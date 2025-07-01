@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Does Nodejs Wait for All Promises Before Exiting? &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Does Nodejs Wait for All Promises Before Exiting?</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<blockquote>
+<p>Between each run of the event loop, Node.js checks if it is waiting for any
+asynchronous I/O or timers and shuts down cleanly if there are not any.</p>
+<p>&mdash; <a href="https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick">https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick</a></p>
+</blockquote>
+<ul>
+<li>see,
+<ul>
+<li><a href="https://konubinix.eu/braindump/posts/javascript/?title=javascript#">javascript</a>,</li>
+</ul>
+</li>
+</ul>
+<p><a href="https://konubinix.eu/braindump/posts/javascript/?title=nodejs#nodejs">nodejs</a> waits for lower level stuff than promises<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>. Fortunately, promises
+are almost always due to the need to deal with those.</p>
+<p>But in theory, you might have an unresolved promise when the program quits.</p>
+<p>That is difficult to simulate, as you need to make this promise &ldquo;wait&rdquo; before
+being run so that node has the time to exit. And the only way to explicitly
+wait is to use a timer, that nodejs will wait to resolve<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</p>
+<p>You can maybe craft something using .unref()<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup></p>
+<p>You can for instance, create a promise with a timer that does not make nodejs wait for it.</p>
+<p><a id="code-snippet--delay"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">const</span> delay <span style="color:#000;font-weight:bold">=</span> ms =&gt; <span style="color:#000;font-weight:bold">new</span> <span style="color:#0086b3">Promise</span>(res =&gt; setTimeout(res, ms).unref());
+</span></span></code></pre></div><p>And then start this promise.</p>
+<p><a id="code-snippet--start"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span>delay(time).then(() =&gt; console.log(<span style="color:#d14">&#34;I fulfilled my promise!&#34;</span>))
+</span></span><span style="display:flex;"><span>console.log(<span style="color:#d14">`I promised I would wait for </span><span style="color:#d14">${</span>time<span style="color:#d14">}</span><span style="color:#d14">`</span>)
+</span></span></code></pre></div><p>In order to realize that nodejs can still wait, let&rsquo;s add an artificial wait
+timer.</p>
+<p><a id="code-snippet--waiting"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span>setTimeout(() =&gt; {console.log(<span style="color:#d14">&#39;done with it&#39;</span>);}, <span style="color:#099">1000</span>)
+</span></span></code></pre></div><p>In the end, the program will wait for one second and totally ignore the promise
+created with the call of delay.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>I promised I would wait for 3000
+</span></span><span style="display:flex;"><span>done with it
+</span></span></code></pre></div><p>As you can see, the promise is never fulfilled.</p>
+<p>You can try setting a shorter value to see this promise resolve when node has
+the time to wait for it.</p>
+<p>You should see something like this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>I promised I would wait for 500
+</span></span><span style="display:flex;"><span>I fulfilled my promise!
+</span></span><span style="display:flex;"><span>done with it
+</span></span></code></pre></div><h2 id="5e2b9be5-68dd-4648-88db-978a5070964c">Not that obvious to reproduce</h2>
+<p>You can try having an async function that always wait for another. Both don&rsquo;t
+use either asynchronous operations or timers.</p>
+<p><a id="code-snippet--promisebomb"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">function</span> outer ()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>   <span style="color:#000;font-weight:bold">while</span>(<span style="color:#000;font-weight:bold">true</span>)
+</span></span><span style="display:flex;"><span>   {
+</span></span><span style="display:flex;"><span>       console.log(<span style="color:#d14">&#34;calling inner&#34;</span>)
+</span></span><span style="display:flex;"><span>       <span style="color:#000;font-weight:bold">await</span> inner()
+</span></span><span style="display:flex;"><span>   }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">function</span> inner ()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>   console.log(<span style="color:#d14">&#34;in inner&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>outer()
+</span></span></code></pre></div><p>In my experience, this code never ends, while I suppose that it should at some time.</p>
+<p>I assume that it is good to keep in mind the fact that nodejs does not make the
+promise (pun intended) to wait for promises, but in real life, it happens in
+very specific occasions.</p>
+<p>In by chance I get into this trap in the future in real life, I might add this
+real life example in here.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/33b252ae-c3aa-4210-a0b2-d68868fc4a84?title=does_nodejs_wait_for_all_promises_before_exiting">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<blockquote>
+<p>if you did just this:</p>
+<p>const myPromise = new Promise((resolve, reject) =&gt; {
+console.log(&ldquo;did nothing here&rdquo;);
+});</p>
+<p>Then, nodejs would not wait for that promise all by itself, even though that
+promise never resolves or rejects. This is because nodejs does not actually wait
+for promises. It waits for the underlying asynchronous operations that are
+usually behind promises. Since there is no such underlying asynchronous
+operation behind this promise, nodejs does not wait for it.</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/66860218/why-does-node-seemingly-wait-for-all-promises-to-resolve">https://stackoverflow.com/questions/66860218/why-does-node-seemingly-wait-for-all-promises-to-resolve</a></p>
+</blockquote>
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
+<blockquote>
+<p>Node event loop keeps running until all outstanding tasks are completed or cancelled.</p>
+<p>setTimeout creates a pending event, so the loop will keep running until that executes.</p>
+<p>Outstanding Promises, setInterval and other mechanisms can all prevent the event loop from halting.</p>
+<p>It&rsquo;s worth noting that setTimeout does not use a promise at all. That&rsquo;s just a regular callback function. The setTimeout() API long predates Promises</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/66860218/why-does-node-seemingly-wait-for-all-promises-to-resolve">https://stackoverflow.com/questions/66860218/why-does-node-seemingly-wait-for-all-promises-to-resolve</a></p>
+</blockquote>
+&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:3">
+<blockquote>
+<p>worth mentioning that you can actually tell nodejs to NOT wait for some asynchronous operations by using the .unref() method. In the example you show, if you do this:</p>
+<p>const timer = setTimeout(() =&gt; {console.log(&lsquo;hello&rsquo;);}, 5000);
+timer.unref();</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/66860218/why-does-node-seemingly-wait-for-all-promises-to-resolve">https://stackoverflow.com/questions/66860218/why-does-node-seemingly-wait-for-all-promises-to-resolve</a></p>
+</blockquote>
+&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+  </article>
+  <aside class="date"><time>Last updated: 19 Nov 2024</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 03 May 2023</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Use the Camera With Kivy on Android &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Use the Camera With Kivy on Android</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#70b1ddb1-19b0-4f58-bbfa-af60490840af">analysis</a></li>
+<li><a href="#9d3126a3-ed81-4bad-b821-b2387aacf6d7">the code</a></li>
+<li><a href="#2f27bf7e-cdf9-496f-83f6-1345dc9b9642">on an old phone</a></li>
+<li><a href="#27c1f1d9-2159-4b40-bfe0-3673a45c0f8f">digging a bit the old phone idea: create a timelapse</a>
+<ul>
+<li><a href="#b4fb01ca-3c91-4182-9b0c-2cc39fb8ebad">phone</a></li>
+<li><a href="#fdba7a84-88be-44d9-a06a-152668a5d724">server</a></li>
+</ul>
+</li>
+<li><a href="#775694ac-a4f4-4788-b6a0-273a3d529c0d">note about CamcorderProfile</a></li>
+<li><a href="#bf8986cb-db45-4573-984a-dba0ae007f44">let&rsquo;s put it to a test</a></li>
+<li><a href="#24ae2566-01d1-4006-8d5d-7d14767f815b">recording a video</a></li>
+<li><a href="#notes-linking-here">Notes linking here</a></li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>They are plenty of use cases involving the camera in the <a href="https://konubinix.eu/braindump/posts/afterlife_for_my_phones/?title=afterlife_for_my_phones#">afterlife for my
+phones</a>, so I would like to learn more about it.</p>
+<p>At first, I assumed that <a href="https://konubinix.eu/braindump/posts/vdo_ninja/?title=vdo_ninja#">streaming video through webrtc</a> would be better and I
+has <a href="https://konubinix.eu/braindump/posts/aiortc_to_create_a_remote_web_camera_with_an_android_phone/?title=aiortc_to_create_a_remote_web_camera_with_an_android_phone#">something that works quite well</a>, as it involves modern and heavily used
+technologies. Yet, likely due to its modern aspect, it is hard to have an app
+that works well and deterministically across several generations of
+<a href="https://konubinix.eu/braindump/posts/android/?title=android#">Android</a>. Also, it&rsquo;s need for <a href="https://konubinix.eu/braindump/posts/webrtc/?title=signaling#signaling">signaling</a> makes the infrastructure a bit harder
+that it needs to be. With <a href="https://konubinix.eu/braindump/posts/kivy/?title=kivy#">kivy</a>, however, I expect it to be easier. Using my <a href="/blog/posts/a_python_runtime_on_android/">a
+python runtime on android</a>, I already created simple apps that worked the same
+way in androids 4 to 11, like the <a href="https://konubinix.eu/braindump/posts/pomodo_timer_on_kivy/?title=pomodo_timer_on_kivy#">pomodo timer on kivy</a> or the <a href="https://konubinix.eu/braindump/posts/interval_timer/?title=doing_again_with_old_python2_kivy_to_reuse_my_wiko_cink_peax#doing-again-with-old-python2-kivy-to-reuse-my-wiko-cink-peax">interval timer</a>.</p>
+<p>So I want to try if dealing with the camera will be that easy.</p>
+<p>Using the high level Camera widget from kivy is straightforward, as I could
+experience with the <a href="https://konubinix.eu/braindump/posts/simple_camera_with_kivy/?title=simple_camera_with_kivy#">simple camera with kivy</a> app, but I want to get deeper.</p>
+<h2 id="70b1ddb1-19b0-4f58-bbfa-af60490840af">analysis</h2>
+<p>kivy.uix.camera.Camera wraps (in the _camera attribute) kivy.core.camera.Camera
+that is extended by kivy.core.camera.camera_android.CameraAndroid</p>
+<p>For the time being, it only wrapped the deprecated <a href="https://developer.android.com/reference/android/hardware/Camera">Camera api</a>, not the <a href="https://developer.android.com/reference/android/hardware/camera2/package-summary">camera2</a>.</p>
+<p>CameraAndroid provides low level functions.</p>
+<p>It also provides the following</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>[<span style="color:#000;font-weight:bold">...</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">grab_frame</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Grab current frame (thread-safe, minimal overhead)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">with</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>_buflock:
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>_buffer <span style="color:#000;font-weight:bold">is</span> <span style="color:#000;font-weight:bold">None</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">return</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        buf <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>_buffer<span style="color:#000;font-weight:bold">.</span>tostring()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> buf
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">decode_frame</span>(<span style="color:#999">self</span>, buf):
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Decode image data from grabbed frame.
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    This method depends on OpenCV and NumPy - however it is only used for
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    fetching the current frame as a NumPy array, and not required when
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    this :class:`CameraAndroid` provider is simply used by a
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    :class:`~kivy.uix.camera.Camera` widget.
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">import</span> <span style="color:#555">numpy</span> <span style="color:#000;font-weight:bold">as</span> <span style="color:#555">np</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">cv2</span> <span style="color:#000;font-weight:bold">import</span> cvtColor
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    w, h <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>_resolution
+</span></span><span style="display:flex;"><span>    arr <span style="color:#000;font-weight:bold">=</span> np<span style="color:#000;font-weight:bold">.</span>fromstring(buf, <span style="color:#d14">&#39;uint8&#39;</span>)<span style="color:#000;font-weight:bold">.</span>reshape((h <span style="color:#000;font-weight:bold">+</span> h <span style="color:#000;font-weight:bold">/</span> <span style="color:#099">2</span>, w))
+</span></span><span style="display:flex;"><span>    arr <span style="color:#000;font-weight:bold">=</span> cvtColor(arr, <span style="color:#099">93</span>)  <span style="color:#998;font-style:italic"># NV21 -&gt; BGR</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> arr
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">read_frame</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Grab and decode frame in one call
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>decode_frame(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>grab_frame())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[<span style="color:#000;font-weight:bold">...</span>]
+</span></span></code></pre></div><p>Calling read_frame will fail on the call to <code>reshape((h + h / 2, w))</code> because
+h + h / 2 is a float and an int is expected, casting to an int helps, but I
+want some code that works with an old release of kivy that I won&rsquo;t be able to
+patch.</p>
+<p>Besides, I feel like depending on cv2 and numpy available in the phone might
+not be a good idea.</p>
+<p>Therefore, I&rsquo;d rather send the raw data somewhere more conventional and
+process the data there.</p>
+<h2 id="9d3126a3-ed81-4bad-b821-b2387aacf6d7">the code</h2>
+<p>Based on this analysis, we can resume the needed code to this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.permissions</span> <span style="color:#000;font-weight:bold">import</span> Permission, request_permissions
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.camera</span> <span style="color:#000;font-weight:bold">import</span> Camera
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">cv2</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">numpy</span> <span style="color:#000;font-weight:bold">as</span> <span style="color:#555">np</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>request_permissions([Permission<span style="color:#000;font-weight:bold">.</span>CAMERA])
+</span></span><span style="display:flex;"><span>cam <span style="color:#000;font-weight:bold">=</span> Camera(resolution<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1680</span>, <span style="color:#099">1256</span>))<span style="color:#000;font-weight:bold">.</span>_camera
+</span></span><span style="display:flex;"><span>cam<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>frame <span style="color:#000;font-weight:bold">=</span> cam<span style="color:#000;font-weight:bold">.</span>grab_frame()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>w, h <span style="color:#000;font-weight:bold">=</span> cam<span style="color:#000;font-weight:bold">.</span>_resolution
+</span></span><span style="display:flex;"><span>cv2<span style="color:#000;font-weight:bold">.</span>imwrite(<span style="color:#d14">&#34;/tmp/test.png&#34;</span>,
+</span></span><span style="display:flex;"><span>            cv2<span style="color:#000;font-weight:bold">.</span>cvtColor(
+</span></span><span style="display:flex;"><span>                np<span style="color:#000;font-weight:bold">.</span>fromstring(
+</span></span><span style="display:flex;"><span>                    frame, <span style="color:#d14">&#39;uint8</span>
+</span></span><span style="display:flex;"><span>                )<span style="color:#000;font-weight:bold">.</span>reshape(
+</span></span><span style="display:flex;"><span>                    (<span style="color:#0086b3">int</span>(h <span style="color:#000;font-weight:bold">+</span> h <span style="color:#000;font-weight:bold">/</span> <span style="color:#099">2</span>),
+</span></span><span style="display:flex;"><span>                     w)
+</span></span><span style="display:flex;"><span>                ),
+</span></span><span style="display:flex;"><span>                cv2<span style="color:#000;font-weight:bold">.</span>COLOR_YUV2BGR_NV21)
+</span></span><span style="display:flex;"><span>            )
+</span></span></code></pre></div><p>Aside from the code to compute the final image, getting a picture is pretty
+obvious. To know the possible resolutions to initialize the camera, I can run:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">list_camera_resolutions</span>():
+</span></span><span style="display:flex;"><span>    Camera <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.hardware.Camera&#39;</span>)
+</span></span><span style="display:flex;"><span>    camera <span style="color:#000;font-weight:bold">=</span> Camera<span style="color:#000;font-weight:bold">.</span>open(<span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>    sizes <span style="color:#000;font-weight:bold">=</span> camera<span style="color:#000;font-weight:bold">.</span>getParameters()<span style="color:#000;font-weight:bold">.</span>getSupportedPictureSizes()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> <span style="color:#0086b3">hasattr</span>(sizes, <span style="color:#d14">&#34;__iter__&#34;</span>):
+</span></span><span style="display:flex;"><span>        resolutions <span style="color:#000;font-weight:bold">=</span> [(size<span style="color:#000;font-weight:bold">.</span>width, size<span style="color:#000;font-weight:bold">.</span>height) <span style="color:#000;font-weight:bold">for</span> size <span style="color:#000;font-weight:bold">in</span> sizes]
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">else</span>: <span style="color:#998;font-style:italic"># the old version of jnius in the old poc does not provide iterators</span>
+</span></span><span style="display:flex;"><span>        resolutions <span style="color:#000;font-weight:bold">=</span> []
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">for</span> i <span style="color:#000;font-weight:bold">in</span> <span style="color:#0086b3">range</span>(sizes<span style="color:#000;font-weight:bold">.</span>size()):
+</span></span><span style="display:flex;"><span>            resolutions<span style="color:#000;font-weight:bold">.</span>append((
+</span></span><span style="display:flex;"><span>                sizes<span style="color:#000;font-weight:bold">.</span>get(i)<span style="color:#000;font-weight:bold">.</span>width,
+</span></span><span style="display:flex;"><span>                sizes<span style="color:#000;font-weight:bold">.</span>get(i)<span style="color:#000;font-weight:bold">.</span>height,
+</span></span><span style="display:flex;"><span>            ))
+</span></span><span style="display:flex;"><span>            camera<span style="color:#000;font-weight:bold">.</span>release()
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> resolutions
+</span></span></code></pre></div><p>Note that this cannot be run in a service, or kivy will complain with</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>11-04 10:03:21.472 11403 11425 I poc     : [CRITICAL] [Window      ] Unable to find any valuable Window provider. Please enable debug logging (e.g. add -d if running from the command line, or change the log level in the config) and re-run your app to identify potential causes
+</span></span><span style="display:flex;"><span>11-04 10:03:21.472 11403 11425 I poc     : sdl2 - RuntimeError: b&#34;Application didn&#39;t initialize properly, did you include SDL_main.h in the file containing your main() function?&#34;
+</span></span><span style="display:flex;"><span>11-04 10:03:21.473 11403 11425 I poc     :   File &#34;/app/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/python-installs/poc/arm64-v8a/kivy/core/__init__.py&#34;, line 71, in core_select_lib
+</span></span><span style="display:flex;"><span>11-04 10:03:21.473 11403 11425 I poc     :   File &#34;/app/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/python-installs/poc/arm64-v8a/kivy/core/window/window_sdl2.py&#34;, line 165, in __init__
+</span></span><span style="display:flex;"><span>11-04 10:03:21.473 11403 11425 I poc     :   File &#34;/app/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/python-installs/poc/arm64-v8a/kivy/core/window/__init__.py&#34;, line 1129, in __init__
+</span></span><span style="display:flex;"><span>11-04 10:03:21.473 11403 11425 I poc     :   File &#34;/app/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/python-installs/poc/arm64-v8a/kivy/core/window/window_sdl2.py&#34;, line 316, in create_window
+</span></span><span style="display:flex;"><span>11-04 10:03:21.473 11403 11425 I poc     :   File &#34;kivy/core/window/_window_sdl2.pyx&#34;, line 121, in kivy.core.window._window_sdl2._WindowSDL2Storage.setup_window
+</span></span><span style="display:flex;"><span>11-04 10:03:21.473 11403 11425 I poc     :   File &#34;kivy/core/window/_window_sdl2.pyx&#34;, line 76, in kivy.core.window._window_sdl2._WindowSDL2Storage.die
+</span></span><span style="display:flex;"><span>11-04 10:03:21.473 11403 11425 I poc     :
+</span></span><span style="display:flex;"><span>11-04 10:03:21.473 11403 11425 I poc     : [CRITICAL] [App         ] Unable to get a Window, abort.
+</span></span><span style="display:flex;"><span>11-04 10:03:21.694  1884  2629 I ActivityManager: Process eu.konix.poc:service_poc (pid 11403) has died: prcp FGS
+</span></span></code></pre></div><h2 id="2f27bf7e-cdf9-496f-83f6-1345dc9b9642">on an <a href="https://konubinix.eu/braindump/posts/afterlife_for_my_phones/?title=afterlife_for_my_phones#">old phone</a></h2>
+<p>On my <a href="https://konubinix.eu/braindump/posts/afterlife_for_my_phones/?title=wiko_cink_peax_2#wiko-cink-peax-2">wiko cink peax 2</a>, with python2 and an old kivy, the camera will update
+only when the application is not waiting for input. That means that I cannot
+put a rpyc endpoint and trigger manually a photo from there. Yet, the
+followings still works and dumps a photograph every 5 seconds.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">plyer</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.app</span> <span style="color:#000;font-weight:bold">import</span> App
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.clock</span> <span style="color:#000;font-weight:bold">import</span> Clock
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.lang</span> <span style="color:#000;font-weight:bold">import</span> Builder
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.boxlayout</span> <span style="color:#000;font-weight:bold">import</span> BoxLayout
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.camera</span> <span style="color:#000;font-weight:bold">import</span> Camera
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">logging</span> <span style="color:#000;font-weight:bold">import</span> getLogger
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>logger <span style="color:#000;font-weight:bold">=</span> getLogger(__name__)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Builder<span style="color:#000;font-weight:bold">.</span>load_string(<span style="color:#d14">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&lt;CameraClick&gt;:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    orientation: &#34;vertical&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Button:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#34;Capture&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        size_hint_y: None
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        height: &#34;48dp&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        on_press: root.capture()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&#34;&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">CameraClick</span>(BoxLayout):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(CameraClick, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        Clock<span style="color:#000;font-weight:bold">.</span>schedule_interval(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>capture, <span style="color:#099">5</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">capture</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> Camera(resolution<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1680</span>, <span style="color:#099">1256</span>))<span style="color:#000;font-weight:bold">.</span>_camera
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>            plyer<span style="color:#000;font-weight:bold">.</span>vibrator<span style="color:#000;font-weight:bold">.</span>vibrate()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        frame <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>grab_frame()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> frame:
+</span></span><span style="display:flex;"><span>            <span style="color:#0086b3">open</span>(<span style="color:#d14">&#34;/sdcard/test.txt&#34;</span>, <span style="color:#d14">&#34;w&#34;</span>)<span style="color:#000;font-weight:bold">.</span>write(frame)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Got nothing&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">TestCamera</span>(App):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">build</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> CameraClick()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">run</span>():
+</span></span><span style="display:flex;"><span>    TestCamera()<span style="color:#000;font-weight:bold">.</span>run()
+</span></span></code></pre></div><p>Also, it won&rsquo;t work when locking the phone and will hang on unlocking.</p>
+<p>That is pretty promising though.</p>
+<h2 id="27c1f1d9-2159-4b40-bfe0-3673a45c0f8f">digging a bit the old phone idea: create a <a href="https://konubinix.eu/braindump/posts/timelapse/?title=timelapse#">timelapse</a></h2>
+<h3 id="b4fb01ca-3c91-4182-9b0c-2cc39fb8ebad">phone</h3>
+<p>Let&rsquo;s try to create a timelapse. To preserve the battery, I added code to
+<a href="https://konubinix.eu/braindump/posts/android/?title=keep_the_the_screen_on_but_very_dimmed#keep-the-the-screen-on-but-very-dimmed">keep the the screen on, but very dimmed</a>, as I remarked that the camera
+won&rsquo;t work properly with a screen shutdown.</p>
+<p>To help preserving the battery even more, I make use of a thread that wakes
+up the screen before grabbing a frame. I cannot use the kivy clock to do so
+for it freezes when the screen is off.</p>
+<p><a id="code-snippet--timelapse"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">plyer</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.app</span> <span style="color:#000;font-weight:bold">import</span> App
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.lang</span> <span style="color:#000;font-weight:bold">import</span> Builder
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.boxlayout</span> <span style="color:#000;font-weight:bold">import</span> BoxLayout
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.core.camera</span> <span style="color:#000;font-weight:bold">import</span> Camera
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">datetime</span> <span style="color:#000;font-weight:bold">import</span> datetime
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.screenmanager</span> <span style="color:#000;font-weight:bold">import</span> Screen, ScreenManagerException, ScreenManager
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">threading</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">contextlib</span> <span style="color:#000;font-weight:bold">import</span> contextmanager
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">requests</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">logging</span> <span style="color:#000;font-weight:bold">import</span> getLogger
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.osc</span> <span style="color:#000;font-weight:bold">import</span> to_service, oschandler
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.wakelock</span> <span style="color:#000;font-weight:bold">import</span> WakeLock
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>logger <span style="color:#000;font-weight:bold">=</span> getLogger(__name__)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>wl <span style="color:#000;font-weight:bold">=</span> WakeLock(<span style="color:#d14">&#39;timelapse&#39;</span>, wakeup<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Builder<span style="color:#000;font-weight:bold">.</span>load_string(<span style="color:#d14">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&lt;Timelapse&gt;:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    orientation: &#34;vertical&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Button:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#34;Clean&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        size_hint_y: None
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        height: &#34;48dp&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        on_press: root.clean()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    BoxLayout:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        orientation: &#34;horizontal&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        Label:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            text: &#34;Front camera&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        CheckBox:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            id: front
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Spinner:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        id: resolution
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        values: &#34;(1600, 1200)&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#34;(1600, 1200)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        # text: &#34;(640, 480)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    BoxLayout:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        orientation: &#34;horizontal&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        Label:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            text: &#34;period&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        TextInput:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            # setting the id of the widget
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            id: period
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            text: &#39;0.5&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Spinner:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        id: action
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        values: &#34;upload&#34;, &#34;save&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#34;save&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Label:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        id: message
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#39;Press start to begin&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Button:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        id: toggle
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#34;Start&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        size_hint_y: None
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        height: &#34;48dp&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        on_press: root.toggle()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&#34;&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">TimelapseScreen</span>(Screen):
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args, <span style="color:#000;font-weight:bold">**</span>kwargs):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(TimelapseScreen, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__(<span style="color:#000;font-weight:bold">*</span>args, <span style="color:#000;font-weight:bold">**</span>kwargs)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timelapse <span style="color:#000;font-weight:bold">=</span> Timelapse()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timelapse)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_leave<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_leave_handler)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_enter<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_enter_handler)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_leave_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timelapse<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_enter_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timelapse<span style="color:#000;font-weight:bold">.</span>pre_enter()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">get_memory_usage</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">with</span> <span style="color:#0086b3">open</span>(<span style="color:#d14">&#39;/proc/self/status&#39;</span>, <span style="color:#d14">&#39;r&#39;</span>) <span style="color:#000;font-weight:bold">as</span> f:
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">for</span> line <span style="color:#000;font-weight:bold">in</span> f:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> line<span style="color:#000;font-weight:bold">.</span>startswith(<span style="color:#d14">&#39;VmRSS:&#39;</span>):
+</span></span><span style="display:flex;"><span>                mem_kb <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">int</span>(line<span style="color:#000;font-weight:bold">.</span>split()[<span style="color:#099">1</span>])
+</span></span><span style="display:flex;"><span>                logger<span style="color:#000;font-weight:bold">.</span>info(<span style="color:#d14">&#34;Memory usage: </span><span style="color:#d14">{:.2f}</span><span style="color:#d14"> MB&#34;</span><span style="color:#000;font-weight:bold">.</span>format(mem_kb <span style="color:#000;font-weight:bold">/</span> <span style="color:#099">1024</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">Timelapse</span>(BoxLayout):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(Timelapse, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;/sdcard/camera&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>capture_thread <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>front<span style="color:#000;font-weight:bold">.</span>bind(active<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>on_front_change)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>on_front_change()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@oschandler</span>(<span style="color:#d14">&#34;timelapse:start&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_</span>(config):
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>period<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">str</span>(config[<span style="color:#d14">&#34;period&#34;</span>])
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#d14">&#34;camera_dir&#34;</span> <span style="color:#000;font-weight:bold">in</span> config:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir <span style="color:#000;font-weight:bold">=</span> config[<span style="color:#d14">&#34;camera_dir&#34;</span>]
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> config<span style="color:#000;font-weight:bold">.</span>get(<span style="color:#d14">&#34;clean&#34;</span>):
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>clean()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>resolution<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> config<span style="color:#000;font-weight:bold">.</span>get(<span style="color:#d14">&#34;resolution&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@oschandler</span>(<span style="color:#d14">&#34;timelapse:stop&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_</span>(_):
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_enter</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        to_service(<span style="color:#d14">&#34;timelapse:enter&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">on_front_change</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>a):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>resolution<span style="color:#000;font-weight:bold">.</span>values <span style="color:#000;font-weight:bold">=</span> [<span style="color:#0086b3">str</span>(resolution) <span style="color:#000;font-weight:bold">for</span> resolution <span style="color:#000;font-weight:bold">in</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>list_camera_resolutions()]
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>resolution<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">not</span> <span style="color:#000;font-weight:bold">in</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>resolution<span style="color:#000;font-weight:bold">.</span>values:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>resolution<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>resolution<span style="color:#000;font-weight:bold">.</span>values[<span style="color:#099">0</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">list_camera_resolutions</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        Camera <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.hardware.Camera&#39;</span>)
+</span></span><span style="display:flex;"><span>        camera <span style="color:#000;font-weight:bold">=</span> Camera<span style="color:#000;font-weight:bold">.</span>open(<span style="color:#099">1</span> <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>front<span style="color:#000;font-weight:bold">.</span>active <span style="color:#000;font-weight:bold">else</span> <span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>        sizes <span style="color:#000;font-weight:bold">=</span> camera<span style="color:#000;font-weight:bold">.</span>getParameters()<span style="color:#000;font-weight:bold">.</span>getSupportedPictureSizes()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#0086b3">hasattr</span>(sizes, <span style="color:#d14">&#34;__iter__&#34;</span>):
+</span></span><span style="display:flex;"><span>            resolutions <span style="color:#000;font-weight:bold">=</span> [(size<span style="color:#000;font-weight:bold">.</span>width, size<span style="color:#000;font-weight:bold">.</span>height) <span style="color:#000;font-weight:bold">for</span> size <span style="color:#000;font-weight:bold">in</span> sizes]
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>: <span style="color:#998;font-style:italic"># the old version of jnius in the old poc does not provide iterators</span>
+</span></span><span style="display:flex;"><span>            resolutions <span style="color:#000;font-weight:bold">=</span> []
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">for</span> i <span style="color:#000;font-weight:bold">in</span> <span style="color:#0086b3">range</span>(sizes<span style="color:#000;font-weight:bold">.</span>size()):
+</span></span><span style="display:flex;"><span>                resolutions<span style="color:#000;font-weight:bold">.</span>append((
+</span></span><span style="display:flex;"><span>                    sizes<span style="color:#000;font-weight:bold">.</span>get(i)<span style="color:#000;font-weight:bold">.</span>width,
+</span></span><span style="display:flex;"><span>                    sizes<span style="color:#000;font-weight:bold">.</span>get(i)<span style="color:#000;font-weight:bold">.</span>height,
+</span></span><span style="display:flex;"><span>                ))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        camera<span style="color:#000;font-weight:bold">.</span>release()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> resolutions
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">stop</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>capture_thread <span style="color:#000;font-weight:bold">is</span> <span style="color:#000;font-weight:bold">not</span> <span style="color:#000;font-weight:bold">None</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>capture_thread<span style="color:#000;font-weight:bold">.</span>join()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>capture_thread <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>brightness(<span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>        wl<span style="color:#000;font-weight:bold">.</span>release()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>_release_camera()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">brightness</span>(<span style="color:#999">self</span>, value):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.runnable</span> <span style="color:#000;font-weight:bold">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span>        WindowManagerLayoutParams <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.WindowManager$LayoutParams&#39;</span>)
+</span></span><span style="display:flex;"><span>        window <span style="color:#000;font-weight:bold">=</span> mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()
+</span></span><span style="display:flex;"><span>        layout_params <span style="color:#000;font-weight:bold">=</span> window<span style="color:#000;font-weight:bold">.</span>getAttributes()
+</span></span><span style="display:flex;"><span>        layout_params<span style="color:#000;font-weight:bold">.</span>screenBrightness <span style="color:#000;font-weight:bold">=</span> value
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">do</span>():
+</span></span><span style="display:flex;"><span>            window<span style="color:#000;font-weight:bold">.</span>setAttributes(layout_params)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        do()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">start</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">with</span> wl<span style="color:#000;font-weight:bold">.</span>awake():
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>brightness(<span style="color:#099">0.01</span>)
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Here we go&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam:
+</span></span><span style="display:flex;"><span>                logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Initializing Camera&#34;</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> Camera(
+</span></span><span style="display:flex;"><span>                    resolution<span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">eval</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>resolution<span style="color:#000;font-weight:bold">.</span>text),
+</span></span><span style="display:flex;"><span>                    index<span style="color:#000;font-weight:bold">=</span><span style="color:#099">1</span> <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>front<span style="color:#000;font-weight:bold">.</span>active <span style="color:#000;font-weight:bold">else</span> <span style="color:#099">0</span>,
+</span></span><span style="display:flex;"><span>                )
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic"># trying to compensate for the video becoming dark in low light environements</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic"># in outdoor environment though, it will be too bright</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic"># try:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic">#     params = self.cam._android_camera.getParameters()</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic">#     params.setExposureCompensation(params.getMaxExposureCompensation())</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic">#     if params.isAutoExposureLockSupported():</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic">#         params.setAutoExposureLock(False)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic">#     self.cam._android_camera.setParameters(params)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic"># except Exception as e:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic">#     logger.warning(e.msg)</span>
+</span></span><span style="display:flex;"><span>                plyer<span style="color:#000;font-weight:bold">.</span>vibrator<span style="color:#000;font-weight:bold">.</span>vibrate()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">True</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>last_capture <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>capture_thread <span style="color:#000;font-weight:bold">=</span> threading<span style="color:#000;font-weight:bold">.</span>Thread(target<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>capture_routine)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>capture_thread<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">toggle</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>toggle<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Start&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>toggle<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Stop&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">need_screen_off</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> <span style="color:#0086b3">float</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>period<span style="color:#000;font-weight:bold">.</span>text) <span style="color:#000;font-weight:bold">&gt;</span> <span style="color:#099">120.</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">capture_routine</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">import</span> <span style="color:#555">time</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">while</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>last_capture:
+</span></span><span style="display:flex;"><span>                time_since_last_capture <span style="color:#000;font-weight:bold">=</span> (datetime<span style="color:#000;font-weight:bold">.</span>now() <span style="color:#000;font-weight:bold">-</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>last_capture)<span style="color:#000;font-weight:bold">.</span>total_seconds()
+</span></span><span style="display:flex;"><span>                logger<span style="color:#000;font-weight:bold">.</span>info(<span style="color:#d14">&#34;Time since last capture: </span><span style="color:#d14">{}</span><span style="color:#d14">s&#34;</span><span style="color:#000;font-weight:bold">.</span>format(time_since_last_capture))
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">if</span> time_since_last_capture <span style="color:#000;font-weight:bold">&gt;</span> <span style="color:#099">2</span><span style="color:#000;font-weight:bold">*</span><span style="color:#0086b3">float</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>period<span style="color:#000;font-weight:bold">.</span>text):
+</span></span><span style="display:flex;"><span>                    notify(<span style="color:#d14">&#34;I&#39;m starting to get tired&#34;</span>)
+</span></span><span style="display:flex;"><span>            wl<span style="color:#000;font-weight:bold">.</span>acquire()
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>need_screen_off():
+</span></span><span style="display:flex;"><span>                <span style="color:#998;font-style:italic"># let some time for the camera to adjust</span>
+</span></span><span style="display:flex;"><span>                time<span style="color:#000;font-weight:bold">.</span>sleep(<span style="color:#099">3</span>)
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">: Grabbing a frame&#34;</span><span style="color:#000;font-weight:bold">.</span>format(datetime<span style="color:#000;font-weight:bold">.</span>now()))
+</span></span><span style="display:flex;"><span>            get_memory_usage()
+</span></span><span style="display:flex;"><span>            frame <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>grab_frame()
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> frame:
+</span></span><span style="display:flex;"><span>                logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">: Frame captured&#34;</span><span style="color:#000;font-weight:bold">.</span>format(datetime<span style="color:#000;font-weight:bold">.</span>now()))
+</span></span><span style="display:flex;"><span>                filename <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>generate_filename()
+</span></span><span style="display:flex;"><span>                message <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">getattr</span>(<span style="color:#999">self</span>, <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>action<span style="color:#000;font-weight:bold">.</span>text)(frame, filename)
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>message<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">: </span><span style="color:#d14">{}</span><span style="color:#d14"> (</span><span style="color:#d14">{}</span><span style="color:#d14">)&#34;</span><span style="color:#000;font-weight:bold">.</span>format(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>action<span style="color:#000;font-weight:bold">.</span>text, filename, message)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>                logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">: No frame captured&#34;</span><span style="color:#000;font-weight:bold">.</span>format(datetime<span style="color:#000;font-weight:bold">.</span>now()))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>need_screen_off():
+</span></span><span style="display:flex;"><span>                wl<span style="color:#000;font-weight:bold">.</span>release()
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">: Now, waiting for </span><span style="color:#d14">{}</span><span style="color:#d14">s&#34;</span><span style="color:#000;font-weight:bold">.</span>format(datetime<span style="color:#000;font-weight:bold">.</span>now(), <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>period<span style="color:#000;font-weight:bold">.</span>text))
+</span></span><span style="display:flex;"><span>            time<span style="color:#000;font-weight:bold">.</span>sleep(<span style="color:#0086b3">float</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>period<span style="color:#000;font-weight:bold">.</span>text))
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">: Ready for a new round&#34;</span><span style="color:#000;font-weight:bold">.</span>format(datetime<span style="color:#000;font-weight:bold">.</span>now()))
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>time_since_last_capture <span style="color:#000;font-weight:bold">=</span> datetime<span style="color:#000;font-weight:bold">.</span>now()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">generate_filename</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        now <span style="color:#000;font-weight:bold">=</span> datetime<span style="color:#000;font-weight:bold">.</span>now()
+</span></span><span style="display:flex;"><span>        formatted_time <span style="color:#000;font-weight:bold">=</span> now<span style="color:#000;font-weight:bold">.</span>strftime(<span style="color:#d14">&#34;%Y%m</span><span style="color:#d14">%d</span><span style="color:#d14">_%H%M%S&#34;</span>) <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;.</span><span style="color:#d14">{:06d}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">.</span>format(now<span style="color:#000;font-weight:bold">.</span>microsecond)
+</span></span><span style="display:flex;"><span>        filename <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">_</span><span style="color:#d14">{}</span><span style="color:#d14">x</span><span style="color:#d14">{}</span><span style="color:#d14">.bin&#34;</span><span style="color:#000;font-weight:bold">.</span>format(formatted_time, <span style="color:#000;font-weight:bold">*</span><span style="color:#0086b3">eval</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>resolution<span style="color:#000;font-weight:bold">.</span>text))
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> filename
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">save</span>(<span style="color:#999">self</span>, frame, filename):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>exists(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir):
+</span></span><span style="display:flex;"><span>            os<span style="color:#000;font-weight:bold">.</span>mkdir(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">open</span>(os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>join(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir, filename), <span style="color:#d14">&#34;wb&#34;</span>)<span style="color:#000;font-weight:bold">.</span>write(frame)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> <span style="color:#d14">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">clean</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">import</span> <span style="color:#555">shutil</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>exists(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir):
+</span></span><span style="display:flex;"><span>            shutil<span style="color:#000;font-weight:bold">.</span>rmtree(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">upload</span>(<span style="color:#999">self</span>, frame, filename):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>            response <span style="color:#000;font-weight:bold">=</span> requests<span style="color:#000;font-weight:bold">.</span>post(
+</span></span><span style="display:flex;"><span>                <span style="color:#d14">&#34;http://192.168.1.245:9999/upload?filename=</span><span style="color:#d14">{}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">.</span>format(filename),
+</span></span><span style="display:flex;"><span>                headers<span style="color:#000;font-weight:bold">=</span>{<span style="color:#d14">&#39;Content-Type&#39;</span>: <span style="color:#d14">&#39;application/octet-stream&#39;</span>},
+</span></span><span style="display:flex;"><span>                data<span style="color:#000;font-weight:bold">=</span>frame,
+</span></span><span style="display:flex;"><span>            )
+</span></span><span style="display:flex;"><span>            message <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Upload successful: &#34;</span>, response<span style="color:#000;font-weight:bold">.</span>text)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">except</span> <span style="color:#900;font-weight:bold">Exception</span> <span style="color:#000;font-weight:bold">as</span> e:
+</span></span><span style="display:flex;"><span>            message <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;upload failed&#34;</span>
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Upload failed: </span><span style="color:#d14">{}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">.</span>format(e))
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> message
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">TimelapseApp</span>(App):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">on_pause</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        logger<span style="color:#000;font-weight:bold">.</span>info(<span style="color:#d14">&#34;Paused&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> <span style="color:#000;font-weight:bold">True</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">on_resume</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        logger<span style="color:#000;font-weight:bold">.</span>info(<span style="color:#d14">&#34;Resumed&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#3c5d5d;font-weight:bold">@staticmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">populate</span>(sm):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>            sm<span style="color:#000;font-weight:bold">.</span>get_screen(<span style="color:#d14">&#39;timelapse&#39;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">except</span> ScreenManagerException:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">pass</span> <span style="color:#998;font-style:italic"># not populated yet</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        sm<span style="color:#000;font-weight:bold">.</span>add_widget(TimelapseScreen(name<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;timelapse&#39;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">build</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        sm <span style="color:#000;font-weight:bold">=</span> ScreenManager()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>populate(sm)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> sm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">run</span>():
+</span></span><span style="display:flex;"><span>    TimelapseApp()<span style="color:#000;font-weight:bold">.</span>run()
+</span></span></code></pre></div><h3 id="fdba7a84-88be-44d9-a06a-152668a5d724">server</h3>
+<p>Then, run locally a server to get the uploaded content, fortunately, I already
+have a docker image to upload data.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run -ti -e <span style="color:#008080">DIR</span><span style="color:#000;font-weight:bold">=</span>/upload/ -e <span style="color:#008080">PORT</span><span style="color:#000;font-weight:bold">=</span><span style="color:#099">9999</span> -p 9999:9999 -v <span style="color:#000;font-weight:bold">$(</span><span style="color:#0086b3">pwd</span><span style="color:#000;font-weight:bold">)</span>:/upload konubinix/uploader:0.1.1
+</span></span></code></pre></div><p>Then post process all the files, with some code like this</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">pathlib</span> <span style="color:#000;font-weight:bold">import</span> Path
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">cv2</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">numpy</span> <span style="color:#000;font-weight:bold">as</span> <span style="color:#555">np</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">process_bin_files</span>(directory):
+</span></span><span style="display:flex;"><span>    bin_files <span style="color:#000;font-weight:bold">=</span> Path(directory)<span style="color:#000;font-weight:bold">.</span>glob(<span style="color:#d14">&#39;*.bin&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">for</span> bin_file <span style="color:#000;font-weight:bold">in</span> bin_files:
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">with</span> bin_file<span style="color:#000;font-weight:bold">.</span>open(<span style="color:#d14">&#39;rb&#39;</span>) <span style="color:#000;font-weight:bold">as</span> f:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>                base_name <span style="color:#000;font-weight:bold">=</span> bin_file<span style="color:#000;font-weight:bold">.</span>stem
+</span></span><span style="display:flex;"><span>                _, dimensions <span style="color:#000;font-weight:bold">=</span> base_name<span style="color:#000;font-weight:bold">.</span>rsplit(<span style="color:#d14">&#39;_&#39;</span>, <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>                w, h <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">map</span>(<span style="color:#0086b3">int</span>, dimensions<span style="color:#000;font-weight:bold">.</span>split(<span style="color:#d14">&#39;x&#39;</span>))
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">except</span> <span style="color:#900;font-weight:bold">ValueError</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#0086b3">print</span>(
+</span></span><span style="display:flex;"><span>                    <span style="color:#d14">f</span><span style="color:#d14">&#34;Error parsing dimensions from filename: </span><span style="color:#d14">{</span>bin_file<span style="color:#000;font-weight:bold">.</span>name<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">continue</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            png_filename <span style="color:#000;font-weight:bold">=</span> bin_file<span style="color:#000;font-weight:bold">.</span>with_suffix(<span style="color:#d14">&#39;.png&#39;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#0086b3">print</span>(bin_file)
+</span></span><span style="display:flex;"><span>            cv2<span style="color:#000;font-weight:bold">.</span>imwrite(
+</span></span><span style="display:flex;"><span>                <span style="color:#0086b3">str</span>(png_filename),
+</span></span><span style="display:flex;"><span>                cv2<span style="color:#000;font-weight:bold">.</span>cvtColor(
+</span></span><span style="display:flex;"><span>                    np<span style="color:#000;font-weight:bold">.</span>frombuffer(f<span style="color:#000;font-weight:bold">.</span>read(), dtype<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;uint8&#39;</span>)<span style="color:#000;font-weight:bold">.</span>reshape(
+</span></span><span style="display:flex;"><span>                        (<span style="color:#0086b3">int</span>(h <span style="color:#000;font-weight:bold">+</span> h <span style="color:#000;font-weight:bold">/</span> <span style="color:#099">2</span>), w)), cv2<span style="color:#000;font-weight:bold">.</span>COLOR_YUV2BGR_NV21))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">print</span>(<span style="color:#d14">f</span><span style="color:#d14">&#34;Processed </span><span style="color:#d14">{</span>bin_file<span style="color:#000;font-weight:bold">.</span>name<span style="color:#d14">}</span><span style="color:#d14"> and saved as </span><span style="color:#d14">{</span>png_filename<span style="color:#000;font-weight:bold">.</span>name<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        bin_file<span style="color:#000;font-weight:bold">.</span>unlink()
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">print</span>(<span style="color:#d14">f</span><span style="color:#d14">&#34;Deleted original file: </span><span style="color:#d14">{</span>bin_file<span style="color:#000;font-weight:bold">.</span>name<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">if</span> __name__ <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    process_bin_files(<span style="color:#d14">&#34;.&#34;</span>)
+</span></span></code></pre></div><p>Let&rsquo;s call that file parser. You simply need to install opencv and run it</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>python3 -m venv venv
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">source</span> ./venv/bin/activate
+</span></span><span style="display:flex;"><span>python3 -m pip install opencv-python
+</span></span><span style="display:flex;"><span>python3 parser.py
+</span></span></code></pre></div><p>Now, let&rsquo;s get even deeper and create a video from those images. (<a href="https://konubinix.eu/braindump/posts/timelapse/?title=timelapse#">timelapse</a>)</p>
+<p>First, let&rsquo;s postprocess them.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">set</span> -eu
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">args</span><span style="color:#000;font-weight:bold">=(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic"># -rotate -180                                  # depending on the orientation of the camera</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic"># -gravity Center -crop 70%x40%+120+150 +repage # take only a 70%x40% size portion of the photo translated by 120x150 from the center</span>
+</span></span><span style="display:flex;"><span>    -gravity South -background white -splice 0x20 <span style="color:#998;font-style:italic"># prepare some room to put the date (which is only the filename)</span>
+</span></span><span style="display:flex;"><span>    -font DejaVu-Sans-Mono                        <span style="color:#998;font-style:italic"># decide a nice font, easy to read</span>
+</span></span><span style="display:flex;"><span>    -set label <span style="color:#d14">&#34;%t&#34;</span> -annotate +0+5 <span style="color:#d14">&#34;%[label]&#34;</span>     <span style="color:#998;font-style:italic"># add the filename at the bottom of the photo</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>mkdir -p originals
+</span></span><span style="display:flex;"><span><span style="color:#008080">total</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>ls *png|wc -l<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>tqdm_update <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">for</span> filename in *png
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">original</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;./originals/</span><span style="color:#d14">${</span><span style="color:#008080">filename</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> <span style="color:#0086b3">test</span> -e <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">original</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;I won&#39;t override </span><span style="color:#d14">${</span><span style="color:#008080">original</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt;&amp;<span style="color:#099">2</span>
+</span></span><span style="display:flex;"><span>        tqdm_update
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">continue</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">fi</span>
+</span></span><span style="display:flex;"><span>    mv <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">filename</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">original</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    magick <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">original</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">args</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">filename</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    tqdm_update
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span> | tqdm --total  <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">total</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> --null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>args<span style="color:#000;font-weight:bold">=</span>(
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">-</span>crf <span style="color:#099">30</span> <span style="color:#000;font-weight:bold">-</span>b:v <span style="color:#099">700</span>k
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">-</span>c:v libx264 <span style="color:#000;font-weight:bold">-</span>movflags <span style="color:#000;font-weight:bold">+</span>faststart
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">-</span>hide_banner <span style="color:#000;font-weight:bold">-</span>loglevel warning <span style="color:#000;font-weight:bold">-</span>stats
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">-</span>pix_fmt yuv420p
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>ffmpeg <span style="color:#000;font-weight:bold">-</span>y <span style="color:#000;font-weight:bold">-</span>framerate <span style="color:#099">10</span> <span style="color:#000;font-weight:bold">-</span>pattern_type glob <span style="color:#000;font-weight:bold">-</span>i <span style="color:#d14">&#34;*.png&#34;</span> <span style="color:#d14">&#34;$</span><span style="color:#d14">{args[@]}</span><span style="color:#d14">&#34;</span> output<span style="color:#000;font-weight:bold">.</span>mp4
+</span></span></code></pre></div><h2 id="775694ac-a4f4-4788-b6a0-273a3d529c0d">note about <a href="https://konubinix.eu/braindump/posts/camcorderprofile/?title=camcorderprofile#">CamcorderProfile</a></h2>
+<p>After working on this, I also discovered that using the <a href="https://konubinix.eu/braindump/posts/camcorderprofile/?title=camcorderprofile#">CamcorderProfile</a>, one
+already had access to profiles dedicated to timelapse such as
+QUALITY_TIME_LAPSE_480P.</p>
+<p>Let&rsquo;s try editing out code to use it instead.</p>
+<p><a id="code-snippet--timelapse2"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">plyer</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.app</span> <span style="color:#000;font-weight:bold">import</span> App
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.lang</span> <span style="color:#000;font-weight:bold">import</span> Builder
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.boxlayout</span> <span style="color:#000;font-weight:bold">import</span> BoxLayout
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.core.camera</span> <span style="color:#000;font-weight:bold">import</span> Camera
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">datetime</span> <span style="color:#000;font-weight:bold">import</span> datetime
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.screenmanager</span> <span style="color:#000;font-weight:bold">import</span> Screen, ScreenManagerException, ScreenManager
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">threading</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">contextlib</span> <span style="color:#000;font-weight:bold">import</span> contextmanager
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">logging</span> <span style="color:#000;font-weight:bold">import</span> getLogger
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.osc</span> <span style="color:#000;font-weight:bold">import</span> to_service, oschandler
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.wakelock</span> <span style="color:#000;font-weight:bold">import</span> WakeLock
+</span></span><span style="display:flex;"><span>MediaRecorder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder&#39;</span>)
+</span></span><span style="display:flex;"><span>AudioSource <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$AudioSource&#39;</span>)
+</span></span><span style="display:flex;"><span>VideoSource <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$VideoSource&#39;</span>)
+</span></span><span style="display:flex;"><span>OutputFormat <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$OutputFormat&#39;</span>)
+</span></span><span style="display:flex;"><span>AudioEncoder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$AudioEncoder&#39;</span>)
+</span></span><span style="display:flex;"><span>VideoEncoder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$VideoEncoder&#39;</span>)
+</span></span><span style="display:flex;"><span>CamcorderProfile <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.CamcorderProfile&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>logger <span style="color:#000;font-weight:bold">=</span> getLogger(__name__)
+</span></span><span style="display:flex;"><span>wl <span style="color:#000;font-weight:bold">=</span> WakeLock(<span style="color:#d14">&#39;timelapse&#39;</span>, wakeup<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Builder<span style="color:#000;font-weight:bold">.</span>load_string(<span style="color:#d14">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&lt;Timelapse&gt;:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    orientation: &#34;vertical&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    BoxLayout:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        orientation: &#34;horizontal&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        Label:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            text: &#34;period&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        TextInput:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            # setting the id of the widget
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            id: period
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            text: &#39;0.5&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Label:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        id: message
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#39;Press start to begin&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Button:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        id: toggle
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#34;Start&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        size_hint_y: None
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        height: &#34;48dp&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        on_press: root.toggle()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&#34;&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">TimelapseScreen</span>(Screen):
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args, <span style="color:#000;font-weight:bold">**</span>kwargs):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(TimelapseScreen, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__(<span style="color:#000;font-weight:bold">*</span>args, <span style="color:#000;font-weight:bold">**</span>kwargs)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timelapse <span style="color:#000;font-weight:bold">=</span> Timelapse()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timelapse)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_leave<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_leave_handler)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_enter<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_enter_handler)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_leave_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timelapse<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_enter_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timelapse<span style="color:#000;font-weight:bold">.</span>pre_enter()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">Timelapse</span>(BoxLayout):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(Timelapse, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;/sdcard/camera&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@oschandler</span>(<span style="color:#d14">&#34;timelapse:start&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_</span>(config):
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>clean()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>period<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">str</span>(config[<span style="color:#d14">&#34;period&#34;</span>])
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#d14">&#34;camera_dir&#34;</span> <span style="color:#000;font-weight:bold">in</span> config:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir <span style="color:#000;font-weight:bold">=</span> config[<span style="color:#d14">&#34;camera_dir&#34;</span>]
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@oschandler</span>(<span style="color:#d14">&#34;timelapse:stop&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_</span>(_):
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_enter</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        to_service(<span style="color:#d14">&#34;timelapse:enter&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#3c5d5d;font-weight:bold">@property</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">running</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder <span style="color:#000;font-weight:bold">is</span> <span style="color:#000;font-weight:bold">not</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">stop</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>release()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>_release_camera()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        wl<span style="color:#000;font-weight:bold">.</span>release()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">brightness</span>(<span style="color:#999">self</span>, value):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.runnable</span> <span style="color:#000;font-weight:bold">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span>        WindowManagerLayoutParams <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.WindowManager$LayoutParams&#39;</span>)
+</span></span><span style="display:flex;"><span>        window <span style="color:#000;font-weight:bold">=</span> mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()
+</span></span><span style="display:flex;"><span>        layout_params <span style="color:#000;font-weight:bold">=</span> window<span style="color:#000;font-weight:bold">.</span>getAttributes()
+</span></span><span style="display:flex;"><span>        layout_params<span style="color:#000;font-weight:bold">.</span>screenBrightness <span style="color:#000;font-weight:bold">=</span> value
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">do</span>():
+</span></span><span style="display:flex;"><span>            window<span style="color:#000;font-weight:bold">.</span>setAttributes(layout_params)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        do()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">start</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        wl<span style="color:#000;font-weight:bold">.</span>acquire()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>brightness(<span style="color:#099">0.01</span>)
+</span></span><span style="display:flex;"><span>        logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Initializing Camera&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> Camera(
+</span></span><span style="display:flex;"><span>            resolution<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">640</span>, <span style="color:#099">480</span>), <span style="color:#998;font-style:italic"># that does not matter I suppose</span>
+</span></span><span style="display:flex;"><span>            index<span style="color:#000;font-weight:bold">=</span><span style="color:#099">0</span>, <span style="color:#998;font-style:italic"># index=1 for front camera (in general)</span>
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>_android_camera<span style="color:#000;font-weight:bold">.</span>unlock()
+</span></span><span style="display:flex;"><span>        plyer<span style="color:#000;font-weight:bold">.</span>vibrator<span style="color:#000;font-weight:bold">.</span>vibrate()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder <span style="color:#000;font-weight:bold">=</span> MediaRecorder()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setCamera(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>_android_camera)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setVideoSource(VideoSource<span style="color:#000;font-weight:bold">.</span>CAMERA)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        profile <span style="color:#000;font-weight:bold">=</span> CamcorderProfile<span style="color:#000;font-weight:bold">.</span>get(CamcorderProfile<span style="color:#000;font-weight:bold">.</span>QUALITY_TIME_LAPSE_480P)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setProfile(profile)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setCaptureRate(<span style="color:#099">1.</span> <span style="color:#000;font-weight:bold">/</span> <span style="color:#0086b3">float</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>period<span style="color:#000;font-weight:bold">.</span>text))
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>exists(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir):
+</span></span><span style="display:flex;"><span>            os<span style="color:#000;font-weight:bold">.</span>mkdir(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir)
+</span></span><span style="display:flex;"><span>        now <span style="color:#000;font-weight:bold">=</span> datetime<span style="color:#000;font-weight:bold">.</span>now()
+</span></span><span style="display:flex;"><span>        formatted_time <span style="color:#000;font-weight:bold">=</span> now<span style="color:#000;font-weight:bold">.</span>strftime(<span style="color:#d14">&#34;%Y%m</span><span style="color:#d14">%d</span><span style="color:#d14">_%H%M%S&#34;</span>) <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;.</span><span style="color:#d14">{:06d}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">.</span>format(now<span style="color:#000;font-weight:bold">.</span>microsecond)
+</span></span><span style="display:flex;"><span>        filename <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">.mp4&#34;</span><span style="color:#000;font-weight:bold">.</span>format(formatted_time)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setOutputFile(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;/&#34;</span> <span style="color:#000;font-weight:bold">+</span> filename)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>prepare()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">toggle</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>toggle<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Start&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>toggle<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Stop&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">clean</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">import</span> <span style="color:#555">shutil</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>exists(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir):
+</span></span><span style="display:flex;"><span>            shutil<span style="color:#000;font-weight:bold">.</span>rmtree(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>camera_dir)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">TimelapseApp</span>(App):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#3c5d5d;font-weight:bold">@staticmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">populate</span>(sm):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>            sm<span style="color:#000;font-weight:bold">.</span>get_screen(<span style="color:#d14">&#39;timelapse&#39;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">except</span> ScreenManagerException:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">pass</span> <span style="color:#998;font-style:italic"># not populated yet</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        sm<span style="color:#000;font-weight:bold">.</span>add_widget(TimelapseScreen(name<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;timelapse&#39;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">build</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        sm <span style="color:#000;font-weight:bold">=</span> ScreenManager()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>populate(sm)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> sm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">run</span>():
+</span></span><span style="display:flex;"><span>    TimelapseApp()<span style="color:#000;font-weight:bold">.</span>run()
+</span></span></code></pre></div><h2 id="bf8986cb-db45-4573-984a-dba0ae007f44">let&rsquo;s put it to a test</h2>
+<p>I performed the test with the <a href="https://konubinix.eu/braindump/posts/afterlife_for_my_phones/?title=wiko_cink_peax_2#wiko-cink-peax-2">wiko cink peax 2</a>.</p>
+<table>
+  <thead>
+      <tr>
+          <th>period (s)</th>
+          <th>release lock</th>
+          <th>release camera</th>
+          <th>video</th>
+          <th>result</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>60</td>
+          <td>yes</td>
+          <td>no</td>
+          <td>no</td>
+          <td><a href="http://192.168.1.46:9999/ipfs/bafybeiapplwrur3c7kyz3yaugaj2j7f2mxyphkdpfbtuux7jnhpe3exfaq?filename=output_video.mp4">http://192.168.1.46:9999/ipfs/bafybeiapplwrur3c7kyz3yaugaj2j7f2mxyphkdpfbtuux7jnhpe3exfaq?filename=output_video.mp4</a></td>
+      </tr>
+      <tr>
+          <td>20</td>
+          <td>no</td>
+          <td>no</td>
+          <td>no</td>
+          <td><a href="http://192.168.1.46:9999/ipfs/bafybeibpzjxzyyfdsczriqdb2jsqae5tekium3zhrk67apabplys4it43y?filename=output_video.mp4">http://192.168.1.46:9999/ipfs/bafybeibpzjxzyyfdsczriqdb2jsqae5tekium3zhrk67apabplys4it43y?filename=output_video.mp4</a></td>
+      </tr>
+      <tr>
+          <td>20</td>
+          <td>no</td>
+          <td>no</td>
+          <td>yes</td>
+          <td><a href="http://192.168.1.46:9999/ipfs/bafybeierkttbuki2f5hfm5tnk6ks72mp6chblwcp2m55b7q74mt6uc73ky?filename=a.mp4">http://192.168.1.46:9999/ipfs/bafybeierkttbuki2f5hfm5tnk6ks72mp6chblwcp2m55b7q74mt6uc73ky?filename=a.mp4</a></td>
+      </tr>
+  </tbody>
+</table>
+<p>They all went quite well for the 12h time of the experiments, without much
+impact on the battery.</p>
+<p>The experiment with the <a href="https://konubinix.eu/braindump/posts/camcorderprofile/?title=camcorderprofile#">CamcorderProfile</a> has 3 cuts because I got the
+phone back to check the intermediate result. This was not easy to do remotely.</p>
+<p>I looks like the test with releasing the wakelock led to photos of lesser
+quality. I assume that the camera tries to focus and adjust the brightness
+when the screen is awaken up and that the grab_frame that follows may grab a
+frame before this process has stabilized. But I won&rsquo;t dig into this, because
+keeping the screen awake it more than enough for the timelapses I have in
+mind.</p>
+<p>Also, using the <a href="https://konubinix.eu/braindump/posts/camcorderprofile/?title=camcorderprofile#">CamcorderProfile</a> and <a href="https://konubinix.eu/braindump/posts/mediarecorder/?title=mediarecorder#">MediaRecorder</a> led to the best results, but with the drawbacks that:</p>
+<ul>
+<li>I cannot see intermediate results and therefore it is harder to check that everything goes well,</li>
+<li>if something goes wrong, like a sudden crash of the phone or the app
+becoming unresponsive, the video won&rsquo;t be closed properly and the whole work might be lost.</li>
+</ul>
+<p>I could try to mitigate those, by streaming the content (like in spydroid) and
+improve the remote connection, but that is a story for another time.</p>
+<h2 id="24ae2566-01d1-4006-8d5d-7d14767f815b">recording a video</h2>
+<p>Now that we understood bit <a href="https://konubinix.eu/braindump/posts/mediarecorder/?title=mediarecorder#">MediaRecorder</a>, this is quite easy:</p>
+<p><a id="code-snippet--videorecorder"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">plyer</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.app</span> <span style="color:#000;font-weight:bold">import</span> App
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.lang</span> <span style="color:#000;font-weight:bold">import</span> Builder
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.boxlayout</span> <span style="color:#000;font-weight:bold">import</span> BoxLayout
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.core.camera</span> <span style="color:#000;font-weight:bold">import</span> Camera
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">json</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">datetime</span> <span style="color:#000;font-weight:bold">import</span> datetime
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.screenmanager</span> <span style="color:#000;font-weight:bold">import</span> Screen, ScreenManagerException, ScreenManager
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">threading</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">contextlib</span> <span style="color:#000;font-weight:bold">import</span> contextmanager
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">logging</span> <span style="color:#000;font-weight:bold">import</span> getLogger
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.osc</span> <span style="color:#000;font-weight:bold">import</span> to_service, oschandler
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.wakelock</span> <span style="color:#000;font-weight:bold">import</span> WakeLock
+</span></span><span style="display:flex;"><span>MediaRecorder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder&#39;</span>)
+</span></span><span style="display:flex;"><span>AudioSource <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$AudioSource&#39;</span>)
+</span></span><span style="display:flex;"><span>VideoSource <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$VideoSource&#39;</span>)
+</span></span><span style="display:flex;"><span>OutputFormat <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$OutputFormat&#39;</span>)
+</span></span><span style="display:flex;"><span>AudioEncoder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$AudioEncoder&#39;</span>)
+</span></span><span style="display:flex;"><span>VideoEncoder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$VideoEncoder&#39;</span>)
+</span></span><span style="display:flex;"><span>CamcorderProfile <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.CamcorderProfile&#39;</span>)
+</span></span><span style="display:flex;"><span>CameraParameters <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#34;android.hardware.Camera$Parameters&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>logger <span style="color:#000;font-weight:bold">=</span> getLogger(__name__)
+</span></span><span style="display:flex;"><span>wl <span style="color:#000;font-weight:bold">=</span> WakeLock(<span style="color:#d14">&#39;videorecorder&#39;</span>, wakeup<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Builder<span style="color:#000;font-weight:bold">.</span>load_string(<span style="color:#d14">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&lt;Videorecorder&gt;:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    orientation: &#34;vertical&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Label:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        id: message
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#39;Press start to begin&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Button:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        id: toggle
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#34;Start&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        on_press: root.toggle()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    Button:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        size_hint_y: 0.5
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        text: &#34;Clean&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        on_press: root.clean()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&#34;&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">VideorecorderScreen</span>(Screen):
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args, <span style="color:#000;font-weight:bold">**</span>kwargs):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(VideorecorderScreen, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__(<span style="color:#000;font-weight:bold">*</span>args, <span style="color:#000;font-weight:bold">**</span>kwargs)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>videorecorder <span style="color:#000;font-weight:bold">=</span> Videorecorder()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>videorecorder)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_leave<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_leave_handler)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_enter<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_enter_handler)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_leave_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>videorecorder<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_enter_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        to_service(<span style="color:#d14">&#34;videorecorder:enter&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">Videorecorder</span>(BoxLayout):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(Videorecorder, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>video_dir <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;/sdcard/videos&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@oschandler</span>(<span style="color:#d14">&#34;videorecorder:start&#34;</span>, answer<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_</span>(_):
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@oschandler</span>(<span style="color:#d14">&#34;videorecorder:stop&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_</span>(_):
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>running:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#3c5d5d;font-weight:bold">@property</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">running</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder <span style="color:#000;font-weight:bold">is</span> <span style="color:#000;font-weight:bold">not</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">stop</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>brightness(<span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>release()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>_release_camera()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        wl<span style="color:#000;font-weight:bold">.</span>release()
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic"># toggle button to its original background</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>toggle<span style="color:#000;font-weight:bold">.</span>background_color <span style="color:#000;font-weight:bold">=</span> (<span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">brightness</span>(<span style="color:#999">self</span>, value):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.runnable</span> <span style="color:#000;font-weight:bold">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span>        WindowManagerLayoutParams <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.WindowManager$LayoutParams&#39;</span>)
+</span></span><span style="display:flex;"><span>        window <span style="color:#000;font-weight:bold">=</span> mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()
+</span></span><span style="display:flex;"><span>        layout_params <span style="color:#000;font-weight:bold">=</span> window<span style="color:#000;font-weight:bold">.</span>getAttributes()
+</span></span><span style="display:flex;"><span>        layout_params<span style="color:#000;font-weight:bold">.</span>screenBrightness <span style="color:#000;font-weight:bold">=</span> value
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">do</span>():
+</span></span><span style="display:flex;"><span>            window<span style="color:#000;font-weight:bold">.</span>setAttributes(layout_params)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        do()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">start</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        wl<span style="color:#000;font-weight:bold">.</span>acquire()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>brightness(<span style="color:#099">0.01</span>)
+</span></span><span style="display:flex;"><span>        logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Initializing Camera&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam <span style="color:#000;font-weight:bold">=</span> Camera(
+</span></span><span style="display:flex;"><span>            resolution<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1600</span>, <span style="color:#099">1200</span>), <span style="color:#998;font-style:italic"># that does not matter I suppose</span>
+</span></span><span style="display:flex;"><span>            index<span style="color:#000;font-weight:bold">=</span><span style="color:#099">0</span>, <span style="color:#998;font-style:italic"># index=1 for front camera (in general)</span>
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        nil
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>_android_camera<span style="color:#000;font-weight:bold">.</span>unlock()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>toggle<span style="color:#000;font-weight:bold">.</span>background_color <span style="color:#000;font-weight:bold">=</span> (<span style="color:#099">1</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder <span style="color:#000;font-weight:bold">=</span> MediaRecorder()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setCamera(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>cam<span style="color:#000;font-weight:bold">.</span>_android_camera)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setVideoSource(VideoSource<span style="color:#000;font-weight:bold">.</span>CAMERA)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setAudioSource(AudioSource<span style="color:#000;font-weight:bold">.</span>MIC)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic"># profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic"># profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH_SPEED_HIGH)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic"># self.recorder.setProfile(profile)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setVideoEncodingBitRate(<span style="color:#099">1000000</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setOutputFormat(OutputFormat<span style="color:#000;font-weight:bold">.</span>DEFAULT)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setAudioEncoder(AudioEncoder<span style="color:#000;font-weight:bold">.</span>DEFAULT)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setVideoEncoder(VideoEncoder<span style="color:#000;font-weight:bold">.</span>DEFAULT)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setVideoSize(<span style="color:#099">720</span>, <span style="color:#099">480</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic"># self.recorder.setVideoFrameRate(30)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic"># self.recorder.setCaptureRate(25)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>setOutputFile(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>generate_filename())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>prepare()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">generate_filename</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>exists(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>video_dir):
+</span></span><span style="display:flex;"><span>            os<span style="color:#000;font-weight:bold">.</span>mkdir(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>video_dir)
+</span></span><span style="display:flex;"><span>        now <span style="color:#000;font-weight:bold">=</span> datetime<span style="color:#000;font-weight:bold">.</span>now()
+</span></span><span style="display:flex;"><span>        formatted_time <span style="color:#000;font-weight:bold">=</span> now<span style="color:#000;font-weight:bold">.</span>strftime(<span style="color:#d14">&#34;%Y%m</span><span style="color:#d14">%d</span><span style="color:#d14">_%H%M%S&#34;</span>) <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;.</span><span style="color:#d14">{:06d}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">.</span>format(now<span style="color:#000;font-weight:bold">.</span>microsecond)
+</span></span><span style="display:flex;"><span>        filename <span style="color:#000;font-weight:bold">=</span> os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>join(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>video_dir, <span style="color:#d14">&#34;</span><span style="color:#d14">{}</span><span style="color:#d14">.mp4&#34;</span><span style="color:#000;font-weight:bold">.</span>format(formatted_time))
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> filename
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">toggle</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>recorder:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>toggle<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Start&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>ids<span style="color:#000;font-weight:bold">.</span>toggle<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Stop&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">clean</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">import</span> <span style="color:#555">shutil</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>exists(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>video_dir):
+</span></span><span style="display:flex;"><span>            shutil<span style="color:#000;font-weight:bold">.</span>rmtree(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>video_dir)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">VideorecorderApp</span>(App):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#3c5d5d;font-weight:bold">@staticmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">populate</span>(sm):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>            sm<span style="color:#000;font-weight:bold">.</span>get_screen(<span style="color:#d14">&#39;videorecorder&#39;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">except</span> ScreenManagerException:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">pass</span> <span style="color:#998;font-style:italic"># not populated yet</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        sm<span style="color:#000;font-weight:bold">.</span>add_widget(VideorecorderScreen(name<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;videorecorder&#39;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">build</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        sm <span style="color:#000;font-weight:bold">=</span> ScreenManager()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>populate(sm)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> sm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">run</span>():
+</span></span><span style="display:flex;"><span>    VideorecorderApp()<span style="color:#000;font-weight:bold">.</span>run()
+</span></span></code></pre></div><!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="https://konubinix.eu/braindump/posts/android/?title=access_the_camera_to_take_pictures#access-the-camera-to-take-pictures">access the camera to take pictures</a> (braindump)</li>
+<li><a href="https://konubinix.eu/braindump/posts/deflickering_a_timelapse/?title=deflickering_a_timelapse#">deflickering a timelapse</a> (braindump)</li>
+<li><a href="https://konubinix.eu/braindump/posts/prevent_rats_from_eating_my_chicken_s_food/?title=prevent_rats_from_eating_my_chicken_s_food#">prevent rats from eating my chicken&rsquo;s food</a> (braindump)</li>
+<li><a href="https://konubinix.eu/braindump/posts/streaming_video_with_kivy/?title=streaming_video_with_kivy#">streaming video with kivy</a> (braindump)</li>
+<li><a href="https://konubinix.eu/braindump/posts/timelapse/?title=timelapse#">timelapse</a> (braindump)</li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/cb377400-a868-41fc-b870-467ac07eea66?title=use_the_camera_with_kivy_on_android">Permalink</a></h2>
+  </article>
+  <aside class="date"><time>Last updated: 18 Jun 2025</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 04 Nov 2024</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

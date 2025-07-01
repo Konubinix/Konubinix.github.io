@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Clk K8s: Accessing the Host From the Pod on Linux and Mac &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Clk K8s: Accessing the Host From the Pod on Linux and Mac</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<p><a href="https://konubinix.eu/braindump/posts/clk_k8s/?title=clk_k8s#">clk k8s</a> is a tool meant to ease the creation and maintenance of a dev k8s stack.</p>
+<p>When I deploy a local k8s stack, I sometimes want the pods to access the
+host. Because some services need to discuss with others using the public API,
+hence the <a href="https://konubinix.eu/braindump/posts/kubernetes/?title=ingress#ingress">ingress</a>, hence the docker published ports.</p>
+<p>Note that I wrote another, <a href="/blog/posts/clk_k8s_and_earthly_in_a_local_dev_env/">more generic article</a> that may help understand this
+one.</p>
+<p>One classical example is authorization. The servers should call the
+<a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=authorization_server#authorization-server">authorization server</a> to check the validity of the <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=access_token#access-token">access token</a>, using some
+public address. In the local development stack, it makes sense to deploy this
+authority locally, in another docker container or helm application. And it makes
+more sense to discuss with it using a &ldquo;public&rdquo; interface rather than an internal
+network.</p>
+<p>In more concrete term, you configure your ingresses to bind to custom domain
+names that redirect to 127.0.0.1, like mystack.<a href="https://konubinix.eu/braindump/posts/localtest_me/?title=localtest_me#">localtest.me</a>. Then, you use the
+command <code>clk k8s add-domain mystack.localtest.me</code> to make this domain actually
+resolve to the host from the perspective of the pods. That way, every actors of
+your program, whether it runs on the host or inside the k8s stack, can connect
+and use the exposed services.</p>
+<p>As it happens, this is not as simple as it seems.</p>
+<h2 id="91bacf24-9477-4d36-a95c-60310186d213">in linux</h2>
+<p>So far, I used the gateway IP of the docker bridge network as IP address to
+connect to when wanting to access host services.</p>
+<p>Let&rsquo;s simplify the scenario by running a simple nc command on the host.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">while</span> true; <span style="color:#000;font-weight:bold">do</span> nc -l -p 9999; <span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><p>Then, you can generally access it using the bridge gateway IP.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc 172.17.0.1 9999 &lt; &lt;(date)&#34;</span>
+</span></span></code></pre></div><p>You should see the date appear on the listening side of the connection.</p>
+<p>This also works from a pod running in the local cluster.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl create deployment --image nginx nginx
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt update
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt install netcat-traditional
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- nc 172.17.0.1 <span style="color:#099">9999</span> &lt; &lt;<span style="color:#000;font-weight:bold">(</span>date<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>This also shows the date on the listening side.</p>
+<p>There is nothing difficult here.</p>
+<h2 id="678b2a88-0377-4e7a-89c3-e523b4d9d50f">in mac</h2>
+<p>The listening nc command needs to be slightly different.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">while</span> true; <span style="color:#000;font-weight:bold">do</span> nc -l 0.0.0.0 9999; <span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><h3 id="18ca9b67-352e-497f-a04f-5af6f50c1e3e">with docker desktop</h3>
+<p>When people install docker in mac, they generally use the official docker
+desktop one. So let&rsquo;s try it first.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc 172.17.0.1 9999 &lt; &lt;(date)&#34;</span>
+</span></span></code></pre></div><p>This does nothing and fails.</p>
+<p>They recommend using <a href="https://konubinix.eu/braindump/posts/docker/?title=host_docker_internal#host-dot-docker-dot-internal">host.docker.internal</a>.</p>
+<p>Let&rsquo;s try it.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc host.docker.internal 9999 &lt; &lt;(date)&#34;</span>
+</span></span></code></pre></div><p>This one works.</p>
+<p>So far so good. Let&rsquo;s try it in the cluster.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk k8s create-cluster --flow
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl create deployment --image nginx nginx
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt update
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt install netcat-traditional
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- nc host.docker.internal <span style="color:#099">9999</span> &lt; &lt;<span style="color:#000;font-weight:bold">(</span>date<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>It times out.</p>
+<p>We can see that the ip address is correctly resolved though.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt install -y bind9-dnsutils
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- dig +short host.docker.internal
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>192.168.65.254
+</span></span></code></pre></div><p>Let&rsquo;s try it with <a href="https://konubinix.eu/braindump/posts/kubernetes/?title=k3d#k3d">k3d</a> instead of <a href="https://konubinix.eu/braindump/posts/kubernetes/?title=kind#kind">kind</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk k8s remove
+</span></span><span style="display:flex;"><span>clk k8s --distribution k3d create-cluster --flow
+</span></span><span style="display:flex;"><span>kubectl create deployment --image nginx nginx
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt update
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt install netcat-traditional
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- nc host.docker.internal <span style="color:#099">9999</span> &lt; &lt;<span style="color:#000;font-weight:bold">(</span>date<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>Indeed, host.docker.internal is not even resolved.</p>
+<p>Let&rsquo;s make sure of this.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt install -y bind9-dnsutils
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- dig +short host.docker.internal
+</span></span></code></pre></div><p>There is no returned ip address, showing that host.docker.internal does not
+resolve.</p>
+<p>Let&rsquo;s try using its IP address directly.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- nc 192.168.65.254 <span style="color:#099">9999</span> &lt; &lt;<span style="color:#000;font-weight:bold">(</span>date<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>Again, time out.</p>
+<p>In fact, even though it is published on the host, the hosted service is
+generally run in docker as well.</p>
+<p>So let&rsquo;s try with the server part running inside docker.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run -i -t --rm -p 9999:9999 alpine sh -c <span style="color:#d14">&#34;while true;do /usr/bin/nc -l -p 9999 -e echo hi;done&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14"> 9999 &lt; /dev/null&#34;</span>
+</span></span></code></pre></div><p>This also times out.</p>
+<p>Using the host.docker.internal address</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14"> 9999 &lt; /dev/null&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>And again in k8s</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl create deployment --image nginx nginx
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt update
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt install netcat-traditional
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- nc host.docker.internal <span style="color:#099">9999</span> &lt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>So, using host.docker.internal works in k8s, using kind.</p>
+<p>With k3d though, it still does not find the host.docker.internal address and
+times out with 192.168.65.254.</p>
+<p>We could dig into the networking stuff, but I don&rsquo;t think that it is worth
+it, because they are other more promising docker stacks. Also, the
+host.docker.internal name is not practical for it makes more complicated the
+scenario mentioned above with a custom domain like mystack.localtest.me.</p>
+<p>Also, I don&rsquo;t like docker desktop much, because it can only be managed using
+the graphical user interface, which is not <a href="https://konubinix.eu/braindump/posts/infrastructure_as_code/?title=infrastructure_as_code#">IaC</a> friendly.</p>
+<h3 id="6721b110-645d-436e-9878-f82255f20291">trying with colima</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/Users/sam/.nix-profile/bin/colima start --network-address
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>&gt; Successfully created context &#34;colima&#34;
+</span></span><span style="display:flex;"><span>&gt; Current context is now &#34;colima&#34;
+</span></span></code></pre></div><p>Let&rsquo;s first try with the default bridge gateway ID address</p>
+<p><a id="code-snippet--ip-colima"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker network inspect bridge | /Users/sam/.nix-profile/bin/jq -r <span style="color:#d14">&#34;.[0].IPAM.Config[0].Gateway&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>172.17.0.1
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14"> 9999 &lt; &lt;(date)&#34;</span>
+</span></span></code></pre></div><p>It fails.</p>
+<p>This is expected, because colima runs inside a virtual machine, it can access the
+host only using the colima network interface created for this.</p>
+<p><a id="code-snippet--ip2-colima"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/Users/sam/.nix-profile/bin/colima list --json | /Users/sam/.nix-profile/bin/jq -r .address
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>192.168.107.2
+</span></span></code></pre></div><p>Let&rsquo;s try with this interface, substituting 2 by 1 to get to the host.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span>%*.*<span style="color:#d14">}</span><span style="color:#d14">.1 9999 &lt; &lt;(date)&#34;</span>
+</span></span></code></pre></div><p>I can see the date in the listening side, meaning that it works.</p>
+<p>But that is not practical, because I have to run a specific colima command to
+know the ip address.</p>
+<h4 id="834fa6d8-ed40-4826-a722-33ebd44bbbb0">with the listening part running with docker run -p</h4>
+<p>As explained earlier, most of my tools are running in docker. So the
+scenario that I am more interested in is when the server part is also a
+container.</p>
+<p>First, let&rsquo;s run the nc listening part in docker.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run -i -t --rm -p 9999:9999 alpine sh -c <span style="color:#d14">&#34;while true;do /usr/bin/nc -l -p 9999 -e echo hi;done&#34;</span>
+</span></span></code></pre></div><p>First, let&rsquo;s discuss with it from the host.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nc localhost <span style="color:#099">9999</span> &lt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>That&rsquo;s ok, now let&rsquo;s try to discuss with it using the bridge gateway IP from
+a docker container.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14"> 9999 &lt; /dev/null&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>That sounds promising, let&rsquo;s try with the colima address.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14"> 9999 &lt; /dev/null&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>Now, let&rsquo;s try from another network.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker network create a
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run --network a alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14"> 9999 &lt; /dev/null&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>Great. Let&rsquo;s just try with the colima ip address as well.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run --network a alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14"> 9999 &lt; /dev/null&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>Everything works as expected here.</p>
+<h4 id="0b123495-28f6-4401-9677-a0c61cc6fb6e">with k8s</h4>
+<p>Now, let&rsquo;s try from a k8s deployment.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/Users/sam/.local/bin/clk k8s --distribution kind create-cluster
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl create deployment --image nginx nginx
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt update
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt install netcat-traditional
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- nc <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#099">9999</span> &lt; &lt;<span style="color:#000;font-weight:bold">(</span>date<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>And using the colima address</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- nc <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#099">9999</span> &lt; &lt;<span style="color:#000;font-weight:bold">(</span>date<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>Sound like everything is working well.</p>
+<h3 id="679f7a23-ed4d-4d6e-a84a-064bdf0f7247">trying with orb</h3>
+<p><a id="code-snippet--ip-orb"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker network inspect bridge | /Users/sam/.nix-profile/bin/jq -r <span style="color:#d14">&#34;.[0].IPAM.Config[0].Gateway&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>192.168.215.1
+</span></span></code></pre></div><p>That is not practical as a lot of tools assume this IP address is <a href="https://konubinix.eu/braindump/posts/adresse_de_la_machine_hote_dans_docker/?title=adresse_de_la_machine_hote_dans_docker#">172.17.0.1</a>.</p>
+<p>Running the listening part in the host</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">while</span> true; <span style="color:#000;font-weight:bold">do</span> nc -l 0.0.0.0 9999; <span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine sh -c <span style="color:#d14">&#34;nc </span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14"> 9999 &lt; &lt;(date)&#34;</span>
+</span></span></code></pre></div><p>It fails. Like in colima, the virtual machine prevents accessing the host
+from the container using the gateway ip.</p>
+<p>Now, trying from docker to docker.</p>
+<p>The listening part now looks like (I took the liberty of putting it already
+in a separate network to test this case as well):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run -i -t --rm --network b -p 9999:9999 alpine sh -c <span style="color:#d14">&#34;while true;do /usr/bin/nc -l -p 9999 -e echo hi;done&#34;</span>
+</span></span></code></pre></div><p>Then,</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run alpine nc <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#099">9999</span> &lt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>Great. Now from k8s</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl create deployment --image nginx nginx
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt update
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- apt install netcat-traditional
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> deployment/nginx -- nc <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#099">9999</span> &lt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>So it looks like orb also deals correctly with connecting the pods using the
+gateway ip.</p>
+<h2 id="381f01f6-e293-4498-a15c-91e0e05dfcc5">conclusion</h2>
+<p>To ease developing in a k8s dev stack, I would definitely avoid docker desktop.</p>
+<p>orb and colima work quite well regarding this use case.</p>
+<p>orb is fast, but the strange gateway ip address may lead to issues. Also, it
+is closed source.</p>
+<p>colima works well, is open source and has plenty of customization features. I
+can even enter its virtual machine and install custom stuff in there.</p>
+<p>Therefore, I would tend to use colima.</p>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/blog/posts/clk_k8s_and_earthly_in_a_local_dev_env/">clk k8s and earthly in a local dev env</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/20e01f12-a21c-43b2-a453-726aec7243e1?title=clk_k8s_accessing_the_host_from_the_pod_on_linux_and_mac">Permalink</a></h2>
+  </article>
+  <aside class="date"><time>Last updated: 06 Jun 2024</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 23 May 2024</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

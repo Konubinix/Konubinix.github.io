@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Make Sense of Keycloak, Openid Connect, Oauth 2.0, Jwt, Jws &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Make Sense of Keycloak, Openid Connect, Oauth 2.0, Jwt, Jws</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<p>make sense of <a href="https://konubinix.eu/braindump/posts/keycloak/?title=keycloak#">keycloak</a>, <a href="https://konubinix.eu/braindump/posts/openid_connect/?title=openid_connect#">openid connect</a>, <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0#">oauth 2.0</a>, <a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=json_web_tokens#">jwt</a>, <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=json_web_signature#">jws</a>.</p>
+<p>I needed to setup some keycloak as <a href="https://konubinix.eu/braindump/posts/identification_and_access_manager/?title=identification_and_access_manager#">IAM</a>. I was fast overwhelmed with all the
+concepts that I&rsquo;m supposed to know before hand.</p>
+<p>Here is a recap of what I could make sense of.</p>
+<h2 id="44917441-a5a0-4064-bb79-2e470a763706"><a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0#">Oauth 2.0</a> to define the authentication flow</h2>
+<p>OAuth 2.0 defines several roles.</p>
+<blockquote>
+<p>OAuth defines four roles:</p>
+<dl>
+<dt>resource owner</dt>
+<dd>An entity capable of granting access to a protected resource.
+When the resource owner is a person, it is referred to as an
+end-user.</dd>
+<dt>resource server</dt>
+<dd>The server hosting the protected resources, capable of accepting
+and responding to protected resource requests using access tokens.</dd>
+<dt>client</dt>
+<dd>An application making protected resource requests on behalf of the
+resource owner and with its authorization.  The term &ldquo;client&rdquo; does
+not imply any particular implementation characteristics (e.g.,
+whether the application executes on a server, a desktop, or other
+devices).</dd>
+<dt>authorization server</dt>
+<dd>The server issuing access tokens to the client after successfully
+authenticating the resource owner and obtaining authorization.</dd>
+</dl>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-1.1">https://datatracker.ietf.org/doc/html/rfc6749#section-1.1</a></p>
+</blockquote>
+<p>And defines several flows to:</p>
+<ul>
+<li>let the client</li>
+<li>obtain an authorization grant from the resource owner</li>
+<li>in order to gain an access token against the authorization server</li>
+<li>so as to get access to the resources</li>
+<li>of the resource owner</li>
+<li>from the resource server.</li>
+</ul>
+<p>This abstract flow is defined like this:</p>
+<blockquote>
+<figure><img src="https://konubinix.eu/ipfs/bafkreicv6wlk54ummx4afiso2hemrq4fcx7f4atys4zkhgcuh4sqinymxm?filename=a.png">
+</figure>
+
+<ul>
+<li>
+<p>(A) The client requests authorization from the resource owner.  The
+authorization request can be made directly to the resource owner (as shown),
+or preferably indirectly via the authorization server as an intermediary.</p>
+</li>
+<li>
+<p>(B) The client receives an authorization grant, which is a credential
+representing the resource owner&rsquo;s authorization, expressed using one of four
+grant types defined in this specification or using an extension grant type.
+The authorization grant type depends on the method used by the client to
+request authorization and the types supported by the authorization server.</p>
+</li>
+<li>
+<p>(C) The client requests an access token by authenticating with the
+authorization server and presenting the authorization grant.</p>
+</li>
+<li>
+<p>(D) The authorization server authenticates the client and validates the
+authorization grant, and if valid, issues an access token.</p>
+</li>
+<li>
+<p>(E) The client requests the protected resource from the resource server and
+authenticates by presenting the access token.</p>
+</li>
+<li>
+<p>(F) The resource server validates the access token, and if valid, serves the
+request.</p>
+</li>
+</ul>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749</a></p>
+</blockquote>
+<p>It distinguish between two types of clients:</p>
+<ul>
+<li>confidential clients can store the user credential and only need to get the authorizations from the authorization server,</li>
+<li>public clients cannot and need the authorization server to perform the login.</li>
+</ul>
+<p>In the later, it means that in the flow, the user is asked to login into the
+authorization server and then the client is given the access token (more on
+that token later).</p>
+<p>It explains that the three following use cases<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> where driving this specification:</p>
+<ol>
+<li>an old school web application, where the server can connect to the
+authorization server and then is confidential,</li>
+<li>a new style web application, where the logic is executed browser side, hence
+considered not trust worthy and public,</li>
+<li>a native application, where the logic is also executed in the user device,
+hence also considered not trust worthy and public,</li>
+</ol>
+<p>Each client is given a client identifier by the authorization server. This
+identifier is not a secret. For confidential clients, a client secret is also
+given that allows the client to authenticate. It is said that public client may
+have a client secret, but that the authorization server should not actually
+take this into account, due to the non trust worthiness of the client.</p>
+<p>There are 4 ways<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> to have the resource owner grant, most of which use HTTP redirection:</p>
+<ol>
+<li>authorization code: redirecting the user to an authorization server to log in
+and redirect back to the client. It is optimized for confidential clients as
+it assumes the client is secure enough to store its refresh token,</li>
+<li>implicit: like the authorization code, but the client is directly given the
+access token instead of being redirected. This only makes sense when the
+client is implemented in a browser native language, such as javascript. It
+exists so as to make the client slightly more responsive, while it is less
+secure because there has been no intermediary authorization server to
+authenticate the user. It is optimized for public clients as it does not
+provide a refresh token and force the client to register anew often.</li>
+<li>resource owner user and password<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>: is considered a least preferred choice<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup> and
+assumes the resource owner trusts the client for not stealing or leaking per
+credentials.</li>
+<li>client credential: is a lot alike 3, but when the client is only used by one
+user, and then there is no need to have a user credential. In that case, the
+client identification is enough. It makes sense when the resource are
+actually under the exclusive control of the client.</li>
+</ol>
+<p>In any case, the client eventually get an access token, that can be used to get
+access to the resource. The access token is considered ephemeral. This provides
+a mean to easily revoke ones right by the non possibility of getting a new fresh
+access token. To help refreshing the access token without getting through the
+whole grant flow, the authorization server may provide a refresh token that can
+be used in the future to claim for a new fresh access token.</p>
+<p>When asking for an access token, the client provides a wanted scope. The
+authorization server may ignore some of this scope and eventually returns the
+scope for which the token is issued. What this scope gives access to is beyond
+the scope of the specification (pun intended).</p>
+<p>In this specification, the access token is a short lived so-called <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=bearer_token#bearer-token">bearer token</a>.</p>
+<p>Now, we need to dig a little bit into this token.</p>
+<h2 id="d1565143-6865-4dff-ba4f-210fc7027e5b">using a bearer token encoded in <a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=json_web_tokens#">JWT format</a>?</h2>
+<p>There is nothing in <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0#">OAuth 2.0</a> against putting some information into the
+bearer token issued by the authorization server.</p>
+<p>Even though <a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=json_web_tokens#">JWT</a>, <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=jose_header#jose-header">JOSE header</a>, <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=json_web_signature#">JWS</a> and <a href="https://konubinix.eu/braindump/posts/json_web_encryption/?title=json_web_encryption#">JWE</a> are defined in separate standards,
+they overlap and depend on each other. We can easily understand that they all
+combine to provide this concepts of a <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded access tokens</a>.</p>
+<p><a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=json_web_tokens#">JSON web tokens</a> is a format to encode claims (a.k.a. key value pairs telling
+something about the resource owner). <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=jws_compact_serialization#jws-compact-serialization">JWS Compact Serialization</a> is the way to put
+this data into a URL (required by <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0#">OAuth 2.0</a>). This also appears to be the reason
+why claims must be as short as possible and the standardized claims have keys of
+only 3 characters (iss, sub, aud, exp,&hellip;).</p>
+<p><span class="org-target" id="org-target--dd9cd5bd-31bd-4e47-bc2b-dd5a27a8f0fc"></span> <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=jose_header#jose-header">JOSE header</a> is defined in <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=json_web_signature#">JWS</a> (in <a href="https://datatracker.ietf.org/doc/html/rfc7515#section-4">here</a>)
+and <a href="https://konubinix.eu/braindump/posts/json_web_encryption/?title=json_web_encryption#">JWE</a> (in <a href="https://datatracker.ietf.org/doc/html/rfc7516#section-4">here</a>). It is a standard of encoding in json the information about
+how to use the JWS or JWE payload. It contains the type of the payload and the
+signature/encryption algorithms and hashes to use.</p>
+<p><a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=json_web_signature#">JSON Web Signature</a> describes how to concatenate a <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=jose_header#jose-header">JOSE header</a>, a payload
+and a signature, encoded in base64 and then separated with spaces.</p>
+<p>You can easily take a look at a <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=json_web_signature#">JWS</a> in the site <a href="https://jwt.io">https://jwt.io</a>. By the way, the
+fact that this site is called JWT but actually shows JWS data is a sign that all
+those concepts are not meant to be thought separately. Therefore, when people
+talk about JWT, they often mean a JWS compactly serialized payload encoded in
+JWT (see also <a href="/blog/posts/should_i_say_jwt_or_jwt_token_or_jws_token_or/">should I say JWT or JWT token, or JWS token or&hellip;?</a>)</p>
+<p>Hence, for example, the following JWS data, signed with the secret &ldquo;test&rdquo;.</p>
+<p><a id="org051fdae"></a></p>
+<p>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.5mhBHqs5_DTLdINd9p5m7ZJ6XD0Xc55kIaCRY5r6HRA</p>
+<p>Can easily be processed with the following python code</p>
+<p>As stated in the appendix C, they don&rsquo;t provide base64 padding, hence we
+artificially add an extra padding of &ldquo;<code>=</code>&rdquo; to make python implementation accept
+those base64 encoded content. Also, they replace the + and / character of the
+base64 alphabet respectively with - and _. This makes sense, as this content will eventually
+be put into a URL, but one could ask why not using a more URL friendly encoding,
+like base58 or base32.</p>
+<p>Therefore the python code to read such data should be like:</p>
+<p><a id="code-snippet--fc84469f-bc34-49c0-b70b-ba0d63d94597"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">base64</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">base64decode</span>(content):
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> base64<span style="color:#000;font-weight:bold">.</span>b64decode(content<span style="color:#000;font-weight:bold">.</span>replace(<span style="color:#d14">&#34;-&#34;</span>, <span style="color:#d14">&#34;+&#34;</span>)<span style="color:#000;font-weight:bold">.</span>replace(<span style="color:#d14">&#34;_&#34;</span>, <span style="color:#d14">&#34;/&#34;</span>) <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;===&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">base64encode</span>(content):
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> base64<span style="color:#000;font-weight:bold">.</span>b64encode(content)<span style="color:#000;font-weight:bold">.</span>replace(<span style="color:#d14">b</span><span style="color:#d14">&#34;+&#34;</span>, <span style="color:#d14">b</span><span style="color:#d14">&#34;-&#34;</span>)<span style="color:#000;font-weight:bold">.</span>replace(<span style="color:#d14">b</span><span style="color:#d14">&#34;/&#34;</span>, <span style="color:#d14">b</span><span style="color:#d14">&#34;_&#34;</span>)<span style="color:#000;font-weight:bold">.</span>rstrip(<span style="color:#d14">b</span><span style="color:#d14">&#34;=&#34;</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">json</span>
+</span></span><span style="display:flex;"><span>jose_str, jwt_payload_str, signature <span style="color:#000;font-weight:bold">=</span> jws<span style="color:#000;font-weight:bold">.</span>split(<span style="color:#d14">&#34;.&#34;</span>)
+</span></span><span style="display:flex;"><span>jose <span style="color:#000;font-weight:bold">=</span> json<span style="color:#000;font-weight:bold">.</span>loads(base64decode(jose_str))
+</span></span><span style="display:flex;"><span>jwt_payload <span style="color:#000;font-weight:bold">=</span> json<span style="color:#000;font-weight:bold">.</span>loads(base64decode(jwt_payload_str))
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">print</span>(<span style="color:#d14">f</span><span style="color:#d14">&#34;jose: </span><span style="color:#d14">{</span>jose<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">print</span>(<span style="color:#d14">f</span><span style="color:#d14">&#34;jwt_payload: </span><span style="color:#d14">{</span>jwt_payload<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>jose: {&#39;alg&#39;: &#39;HS256&#39;, &#39;typ&#39;: &#39;JWT&#39;}
+</span></span><span style="display:flex;"><span>jwt_payload: {&#39;sub&#39;: &#39;1234567890&#39;, &#39;name&#39;: &#39;John Doe&#39;, &#39;iat&#39;: 1516239022}
+</span></span></code></pre></div><p>To check the signature, we have to construct the HMACSHA256 (HS256 in the <a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=jose_header#jose-header">JOSE header</a>) of jose.jwt_payload with the key &ldquo;test&rdquo;.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">hmac</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">hashlib</span>
+</span></span><span style="display:flex;"><span>h <span style="color:#000;font-weight:bold">=</span> base64encode(hmac<span style="color:#000;font-weight:bold">.</span>new(secret<span style="color:#000;font-weight:bold">.</span>encode(), (jose_str <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;.&#34;</span> <span style="color:#000;font-weight:bold">+</span> jwt_payload_str)<span style="color:#000;font-weight:bold">.</span>encode(), hashlib<span style="color:#000;font-weight:bold">.</span>sha256)<span style="color:#000;font-weight:bold">.</span>digest())<span style="color:#000;font-weight:bold">.</span>decode()
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">print</span>(h)
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">print</span>(signature)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>5mhBHqs5_DTLdINd9p5m7ZJ6XD0Xc55kIaCRY5r6HRA
+</span></span><span style="display:flex;"><span>5mhBHqs5_DTLdINd9p5m7ZJ6XD0Xc55kIaCRY5r6HRA
+</span></span></code></pre></div><h2 id="e5b9c43f-b8a6-4219-82d2-e252ee75c269">Adding OpenID Connect</h2>
+<p>OpenID connect appears to be a specification that describes how to use OAuth
+2.0 to get not only an access token, but also a so called <a href="https://konubinix.eu/braindump/posts/openid_connect/?title=identity_token#identity-token">Identity Token</a>. This
+identity token is actually a a JWS token in which the JWT claims are user
+data.</p>
+<p>The scope of OAuth 2.0 is used to define what data to return in the id token.</p>
+<p>In order to get the id token along with the access token, the client needs to
+explicitly ask for the scope openid.</p>
+<p>The authorization servers that talks OpenID connect language are called OpenID
+providers. They are implementations of the <a href="https://konubinix.eu/braindump/posts/identity_provider/?title=identity_provider#">IdP</a> concept.  Also, the OAuth 2.0
+client is referred to as the Relying Party.</p>
+<p>This specification also tackle other topics, like <a href="https://konubinix.eu/braindump/posts/openid_connect/?title=openid_connect_provider#openid-connect-provider">OpenID Connect Provider</a>
+discovery, but that goes beyond the scope of what I think I need to
+understand so far.</p>
+<h2 id="37603580-d1ef-42bb-9ed2-86ea0c258468">Keycloak, finally</h2>
+<p>Keycloak is the <a href="https://konubinix.eu/braindump/posts/identity_provider/?title=identity_provider#">Identity Provider</a>, it provides the way to specify how to
+log in, possibly using stuff like <a href="https://konubinix.eu/braindump/posts/time_based_one_time_password/?title=time_based_one_time_password#">TOTP</a> and return signed access tokens
+that can be used by the applications to give the client access to the
+resources of the resource owner.</p>
+<h3 id="e6a32a02-093a-48a2-9e81-d12f2271c6d3">As an openid provider</h3>
+<p>When configured in OpenID Connect mode, keycloak becomes an OpenID Provider.</p>
+<p>We can connect and get an access token and a refresh token.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>http --form http://localhost:8080/auth/realms/test/protocol/openid-connect/token <span style="color:#008080">grant_type</span><span style="color:#000;font-weight:bold">=</span>password <span style="color:#008080">username</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">password</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">client_id</span><span style="color:#000;font-weight:bold">=</span>test|jq -M
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;access_token&#34;: &#34;eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJzZnRLYWpMbnRGeXBrTGh6cGo3bkhxMmxlU0wtdUxjbjk5NThCMG9QSmprIn0.eyJleHAiOjE2MzkxNTE3NzQsImlhdCI6MTYzOTE1MTQ3NCwianRpIjoiNTllMjQyNjktZjI3NC00MjRmLWJkZDUtNDdkNjMxOTUxOTQwIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL2F1dGgvcmVhbG1zL3Rlc3QiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiODgyY2NjNDMtODc5Yy00ZWI3LWI1MGMtOTY0YTc0NGJjMjc4IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoidGVzdCIsInNlc3Npb25fc3RhdGUiOiI1OTUxYTQxNy1jZDcxLTRjMTgtYWJiNi0yNGU1NjNlMjlkMzIiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtdGVzdCIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiI1OTUxYTQxNy1jZDcxLTRjMTgtYWJiNi0yNGU1NjNlMjlkMzIiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicHJlZmVycmVkX3VzZXJuYW1lIjoidGVzdCIsImVtYWlsIjoiYUBhLmEifQ.fo9tM3sZcGi7S3VeQdzLSXDRrHGMyF9plM5ZpWSA3MTaHtdzyMiUDtsaOWsDyLC9F03AyhCb0G5eR-wP5p_rl2pswh4WLnYmNN87SPSDn1V9yUzwzd-wcxsdVhj-ux_5YdxZpZsL0mzvxXMI1Mjzb56qBI9aA8FjOm9_aujuhCUlG4MT-K9XFuzkbS_ie9Lcz0ShsUPeSILb-yjyUYj0y9Pauf0YUAWRJbjXjDur-CxxawpuSLMl25Ocytxr2csrZR1cxLXHU5WhB0fz9Ss1tz6s3uaCoqEvBn3Iu-w58llMloLWbYQTTjoG7tDUpFvfwWpKoRdXVll6qTNcrmZ8IQ&#34;,
+</span></span><span style="display:flex;"><span>  &#34;expires_in&#34;: 300,
+</span></span><span style="display:flex;"><span>  &#34;refresh_expires_in&#34;: 1800,
+</span></span><span style="display:flex;"><span>  &#34;refresh_token&#34;: &#34;eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJlOTE0YTAwYi01YmI4LTRjMGUtODJlYi1iZGZmYmM2NTRkMTUifQ.eyJleHAiOjE2MzkxNTMyNzQsImlhdCI6MTYzOTE1MTQ3NCwianRpIjoiNzE4MTQ0M2QtMjk5My00MWI1LTgzODctYjE4NDA4MjhhZmFiIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL2F1dGgvcmVhbG1zL3Rlc3QiLCJhdWQiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdCIsInN1YiI6Ijg4MmNjYzQzLTg3OWMtNGViNy1iNTBjLTk2NGE3NDRiYzI3OCIsInR5cCI6IlJlZnJlc2giLCJhenAiOiJ0ZXN0Iiwic2Vzc2lvbl9zdGF0ZSI6IjU5NTFhNDE3LWNkNzEtNGMxOC1hYmI2LTI0ZTU2M2UyOWQzMiIsInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjU5NTFhNDE3LWNkNzEtNGMxOC1hYmI2LTI0ZTU2M2UyOWQzMiJ9.IdXCOw1kQwVsQG-5kt_jB51I7SQpghfYQhz5DnI6_jE&#34;,
+</span></span><span style="display:flex;"><span>  &#34;token_type&#34;: &#34;Bearer&#34;,
+</span></span><span style="display:flex;"><span>  &#34;not-before-policy&#34;: 0,
+</span></span><span style="display:flex;"><span>  &#34;session_state&#34;: &#34;5951a417-cd71-4c18-abb6-24e563e29d32&#34;,
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;profile email&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Here is a dumb bash function that can be used to parse the output of the keycloak token endpoint.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>parse <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">local</span> <span style="color:#008080">name</span><span style="color:#000;font-weight:bold">=</span><span style="color:#008080">$1</span>
+</span></span><span style="display:flex;"><span>    jq .<span style="color:#008080">$name</span> | cut -f2 -d. | base64 -d|jq -M
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>Then, by looking at the access token, we can see this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>http --form http://localhost:8080/auth/realms/test/protocol/openid-connect/token <span style="color:#008080">grant_type</span><span style="color:#000;font-weight:bold">=</span>password <span style="color:#008080">username</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">password</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">client_id</span><span style="color:#000;font-weight:bold">=</span>test|parse access_token
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1639151664,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1639151364,
+</span></span><span style="display:flex;"><span>  &#34;jti&#34;: &#34;4d638bb1-082d-4636-929e-025e07ea4657&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;http://localhost:8080/auth/realms/test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;aud&#34;: &#34;account&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;882ccc43-879c-4eb7-b50c-964a744bc278&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;Bearer&#34;,
+</span></span><span style="display:flex;"><span>  &#34;azp&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;session_state&#34;: &#34;fea3ccc4-c6b4-4fe6-88e6-8e797f5371a2&#34;,
+</span></span><span style="display:flex;"><span>  &#34;acr&#34;: &#34;1&#34;,
+</span></span><span style="display:flex;"><span>  &#34;realm_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>      &#34;default-roles-test&#34;,
+</span></span><span style="display:flex;"><span>      &#34;offline_access&#34;,
+</span></span><span style="display:flex;"><span>      &#34;uma_authorization&#34;
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;resource_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;account&#34;: {
+</span></span><span style="display:flex;"><span>      &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>        &#34;manage-account&#34;,
+</span></span><span style="display:flex;"><span>        &#34;manage-account-links&#34;,
+</span></span><span style="display:flex;"><span>        &#34;view-profile&#34;
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;profile email&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sid&#34;: &#34;fea3ccc4-c6b4-4fe6-88e6-8e797f5371a2&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email_verified&#34;: true,
+</span></span><span style="display:flex;"><span>  &#34;preferred_username&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email&#34;: &#34;a@a.a&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>We can see that the &ldquo;typ&rdquo; is <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=bearer_token#bearer-token">Bearer</a>, meaning &ldquo;don&rsquo;t try to interpret the
+content, I&rsquo;m just a token to authenticate&rdquo;, but the other claims contains much
+information about the user, like an OpenID Token would do.</p>
+<p>By providing the scope openid, we get.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>http --form http://localhost:8080/auth/realms/test/protocol/openid-connect/token <span style="color:#008080">grant_type</span><span style="color:#000;font-weight:bold">=</span>password <span style="color:#008080">username</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">password</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">client_id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">scope</span><span style="color:#000;font-weight:bold">=</span>openid|jq -M
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;access_token&#34;: &#34;eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJzZnRLYWpMbnRGeXBrTGh6cGo3bkhxMmxlU0wtdUxjbjk5NThCMG9QSmprIn0.eyJleHAiOjE2MzkxNTE4MzEsImlhdCI6MTYzOTE1MTUzMSwianRpIjoiZGI5NmYwMGItYzNiZS00N2VlLWE4ZTUtZTQzNmRiYWQyYmRmIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL2F1dGgvcmVhbG1zL3Rlc3QiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiODgyY2NjNDMtODc5Yy00ZWI3LWI1MGMtOTY0YTc0NGJjMjc4IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoidGVzdCIsInNlc3Npb25fc3RhdGUiOiJjZDRlYjVhMS0xYTk5LTRlNWItOGMyZC1iYjViNDNmMGRiYmEiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtdGVzdCIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwic2lkIjoiY2Q0ZWI1YTEtMWE5OS00ZTViLThjMmQtYmI1YjQzZjBkYmJhIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInByZWZlcnJlZF91c2VybmFtZSI6InRlc3QiLCJlbWFpbCI6ImFAYS5hIn0.fo8vkoPHaLrhnFIoz5dWX_zTwBoOb5KS3W7TjGj_o5Krw5MGrqyMTJDbAkCGNx3O2WgQkF_KvenX1dR9dERVNpsmROGk1Oeh5rRlEW4o4qZEwbnDQNJNIMGJj9XzZuFVSsn0DQtezcHmDYTJtETHNtKIz8JH2FeDYjSkzPa6Rm-YEBKDXdBk1GJ5LPY5lHQtwZCXIc0bET3NLAnqtodEd3373E0i-pdwPqR7jrVDCqAUQjYcpJc4O9Uvs8JcFsGX2kmigh-LanYKZtQQvlKyg5HZ--tCNqgHs-5Gj_QZlG5RoOQgcEmw5lcaKu8hgxJQKudeseLePBBBAIsh2LtAVQ&#34;,
+</span></span><span style="display:flex;"><span>  &#34;expires_in&#34;: 300,
+</span></span><span style="display:flex;"><span>  &#34;refresh_expires_in&#34;: 1800,
+</span></span><span style="display:flex;"><span>  &#34;refresh_token&#34;: &#34;eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJlOTE0YTAwYi01YmI4LTRjMGUtODJlYi1iZGZmYmM2NTRkMTUifQ.eyJleHAiOjE2MzkxNTMzMzEsImlhdCI6MTYzOTE1MTUzMSwianRpIjoiYjg4YTg4MWMtZWFlOC00ZTRiLWFiODctYTJjZGQ2YjI2MWY3IiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL2F1dGgvcmVhbG1zL3Rlc3QiLCJhdWQiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdCIsInN1YiI6Ijg4MmNjYzQzLTg3OWMtNGViNy1iNTBjLTk2NGE3NDRiYzI3OCIsInR5cCI6IlJlZnJlc2giLCJhenAiOiJ0ZXN0Iiwic2Vzc2lvbl9zdGF0ZSI6ImNkNGViNWExLTFhOTktNGU1Yi04YzJkLWJiNWI0M2YwZGJiYSIsInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJzaWQiOiJjZDRlYjVhMS0xYTk5LTRlNWItOGMyZC1iYjViNDNmMGRiYmEifQ.025A0GkY_Se4NxldFhDibQvXhVR6dVYcprzAjo0NDcQ&#34;,
+</span></span><span style="display:flex;"><span>  &#34;token_type&#34;: &#34;Bearer&#34;,
+</span></span><span style="display:flex;"><span>  &#34;id_token&#34;: &#34;eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJzZnRLYWpMbnRGeXBrTGh6cGo3bkhxMmxlU0wtdUxjbjk5NThCMG9QSmprIn0.eyJleHAiOjE2MzkxNTE4MzEsImlhdCI6MTYzOTE1MTUzMSwiYXV0aF90aW1lIjowLCJqdGkiOiIwMzMyMDg1Ny04OTU3LTRlYzQtYTQxNi1hMTA3ZjBhYzQ5MjQiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdCIsImF1ZCI6InRlc3QiLCJzdWIiOiI4ODJjY2M0My04NzljLTRlYjctYjUwYy05NjRhNzQ0YmMyNzgiLCJ0eXAiOiJJRCIsImF6cCI6InRlc3QiLCJzZXNzaW9uX3N0YXRlIjoiY2Q0ZWI1YTEtMWE5OS00ZTViLThjMmQtYmI1YjQzZjBkYmJhIiwiYXRfaGFzaCI6ImF6RGNLeWdhMUtOSWtDRU11VW0yakEiLCJhY3IiOiIxIiwic2lkIjoiY2Q0ZWI1YTEtMWE5OS00ZTViLThjMmQtYmI1YjQzZjBkYmJhIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInByZWZlcnJlZF91c2VybmFtZSI6InRlc3QiLCJlbWFpbCI6ImFAYS5hIn0.FSTxY25U3J9cwmKIzMoSwwOpoimNFypPNy_H3eDkIHyBYCumAL3pqLpCrou07j7bMCe7qe8pmiLWmqKMcrj24FiAEb-XFhxI1dNm5gSbAOTrR30W7DOg_QK1K3mebm--SVNhbvt6eKyyjRhkf6t38ekVBZbPwSnkFEp3enlV0351P3D7mIRjRzVo1BtvKJSRGBxFVIDUYSOHeRXZ7q1hQKRNQGe7Bf1Ytr6Eu2RhwMCGmR4uoPKs6Apr2xUUd66la_ohSQSGG1IVRRQ7l7jYe7RYh-TY7AiN7EBwteiAvzhlLxpUm6WbWLvAgStNxjwLOz4QdyFoHCYHcdD4iBpc8Q&#34;,
+</span></span><span style="display:flex;"><span>  &#34;not-before-policy&#34;: 0,
+</span></span><span style="display:flex;"><span>  &#34;session_state&#34;: &#34;cd4eb5a1-1a99-4e5b-8c2d-bb5b43f0dbba&#34;,
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;openid profile email&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Now, along with access_token and refresh token, there is indeed also the id_token.</p>
+<p>Let&rsquo;s take a look at it:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>http --form http://localhost:8080/auth/realms/test/protocol/openid-connect/token <span style="color:#008080">grant_type</span><span style="color:#000;font-weight:bold">=</span>password <span style="color:#008080">username</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">password</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">client_id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">scope</span><span style="color:#000;font-weight:bold">=</span>openid|parse id_token
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1639151872,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1639151572,
+</span></span><span style="display:flex;"><span>  &#34;auth_time&#34;: 0,
+</span></span><span style="display:flex;"><span>  &#34;jti&#34;: &#34;8cf814b3-1a30-47ab-8476-df2402902ea8&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;http://localhost:8080/auth/realms/test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;aud&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;882ccc43-879c-4eb7-b50c-964a744bc278&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;ID&#34;,
+</span></span><span style="display:flex;"><span>  &#34;azp&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;session_state&#34;: &#34;a9809a96-1591-468f-a285-620410ed620c&#34;,
+</span></span><span style="display:flex;"><span>  &#34;at_hash&#34;: &#34;nzfAoyobWNxUQrUthi3iLQ&#34;,
+</span></span><span style="display:flex;"><span>  &#34;acr&#34;: &#34;1&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sid&#34;: &#34;a9809a96-1591-468f-a285-620410ed620c&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email_verified&#34;: true,
+</span></span><span style="display:flex;"><span>  &#34;preferred_username&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email&#34;: &#34;a@a.a&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Actually, the same information is provided. The only difference appears to be
+that &ldquo;typ&rdquo; is now ID, the &ldquo;aud&rdquo; is now the client id (meaning that the id token
+is meant to be used by the client and not the resource server<sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>) and all the
+keycloak specific stuff are gone.</p>
+<p>Then, one may naively think that if one needs to get the official client id as
+per the specification, the scope=openid is needed, but if the purpose is to get
+user information, the access_token could be more than enough.</p>
+<p>Actually, they are <a href="https://konubinix.eu/braindump/posts/id_tokens_vs_access_tokens/?title=id_tokens_vs_access_tokens#">conceptually different</a>, so I would recommend to use one or
+the other depending on the goal to reach and the expected piece of code that is
+supposed to interpret it. The client is supposed to interpret the <a href="https://konubinix.eu/braindump/posts/openid_connect/?title=identity_token#identity-token">ID Token</a>,
+while the access token is supposed to make sens only for the resource server
+(see <a href="https://konubinix.eu/braindump/posts/id_tokens_vs_access_tokens/?title=id_tokens_vs_access_tokens#">ID Tokens vs Access Tokens</a>). Therefore, the client should not make any
+assumption about what is inside the access token and use the id token to find
+user information.</p>
+<p>Also, this data is signed using RSA, as the JOSE header indicates.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>http --form http://localhost:8080/auth/realms/test/protocol/openid-connect/token <span style="color:#008080">grant_type</span><span style="color:#000;font-weight:bold">=</span>password <span style="color:#008080">username</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">password</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">client_id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">scope</span><span style="color:#000;font-weight:bold">=</span>openid|jq -r .access_token|cut -f <span style="color:#099">1</span> -d.|base64 -d|jq -M
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;alg&#34;: &#34;RS256&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;JWT&#34;,
+</span></span><span style="display:flex;"><span>  &#34;kid&#34;: &#34;dBwkp92GraFc10rvP5xbRByVHDkwl2nph_AIufTaheY&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The public key can be seen using the appropriate endpoint<sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>http --form http://localhost:8080/auth/realms/test/protocol/openid-connect/certs |jq -r -M <span style="color:#d14">&#39;.keys[] | select(.alg == &#34;RS256&#34;)&#39;</span>
+</span></span></code></pre></div><p><a id="org-example-block--public-key"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;kid&#34;: &#34;dBwkp92GraFc10rvP5xbRByVHDkwl2nph_AIufTaheY&#34;,
+</span></span><span style="display:flex;"><span>  &#34;kty&#34;: &#34;RSA&#34;,
+</span></span><span style="display:flex;"><span>  &#34;alg&#34;: &#34;RS256&#34;,
+</span></span><span style="display:flex;"><span>  &#34;use&#34;: &#34;sig&#34;,
+</span></span><span style="display:flex;"><span>  &#34;n&#34;: &#34;ndmgnvbpQUvUkphE1XKmRewn3BF6sCO8zxPb75khWkpxDOiSVnSpq3KB0Xun9IwCUkep7H0x3QVP-Ehf-pyUJKBygePzzQ7EeQmM1L4DsVv3z6X05S0jJB_qKvEK1kS1AsGUu5lflvYYWMA-qxUiQOMz0sTPuiqSZVRSAn3jKXtssVROpIiUe6rtktsJaKGV0HqqcJAaVa_GZqBlsi6Qmi0TNqQO9D8WaQn9IwfrJ7i-n8pOxDNH1rNDNjUemIyu9Al4_3VPYdBxCMHfPB1ziFhi6sTsYLTShFA-ZASfZx-vjgYbxvhlxl50MXiegYCQ5Giu5lMjCX-SbxhgCEP71Q&#34;,
+</span></span><span style="display:flex;"><span>  &#34;e&#34;: &#34;AQAB&#34;,
+</span></span><span style="display:flex;"><span>  &#34;x5c&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;MIIClzCCAX8CBgF9s0wfBDANBgkqhkiG9w0BAQsFADAPMQ0wCwYDVQQDDAR0ZXN0MB4XDTIxMTIxMzEwMTU1MFoXDTMxMTIxMzEwMTczMFowDzENMAsGA1UEAwwEdGVzdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAJ3ZoJ726UFL1JKYRNVypkXsJ9wRerAjvM8T2++ZIVpKcQzoklZ0qatygdF7p/SMAlJHqex9Md0FT/hIX/qclCSgcoHj880OxHkJjNS+A7Fb98+l9OUtIyQf6irxCtZEtQLBlLuZX5b2GFjAPqsVIkDjM9LEz7oqkmVUUgJ94yl7bLFUTqSIlHuq7ZLbCWihldB6qnCQGlWvxmagZbIukJotEzakDvQ/FmkJ/SMH6ye4vp/KTsQzR9azQzY1HpiMrvQJeP91T2HQcQjB3zwdc4hYYurE7GC00oRQPmQEn2cfr44GG8b4ZcZedDF4noGAkORoruZTIwl/km8YYAhD+9UCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAJuq29FRykgyP5P2wcKq5Uvc0Tk/549zRY8BZtdu/TLZRjw/0T3Hx4ml0fPBfsYroGs4LNuoPPKdPPKObncW9SLKYUdru2UQXKksQQLTjwWlX12Cu60fewin4+15cP7DWQNxhNArntGvBVhYoFbOb/xPDlygsHWNdTILe46DoqBB3cNCLLHHdKviI2Imi2dHgiAmWDi2NGmzwtZ9cI/3i7Qmk8Hid6wQFiWTOUXNUcgo0Z9lSv/kJrL3zrRCugLV1f97Q/sWGnvBZ2T5Kv15XFaZDaE2tZHCxHAyDNgk4OtWDUDJzR23k0L6MejKaKZiwyloNHWVP7c+Fx6sOyb5Www==&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;x5t&#34;: &#34;JGoQvp7PEffvd4wbSAr4RxGwaL8&#34;,
+</span></span><span style="display:flex;"><span>  &#34;x5t#S256&#34;: &#34;CmEYBoMSHOcMju2w7nFt1GNumNoq3SxGiXMFa1mPeLM&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Say we get the following access token</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>http --form http://localhost:8080/auth/realms/test/protocol/openid-connect/token <span style="color:#008080">grant_type</span><span style="color:#000;font-weight:bold">=</span>password <span style="color:#008080">username</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">password</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">client_id</span><span style="color:#000;font-weight:bold">=</span>test|jq -r .access_token
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJkQndrcDkyR3JhRmMxMHJ2UDV4YlJCeVZIRGt3bDJucGhfQUl1ZlRhaGVZIn0.eyJleHAiOjE2MzkzOTI1MjMsImlhdCI6MTYzOTM5MjIyMywianRpIjoiMTVjY2YxNmItNmJmMy00MDY5LWFjZTgtYjBlMTU4MzcyZjc3IiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL2F1dGgvcmVhbG1zL3Rlc3QiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMWRmYjIwMjAtM2RiNS00OGFiLThkMGEtNDUxY2I4ZjBhMTk4IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoidGVzdCIsInNlc3Npb25fc3RhdGUiOiJmMGUxODIxOS0wZjBjLTQ2ZjMtODI5Mi1mYTYwNzRlNjc1NjciLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtdGVzdCIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiJmMGUxODIxOS0wZjBjLTQ2ZjMtODI5Mi1mYTYwNzRlNjc1NjciLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsInByZWZlcnJlZF91c2VybmFtZSI6InRlc3QifQ.E6RNELN5jJnkaA29XHPloBWEvd11C41YIYym1sgO6Q00iVYfRXoqI67wRoBLDFHjwq1hh8NPPoQp5NMSr71BlaPzayPUeZYZxAV7QGVBJzfaF0n95QGTLrV-KdHE-f0cxz5YAib87aWbci1-QMFblobhWLA3QL-Rie89Z3DhPMtuYxW21QLj9oWeATsZpWm9w0S7KM1x2vc1pYRsGElobzpgceZXySay-0GYM6v71sK9p0PfUhNWm9Pr3gtKkLnLG3McJmCmml5xj7bDhgDnpcGWfiP2CYHNUVFEkmbclPFc_Zd0fGiFYmxofAFIPtcjptrAyEHFZK55tgLQqYwXEw
+</span></span></code></pre></div><p>Then, using of the <a href="https://python-jose.readthedocs.io/en/latest/jws/">python-jose library</a>, we can check this token.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">json</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jose</span> <span style="color:#000;font-weight:bold">import</span> jws
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">print</span>(json<span style="color:#000;font-weight:bold">.</span>dumps(json<span style="color:#000;font-weight:bold">.</span>loads(jws<span style="color:#000;font-weight:bold">.</span>verify(access_token, public_key, algorithms<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;RS256&#34;</span>)<span style="color:#000;font-weight:bold">.</span>decode()), indent<span style="color:#000;font-weight:bold">=</span><span style="color:#099">4</span>))
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    &#34;exp&#34;: 1639392523,
+</span></span><span style="display:flex;"><span>    &#34;iat&#34;: 1639392223,
+</span></span><span style="display:flex;"><span>    &#34;jti&#34;: &#34;15ccf16b-6bf3-4069-ace8-b0e158372f77&#34;,
+</span></span><span style="display:flex;"><span>    &#34;iss&#34;: &#34;http://localhost:8080/auth/realms/test&#34;,
+</span></span><span style="display:flex;"><span>    &#34;aud&#34;: &#34;account&#34;,
+</span></span><span style="display:flex;"><span>    &#34;sub&#34;: &#34;1dfb2020-3db5-48ab-8d0a-451cb8f0a198&#34;,
+</span></span><span style="display:flex;"><span>    &#34;typ&#34;: &#34;Bearer&#34;,
+</span></span><span style="display:flex;"><span>    &#34;azp&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>    &#34;session_state&#34;: &#34;f0e18219-0f0c-46f3-8292-fa6074e67567&#34;,
+</span></span><span style="display:flex;"><span>    &#34;acr&#34;: &#34;1&#34;,
+</span></span><span style="display:flex;"><span>    &#34;realm_access&#34;: {
+</span></span><span style="display:flex;"><span>        &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>            &#34;default-roles-test&#34;,
+</span></span><span style="display:flex;"><span>            &#34;offline_access&#34;,
+</span></span><span style="display:flex;"><span>            &#34;uma_authorization&#34;
+</span></span><span style="display:flex;"><span>        ]
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    &#34;resource_access&#34;: {
+</span></span><span style="display:flex;"><span>        &#34;account&#34;: {
+</span></span><span style="display:flex;"><span>            &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>                &#34;manage-account&#34;,
+</span></span><span style="display:flex;"><span>                &#34;manage-account-links&#34;,
+</span></span><span style="display:flex;"><span>                &#34;view-profile&#34;
+</span></span><span style="display:flex;"><span>            ]
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    &#34;scope&#34;: &#34;profile email&#34;,
+</span></span><span style="display:flex;"><span>    &#34;sid&#34;: &#34;f0e18219-0f0c-46f3-8292-fa6074e67567&#34;,
+</span></span><span style="display:flex;"><span>    &#34;email_verified&#34;: false,
+</span></span><span style="display:flex;"><span>    &#34;preferred_username&#34;: &#34;test&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>In case the signature would have failed, python-jose would have raised an error.</p>
+<h3 id="3d89eef9-337c-4590-af17-6e430fdcebe3">Describing roles and scopes and mapping</h3>
+<p>In keycloak, the users are part of groups that share the same attributes.</p>
+<p>The oauth 2.0 scopes (called client scope in keycloak) are associated with
+mappers that describes what user/group attribute will be returned in the
+claims and how they will be returned.</p>
+<p>You can define those mappers the scope and then associate a client scope to a
+client, or directly create a mapper inside a client.</p>
+<p>Those mappers can be of a lot of kind, and use a lot of sources of user
+information (like group, roles) as input. They eventually provide the claims
+to put in the access token. It is to be noted that it is asked whether to
+provide this information in the id token or in the access token or not.</p>
+<p>For example, say you add the attribute foo=bar in the user test.</p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreihs4mtcnkvjogfee6o4u5znw4z75sy3d3blm5hixqhlb2ice7kpva?filename=a.png">
+</figure>
+
+<p>Then, in the client Mapper, you add one that reads the value of foo.</p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreicjiujr6pgmmm2nx6vn6eqwbooybw3dzz7ricwjsdub5j4bv4ddm4?filename=a.png">
+</figure>
+
+<p>Then you will see the this data in the access token.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>read_access_token <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    http --form http://localhost:8080/auth/realms/test/protocol/openid-connect/token <span style="color:#008080">grant_type</span><span style="color:#000;font-weight:bold">=</span>password <span style="color:#008080">username</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">password</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">test</span> <span style="color:#008080">client_id</span><span style="color:#000;font-weight:bold">=</span>test|parse access_token
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p><a id="code-snippet--read-access-token"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>read_access_token
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1639153967,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1639153667,
+</span></span><span style="display:flex;"><span>  &#34;jti&#34;: &#34;58d7c8de-5d1e-4835-9f2d-efd87696e5bb&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;http://localhost:8080/auth/realms/test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;aud&#34;: &#34;account&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;882ccc43-879c-4eb7-b50c-964a744bc278&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;Bearer&#34;,
+</span></span><span style="display:flex;"><span>  &#34;azp&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;session_state&#34;: &#34;c65e588d-c20f-4f85-b528-18da3d948447&#34;,
+</span></span><span style="display:flex;"><span>  &#34;acr&#34;: &#34;1&#34;,
+</span></span><span style="display:flex;"><span>  &#34;realm_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>      &#34;default-roles-test&#34;,
+</span></span><span style="display:flex;"><span>      &#34;offline_access&#34;,
+</span></span><span style="display:flex;"><span>      &#34;uma_authorization&#34;
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;resource_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;account&#34;: {
+</span></span><span style="display:flex;"><span>      &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>        &#34;manage-account&#34;,
+</span></span><span style="display:flex;"><span>        &#34;manage-account-links&#34;,
+</span></span><span style="display:flex;"><span>        &#34;view-profile&#34;
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;profile email&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sid&#34;: &#34;c65e588d-c20f-4f85-b528-18da3d948447&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email_verified&#34;: true,
+</span></span><span style="display:flex;"><span>  &#34;foo&#34;: &#34;bar&#34;,
+</span></span><span style="display:flex;"><span>  &#34;preferred_username&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email&#34;: &#34;a@a.a&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>You can see that the access token shows the roles associated with a user.</p>
+<p>Actually, the roles are simple words that only make sense for the application
+that will use them.</p>
+<p>You can map users and groups to roles using the &ldquo;role mapping&rdquo; notion.</p>
+<p>Say you define a role called somerole and map it to the user test.</p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreighd6mwgmhs6nxhnodo4itus3msh6fpjnzqef35soohjdcx4gnh2e?filename=a.png">
+</figure>
+
+<p>Then, you can see it</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1639154206,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1639153906,
+</span></span><span style="display:flex;"><span>  &#34;jti&#34;: &#34;f373389c-fda7-4a1c-8292-55b943717038&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;http://localhost:8080/auth/realms/test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;aud&#34;: &#34;account&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;882ccc43-879c-4eb7-b50c-964a744bc278&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;Bearer&#34;,
+</span></span><span style="display:flex;"><span>  &#34;azp&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;session_state&#34;: &#34;d1b8d758-ba84-4b7d-9f41-a4fdad57f241&#34;,
+</span></span><span style="display:flex;"><span>  &#34;acr&#34;: &#34;1&#34;,
+</span></span><span style="display:flex;"><span>  &#34;realm_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>      &#34;default-roles-test&#34;,
+</span></span><span style="display:flex;"><span>      &#34;somerole&#34;,
+</span></span><span style="display:flex;"><span>      &#34;offline_access&#34;,
+</span></span><span style="display:flex;"><span>      &#34;uma_authorization&#34;
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>   &#34;resource_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;account&#34;: {
+</span></span><span style="display:flex;"><span>      &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>        &#34;manage-account&#34;,
+</span></span><span style="display:flex;"><span>        &#34;manage-account-links&#34;,
+</span></span><span style="display:flex;"><span>        &#34;view-profile&#34;
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;profile email&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sid&#34;: &#34;d1b8d758-ba84-4b7d-9f41-a4fdad57f241&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email_verified&#34;: true,
+</span></span><span style="display:flex;"><span>  &#34;foo&#34;: &#34;bar&#34;,
+</span></span><span style="display:flex;"><span>  &#34;preferred_username&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email&#34;: &#34;a@a.a&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The access token returned by keycloak will return the roles associated with
+the user. This can be filtered using the &ldquo;scope&rdquo; tab of the client, thus
+limiting the returned roles to only those that make sense for the client.</p>
+<p>Thus, by providing this scope limitation in the client.</p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreihdemt5pp3nhqpzjmol77m4ryni2qh63w34zfmfjz5jip3vpenoba?filename=a.png">
+</figure>
+
+<p>You eventually get only that role returned.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1639154248,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1639153948,
+</span></span><span style="display:flex;"><span>  &#34;jti&#34;: &#34;2b8f0fa5-4a97-4a6c-b366-2b19313d2e0f&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;http://localhost:8080/auth/realms/test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;882ccc43-879c-4eb7-b50c-964a744bc278&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;Bearer&#34;,
+</span></span><span style="display:flex;"><span>  &#34;azp&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;session_state&#34;: &#34;84211814-2f3c-4b07-b796-2a211a0c3d11&#34;,
+</span></span><span style="display:flex;"><span>  &#34;acr&#34;: &#34;1&#34;,
+</span></span><span style="display:flex;"><span>  &#34;realm_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>      &#34;somerole&#34;
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;profile email&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sid&#34;: &#34;84211814-2f3c-4b07-b796-2a211a0c3d11&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email_verified&#34;: true,
+</span></span><span style="display:flex;"><span>  &#34;foo&#34;: &#34;bar&#34;,
+</span></span><span style="display:flex;"><span>  &#34;preferred_username&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email&#34;: &#34;a@a.a&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Now, here is the origin of this part of the answer:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#d14">&#34;resource_access&#34;</span><span style="color:#000;font-weight:bold">:</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;account&#34;</span><span style="color:#000;font-weight:bold">:</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#d14">&#34;roles&#34;</span><span style="color:#000;font-weight:bold">:</span> [
+</span></span><span style="display:flex;"><span>            <span style="color:#d14">&#34;manage-account&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#d14">&#34;manage-account-links&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#d14">&#34;view-profile&#34;</span>
+</span></span><span style="display:flex;"><span>        ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>},
+</span></span></code></pre></div><p>It comes from the default configuration of the client scopes. By default, a
+new client comes with the client scope role, that provides, among other
+things, a mapper called &ldquo;client roles&rdquo;.</p>
+<p>This mapper provides the token claim &ldquo;resource_access.${client_id}.roles&rdquo;. So
+that data apparently comes from a client called &ldquo;account&rdquo; that would provides
+roles.</p>
+<p>And we indeed can find the client named account with, among others, those
+roles configured.</p>
+<p>By adding the user to some of the other roles, we can see them appear in the
+answer. Those three roles (manage-account, manage-account-links and
+view-profile) where shown by default because they are defined as default
+roles for the account client. This is difficult to find out because it is not
+in the client configuration panel, but in the role panel, when asking
+explicitly for the default roles of this client.</p>
+<h2 id="d06d8738-cdc8-428c-acb5-a41531036856">How do I use this in real life?</h2>
+<p>Now that I understand what are jwt, jws, oauth 2.0, openid connect and
+keycloak and how keycloak works, I need to decide how I want to make the whole
+stuff work.</p>
+<p>Actually, I did not find any resource or standard explaining a &ldquo;correct&rdquo; way
+of making the whole thing.</p>
+<p>Keycloak provides ways of describing the resources and the link with the roles
+in concepts like permissions (see
+<a href="https://www.keycloak.org/docs/latest/authorization_services/">https://www.keycloak.org/docs/latest/authorization_services/</a> ). It also
+supports complicated flows following the <a href="https://konubinix.eu/braindump/posts/user_managed_access/?title=user_managed_access#">User-Managed Access</a> standard.</p>
+<p>But I feel like it most cases using keycloak in an openid connect fashion, the
+paradigm is to let keycloak provide the tokens describing the user roles and
+let the resource server decide what kind of resources to serve based on that
+information.</p>
+<p>So, I guess the usage I  would be:</p>
+<ol>
+<li>use keycloak in openid-connect mode,</li>
+<li>describe roles that indicate what one can do about the resource</li>
+</ol>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/blog/posts/how_do_i_create_an_oauth_2_0_oidc_resource_server/">how do I create an OAuth 2.0/OIDC resource server?</a></li>
+<li><a href="https://konubinix.eu/braindump/posts/trying_authenticating_to_keycloak_using_google_as_identity_provider/?title=trying_authenticating_to_keycloak_using_google_as_identity_provider#">trying authenticating to keycloak using google as Identity Provider</a> (braindump)</li>
+<li><a href="/blog/posts/what_should_i_put_into_those_scopes_and_access_tokens_claims/">what should I put into those scopes and access tokens claims?</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/decbabd3-4149-4ff4-809e-6ffb5bcfd06c?title=make_sense_of_keycloak_openid_connect_oauth_2_0_jwt_jws">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<blockquote>
+<dl>
+<dt>web application</dt>
+<dd>A web application is a confidential client running on a web
+server.  Resource owners access the client via an HTML user
+interface rendered in a user-agent on the device used by the
+resource owner.  The client credentials as well as any access
+token issued to the client are stored on the web server and are
+not exposed to or accessible by the resource owner.</dd>
+<dt>user-agent-based application</dt>
+<dd>A user-agent-based application is a public client in which the
+client code is downloaded from a web server and executes within a
+user-agent (e.g., web browser) on the device used by the resource
+owner.  Protocol data and credentials are easily accessible (and
+often visible) to the resource owner.  Since such applications
+reside within the user-agent, they can make seamless use of the
+user-agent capabilities when requesting authorization.</dd>
+<dt>native application</dt>
+<dd>A native application is a public client installed and executed on
+the device used by the resource owner.  Protocol data and
+credentials are accessible to the resource owner.  It is assumed
+that any client authentication credentials included in the
+application can be extracted.  On the other hand, dynamically
+issued credentials such as access tokens or refresh tokens can
+receive an acceptable level of protection.  At a minimum, these
+credentials are protected from hostile servers with which the
+application may interact.  On some platforms, these credentials
+might be protected from other applications residing on the same
+device.</dd>
+</dl>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749</a></p>
+</blockquote>
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
+<blockquote>
+<p>An authorization grant is a credential representing the resource
+owner&rsquo;s authorization (to access its protected resources) used by the
+client to obtain an access token</p>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749</a></p>
+</blockquote>
+&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:3">
+<blockquote>
+<p>The resource owner password credentials (i.e., username and password)
+can be used directly as an authorization grant to obtain an access
+token.</p>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749</a></p>
+</blockquote>
+&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:4">
+<blockquote>
+<p>The credentials should only be used when there is a high
+degree of trust between the resource owner and the client (e.g., the
+client is part of the device operating system or a highly privileged
+application), and when other authorization grant types are not
+available (such as an authorization code)</p>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749</a></p>
+</blockquote>
+&#160;<a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:5">
+<blockquote>
+<ul>
+<li>ID tokens are meant to be read by the OAuth client. Access tokens are meant to be read by the resource server.</li>
+<li>ID tokens are <a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=json_web_tokens#">JWT</a>s. Access tokens can be JWTs but may also be a random string.</li>
+<li>ID tokens should never be sent to an API. Access tokens should never be read by the client</li>
+</ul>
+<p>&mdash; <a href="https://oauth.net/id-tokens-vs-access-tokens/">https://oauth.net/id-tokens-vs-access-tokens/</a></p>
+</blockquote>
+&#160;<a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:6">
+<blockquote>
+<p>The realm RSA public key is retrieved
+from the endpoint</p>
+<ul>
+<li><a href="https://localhost:8080/auth/realms/master/protocol/openid-connect/certs">https://localhost:8080/auth/realms/master/protocol/openid-connect/certs</a></li>
+</ul>
+<p>[&hellip;]</p>
+<p>Obtaining a certificate file for the realm
+public key  (.pem format)</p>
+<p>The x5c filed value is copied between  —–BEGIN CERTIFICATE—–</p>
+<p>—–END CERTIFICATE—– directives</p>
+<p>&mdash; <a href="https://www.janua.fr/keycloak-access-token-verification-example/">https://www.janua.fr/keycloak-access-token-verification-example/</a></p>
+</blockquote>
+&#160;<a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+  </article>
+  <aside class="date"><time>Last updated: 05 Nov 2024</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 10 Dec 2021</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>My Deskjet 4100 Printer Crops the A4 Prints at the Top When Using Cups &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">My Deskjet 4100 Printer Crops the A4 Prints at the Top When Using Cups</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<p>I could find similar issues <a href="https://fitzcarraldoblog.wordpress.com/2021/04/28/how-to-prevent-cups-omitting-the-bottom-of-the-cups-printer-test-page/">here</a> and <a href="https://answers.launchpad.net/hplip/+question/667437">here</a>.</p>
+<p>I also found some interesting intel about the ImageableArea notion in <a href="https://superuser.com/questions/1026576/how-to-set-the-minimum-margin-in-cups-foomatic-driver">this post</a>
+and at the section &ldquo;10.4.7.1.2 Changing the printer margin settings&rdquo; of <a href="https://docs.oracle.com/cd/E16764_01/bi.1111/b32121/pbr_uxprt004.htm">this
+documentation</a>.</p>
+<p>Looking at my ppd, I can see this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>*PaperDimension A4/A4 210x297: &#34;595.440002441406 841.679992675781&#34;
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>*ImageableArea A4/A4 210x297: &#34;8.39999961853 8.39999961853 587.039978027344 805.679992675781&#34;
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p>This means that the bottom, right and left margins are 8.4 pts, while the top
+margin is 36 pts wide. That should explain why I cannot see the upper parts of
+my prints.</p>
+<p>Let&rsquo;s try with a top margin of 8.4. That would mean that we put the following value:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">return</span> <span style="color:#099">841.679992675781</span> <span style="color:#000;font-weight:bold">-</span> <span style="color:#099">8.39999961853</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>833.279993057251
+</span></span></code></pre></div><p>And therefore change the ImageableArea line to this one:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>*ImageableArea A4/A4 210x297: &#34;8.39999961853 8.39999961853 587.039978027344 833.2800003814699&#34;
+</span></span></code></pre></div><p>Now, my printer doesn&rsquo;t cut the top part anymore!</p>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/e8946b11-220f-4a1c-829a-8636f0c4dc7e?title=my_deskjet_4100_printer_crops_the_a4_prints_at_the_top_when_using_cups">Permalink</a></h2>
+  </article>
+  <aside class="date"><time>Last updated: 15 May 2024</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 14 May 2024</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

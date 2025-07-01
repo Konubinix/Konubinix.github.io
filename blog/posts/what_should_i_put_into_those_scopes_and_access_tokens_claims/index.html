@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>What Should I Put Into Those Scopes and Access Tokens Claims? &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">What Should I Put Into Those Scopes and Access Tokens Claims?</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/evergreen/">Evergreen</a></span></header>
+  <article>
+	<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#a76589e9-3055-4d91-a555-6f727b23c359">According to OAuth</a>
+<ul>
+<li><a href="#3713a08a-24bf-4dd7-bbe1-01d9ee278ba6">permission and link with roles</a></li>
+<li><a href="#5fdddffa-d0fc-4edc-8b9f-4c788ffbc002">claims and relation to identity</a></li>
+<li><a href="#a5d06eff-73ee-4517-b622-342ae3c0df71">authorization strategies</a></li>
+</ul>
+</li>
+<li><a href="#d88c661f-dcda-4ca1-9102-d1dfc6ed9e7a">According to Microsoft windows active directory</a>
+<ul>
+<li><a href="#b04af13e-0fe7-41a4-b82d-6f97ef6fd6b3">check the user identity</a></li>
+<li><a href="#c2768693-c331-4acb-9f98-94e19dfcd6df">check the user group and tenant</a></li>
+<li><a href="#7cb2d3a3-bb01-4f5f-94c0-3d6e78be5d1e">make clear immutable and mutable claims</a></li>
+<li><a href="#b9e4158b-ff13-4422-87d3-a2675d6397a5">check that the user has appropriate responsibilities</a></li>
+<li><a href="#ee15055f-b3a1-4f65-81b2-0f6d130ce00b">check that the token has appropriate scope</a></li>
+</ul>
+</li>
+<li><a href="#238f3fdc-e01d-45ca-90c1-b8fbb2bd61d8">According to Microsoft azure multinenant documentation</a></li>
+<li><a href="#f222c304-ce62-4696-9fea-866dddefd56e">According to some stackoverflow questions</a>
+<ul>
+<li><a href="#21160a62-70c0-473a-a2c9-5e489f044459">permissions and relation to roles and groups</a></li>
+<li><a href="#d04a7d3a-9fc7-4af0-bea2-a689656070be">claims and relation to identity</a></li>
+<li><a href="#ddb16e0d-11f5-4411-bdb9-339116b97710">authorization strategies</a></li>
+</ul>
+</li>
+<li><a href="#a9c0403f-03cc-491a-92dd-3b646eec6aa0">My opinion</a>
+<ul>
+<li><a href="#a84bcded-3d8d-4d0f-bf5d-784a794416e3">Side note about how I reason about roles</a></li>
+<li><a href="#85547d67-aa64-486b-8f49-ab04df0ba387">Make the authorization server aware of the data?</a></li>
+</ul>
+</li>
+<li><a href="#55b743a4-534f-4960-aee0-3b0faff6957e">Some definitions of scopes in well known implementations</a>
+<ul>
+<li><a href="#b9016fd9-c02b-4063-a887-0c6960c5be78">OpenID Connect</a></li>
+<li><a href="#3fc51529-8681-4f5b-b827-8a31c3a2250a">slack</a></li>
+<li><a href="#cd01bed3-0134-4027-9ad1-69d434a9716e">google</a></li>
+<li><a href="#f45f37f5-5409-48e7-9ebe-ef5d0d7900d5">fitbit</a></li>
+</ul>
+</li>
+<li><a href="#notes-linking-here">Notes linking here</a></li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>After <a href="/blog/posts/make_sense_of_keycloak_openid_connect_oauth_2_0_jwt_jws/">making sense of keycloak, openid connect, oauth 2.0, jwt, jws</a> and
+<a href="/blog/posts/how_do_i_create_an_oauth_2_0_oidc_resource_server/">understanding the creation of an OAuth 2.0/OIDC resource server</a>, I feel that I
+understand well enough the &ldquo;is&rdquo;. I would like to <a href="https://konubinix.eu/braindump/posts/loi_de_hume/?title=loi_de_hume#">focus on the &ldquo;ought to&rdquo;</a>.</p>
+<p>In other words, I want to use <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0#">OAuth 2.0</a> for real, but I don&rsquo;t know yet how to
+design my system. Here, I try to document what I could find in the internet that
+helped me.</p>
+<p>TL;DR: I describe what I understand of how several sources do thing, then I give
+<a href="#a9c0403f-03cc-491a-92dd-3b646eec6aa0">my opinion</a> on how I would design such a system.</p>
+<p>OAuth is very vague in the definition of the <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=access_token#access-token">access token</a>.</p>
+<blockquote>
+<p>access token is a string representing an authorization issued to the
+client. The string is usually opaque to the client</p>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749</a></p>
+</blockquote>
+<p>It looks like, on top of this very non prescriptive definition, popular
+implementations have reached a consensus of using <a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=json_web_tokens#">JWT</a>/<a href="https://konubinix.eu/braindump/posts/json_web_signature/?title=json_web_signature#">JWS</a> to encode this
+token.</p>
+<p>OAuth tried to catch up with this trend of encoding access token in JWT and
+finally (late 2021) tried to standardize a bit the <a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a>s one could find in
+this token. It still is very vague. I assume that there are so many use cases
+that we cannot generalize them well in a standard.</p>
+<p>If I understand correctly, the flow, when using OAuth and access tokens encoded
+in JWT/JWS, looks like this:</p>
+<ol>
+<li>an <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=authorization_server#authorization-server">authorization server</a> has access to a database of users<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</li>
+<li>a <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0_client#oauth-2-dot-0-client">client</a> connects to the authorization server with a scope and gets an access
+token that contains a set of claims,</li>
+<li>the client connects to a <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=resource_server#resource-server">resource server</a> with the set of claims. The resource
+server checks the validity of the token and infer from it which resource can
+be accessed.</li>
+</ol>
+<p>So the question is: <strong>what kind of messages would I want to convey in the scopes
+and in the claims to have a sensible and maintainable system?</strong></p>
+<p>In my mind, this topic is particularly hard, because it asks questions at
+several dimensions (see the <a href="https://konubinix.eu/braindump/posts/three_worlds_analogy/?title=three_worlds_analogy#">three worlds analogy</a>).</p>
+<ol>
+<li>it needs to define some ontology at the authorization server side, to map
+roles/tenants/groups/users to some claims.</li>
+<li>it needs to define another ontology at the resource server side, mapping
+claims to permissions on resources.</li>
+</ol>
+<p>Those two worlds need to be in sync and are most likely to be administered by
+two different kind of teams, with different <a href="https://konubinix.eu/braindump/posts/getting_things_done/?title=horizons_of_focus#horizons-of-focus">horizons of focus</a>.</p>
+<p>Also, the definitions of those terms rely on the expected use cases of the
+users. So this definition must be done by a <a href="https://konubinix.eu/braindump/posts/scrum_team/?title=only_one_product_owner#only-one-product-owner">product owner</a> as much as a <a href="https://konubinix.eu/braindump/posts/scrum_team/?title=developers#developers">technical
+team</a>.</p>
+<p>Another reason why this is a complicated subject is that the definitions of
+scope/users/group/role/tenant/permission/etc are generally a bit vague. Chances
+are that several appropriate interpretations of those terms lead to pretty
+different implementations. Due to the loose nature of the standard, one would be
+able to implement all those interpretations. Then, the choice of using one or
+another becomes arbitrary.</p>
+<p>By looking at the literature, I can have a feeling of several ways of thinking
+those concepts. I can then pick what suits me.</p>
+<h2 id="a76589e9-3055-4d91-a555-6f727b23c359">According to OAuth</h2>
+<h3 id="3713a08a-24bf-4dd7-bbe1-01d9ee278ba6">permission and link with roles</h3>
+<p>OAuth uses the traditional definition of permission and add the definition of privilege.</p>
+<blockquote>
+<p>accessing the house is a permission, that is, an action that you can perform on
+a resource</p>
+<p>[&hellip;]</p>
+<p>permission becomes a privilege (or right) when it is assigned to someone.</p>
+<p>&ndash; <a href="https://auth0.com/intro-to-iam/what-is-authorization/">https://auth0.com/intro-to-iam/what-is-authorization/</a></p>
+</blockquote>
+<p>This definition of privilege supposes that we assign permission directly to
+users. I don&rsquo;t agree at all with this and would rather talk about the path
+going from a user to roles/groups/tenants/claims to permissions. With that
+model in mind, a privilege would be whether a path exist or not. I don&rsquo;t see
+the need (yet ?) to add this notion in the model but I keep it in mind in
+case that happens.</p>
+<p>Afterwards, they define permission as a scope. Here again, I don&rsquo;t understand
+the rationale supporting this statement. Maybe do they mean that permission
+gives access to a subset of the resources? If they don&rsquo;t want to refer to
+<a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=scope#scope">oauth 2.0 scope</a>, I think the wording was ambiguous.</p>
+<blockquote>
+<p>permission is a scope, that is, the action that the decorator would like to
+perform at your house</p>
+<p>&ndash; <a href="https://auth0.com/intro-to-iam/what-is-authorization/">https://auth0.com/intro-to-iam/what-is-authorization/</a></p>
+</blockquote>
+<p>Then, they define roles as sets of permissions. <a href="#org-target--roles-are-not-sets-of-permissions">I disagree with this point of
+view</a>.</p>
+<blockquote>
+<p>role is nothing but a collection of permissions.</p>
+<p>&ndash; <a href="https://auth0.com/intro-to-iam/what-is-authorization/">https://auth0.com/intro-to-iam/what-is-authorization/</a></p>
+</blockquote>
+<p>Actually, by looking at the following example, I think we agree on what
+should be in a role and that I just disagree on the wording &ldquo;nothing but a
+collection of permissions&rdquo; while I agree with the idea.</p>
+<blockquote>
+<p>system manager would first create a role called &ldquo;Manager&rdquo; (or similar). Then,
+they would assign these permissions to this role and would associate you with
+the &ldquo;Manager&rdquo; role</p>
+<p>&ndash; <a href="https://auth0.com/intro-to-iam/what-is-authorization/">https://auth0.com/intro-to-iam/what-is-authorization/</a></p>
+</blockquote>
+<p>Indeed, they separate the step of creating a role and assigning permissions
+to it, which it exactly what I would expect of modeling a mapping from a role
+to a set of permissions. This, to me, supports the idea that it is only a
+<a href="https://konubinix.eu/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> and that we fundamentally agree.</p>
+<h3 id="5fdddffa-d0fc-4edc-8b9f-4c788ffbc002">claims and relation to identity</h3>
+<p>They define a claim as something related to the identity, but used in a context
+of granting access. They remind that, for the claim to be useful, it has to be
+trustfully issued by a trusted third party.</p>
+<p>Then, they indicate that this set of claims is actually an <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=access_token#access-token">access token</a> (more
+precisely a <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded access tokens</a>, but they don&rsquo;t go that far).</p>
+<blockquote>
+<p>Sometimes authorization is somewhat related to identity.</p>
+<p>[&hellip;]</p>
+<p>In the authorization context, your name is an attribute of your identity. Other
+attributes are your age, your language, your credit card, and anything else
+relevant in a specific</p>
+<p>[&hellip;]</p>
+<p>claim, that is, a declaration stating you&rsquo;ve got that attribute.</p>
+<p>[&hellip;]</p>
+<p>sure of your name because they trust the government that issued your passport.</p>
+<p>[&hellip;]</p>
+<p>boarding pass, along with the proof of identity of consumers, represents a kind
+of ‘access token’ that grants access rights to jump onto the plane.</p>
+<p>&ndash; <a href="https://auth0.com/intro-to-iam/what-is-authorization/">https://auth0.com/intro-to-iam/what-is-authorization/</a></p>
+</blockquote>
+<p>To me, they make the confusion between:</p>
+<ol>
+<li>a claim as an attribute about the user identity,</li>
+<li>a <a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a> as a key/value given to the resource server to assess
+whether the access is granted or not,</li>
+</ol>
+<p>To me 1. is a subset of 2.. Indeed, you may well find scopes or roles or
+tenants information in the latter, and I doubt they mean that those belong to
+&ldquo;a declaration stating you&rsquo;ve got that attribute&rdquo;. Hence, I think by
+&ldquo;somewhat related to identity&rdquo;, they mean 1.</p>
+<p>But, when they indicate that the claims must be issued by trusted third
+party, I think they mean all the claims of 2., not only the claims of 1.</p>
+<p>Again, this is a <a href="https://konubinix.eu/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> and I agree in principle, but making this
+confusion clear helps me have clear ideas of the concepts and take
+appropriate decisions.</p>
+<h3 id="a5d06eff-73ee-4517-b622-342ae3c0df71">authorization strategies</h3>
+<p>They differentiate between several authorization strategies, among those <a href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>
+and <a href="https://konubinix.eu/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a> (that they call ABAC).</p>
+<blockquote>
+<p>several different authorization strategies that computer systems leverage during
+application deployment. The most prominent ones are Role-Based Access Control
+(RBAC) and Attribute-Based Access Control (ABAC).</p>
+<p>[&hellip;]</p>
+<p>When using <a href="https://konubinix.eu/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">ABAC</a>, a computer system defines whether a user has sufficient access
+privileges to execute an action based on a trait (attribute or claim) associated
+with that user.</p>
+<p>[&hellip;]</p>
+<p><a href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>, on the other hand, treats authorization as permissions associated with
+roles and not directly with users.</p>
+<p>&ndash; <a href="https://auth0.com/intro-to-iam/what-is-authorization/">https://auth0.com/intro-to-iam/what-is-authorization/</a></p>
+</blockquote>
+<p>Finally, they refer to more complicated strategies, like <a href="https://konubinix.eu/braindump/posts/relation_based_access_control/?title=relation_based_access_control#">Relation Based
+Access Control</a>. I&rsquo;m still waaay too noob to understand this strategy, but
+it&rsquo;s good to know as I might <a href="https://konubinix.eu/braindump/posts/serendipite/?title=serendipite#">serendipitously</a> come to that later.</p>
+<blockquote>
+<p>Relationship Based Access Control examines the following question in regards to
+authorization: “Does this user have a sufficient relationship to this object or
+action such that they can access it?”</p>
+<p>[&hellip;]</p>
+<p>Sometimes a traversal of a graph of groups, roles, organizations, and objects
+requires exploring many nodes to establish a relationship between a user and
+what they are trying to do.</p>
+<p>&ndash; <a href="https://auth0.com/intro-to-iam/what-is-authorization/">https://auth0.com/intro-to-iam/what-is-authorization/</a></p>
+</blockquote>
+<p>In another document, they vaguely define the scope as a mean to restrict the data.</p>
+<blockquote>
+<p>Scope is a mechanism to let an application request limited access to a user’s
+data.</p>
+<p>&ndash; <a href="https://www.oauth.com/oauth2-servers/scope/defining-scopes/">https://www.oauth.com/oauth2-servers/scope/defining-scopes/</a></p>
+</blockquote>
+<p>One important thing to notice here is that scopes are now considered as a mean
+to inform the resource owner about the kind of access that the client will have.</p>
+<p>Therefore, defining scope becomes more a user experience topic rather than a
+technical topic. It adds to the idea that authorization is at the boundary
+between handling the user and technology.</p>
+<blockquote>
+<p>challenge when defining scopes for your service is to not get carried away with
+defining too many scopes. Users need to be able to understand what level of
+access they are granting to the application, and this will be presented to the
+user in some sort of list.</p>
+<p>[&hellip;]</p>
+<p>need to actually understand what is going on and not get overwhelmed with information. If y</p>
+<p>&ndash; <a href="https://www.oauth.com/oauth2-servers/scope/defining-scopes/">https://www.oauth.com/oauth2-servers/scope/defining-scopes/</a></p>
+</blockquote>
+<p>Then, they provide a few examples of typical uses of scopes.</p>
+<blockquote>
+<p>Read vs write access is a good place to start</p>
+<p>[&hellip;]</p>
+<p>Restricting Access to Sensitive Information</p>
+<p>[&hellip;]</p>
+<p>scope that allows applications to have access to private repos.</p>
+<p>[&hellip;]</p>
+<p>scope that allows applications to delete repos, so users can rest assured that
+random applications can’t go around deleting their repos.</p>
+<p>[&hellip;]</p>
+<p>way for applications to restrict themselves to only be able to edit files in a single folder.</p>
+<p>[&hellip;]</p>
+<p>great use of scope is to selectively enable access to a user’s account based on the functionality needed</p>
+<p>[&hellip;]</p>
+<p>Limiting Access to Billable Resources</p>
+<p>[&hellip;]</p>
+<p>This means applications that need to access the YouTube API won’t necessarily also be able to access the user’s Gmail account</p>
+<p>&ndash; <a href="https://www.oauth.com/oauth2-servers/scope/defining-scopes/">https://www.oauth.com/oauth2-servers/scope/defining-scopes/</a></p>
+</blockquote>
+<p>To me, it looks like there a plenty of ontologies around scopes. Scopes are
+not defined according to some technical constraint but rather according to
+how we want to define users journeys.</p>
+<p>No wonder why I could not guess any satisfying teleological definition.</p>
+<p>Actually, now I understand better the following quote:</p>
+<blockquote>
+<p>OAuth does not define any particular values for scopes, since it is highly
+dependent on the service&rsquo;s internal architecture and needs.</p>
+<p>&ndash; <a href="https://oauth.net/2/scope/">https://oauth.net/2/scope/</a></p>
+</blockquote>
+<p>They advice to take a look at how google defines scopes for inspiration.</p>
+<blockquote>
+<p>Google’s API is a great example of effectively using scope. For a full list of
+the scopes that the Google OAuth API supports, visit their OAuth 2.0 Playground
+at <a href="https://developers.google.com/oauthplayground/">https://developers.google.com/oauthplayground/</a></p>
+<p>&ndash; <a href="https://www.oauth.com/oauth2-servers/scope/defining-scopes/">https://www.oauth.com/oauth2-servers/scope/defining-scopes/</a></p>
+</blockquote>
+<p>I took a look at them <a href="#org-target--google">later in this document</a>.</p>
+<h2 id="d88c661f-dcda-4ca1-9102-d1dfc6ed9e7a">According to Microsoft <a href="https://konubinix.eu/braindump/posts/windows_active_directory/?title=windows_active_directory#">windows active directory</a></h2>
+<p>They the vocabulary of <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0#">OAuth 2.0</a>, except that they call the resource server
+simply resource.</p>
+<blockquote>
+<p>There are two parties involved in an access token request: the client, who
+requests the token, and the resource (the API) that accepts the token when the
+API is called</p>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<p>I think this is to reflect the notion of resource that we can find in <a href="https://konubinix.eu/braindump/posts/representational_state_transfer/?title=representational_state_transfer#">REST</a>.</p>
+<blockquote>
+<p>resource R is a temporally varying membership function MR(t), which for time t
+maps to a set of entities, or values, which are equivalent</p>
+<p>&mdash; <a href="https://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm">https://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm</a></p>
+</blockquote>
+<p>But to me, this is confusing, because apart from the conceptual notion of REST
+resource, the party that accepts the token is actually the OAuth 2.0 resource
+server, not the resource itself.</p>
+<p>Actually, I think their ontology is a bit confusing, so I would not recommend
+using it as inspiration. Nonetheless, I find their model quite interesting.</p>
+<h3 id="b04af13e-0fe7-41a4-b82d-6f97ef6fd6b3">check the user identity</h3>
+<p>The user is identified with <strong>sub</strong> and <strong>oid</strong> JWT claims.</p>
+<blockquote>
+<dl>
+<dt>sub</dt>
+<dd>String The principal about which the token asserts information, such as
+the user of an app. This value is immutable and cannot be reassigned or
+reused. It can be used to perform authorization checks safely, such as when
+the token is used to access a resource, and can be used as a key in database
+tables. Because the subject is always present in the tokens that Azure AD
+issues, we recommend using this value in a general-purpose authorization
+system. The subject is, however, a pairwise identifier - it is unique to a
+particular application ID. Therefore, if a single user signs into two
+different apps using two different client IDs, those apps will receive two
+different values for the subject claim. This may or may not be desired
+depending on your architecture and privacy requirements. See also the oid
+claim (which does remain the same across apps within a tenant).</dd>
+<dt>oid</dt>
+<dd>String, a GUID The immutable identifier for the &ldquo;principal&rdquo; of the
+request - the user or service principal whose identity has been verified. In
+ID tokens and app+user tokens, this is the object ID of the user. In app-only
+tokens, this is the object ID of the calling service principal. It can also be
+used to perform authorization checks safely and as a key in database
+tables. This ID uniquely identifies the principal across applications - two
+different applications signing in the same user will receive the same value in
+the oid claim. Thus, oid can be used when making queries to Microsoft online
+services, such as the Microsoft Graph. The Microsoft Graph will return this ID
+as the id property for a given user account. Because the oid allows multiple
+apps to correlate principals, the profile scope is required in order to
+receive this claim for users. If a single user exists in multiple tenants, the
+user will contain a different object ID in each tenant - they are considered
+different accounts, even though the user logs into each account with the same
+credentials.</dd>
+</dl>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<p>They clearly state that the JWT claims are to be used in the database of the
+resource server to <a href="#org-target--aware-data">perform future authorization checks</a>.</p>
+<h3 id="c2768693-c331-4acb-9f98-94e19dfcd6df">check the user group and tenant</h3>
+<p>To allow multi tenancy, they simply add another JWT claim, the <strong>tid</strong>.</p>
+<blockquote>
+<dl>
+<dt>tid</dt>
+<dd>String, a GUID Represents the tenant that the user is signing in
+to. For work and school accounts, the GUID is the immutable tenant ID of the
+organization that the user is signing in to. For sign-ins to the personal
+Microsoft account tenant (services like Xbox, Teams for Life, or Outlook), the
+value is 9188040d-6c67-4c5b-b112-36a304b66dad. To receive this claim, your app
+must request the profile scope.</dd>
+</dl>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<p>This information is use to check access. For instance, data put by a user is
+expected to be read only by other users belonging to the same tenant.</p>
+<blockquote>
+<p>Check that the tid inside the token matches the tenant ID used to store the data
+in your API.</p>
+<p>When a user stores data in your API from one tenant, they must sign into that
+tenant again to access that data. <strong>Never allow data in one tenant to be accessed
+from another tenant</strong>.</p>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<h3 id="7cb2d3a3-bb01-4f5f-94c0-3d6e78be5d1e">make clear immutable and mutable claims</h3>
+<p>They warn against JWT claims that may change in the profile of the user, such as the
+email. Using them to get access to the data is very risky.</p>
+<blockquote>
+<ul>
+<li>
+<p>Do use immutable claim values tid and sub or oid as a combined key for storing
+for uniquely identifying your API&rsquo;s data and determining whether a user should
+be granted access to that data.</p>
+<ul>
+<li>Good: tid + sub</li>
+<li>Better: tid + oid - the oid is consistent across applications, so an ecosystem
+of apps can audit user access to data, for instance.</li>
+</ul>
+</li>
+<li>
+<p>Do not use mutable, human-readable identifiers like email or upn for uniquely identifying data.</p>
+<ul>
+<li>Bad: email</li>
+<li>Bad: upn</li>
+</ul>
+</li>
+</ul>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<h3 id="b9e4158b-ff13-4422-87d3-a2675d6397a5">check that the user has appropriate responsibilities</h3>
+<p>They define roles as &ldquo;lists of permissions&rdquo;. <a href="#org-target--roles-are-not-sets-of-permissions">I don&rsquo;t agree with the wording</a>,
+but I think they mean that the resource server checks the roles to find out
+whether the token bearer has access to the API. Actually, they use
+interchangeably &ldquo;set&rdquo; and &ldquo;list&rdquo; here.</p>
+<p>They add two JWT claims to do so : <strong>wids</strong> and <strong>roles</strong>.</p>
+<blockquote>
+<dl>
+<dt>roles</dt>
+<dd>Array of strings, a list of permissions. The set of permissions
+exposed by your application that the requesting application or user has been
+given permission to call. [&hellip;]</dd>
+<dt>wids</dt>
+<dd>Array of RoleTemplateID GUIDs Denotes the tenant-wide roles assigned
+to this user [&hellip;]</dd>
+</dl>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<p>The resource server is supposed to check the roles to find out whether the
+token bearer can have access to the resource.</p>
+<p>Also, they provide an example of role: &ldquo;admin&rdquo;. To me, this corroborates the
+idea that we agree on what a role is, even though we don&rsquo;t agree on the
+wording.</p>
+<blockquote>
+<p>Use the roles and wids claims to validate that the user themselves has
+authorization to call your API. For example, an admin may have permission to
+write to your API, but not a normal user</p>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<p>Another interesting things to note is that they use role and group as if they
+were similar concepts.</p>
+<blockquote>
+<p>If you&rsquo;ve requested the roles or groups claims in the access token, verify that
+the user is in the group allowed to do this action.</p>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<p>In my model, groups are about links between users, where roles are more about
+responsibilities. I eventually agree that both should be checked to assess
+resource access.</p>
+<h3 id="ee15055f-b3a1-4f65-81b2-0f6d130ce00b">check that the token has appropriate scope</h3>
+<p>They encourage to check the scope of the token to ensure you are using a token
+that is indeed issued to get access to the appropriate data.</p>
+<p>To do so, they use the JWT claims <strong>scp</strong>.</p>
+<blockquote>
+<p>Use the scp claim to validate that the user has granted the calling app
+permission to call your API</p>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
+</blockquote>
+<p>It should be noted that they follow the advice of JWT to have small claim
+keys to keep the token compact.</p>
+<blockquote>
+<p>claim names are only three characters long as JWT is meant to be compact</p>
+<p>&mdash; <a href="https://jwt.io/introduction">https://jwt.io/introduction</a></p>
+</blockquote>
+<h2 id="238f3fdc-e01d-45ca-90c1-b8fbb2bd61d8">According to Microsoft <a href="https://docs.microsoft.com/en-us/azure/architecture/multitenant-identity/authorize">azure multinenant documentation</a></h2>
+<p>They explain that access control is typically not following one scheme but
+several in combination. They make the distinction between role/resources and
+permissions.</p>
+<blockquote>
+<p>typical app will employ a mix of both (<a href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">Role Based Access Control</a> and <a href="https://konubinix.eu/braindump/posts/resource_based_access_control/?title=resource_based_access_control#">Resource
+based access control</a>). For example, to delete a resource, the user must be the
+resource owner or an admin</p>
+<p>[&hellip;]</p>
+<p>a good approach is to aggregate all of the user&rsquo;s role-based and resource-based
+permissions, then check the aggregate set against the desired operation</p>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/architecture/multitenant-identity/authorize">https://docs.microsoft.com/en-us/azure/architecture/multitenant-identity/authorize</a></p>
+</blockquote>
+<p>They use the <strong>tenantId</strong> JWT claim to ensure the user only has access to
+resources belonging to pers tenant. Interestingly, they don&rsquo;t use <strong>tid</strong>, like
+in <a href="https://konubinix.eu/braindump/posts/windows_active_directory/?title=windows_active_directory#">windows active directory</a>. And don&rsquo;t follow the advice of having as small
+JWT claim keys as possible.</p>
+<blockquote>
+<p>you must ensure that permissions don&rsquo;t &ldquo;leak&rdquo; to another tenant&rsquo;s data.</p>
+<p>[&hellip;]</p>
+<p>you can assign someone from another tenant as a contributor</p>
+<p>[&hellip;]</p>
+<p>other permission types are restricted to resources that belong to that user&rsquo;s tenant</p>
+<p>[&hellip;]</p>
+<p>enforce this requirement, the code checks the tenant ID before granting the permission</p>
+<p>[&hellip;]</p>
+<p>TenantId field as assigned when the survey is created</p>
+<p>&ndash; <a href="https://docs.microsoft.com/en-us/azure/architecture/multitenant-identity/authorize">https://docs.microsoft.com/en-us/azure/architecture/multitenant-identity/authorize</a></p>
+</blockquote>
+<h2 id="f222c304-ce62-4696-9fea-866dddefd56e">According to some stackoverflow questions</h2>
+<p>By looking at stackoverflow questions, I could find some other valuable food for
+thoughts.</p>
+<h3 id="21160a62-70c0-473a-a2c9-5e489f044459">permissions and relation to roles and groups</h3>
+<p>A point of view is to define a role as the link between a set of users
+and a set of permissions.</p>
+<blockquote>
+<p>On one hand, a Role is a collection of Permissions. I like to call it a
+Permission Profile. When defining a Role you basically add a bunch of
+Permissions into that Role so in that sense a Role is a Permission Profile.</p>
+<p>On the other hand, a Role is also a collection of Users. If I add Bob and Alice
+to the Role &ldquo;Managers&rdquo; then &ldquo;Managers&rdquo; now contains a collection of two Users
+sort of like a Group.</p>
+<p>The truth is that a Role is BOTH a collection of Users and a collection of
+Permissions put together. Visually this can be viewed as a Venn diagram.</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>This distinguishes roles from groups, that are only groups of users.</p>
+<blockquote>
+<p>Group = Collection of Users</p>
+<p>A &ldquo;Group&rdquo; is strictly a collection of Users. The difference between a Group and a Role is that a Role also has a collection of Permissions but a Group only has a collection of Users</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>In this point of view, a permission is something that can be done: it is a verb.</p>
+<blockquote>
+<p>What is a Permission</p>
+<p>Permission = What a subject can do</p>
+<p>What is a Permission Set</p>
+<p>Permission Set = A Collection of Permissions</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>Then, Permissions, Permission sets, Users and Groups can be added to a Role.</p>
+<h3 id="d04a7d3a-9fc7-4af0-bea2-a689656070be">claims and relation to identity</h3>
+<p>It is emphasised that claims are intrinsically about the resource owner. It
+answers the question &ldquo;What does the token claim about the user that should
+help decide whether per is allowed or not?&rdquo;</p>
+<blockquote>
+<p>What Are Claims</p>
+<p>Claim = What a Subject &ldquo;is&rdquo;</p>
+<p>Claims are NOT Permissions. As pointed out in previous answers, a Claim is what a subject &ldquo;is&rdquo; not what a subject &ldquo;can do&rdquo;.</p>
+<p>Claims do not replace Roles or Permissions, they are additional pieces of information that one can use to make an Authorization decision.</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>It is explained that claims are useful to reflect the mutable nature of
+access granting, were some arbitrary mapping to roles is not enough.</p>
+<blockquote>
+<p>Claims to be useful when an Authorization decision needs to be made when the
+User cannot be added to a Role or the decision is not based on the association
+of User to Permission</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<h3 id="ddb16e0d-11f5-4411-bdb9-339116b97710">authorization strategies</h3>
+<p>It is suggested that roles are one particular kind of JWT claim. Therefore
+RBAC is a specific implementation of CBAC. An example is given to show that
+sometimes, claims (a.k.a. user intrinsic properties) make more sense than
+roles.</p>
+<blockquote>
+<p><a href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a> vs <a href="https://konubinix.eu/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a></p>
+<p>Ok, now, if you ask what is the benefit of Role-based access control or Claim
+based access control, then, think about this page &ldquo;ViewImagesOfViolence&rdquo;. Is not
+it more intuitive to check for a claim &ldquo;Adult-over-18years&rdquo; when determining if
+you should allow the user to visit that page? In a word, using Claims, you can
+create more segments within your users comparing roles. In an abstract sense,
+all roles can be claims too, but claims cannot be thought of as roles.</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>Another example is given with more depth : the <a href="https://konubinix.eu/braindump/posts/night_club_analogy/?title=night_club_analogy#">nightclub metaphor</a>. If the
+resource server is a night club, the client is the person that wish to enter
+the night club and the access token is the driver&rsquo;s licence, then the bouncer
+checks the claims of the driver&rsquo;s licence to assess whether the client can
+get access to the night club.</p>
+<p>In that case, the age of the person, hence an intrinsic property, is used to
+decide whether the resource can be accessed or not.</p>
+<blockquote>
+<p>@CodingSoft used the night club metaphor in a previous answer, which I&rsquo;d like to
+extend. In that answer, the Driver&rsquo;s License was used as an example that
+contained a set of Claims where the Date of Birth represents one of the Claims
+and the value of the DateOfBirth Claim is used to test against the authorization
+rule. The government that issued the Driver&rsquo;s License is the authority that
+gives the Claim authenticity. Therefore, in a night club scenario, the bouncer
+at the door looks at the the person&rsquo;s Driver&rsquo;s License, ensures that it was
+issued by a trusted authority by examining whether or not it is a fake ID
+(i.e. must be valid government issued ID), then looks at the Date of Birth (one
+of the many claims on a Driver&rsquo;s License), then uses that value to determine if
+the person is old enough to enter the club. If so, the person passes the
+authorization rule by virtue of having a valid Claim, not by being in some Role.</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>Moreover, this metaphor is extended to show that adding roles helps crafting
+a finer grained authorization model.</p>
+<blockquote>
+<p>Now, with that base in mind I&rsquo;d like to now extend that further. Suppose that
+the building where the night club is contains offices, rooms, a kitchen, other
+floors, elevators, a basement, etc. where only employees of the club can
+enter. Furthermore, certain employees might have access to certain places that
+other employees may not. For example, a Manager may have access to an office
+floor above that other employees cannot access. In this case there are two
+Roles. Manager and Employee.</p>
+<p>While visitors&rsquo; access to the public night club area is authorized by a single
+claim as explained above, employees need access by Role to other non-public
+restricted rooms. For them, a Driver&rsquo;s License is not enough. What they need is
+an Employee Badge that they scan to enter doors. Somewhere there is an RBAC
+system that grants badges in the Manager Role access to the top floor, and
+badges in the Employee Role access to other rooms.</p>
+<p>If for whatever reason certain rooms need to be added/removed by Role, this can
+be done using RBAC, but it is not a good fit for a Claim.</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>Also, it is proposed to take care of not coupling JWT claims and
+permissions. This is called: <a href="https://konubinix.eu/braindump/posts/permission_based_access_control/?title=permission_based_access_control#">Permission-Based access control</a>.</p>
+<p>It describes that the resource server should not directly check the JWT claims but
+map them to permissions (read, write, update) and assign permissions to the
+endpoints. That way is supposed to ease modeling and maintaining the access
+control.</p>
+<blockquote>
+<p>Permission-Based access control is a way of assigning various permissions to
+various users or various roles or various claims and checking if a user has
+permission to execute an action from the code in run time. If you assign
+permission to a role or a claim, then, you would check what are the roles or
+claims for that logged-in user. And then, you will check what permissions are
+available for those roles or claims.</p>
+<p>[&hellip;]</p>
+<p>roles can be thought of as claims too. So, you can treat the roles as
+claims. Then, you can create a table of Claims in your database. Then, create
+another table for holding the relations where each claim can contain multiple
+permissions.</p>
+<p>[&hellip;]</p>
+<p>more control of your security logic in your application if you apply
+permission-based access control.</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>It is recommended not to assign sets of permissions to a users, which is
+exactly what the model &ldquo;role == sets of permission&rdquo; would imply. So I think
+that this is linked to the <a href="https://konubinix.eu/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> <a href="#org-target--roles-are-not-sets-of-permissions">mentioned earlier</a> and I tend
+to agree with what is written here.</p>
+<blockquote>
+<p>You can assign a set of permissions directly to a user. But do not do that. It
+will be tremendously difficult to manage that. Rather, you can assign a set of
+permissions to a Role Or you can assign a set of permissions to a Claim
+(Recommended).</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>It is emphasized that the resource server should not assign roles to
+resources but rather use the intermediate notion of permission.</p>
+<blockquote>
+<p>Coding Roles into the application is a bad idea. This hard codes the purpose of
+the Role into the application. What the application should have is just
+Permissions that act like Feature Flags. Where Feature Flags are made accessible
+by configuration</p>
+<p>[&hellip;]</p>
+<p>This way, there is no hard coding of Roles and the only time a Permission
+changes is when it is removed or a new one is added. Once a Permission is added
+to the software it should never be changed. It should only be removed when
+necessary (i.e. when a feature is discontinued in a new version) and only new
+ones can be added</p>
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<p>In the end, a picture is shown to show the big picture with all that in mind.</p>
+<blockquote>
+<figure><img src="https://i.stack.imgur.com/WMblk.png">
+</figure>
+
+<p>&ndash; <a href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
+</blockquote>
+<h2 id="a9c0403f-03cc-491a-92dd-3b646eec6aa0">My <a href="https://konubinix.eu/braindump/posts/decide_de_croire/?title=decide_de_croire#">opinion</a></h2>
+<p>Here, the objective is to find a framework that allows to think authorization
+and produce meaningful arguments to decide what to put in the <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded
+access tokens</a>.</p>
+<p>I decide to use the following definitions :</p>
+<dl>
+<dt>the token scope</dt>
+<dd>related to the token and used to avoid issuing individual
+tokens with too much access, limiting its impact on the resources (in case
+it becomes stolen for example). The ontology of the scope should depend on
+use cases. If for example, the user is expected to get access to resources
+of kind X and then use them to update resources of case Y, it makes sense to
+have a scope &ldquo;X -&gt; Y&rdquo; that provides read access to resources of kind X and
+write access to resources of kind Y. Also, the scope is shown to the user to
+ask per whether the scope should be granted. That means that the scope name
+is not only some technical stuff but also a user experience concept. In
+other terms, <strong>the scope is the way for the user to tell the authorization
+server what access to grant to the client</strong>.</dd>
+<dt>the users group and tenant</dt>
+<dd>anything giving information about the social
+groups the users is in. For instance, a user might be given the right to get
+access to all the resources of some kind created by all the users of per
+tenant.</dd>
+<dt><a href="https://konubinix.eu/braindump/posts/getting_things_done/?title=horizons_of_focus#horizons-of-focus">commitment</a></dt>
+<dd>whatever the user has been committed to get done. This
+concept is not actually discussed in implementing authorization because we
+generally only need to know about access to make a decision. Yet, I think it
+helps to understand why the user needs those access at first.</dd>
+<dt>commitments</dt>
+<dd>sets of commitments the users has with relativity to the
+resource. People generally call those &ldquo;roles&rdquo; (see <a href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>) but I think this is
+an oversimplification of the notion of commitment.</dd>
+<dt>claims</dt>
+<dd>not to be confused with the <a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a>. Intrinsic properties
+of the user, like the age or some unique identity (see <a href="https://konubinix.eu/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a>). For example,
+resources might be available only to adults (age &gt;= 18 in France).</dd>
+<dt><a href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a></dt>
+<dd>all the key/value data that are stored in a token encoded using
+JWT, and might actually convey information about claims, but also roles,
+scope or groups.</dd>
+<dt>actions</dt>
+<dd>whatever can be done on a resource, like create, read, update,
+delete.</dd>
+<dt>permission</dt>
+<dd>predicate telling whether an action is granted over a resource</dd>
+</dl>
+<p>Now, there are a few expectations that are to be met.</p>
+<p>The resource server uses JWT claims to define the permissions.</p>
+<p>The resource server <strong>has to</strong> keep track of the association between the created
+resources and some JWT claims. This will be needed to decide future
+permissions. For instance, imagine you create a resource server where all
+users of the same tenant share the same resources. When a user from tenant T
+creates a resource R, the resource server must record the association
+T-&gt;R. Then, when another users from the same tenant T claims access to the
+available resources, the resource server must return R.</p>
+<p>This means that the resource server &ldquo;pollutes&rdquo; its database with some concepts
+that come from the authorization server. <a href="#org-target--aware-data">I am ok with this</a>.</p>
+<p>Also, this means that the mutability of the JWT claims must be very clear, as
+changing some JWT claims values might break the links in all the resources
+servers. For example, using the email JWT claim in the resource server to check
+access might be dangerous in case the email is subject to change.</p>
+<h3 id="a84bcded-3d8d-4d0f-bf5d-784a794416e3"><span class="org-target" id="org-target--roles-are-not-sets-of-permissions"></span> Side note about how I reason about roles</h3>
+<p>Another popular definition is that roles are actually sets of permissions. I
+don&rsquo;t like it because it hides the more traditional meaning of role as
+commitment. May be this is because I consider myself a <a href="https://konubinix.eu/braindump/posts/getting_things_done/?title=getting_things_done#">gtd</a> practitioner, in
+my opinion, roles are particular cases of <a href="https://konubinix.eu/braindump/posts/getting_things_done/?title=horizon_2_areas_of_focus_and_accountability#horizon-2-areas-of-focus-and-accountability">area of focus</a>.</p>
+<p>For instance, being a <a href="https://konubinix.eu/braindump/posts/technical_lead/?title=technical_lead#">technical lead</a>, I know the difference between</p>
+<ol>
+<li>my role that implies stuffs that I need to maintain, like, among other things
+<ol>
+<li>train the newcomers,</li>
+<li>ensure the CI still works,</li>
+<li>ensure coding best practices are known,</li>
+</ol>
+</li>
+<li>and the permissions that I am granted that should allow me fulfil that role
+<ol>
+<li>access to the collaborative tools administration console,</li>
+<li>permission to take time not working on the code to prepare training materials,</li>
+</ol>
+</li>
+</ol>
+<p>Also, I think we all are confronted, one day or another, with sets of
+permissions that don&rsquo;t allow us to correctly fulfil our roles. In that case,
+we have to clarify both and ensure that either the role is renegotiated or
+some other permissions are granted.</p>
+<p>Therefore, I assume we all agree that the concept of role cannot be reduced to
+a set of permissions in real life.</p>
+<p>Hence, to ease reasoning with the concept of role in authorization delegation,
+I think it is more appropriate to reflect those real life concepts and
+consider that roles can be associated to sets of permissions.</p>
+<p>Of course, I don&rsquo;t mind people taking the shortcut of considering a role as a
+set of permission. To me, both are is equivalent with respect to the objective
+of controlling access. I&rsquo;m just arguing that I won&rsquo;t.</p>
+<p>Actually, by digging into the examples, I think that we end up thinking of
+the same thing, but with different words, and that this is more of a <a href="https://konubinix.eu/braindump/posts/debat_semantique/?title=debat_semantique#">semantic
+debate</a>. In the end, it is mostly a matter of taste.</p>
+<h3 id="85547d67-aa64-486b-8f49-ab04df0ba387"><span class="org-target" id="org-target--aware-data"></span> Make the authorization server aware of the data?</h3>
+<p>In all the literature I read, only the resource servers knew about the
+resources. The authorization server does not know whether the resources will
+be X or Y and in particular does not know about specific instances, like X1,
+X2&hellip;Xn.</p>
+<p>Also, a part of the authorization server ontology transpires into all the
+resource server as they have to keep track of JWT claims.</p>
+<p>This means that changing the authorization strategy in the authorization
+server implies to migrate the data in all the resource servers. Imagine you
+have a single tenant application and decide to make it multi tenant. You
+first have to go to all the resource servers to add the tenant id column and
+migrate the data. This might be cumbersome.</p>
+<p>To mitigate this, some might be tempted to inverse the logic and make the
+authorization server aware of the resources. That way, the resource server
+only knows about the resources and migrations of strategies only impact the
+authorization server. This means that the authorization server database
+should be big enough to store the order of magnitude of the resource servers
+time the amount of data in each resource server. This looks pretty cumbersome
+as well. Also, the authorization would have to convey resource information to
+the resource servers. In the case of using <a href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded access tokens</a>, this
+would lead to pretty big tokens, which is contrary to OAuth 2.0 initial idea.</p>
+<p>I guess that there is no ideal solution and a compromise needs to be
+done.</p>
+<p>Actually, I feel like making the authorization server resource aware looks
+the worst. Plus, no popular implementations I read does this hence it might
+be harder to find food for thoughts in the literature. Finally, it looks the
+least compatible with the OAuth 2.0 idea of separating the authorization
+server from the stack. If one would really want to do it, I would advice
+looking for others authorization delegation standards than OAuth 2.0.</p>
+<h2 id="55b743a4-534f-4960-aee0-3b0faff6957e">Some definitions of scopes in well known implementations</h2>
+<p>To me, scopes are one of the most tricky concept to implement, because they
+are at the frontier between user experience and security.</p>
+<p>Let&rsquo;s see how some popular implementation defined them, to get some food for
+thoughts.</p>
+<h3 id="b9016fd9-c02b-4063-a887-0c6960c5be78"><a href="https://konubinix.eu/braindump/posts/openid_connect/?title=openid_connect#">OpenID Connect</a></h3>
+<p>OpenID connect is mostly about getting access to the resource owner&rsquo;s
+data. Hence, it looks natural that its scopes are about several kind of
+information based on the nature of the data.</p>
+<blockquote>
+<p>OpenID Connect defines the following scope values that are used to request Claims:</p>
+<dl>
+<dt>profile</dt>
+<dd>OPTIONAL. This scope value requests access to the End-User&rsquo;s
+default profile Claims, which are:
+<ul>
+<li>name,</li>
+<li>family_name,</li>
+<li>given_name,</li>
+<li>middle_name,</li>
+<li>nickname,</li>
+<li>preferred_username,</li>
+<li>profile,</li>
+<li>picture,</li>
+<li>website,</li>
+<li>gender,</li>
+<li>birthdate,</li>
+<li>zoneinfo,</li>
+<li>locale,</li>
+<li>updated_at.</li>
+</ul>
+</dd>
+<dt>email</dt>
+<dd>OPTIONAL. This scope value requests access to the email and
+email_verified Claims.</dd>
+<dt>address</dt>
+<dd>OPTIONAL. This scope value requests access to the address Claim.</dd>
+<dt>phone</dt>
+<dd>OPTIONAL. This scope value requests access to the phone_number and
+phone_number_verified Claims.</dd>
+</dl>
+<p>&ndash; <a href="https://openid.net/specs/openid-connect-core-1_0.html">https://openid.net/specs/openid-connect-core-1_0.html</a></p>
+</blockquote>
+<h3 id="3fc51529-8681-4f5b-b827-8a31c3a2250a">slack</h3>
+<p>Slack&rsquo;s scopes are more about separating the kinds of actions and resources and
+the permissions on them. They also let the roles transpire into the scope.</p>
+<blockquote>
+<p>When a user is responding to your OAuth request, the requested scopes will be
+displayed to them when they are asked to approve your request</p>
+<p>[&hellip;]</p>
+<p>Slack uses scopes that refer to the object they grant access to, followed by the
+class of actions on that object they allow (e.g. <write>). Additionally, some
+scopes have an optional perspective which is either user, bot, or admin, which
+influences how the action appears in Slack (e.g. chat:write:user will send a
+message from the authorizing user as opposed to your app).</p>
+<p>&ndash; <a href="https://api.slack.com/legacy/oauth-scopes">https://api.slack.com/legacy/oauth-scopes</a></p>
+</blockquote>
+<h3 id="cd01bed3-0134-4027-9ad1-69d434a9716e"><span class="org-target" id="org-target--google"></span> google</h3>
+<p>Google appears to follow a same similar strategy, but they also have scopes
+gathered into namespaces that convey the names of the products.</p>
+<p>They remind that scopes are not a tiling of possibilities, hence better use a
+scope without accesses that you don&rsquo;t need.</p>
+<blockquote>
+<p>Many scopes overlap, so it&rsquo;s best to use a scope that isn&rsquo;t sensitive</p>
+<p>&ndash; <a href="https://developers.google.com/identity/protocols/oauth2/scopes">https://developers.google.com/identity/protocols/oauth2/scopes</a></p>
+</blockquote>
+<p>Here are a few example of scopes found at google. We can see a mix of
+namespaces, permissions, functions and resources.</p>
+<blockquote>
+<p><a href="https://www.googleapis.com/auth/cloud-platform.read-only">https://www.googleapis.com/auth/cloud-platform.read-only</a></p>
+<p><a href="https://www.googleapis.com/auth/tagmanager.readonly">https://www.googleapis.com/auth/tagmanager.readonly</a></p>
+<p><a href="https://www.googleapis.com/auth/youtube">https://www.googleapis.com/auth/youtube</a></p>
+<p><a href="https://www.googleapis.com/auth/youtube.channel-memberships.creator">https://www.googleapis.com/auth/youtube.channel-memberships.creator</a></p>
+<p><a href="https://www.googleapis.com/auth/youtube.upload">https://www.googleapis.com/auth/youtube.upload</a></p>
+<p>&ndash; <a href="https://developers.google.com/oauthplayground/">https://developers.google.com/oauthplayground/</a></p>
+</blockquote>
+<p>We can appreciate that this mixes the nature of the resource, the
+responsibilities of the user and user expected journeys.</p>
+<p>One interesting example is at <a href="https://konubinix.eu/braindump/posts/google_drive/?title=google_drive#">google drive</a>.</p>
+<blockquote>
+<dl>
+<dt><a href="https://www.googleapis.com/auth/drive.appdata">https://www.googleapis.com/auth/drive.appdata</a></dt>
+<dd>View and manage its own
+<a href="https://konubinix.eu/braindump/posts/store_application_specific_data_in_google_drive/?title=store_application_specific_data_in_google_drive#">configuration data</a> in your Google Drive</dd>
+<dt><a href="https://www.googleapis.com/auth/drive.file">https://www.googleapis.com/auth/drive.file</a></dt>
+<dd>View and manage Google Drive
+files and folders that you have opened or created with this app<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></dd>
+</dl>
+<p>&ndash; <a href="https://developers.google.com/identity/protocols/oauth2/scopes#drive">https://developers.google.com/identity/protocols/oauth2/scopes#drive</a></p>
+</blockquote>
+<p>Those scope clearly reflect a classical use case of storing app data without
+disturbing the user&rsquo;s data. This reflects the fact that scopes are mostly
+driven by expected user journeys.</p>
+<h3 id="f45f37f5-5409-48e7-9ebe-ef5d0d7900d5">fitbit</h3>
+<p>Fitbit uses scopes to tile the kind of data to consider.</p>
+<blockquote>
+<p>scope: A space-delimited list of data collections requested by the application</p>
+<p>[&hellip;]</p>
+<p>&ldquo;scope&rdquo;: &ldquo;social settings heartrate nutrition sleep activity profile location weight&rdquo;</p>
+<p>&ndash; <a href="https://dev.fitbit.com/build/reference/web-api/developer-guide/authorization/">https://dev.fitbit.com/build/reference/web-api/developer-guide/authorization/</a></p>
+</blockquote>
+<p>Here, the scope is quite simple: a tiling of the resources by nature.</p>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="https://konubinix.eu/braindump/posts/how_to_deal_with_permissions_in_oauth2/?title=how_to_deal_with_permissions_in_oauth2#">how to deal with permissions in OAuth2?</a> (braindump)</li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/ae37b219-5eb7-41d7-9687-5a52fb9821f1?title=what_should_i_put_into_those_scopes_and_access_tokens_claims">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>We can imagine that those users can be gathered in groups and assigned to
+roles</p>
+<!--more-->
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
+<p>but those will be visible by the end user&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+  </article>
+  <aside class="date"><time>Last updated: 13 Feb 2025</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Jan 2022</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

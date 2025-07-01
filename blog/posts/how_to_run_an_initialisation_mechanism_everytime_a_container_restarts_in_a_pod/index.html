@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>How to Run an Initialisation Mechanism Everytime a Container Restarts in a Pod &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">How to Run an Initialisation Mechanism Everytime a Container Restarts in a Pod</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#e245ccae-c3b2-490e-a845-24420836a9e6">a base scenario to test</a></li>
+<li><a href="#29311f1c-4275-439b-ac68-702db7f4964e">run some code inside the container itself</a>
+<ul>
+<li><a href="#7f97131d-c5b8-4ff6-99ce-11cda13cae89">edit the entrypoint</a></li>
+<li><a href="#e7731296-9a37-493b-8964-12fdcedef157">postStart script</a></li>
+</ul>
+</li>
+<li><a href="#4cea2060-e905-40e0-9098-98b6b788de53">run some code in another container, in the same pod</a>
+<ul>
+<li><a href="#c711e8cc-24f8-48a6-a0c2-3a9064a6089f">the &ldquo;sidekick&rdquo; container</a></li>
+<li><a href="#9d297e0c-784e-46f9-946c-9dac1530894e">using initContainer</a>
+<ul>
+<li><a href="#45c84e04-6b74-4fb8-b2f2-3f71932c9947">restartPolicy = Never or OnFailure</a></li>
+<li><a href="#f021b020-9f07-4bcc-9c58-fc2666d7ce36">restartPolicy = Always =&gt; sidecar container</a></li>
+<li><a href="#20f5781f-452b-4609-b882-bc86b1768388">another issue</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#be29258d-10de-416a-8773-49420563741f">run some code in another pod, using jobs</a>
+<ul>
+<li><a href="#66cb3c1a-9669-4e18-9ae1-d8f277776483">using an operator</a></li>
+</ul>
+</li>
+<li><a href="#7a863d61-066f-44d9-afdd-56553862cc96">conclusion</a></li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<h2 id="e245ccae-c3b2-490e-a845-24420836a9e6">a base scenario to test</h2>
+<p><a href="https://konubinix.eu/braindump/posts/nginx/?title=nginx#">nginx</a> is often used for tutorials, example and stuffs, let&rsquo;s use it.</p>
+<p>Something very simple and dumb.</p>
+<p><a id="code-snippet--basepod"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">namespace</span>:<span style="color:#bbb"> </span>default<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">labels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">hostPath</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/tmp<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">image</span>:<span style="color:#bbb"> </span>nginx:latest<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">imagePullPolicy</span>:<span style="color:#bbb"> </span>IfNotPresent<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>maincontainer<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">ports</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">containerPort</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>http<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">livenessProbe</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">httpGet</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">initialDelaySeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">periodSeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">readinessProbe</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">httpGet</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">initialDelaySeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">periodSeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span></code></pre></div><p>We will want to initialize the <code>/usr/share/nginx/html/init</code> folder every time
+the container restarts.</p>
+<p>To get access to this service, we have to provide a few resources related to
+the network.</p>
+<p><a id="code-snippet--connection"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#bbb">    </span>---<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Service<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>testsvc<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">labels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testsvc<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">ports</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>http<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">protocol</span>:<span style="color:#bbb"> </span>TCP<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">targetPort</span>:<span style="color:#bbb"> </span>http<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">selector</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">type</span>:<span style="color:#bbb"> </span>ClusterIP<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>---<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>networking.k8s.io/v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Ingress<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">annotations</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">cert-manager.io/cluster-issuer</span>:<span style="color:#bbb"> </span>local<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>testingress<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">rules</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span>- <span style="color:#000080">host</span>:<span style="color:#bbb"> </span>testingress.localtest.me<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">http</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">paths</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span>- <span style="color:#000080">backend</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">service</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>testsvc<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                </span><span style="color:#000080">port</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">                  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>http<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">pathType</span>:<span style="color:#bbb"> </span>Prefix<span style="color:#bbb">
+</span></span></span></code></pre></div><p>We can now apply those resources.</p>
+<p>Then, see the pod answering a simple get request.</p>
+<p><a id="code-snippet--discuss"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span> curl --fail --silent --show-error --location <span style="color:#d14">&#34;http://testingress.localtest.me</span><span style="color:#d14">${</span><span style="color:#008080">url</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> | grep <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">expected</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> ; <span style="color:#000;font-weight:bold">}</span> 2&gt;&amp;<span style="color:#099">1</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+</span></span><span style="display:flex;"><span>&lt;h1&gt;Welcome to nginx!&lt;/h1&gt;
+</span></span></code></pre></div><p>Nothing fancy, but a good start to test our ideas.</p>
+<p>Now, let&rsquo;s focus on how we could initialize the <code>/usr/share/nginx/html/init</code>
+folder automatically.</p>
+<h2 id="29311f1c-4275-439b-ac68-702db7f4964e">run some code inside the container itself</h2>
+<p>We can run the initialization code inside the container that needs it.</p>
+<p>In our case, the initialization script needed a bunch of typescript stuffs. We
+did not want to pollute the tiny little container with those.</p>
+<p>Yet, for the record, to the best of my knowledge, there are two ways of doing
+this.</p>
+<h3 id="7f97131d-c5b8-4ff6-99ce-11cda13cae89">edit the entrypoint</h3>
+<p>You an create your own image with the entrypoint first initializing and then
+running the old entrypoint.</p>
+<p>It requires that you maintain the image though, and possible update the
+entrypoint if the behavior changes. Also, you might mess up with the signals
+handlers by running a server in the background, running the initialization
+script and then put it in the foreground again.</p>
+<h3 id="e7731296-9a37-493b-8964-12fdcedef157"><a href="https://konubinix.eu/braindump/posts/poststart_handler/?title=poststart_handler#">postStart</a> script</h3>
+<p>I tend to avoid them, because they are hard to
+debug, but this definitely an option.</p>
+<h2 id="4cea2060-e905-40e0-9098-98b6b788de53">run some code in another container, in the same pod</h2>
+<p>The code of the container that we would like to run should look like this.</p>
+<p><a id="code-snippet--sidecarcode"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>busybox<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">command</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;/bin/sh&#34;</span>,<span style="color:#bbb"> </span><span style="color:#d14">&#34;-c&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">args</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- |<span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      echo &#34;Waiting for Nginx to start...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      while ! nc -z localhost 80; do sleep 1; done
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      echo &#34;Nginx is up! Initializing...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      echo &#34;&lt;h1&gt;Welcome! Initialized&lt;/h1&gt;&#34; &gt; /usr/share/nginx/html/init/index.html
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      echo &#34;Initialization complete.&#34;</span><span style="color:#bbb">      
+</span></span></span></code></pre></div><p>As far as I could understand, there are three ways to run containers aside
+the main one.</p>
+<h3 id="c711e8cc-24f8-48a6-a0c2-3a9064a6089f">the &ldquo;sidekick&rdquo; container</h3>
+<p>We could try using another container next to our own. It would wait for the
+main container to start and then initialize it. I did not actually see the
+term &ldquo;sidekick&rdquo; used in the literature, but I like it.</p>
+<p><a id="code-snippet--basewithsidekick"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">namespace</span>:<span style="color:#bbb"> </span>default<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">labels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">hostPath</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/tmp<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">image</span>:<span style="color:#bbb"> </span>nginx:latest<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">imagePullPolicy</span>:<span style="color:#bbb"> </span>IfNotPresent<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>maincontainer<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">ports</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">containerPort</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>http<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">livenessProbe</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">httpGet</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">initialDelaySeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">periodSeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">readinessProbe</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">httpGet</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">initialDelaySeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">periodSeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>busybox<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">command</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;/bin/sh&#34;</span>,<span style="color:#bbb"> </span><span style="color:#d14">&#34;-c&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">args</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- |<span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Waiting for Nginx to start...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          while ! nc -z localhost 80; do sleep 1; done
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Nginx is up! Initializing...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;&lt;h1&gt;Welcome! Initialized&lt;/h1&gt;&#34; &gt; /usr/share/nginx/html/init/index.html
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Initialization complete.&#34;</span><span style="color:#bbb">          
+</span></span></span></code></pre></div><p>This unfortunately results in:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>curl: (22) The requested URL returned error: 503
+</span></span></code></pre></div><p>Looking at the resource, we get</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl describe pod testpod | gi backoff
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>    Reason:       CrashLoopBackOff
+</span></span><span style="display:flex;"><span>Warning  BackOff    102s (x6 over 2m35s)  kubelet            Back-off restarting failed container init-sidekick in pod testpod_default(b0f5b871-7095-456a-a384-47922cfca81d)
+</span></span></code></pre></div><p>Indeed, it needs the pod to be up and running, and if we try using a
+RestartPolicy to <code>Never</code> to avoid needing this.</p>
+<p>Now, we get a pod that is partially running.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl describe pod testpod | gi <span style="color:#d14">&#39;Stat\|Reason&#39;</span>|gv <span style="color:#d14">&#34;Type&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Status:           Running
+</span></span><span style="display:flex;"><span>    State:          Running
+</span></span><span style="display:flex;"><span>    State:          Terminated
+</span></span><span style="display:flex;"><span>      Reason:       Completed
+</span></span></code></pre></div><p>Listing the pods shows it as:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get pods testpod
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NAME      READY   STATUS     RESTARTS   AGE
+</span></span><span style="display:flex;"><span>testpod   1/2     NotReady   0          17s
+</span></span></code></pre></div><p>Therefore, even though nginx can still be accessed with the port-forward, no
+svc or ingress will be setup.</p>
+<p>Also, the restartPolicy is configured pod-wise. The main container will not
+restart if need be. It is definitely not what we want.</p>
+<h3 id="9d297e0c-784e-46f9-946c-9dac1530894e">using <a href="https://konubinix.eu/braindump/posts/init_containers/?title=init_containers#">initContainer</a></h3>
+<p>initContainer have their own restartPolicy<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>. Hence
+the limitation of the &ldquo;sidekick&rdquo; container no longer applies.</p>
+<h4 id="45c84e04-6b74-4fb8-b2f2-3f71932c9947">restartPolicy = Never or OnFailure</h4>
+<p>This is the classical case of initContainer.</p>
+<p>The main container will start only after the initcontainer has run, so this
+won&rsquo;t work.</p>
+<p><a id="code-snippet--basewithinitcontainer"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">namespace</span>:<span style="color:#bbb"> </span>default<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">labels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">hostPath</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/tmp<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">image</span>:<span style="color:#bbb"> </span>nginx:latest<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">imagePullPolicy</span>:<span style="color:#bbb"> </span>IfNotPresent<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>maincontainer<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">ports</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">containerPort</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>http<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">livenessProbe</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">httpGet</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">initialDelaySeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">periodSeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">readinessProbe</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">httpGet</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">initialDelaySeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">periodSeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">initContainers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>busybox<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">command</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;/bin/sh&#34;</span>,<span style="color:#bbb"> </span><span style="color:#d14">&#34;-c&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">args</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- |<span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Waiting for Nginx to start...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          while ! nc -z localhost 80; do sleep 1; done
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Nginx is up! Initializing...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;&lt;h1&gt;Welcome! Initialized&lt;/h1&gt;&#34; &gt; /usr/share/nginx/html/init/index.html
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Initialization complete.&#34;</span><span style="color:#bbb">          
+</span></span></span></code></pre></div><p>As expected, this leads to the pod being stuck in the init phase, subject to
+the circular dependency initContainer &lt;-&gt; main container.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get pod testpod
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NAME      READY   STATUS     RESTARTS   AGE
+</span></span><span style="display:flex;"><span>testpod   0/1     Init:0/1   0          25s
+</span></span></code></pre></div><h4 id="f021b020-9f07-4bcc-9c58-fc2666d7ce36">restartPolicy = Always =&gt; <a href="https://konubinix.eu/braindump/posts/init_containers/?title=sidecar_container#sidecar-container">sidecar container</a><sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></h4>
+<p>It should do the work.</p>
+<p><a id="code-snippet--sidecar"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">namespace</span>:<span style="color:#bbb"> </span>default<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">labels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">hostPath</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/tmp<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">image</span>:<span style="color:#bbb"> </span>nginx:latest<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">imagePullPolicy</span>:<span style="color:#bbb"> </span>IfNotPresent<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>maincontainer<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">ports</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">containerPort</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>http<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">livenessProbe</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">httpGet</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">initialDelaySeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">periodSeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">readinessProbe</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">httpGet</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">initialDelaySeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">3</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">periodSeconds</span>:<span style="color:#bbb"> </span><span style="color:#099">5</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">initContainers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>busybox<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">command</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;/bin/sh&#34;</span>,<span style="color:#bbb"> </span><span style="color:#d14">&#34;-c&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">args</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- |<span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Waiting for Nginx to start...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          while ! nc -z localhost 80; do sleep 1; done
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Nginx is up! Initializing...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;&lt;h1&gt;Welcome! Initialized&lt;/h1&gt;&#34; &gt; /usr/share/nginx/html/init/index.html
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Initialization complete.&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          sleep 3600</span><span style="color:#bbb">          
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">restartPolicy</span>:<span style="color:#bbb"> </span>Always<span style="color:#bbb">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&lt;h1&gt;Welcome! Initialized&lt;/h1&gt;
+</span></span></code></pre></div><p>It works, but the container remains here for the lifetime of the pod.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get pod testpod
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NAME      READY   STATUS    RESTARTS   AGE
+</span></span><span style="display:flex;"><span>testpod   2/2     Running   0          3m8s
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl describe pod testpod | gi <span style="color:#d14">&#39;Stat\|Reason&#39;</span>|gv <span style="color:#d14">&#34;Type&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Status:           Running
+</span></span><span style="display:flex;"><span>    State:          Running
+</span></span><span style="display:flex;"><span>    State:          Running
+</span></span></code></pre></div><p>So this is far from ideal.</p>
+<h4 id="20f5781f-452b-4609-b882-bc86b1768388">another issue</h4>
+<p>initcontainer are run once for the lifetime of the pod. Therefore, even if
+this worked, it would still not fulfil our need. This can be mitigated using
+a postStart script that would trigger the initialization in the sidecar, but
+I intuitively don&rsquo;t like it.</p>
+<h2 id="be29258d-10de-416a-8773-49420563741f">run some code in another pod, using jobs</h2>
+<p>If we cannot initialize the pod from the inside, let&rsquo;s try from the outside. A
+job might be exactly what we need.</p>
+<p>Because this is from the outside, we have to allow the communication between
+the job and the pod, at least so that the job waits for the pod.</p>
+<p><a id="code-snippet--jobtopod"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>networking.k8s.io/v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>NetworkPolicy<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>jobtopod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">podSelector</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">matchLabels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">policyTypes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- Ingress<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">ingress</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">from</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">podSelector</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">matchLabels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testjob<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">ports</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">protocol</span>:<span style="color:#bbb"> </span>TCP<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">port</span>:<span style="color:#bbb"> </span><span style="color:#099">80</span><span style="color:#bbb">
+</span></span></span></code></pre></div><p>Then, the code of the job is quite similar to the code of the initcontainer.</p>
+<p><a id="code-snippet--jobdef"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>batch/v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Job<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>testjob<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">labels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testjob<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">template</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">labels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testjob<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">hostPath</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span><span style="color:#000080">path</span>:<span style="color:#bbb"> </span>/tmp<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>busybox<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">command</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;/bin/sh&#34;</span>,<span style="color:#bbb"> </span><span style="color:#d14">&#34;-c&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">args</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- |<span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              echo &#34;Waiting for Nginx to be ready...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              until nc -z testsvc 80; do
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                echo &#34;Waiting for Nginx...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                sleep 2
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              done
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              echo &#34;Nginx is up! Running initialization...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              echo &#34;&lt;h1&gt;Welcome! Initialized at $(date)&lt;/h1&gt;&#34; &gt; /usr/share/nginx/html/init/index.html
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              echo &#34;Initialization complete.&#34;</span><span style="color:#bbb">              
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">          </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">            </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>data<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">              </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/usr/share/nginx/html/init<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">restartPolicy</span>:<span style="color:#bbb"> </span>Never<span style="color:#bbb">
+</span></span></span></code></pre></div><p>Note that I mounted the data volume here, to be able to init some files that will be read by the pod.</p>
+<p>We can request the init page. Yeah!</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&lt;h1&gt;Welcome! Initialized at Thu Mar 20 10:50:02 UTC 2025&lt;/h1&gt;
+</span></span></code></pre></div><p>And the job don&rsquo;t leaves a dangling pod behind.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get pods testpod | tail -1
+</span></span><span style="display:flex;"><span>kubectl get pods -l app.kubernetes.io/name<span style="color:#000;font-weight:bold">=</span>testjob | tail -1
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>testpod   1/1     Running   0          8m50s
+</span></span><span style="display:flex;"><span>testjob-wkh4n   0/1     Completed   0          8m50s
+</span></span></code></pre></div><p>But that is not enough. When the container restarts, nothing will tell the job
+to run again.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> pods/testpod -- nginx -s stop
+</span></span></code></pre></div><p>Of course, the job won&rsquo;t start again</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get pods
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NAME            READY   STATUS      RESTARTS      AGE
+</span></span><span style="display:flex;"><span>testjob-s5gqn   0/1     Completed   0             3m19s
+</span></span><span style="display:flex;"><span>testpod         1/1     Running     2 (23s ago)   3m19s
+</span></span></code></pre></div><p>And the initialization won&rsquo;t be updated.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&lt;h1&gt;Welcome! Initialized at Thu Mar 20 10:50:02 UTC 2025&lt;/h1&gt;
+</span></span></code></pre></div><h3 id="66cb3c1a-9669-4e18-9ae1-d8f277776483">using an <a href="https://konubinix.eu/braindump/posts/kubernetes/?title=operator#operator">operator</a></h3>
+<p>We can try to create a custom operator to trigger this job automatically.</p>
+<p>For the sake of this article, I wanted something easy to play with, so I
+chose <a href="https://flant.github.io/shell-operator/HOOKS.html">shell-operator</a>.</p>
+<p>First, I need to setup some policies for the operator to be able to watch the
+pod and run a job.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl create namespace example-monitor-pods
+</span></span><span style="display:flex;"><span>kubectl create --namespace example-monitor-pods serviceaccount monitor-pods-acc
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># the following needs to be deleted and recreated each time you change the clusterrole</span>
+</span></span><span style="display:flex;"><span>kubectl create clusterrole monitor-pods --verb<span style="color:#000;font-weight:bold">=</span>get,watch,list,delete,create --resource<span style="color:#000;font-weight:bold">=</span>pods,jobs
+</span></span><span style="display:flex;"><span>kubectl create clusterrolebinding monitor-pods --clusterrole<span style="color:#000;font-weight:bold">=</span>monitor-pods --serviceaccount<span style="color:#000;font-weight:bold">=</span>example-monitor-pods:monitor-pods-acc
+</span></span></code></pre></div><p>We will need to put the job definition inside the operator, so that it
+can be mounted into the operator.</p>
+<p>Let&rsquo;s put it in a config map.</p>
+<p><a id="code-snippet--jobdefcm"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>ConfigMap<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>jobdef<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">data</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">job.yaml</span>:<span style="color:#bbb"> </span>|<span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    apiVersion: batch/v1
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    kind: Job
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    metadata:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      name: testjob
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      labels:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        app.kubernetes.io/name: testjob
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    spec:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      template:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        metadata:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          labels:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            app.kubernetes.io/name: testjob
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        spec:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          volumes:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            - name: data
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              hostPath:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                path: /tmp
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          containers:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            - name: init
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              image: busybox
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              command: [&#34;/bin/sh&#34;, &#34;-c&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              args:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                - |
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                  echo &#34;Waiting for Nginx to be ready...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                  until nc -z testsvc 80; do
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                    echo &#34;Waiting for Nginx...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                    sleep 2
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                  done
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                  echo &#34;Nginx is up! Running initialization...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                  echo &#34;&lt;h1&gt;Welcome! Initialized at $(date)&lt;/h1&gt;&#34; &gt; /usr/share/nginx/html/init/index.html
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                  echo &#34;Initialization complete.&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">              volumeMounts:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                - name: data
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                  mountPath: /usr/share/nginx/html/init
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          restartPolicy: Never</span><span style="color:#bbb">    
+</span></span></span></code></pre></div><p>Then, we can provide the code of the operator that will recreate a job each
+time if sees the main container entering the Running state.</p>
+<p>I won&rsquo;t get into the details of the code of the hook here, because the
+<a href="https://flant.github.io/shell-operator/HOOKS.html">documentation</a> is very well done and explains this better than I could.</p>
+<p>The hook has to deal with being called with three kind of events:</p>
+<ol>
+<li>with <code>--config</code>, it is expected to return what it wants to watch
+<a id="code-snippet--config"></a>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">configVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kubernetes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">​- apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">executeHookOnEvent</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;Modified&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">labelSelector</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">matchLabels</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">app.kubernetes.io/name</span>:<span style="color:#bbb"> </span>testpod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">namespace</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">nameSelector</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">matchNames</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;default&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">jqFilter</span>:<span style="color:#bbb"> </span>.status.conditions[]|select(.type == &#34;Ready&#34;).status<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">allowFailure</span>:<span style="color:#bbb"> </span><span style="color:#000;font-weight:bold">true</span><span style="color:#bbb">
+</span></span></span></code></pre></div></li>
+<li>at startup, it is called with the description of all matched objects, into <code>.[0].objects</code> of <code>${BINDING_CONTEXT_PATH}</code>
+I identify this situation when <code>.[0].object</code> (singular) is null, as this is the next case
+<a id="code-snippet--checkstartup"></a>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">pod_name</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>jq -r .<span style="color:#000;font-weight:bold">[</span>0<span style="color:#000;font-weight:bold">]</span>.object.metadata.name <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">BINDING_CONTEXT_PATH</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">if</span> <span style="color:#0086b3">test</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">pod_name</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;null&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">then</span>
+</span></span></code></pre></div>In that case only, I need to get the status in the list of objects provided.
+<a id="code-snippet--startupcode"></a>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">pod_name</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>jq -r .<span style="color:#000;font-weight:bold">[</span>0<span style="color:#000;font-weight:bold">]</span>.objects<span style="color:#000;font-weight:bold">[</span>0<span style="color:#000;font-weight:bold">]</span>.object.metadata.name <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">BINDING_CONTEXT_PATH</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">ready</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>jq -r .<span style="color:#000;font-weight:bold">[</span>0<span style="color:#000;font-weight:bold">]</span>.objects<span style="color:#000;font-weight:bold">[</span>0<span style="color:#000;font-weight:bold">]</span>.filterResult <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">BINDING_CONTEXT_PATH</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div></li>
+<li>when a matched object changes, it is called with the object described in <code>~.[0].object~</code>, this is the else part of my condition
+<a id="code-snippet--matchedcase"></a>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">else</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">ready</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>jq -r .<span style="color:#000;font-weight:bold">[</span>0<span style="color:#000;font-weight:bold">]</span>.filterResult <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">BINDING_CONTEXT_PATH</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div></li>
+</ol>
+<p>In 2 or 3, if the container is ready, I want to trigger a new job. Otherwise, do nothing.</p>
+<p><a id="code-snippet--restartjob"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">if</span> <span style="color:#0086b3">test</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">ready</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;True&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">then</span>
+</span></span><span style="display:flex;"><span>    kubectl --namespace default delete --wait -f /jobdef/job.yaml <span style="color:#000;font-weight:bold">||</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;no job to remove&#34;</span>
+</span></span><span style="display:flex;"><span>    kubectl --namespace default apply -f /jobdef/job.yaml
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Job for pod &#39;</span><span style="color:#d14">${</span><span style="color:#008080">pod_name</span><span style="color:#d14">}</span><span style="color:#d14">&#39; created&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">else</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Ready: </span><span style="color:#d14">${</span><span style="color:#008080">ready</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">fi</span>
+</span></span></code></pre></div><p>Put together, it gives a script a bit hairy, that hides the fact that the
+logic is pretty simple.</p>
+<p>Let&rsquo;s put that code in a configmap as well (named pods-hook, see <sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>).</p>
+<p>Finally, we have to create a pod to run shell-operator giving it access to
+both the bash script code and the job definition.</p>
+<p><a id="code-snippet--startoperator"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>shell-operator<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>pods-hook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">configMap</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>pods-hook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">defaultMode</span>:<span style="color:#bbb"> </span><span style="color:#099">0777</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>jobdef<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">configMap</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>jobdef<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>shell-operator<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>ghcr.io/flant/shell-operator:latest<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">imagePullPolicy</span>:<span style="color:#bbb"> </span>Always<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>pods-hook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/hooks<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>jobdef<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span>/jobdef<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">serviceAccountName</span>:<span style="color:#bbb"> </span>monitor-pods-acc<span style="color:#bbb">
+</span></span></span></code></pre></div><p>In real life, one would may be provide a custom image with the files in it,
+but in the scope of this article, I did not want to bother building images.</p>
+<p>In the end, after applying this.</p>
+<p>We can take a look at the log of this operator to see if it ran the job once started.</p>
+<p><a id="code-snippet--operatorlogs"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl logs --namespace example-monitor-pods pods/shell-operator |gi <span style="color:#d14">&#34;shell-operator.hook-manager.hook.executor&#34;</span>|jq -r .msg
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>job.batch &#34;testjob&#34; deleted
+</span></span><span style="display:flex;"><span>job.batch/testjob created
+</span></span><span style="display:flex;"><span>Job for pod &#39;testpod&#39; created
+</span></span></code></pre></div><p>And we can see that the job was indeed recently run.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get pods
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NAME            READY   STATUS      RESTARTS      AGE
+</span></span><span style="display:flex;"><span>testjob-9gz29   0/1     Completed   0             22s
+</span></span><span style="display:flex;"><span>testpod         1/1     Running     1 (21m ago)   40m
+</span></span></code></pre></div><p>Now, let&rsquo;s try to restart the main container and see how it reacts.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> pods/testpod -- nginx -s stop
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get pods
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NAME            READY   STATUS              RESTARTS     AGE
+</span></span><span style="display:flex;"><span>testjob-kq5pk   0/1     ContainerCreating   0            0s
+</span></span><span style="display:flex;"><span>testpod         1/1     Running             2 (4s ago)   40m
+</span></span></code></pre></div><p>So far so good, let&rsquo;s take a look at the log of the operator.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>job.batch &#34;testjob&#34; deleted
+</span></span><span style="display:flex;"><span>job.batch/testjob created
+</span></span><span style="display:flex;"><span>Job for pod &#39;testpod&#39; created
+</span></span><span style="display:flex;"><span>Ready: False
+</span></span><span style="display:flex;"><span>job.batch &#34;testjob&#34; deleted
+</span></span><span style="display:flex;"><span>job.batch/testjob created
+</span></span><span style="display:flex;"><span>Job for pod &#39;testpod&#39; created
+</span></span></code></pre></div><p>It shows that succession of events</p>
+<ol>
+<li>operator starting -&gt; detecting the running container -&gt; start a job</li>
+<li>main container stopped -&gt; do nothing</li>
+<li>main container started again -&gt; start a job</li>
+</ol>
+<h2 id="7a863d61-066f-44d9-afdd-56553862cc96">conclusion</h2>
+<p>From all attempts I made, only the solution operator + job fulfilled exactly
+my need of initializing my pod EVERYTIME the main container starts. It is
+however a bit involved, for it needs to configure some rights and start a pod
+that creates jobs that in turn run the initialization.</p>
+<p>On the other hand, this feeling might be linked to the fact this is my first
+experience writing an operator. May be with time and experience this will
+feel more natural.</p>
+<p>In any case, I liked how kubernetes could adapt to this fancy use case.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/07b0a69f-4012-4f4e-9e17-60dae69ab9b1?title=how_to_run_an_initialisation_mechanism_everytime_a_container_restarts_in_a_pod">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<blockquote>
+<p>sidecar containers ignore the pod-level restartPolicy</p>
+<p>&mdash; <a href="https://www.baeldung.com/ops/kubernetes-pod-lifecycle">https://www.baeldung.com/ops/kubernetes-pod-lifecycle</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-03-20 Thu]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
+<blockquote>
+<p>init container is created with its restartPolicy set to Always</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/">https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-03-20 Thu]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:3">
+<p><a id="code-snippet--operatorcode"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>ConfigMap<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>pods-hook<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">data</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">pods-hook.sh</span>:<span style="color:#bbb"> </span>|<span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    #!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    if [[ $1 == &#34;--config&#34; ]] ; then
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      cat &lt;&lt;EOF
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      configVersion: v1
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      kubernetes:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      - apiVersion: v1
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        kind: Pod
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        executeHookOnEvent: [&#34;Modified&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        labelSelector:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          matchLabels:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            app.kubernetes.io/name: testpod
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        namespace:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          nameSelector:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            matchNames: [&#34;default&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        jqFilter: .status.conditions[]|select(.type == &#34;Ready&#34;).status
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        allowFailure: true
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    EOF
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    else
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      pod_name=$(jq -r .[0].object.metadata.name &#34;${BINDING_CONTEXT_PATH}&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      if test &#34;${pod_name}&#34; = &#34;null&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      then
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">         pod_name=$(jq -r .[0].objects[0].object.metadata.name &#34;${BINDING_CONTEXT_PATH}&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">         ready=$(jq -r .[0].objects[0].filterResult &#34;${BINDING_CONTEXT_PATH}&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      else
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          ready=$(jq -r .[0].filterResult &#34;${BINDING_CONTEXT_PATH}&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      fi
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      if test &#34;${ready}&#34; = &#34;True&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      then
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          kubectl --namespace default delete --wait -f /jobdef/job.yaml || echo &#34;no job to remove&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          kubectl --namespace default apply -f /jobdef/job.yaml
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Job for pod &#39;${pod_name}&#39; created&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      else
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">          echo &#34;Ready: ${ready}&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">      fi
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    fi</span><span style="color:#bbb">    
+</span></span></span></code></pre></div>&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+  </article>
+  <aside class="date"><time>Last updated: 30 May 2025</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 20 Mar 2025</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

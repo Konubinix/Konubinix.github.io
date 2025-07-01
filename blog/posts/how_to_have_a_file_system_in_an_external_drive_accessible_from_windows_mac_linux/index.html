@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>How to Have a File System in an External Drive Accessible From Windows/Mac/Linux? &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">How to Have a File System in an External Drive Accessible From Windows/Mac/Linux?</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<div class="ox-hugo-toc toc has-section-numbers">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><span class="section-num">1</span> <a href="#f5426133-a296-4f5d-bce6-0b18ef67af7d">FAT32</a></li>
+<li><span class="section-num">2</span> <a href="#cf65b9d2-2270-49eb-80a2-779603c75ed7">NTFS</a></li>
+<li><span class="section-num">3</span> <a href="#b4e89d87-906c-421d-a78e-8bb500aab120">Universal Disk Format</a></li>
+<li><span class="section-num">4</span> <a href="#2acfdae7-3a8b-4997-86f7-b94d962c24c9">Comparison of udf, ntfs, ext</a>
+<ul>
+<li><span class="section-num">4.1</span> <a href="#b456405f-d43e-4e21-913e-feddc14ec64f">Size limits</a></li>
+<li><span class="section-num">4.2</span> <a href="#3b5985bf-4b93-41c1-a9bf-a07089a5ec79">Metadata</a></li>
+<li><span class="section-num">4.3</span> <a href="#7f6254a8-5f0b-4a46-8208-cd60780b1a06">Features</a></li>
+<li><span class="section-num">4.4</span> <a href="#36081c99-d3bd-4041-a216-7c4339777a03">Allocation and layout policies</a></li>
+<li><span class="section-num">4.5</span> <a href="#1701fb18-1d7a-48ff-a0e1-9f936938945f">Supporting operating systems</a></li>
+</ul>
+</li>
+<li><span class="section-num">5</span> <a href="#1e3388f9-6527-4048-960a-32e214df0914">Conclusion</a></li>
+<li><span class="section-num">6</span> <a href="#5d82b30c-d50b-4b2f-b5f2-535796de7524">Test mkudffs for real</a></li>
+<li><span class="section-num">7</span> <a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>TL;DR: <a href="#5d82b30c-d50b-4b2f-b5f2-535796de7524">Use udf</a> <br/></p>
+<h2 id="f5426133-a296-4f5d-bce6-0b18ef67af7d"><span class="section-num">1</span> FAT32</h2>
+<p>Accessible everywhere, but is limited to 4Go per file… <br/></p>
+<h2 id="cf65b9d2-2270-49eb-80a2-779603c75ed7"><span class="section-num">2</span> NTFS</h2>
+<p>Good drivers on linux (NTFS-3G), but philosophically bad. <br/>
+The specification has become open ? <br/></p>
+<h2 id="b4e89d87-906c-421d-a78e-8bb500aab120"><span class="section-num">3</span> Universal Disk Format</h2>
+<p>Should be the best option. <br/></p>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Universal_Disk_Format">https://en.wikipedia.org/wiki/Universal_Disk_Format</a> &ldquo;is an open vendor-neutral file system for computer data storage for a broad range of media&rdquo; <br/></li>
+<li><a href="http://serverfault.com/questions/35243/what-is-the-partition-id-filesystem-type-for-udf">http://serverfault.com/questions/35243/what-is-the-partition-id-filesystem-type-for-udf</a> <br/></li>
+<li><a href="http://superuser.com/questions/39942/using-udf-on-a-usb-flash-drive">http://superuser.com/questions/39942/using-udf-on-a-usb-flash-drive</a> <br/></li>
+<li><a href="http://www.neowin.net/forum/topic/604926-format-usb-drive-to-udf-filesystem/">http://www.neowin.net/forum/topic/604926-format-usb-drive-to-udf-filesystem/</a> <br/></li>
+</ul>
+<h2 id="2acfdae7-3a8b-4997-86f7-b94d962c24c9"><span class="section-num">4</span> Comparison of udf, ntfs, ext</h2>
+<p><a href="https://en.wikipedia.org/wiki/Comparison_of_file_systems">https://en.wikipedia.org/wiki/Comparison_of_file_systems</a> <br/></p>
+<h3 id="b456405f-d43e-4e21-913e-feddc14ec64f"><span class="section-num">4.1</span> Size limits</h3>
+<p>:PROPERTIES <br/>
+:CREATED:  <span class="timestamp-wrapper"><span class="timestamp">[2014-11-05 Wed 11:40]</span></span> <br/>
+:CUSTOM_ID: 4af5f416-c583-4299-9066-aaf895a673ec <br/>
+:END <br/>
+:LOGBOOK <br/></p>
+<ul>
+<li>Captured       <span class="timestamp-wrapper"><span class="timestamp">[2012-09-23 Sun 11:52]</span></span> <br/></li>
+</ul>
+<p>:END <br/></p>
+<table>
+  <thead>
+      <tr>
+          <th>File system</th>
+          <th>Maximum filename length</th>
+          <th>Allowable characters in directory entries</th>
+          <th>Maximum pathname length</th>
+          <th>Maximum file size</th>
+          <th>Maximum volume size</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>ext4</td>
+          <td>255 bytes</td>
+          <td>Any byte except NUL and /</td>
+          <td>No limit defined</td>
+          <td>16 TB</td>
+          <td>1 EB</td>
+      </tr>
+      <tr>
+          <td>NTFS</td>
+          <td>255 characters</td>
+          <td>Depends on namespace used</td>
+          <td>32,767 UCS with each path component (directory or filename) up to 255 characters long</td>
+          <td>16 EB</td>
+          <td>16 EB</td>
+      </tr>
+      <tr>
+          <td>UDF</td>
+          <td>255 bytes</td>
+          <td>Any Unicode except NUL</td>
+          <td>1,023 bytes</td>
+          <td>16 EB</td>
+          <td>2 TB (hard disk), 8 TB (optical disc)</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="3b5985bf-4b93-41c1-a9bf-a07089a5ec79"><span class="section-num">4.2</span> Metadata</h3>
+<p>:PROPERTIES <br/>
+:CREATED:  <span class="timestamp-wrapper"><span class="timestamp">[2014-11-05 Wed 11:40]</span></span> <br/>
+:CUSTOM_ID: e16c1451-a4c5-4b7a-b478-cb6bfbf9ea6d <br/>
+:END <br/>
+:LOGBOOK <br/></p>
+<ul>
+<li>Captured       <span class="timestamp-wrapper"><span class="timestamp">[2012-09-23 Sun 11:52]</span></span> <br/></li>
+</ul>
+<p>:END <br/></p>
+<table>
+  <thead>
+      <tr>
+          <th>File system</th>
+          <th>Stores file owner</th>
+          <th>POSIX file permissions</th>
+          <th>Creation timestamps</th>
+          <th>Last access/ read timestamps</th>
+          <th>Last content modification timestamps</th>
+          <th>Disk copy created</th>
+          <th>Last metadata change timestamps</th>
+          <th>Last archive timestamps</th>
+          <th>Access control lists</th>
+          <th>Security/ MAC labels</th>
+          <th>Extended attributes/ Alternate data streams/ forks</th>
+          <th>Checksum/ ECC</th>
+          <th>Max Timestamp Granularity</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>ext4</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Unknown</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>1 nanosecond</td>
+      </tr>
+      <tr>
+          <td>NTFS</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>100 nanoseconds</td>
+      </tr>
+      <tr>
+          <td>UDF</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Unknown</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="7f6254a8-5f0b-4a46-8208-cd60780b1a06"><span class="section-num">4.3</span> Features</h3>
+<p>:PROPERTIES <br/>
+:CREATED:  <span class="timestamp-wrapper"><span class="timestamp">[2014-11-05 Wed 11:40]</span></span> <br/>
+:CUSTOM_ID: 9c66eedf-0282-41a6-b5ea-123e670b2db5 <br/>
+:END <br/>
+:LOGBOOK <br/></p>
+<ul>
+<li>Captured       <span class="timestamp-wrapper"><span class="timestamp">[2012-09-23 Sun 11:55]</span></span> <br/></li>
+</ul>
+<p>:END <br/></p>
+<table>
+  <thead>
+      <tr>
+          <th>File system</th>
+          <th>Hard links</th>
+          <th>Symbolic links</th>
+          <th>Block journaling</th>
+          <th>Metadata-only journaling</th>
+          <th>Case-sensitive</th>
+          <th>Case-preserving</th>
+          <th>File Change Log</th>
+          <th>Snapshot</th>
+          <th>XIP</th>
+          <th>Encryption</th>
+          <th>COW</th>
+          <th>integrated LVM</th>
+          <th>Data deduplication</th>
+          <th>Volumes are resizeable</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>ext4</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>No</td>
+          <td>No</td>
+          <td>Online</td>
+      </tr>
+      <tr>
+          <td>NTFS</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Partial</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Partial</td>
+          <td>Unknown</td>
+          <td>No</td>
+          <td>Online</td>
+      </tr>
+      <tr>
+          <td>UDF</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>No</td>
+          <td>No</td>
+          <td>No</td>
+          <td>Unknown</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="36081c99-d3bd-4041-a216-7c4339777a03"><span class="section-num">4.4</span> Allocation and layout policies</h3>
+<p>:PROPERTIES <br/>
+:CREATED:  <span class="timestamp-wrapper"><span class="timestamp">[2014-11-05 Wed 11:40]</span></span> <br/>
+:CUSTOM_ID: 47220927-55ef-4c7c-b502-b287543ef1e4 <br/>
+:END <br/>
+:LOGBOOK <br/></p>
+<ul>
+<li>Captured       <span class="timestamp-wrapper"><span class="timestamp">[2012-09-23 Sun 11:57]</span></span> <br/></li>
+</ul>
+<p>:END <br/></p>
+<table>
+  <thead>
+      <tr>
+          <th>File system</th>
+          <th>Block suballocation</th>
+          <th>Variable file block size</th>
+          <th>Extents</th>
+          <th>Allocate-on-flush</th>
+          <th>Sparse files</th>
+          <th>Transparent compression</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>ext4</td>
+          <td>No</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No</td>
+      </tr>
+      <tr>
+          <td>NTFS</td>
+          <td>Partial</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Partial</td>
+      </tr>
+      <tr>
+          <td>UDF</td>
+          <td>No</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Depends</td>
+          <td>No</td>
+          <td>No</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="1701fb18-1d7a-48ff-a0e1-9f936938945f"><span class="section-num">4.5</span> Supporting operating systems</h3>
+<p>:PROPERTIES <br/>
+:CREATED:  <span class="timestamp-wrapper"><span class="timestamp">[2014-11-05 Wed 11:40]</span></span> <br/>
+:CUSTOM_ID: 11aa919e-a797-486a-a575-fd72cf434a78 <br/>
+:END <br/>
+:LOGBOOK <br/></p>
+<ul>
+<li>Captured       <span class="timestamp-wrapper"><span class="timestamp">[2012-09-23 Sun 11:58]</span></span> <br/></li>
+</ul>
+<p>:END <br/></p>
+<table>
+  <thead>
+      <tr>
+          <th>File system</th>
+          <th>DOS</th>
+          <th>Windows 9x</th>
+          <th>Windows NT</th>
+          <th>Linux</th>
+          <th>Mac OS</th>
+          <th>Mac OS X</th>
+          <th>FreeBSD</th>
+          <th>BeOS</th>
+          <th>Solaris</th>
+          <th>AIX</th>
+          <th>z/OS</th>
+          <th>OS/2</th>
+          <th>Windows CE</th>
+          <th>Windows Mobile</th>
+          <th>VxWorks</th>
+          <th>HP-UX</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>ext4</td>
+          <td>No</td>
+          <td>No</td>
+          <td>with Ext2Fsd (partial, extents limited) or Ext2Read (read-only, also on LVM2)</td>
+          <td>Yes since kernel 2.6.28</td>
+          <td>No</td>
+          <td>with fuse-ext2 (partial) and ExtFS (full read/write)</td>
+          <td>No</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>No</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+      </tr>
+      <tr>
+          <td>NTFS</td>
+          <td>with third-party driver</td>
+          <td>with third-party driver</td>
+          <td>Yes</td>
+          <td>Yes Kernel 2.2 or newer, or with NTFS-3G or ntfsprogs</td>
+          <td>No</td>
+          <td>with NTFS-3G</td>
+          <td>with NTFS-3G</td>
+          <td>with NTFS-3G</td>
+          <td>with NTFS-3G on Opensolaris</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Partial read-only third-party driver</td>
+          <td>with 3rd-party driver</td>
+          <td>No</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+      </tr>
+      <tr>
+          <td>UDF</td>
+          <td>Unknown</td>
+          <td>Partial read-only support of UDF 1.02 since Win98 and WinME</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes since Mac OS 9</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Unknown</td>
+          <td>Yes</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Yes</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+          <td>Unknown</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="1e3388f9-6527-4048-960a-32e214df0914"><span class="section-num">5</span> Conclusion</h2>
+<p>UDF is THE true universal file system. The drawback on using UDF is that is <br/>
+possesses less features that others. But the essentials are there. It also <br/>
+suffers from bad OS implementations that will consider a UDF filesystem as <br/>
+being a read only CD-Rom. <br/></p>
+<h2 id="5d82b30c-d50b-4b2f-b5f2-535796de7524"><span class="section-num">6</span> Test mkudffs for real</h2>
+<p><a href="http://superuser.com/questions/39942/using-udf-on-a-usb-flash-drive#answer-48040">http://superuser.com/questions/39942/using-udf-on-a-usb-flash-drive#answer-48040</a> <br/></p>
+<p>Zeroing the disk to avoid any confusion later. <br/></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>dd <span style="color:#000;font-weight:bold">if</span><span style="color:#000;font-weight:bold">=</span>/dev/zero <span style="color:#008080">of</span><span style="color:#000;font-weight:bold">=</span>/dev/sdx <span style="color:#008080">bs</span><span style="color:#000;font-weight:bold">=</span><span style="color:#099">512</span> <span style="color:#008080">conv</span><span style="color:#000;font-weight:bold">=</span>sync <span style="color:#008080">bs</span><span style="color:#000;font-weight:bold">=</span>4M
+</span></span></code></pre></div><p>Creating the new filesytem. <br/></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sai udftools
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>mkudffs -l mydisk --media-type<span style="color:#000;font-weight:bold">=</span>hd --blocksize<span style="color:#000;font-weight:bold">=</span><span style="color:#099">512</span> /dev/sdx
+</span></span></code></pre></div><p>It worked perfectly on a 1Go micro sd card. <br/></p>
+<h2 id="permalink"><span class="section-num">7</span> <a href="https://konubinix.eu/blog/8591b41e-63fb-4b1f-9df0-87fa04fca791?title=how_to_have_a_file_system_in_an_external_drive_accessible_from_windows_mac_linux">Permalink</a></h2>
+  </article>
+  <aside class="date"><time>Last updated: 06 Feb 2024</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Feb 2024</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

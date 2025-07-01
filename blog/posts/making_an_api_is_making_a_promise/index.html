@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Making an API Is Making a Promise &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Making an API Is Making a Promise</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/evergreen/">Evergreen</a></span></header>
+  <article>
+	<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#chain-of-promises">chain of promises</a></li>
+<li><a href="#don-t-confuse-epistemic-claims-and-promises">don&rsquo;t confuse epistemic claims and promises</a></li>
+<li><a href="#what-if-i-am-100-sure">what if I am 100% sure?</a></li>
+<li><a href="#my-opinion">my opinion</a></li>
+<li><a href="#notes-linking-here">Notes linking here</a></li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>When creating an <a href="https://konubinix.eu/braindump/posts/interface_de_programmation/?title=interface_de_programmation#">API</a>, one has to define as precisely as possible its inputs,
+outputs and behaviors.</p>
+<p>In particular, for the values, one has to make clear :</p>
+<ul>
+<li>their meaning</li>
+<li>their types,</li>
+<li>the specific accepted/rejected values,</li>
+</ul>
+<p>Let&rsquo;s consider you define one function that returns a kind of id. Something
+like:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">get_id</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;Returns a unique id&#34;</span>
+</span></span></code></pre></div><p>Imagine now that you want to be very clear about how unique this returned object
+is (see <a href="https://konubinix.eu/braindump/posts/when_to_use_uuid_uid_and_id/?title=when_to_use_uuid_uid_and_id#">when to use uuid, uid and id?</a>).</p>
+<p>Imagine for example that you want the id to be universally unique. Then you
+would use <a href="https://konubinix.eu/braindump/posts/universally_unique_identifier/?title=universally_unique_identifier#">UUID</a> to fulfil that promise.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">get_id</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;Returns a unique id, following RFC 4122 standard&#34;</span>
+</span></span></code></pre></div><p>To me, this is a promise you make to your user. Using your API, your user trusts
+you to return a RFC 4122 compliant object.</p>
+<h2 id="chain-of-promises">chain of promises</h2>
+<p>Of course, you are likely to rely on some other API to implement yours. In that
+case you rely on their promises to make yours.</p>
+<p>In the previous example, let&rsquo;s assume that you created the id using some third
+party library that is defined like this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">uuidgen</span>():
+</span></span><span style="display:flex;"><span>   <span style="color:#d14">&#34;Return an RFC 4122 compliant UUID version 4&#34;</span>
+</span></span></code></pre></div><p>Then, you can claim that your API returns an UUID. The same way you rely on this
+uuidgen library, others will rely on you for returning a UUID: this defines a
+chain of promises.</p>
+<p>Of course, that chain may be broken. If at some point uuidgen returns something
+else than a object compliant with RFC 4122, then your API won&rsquo;t either. Then you
+will be legitimate blaming uuidgen, the same way than your users will be
+legitimate blaming you<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</p>
+<p>In general, we assume that the promises are fulfilled. Besides we rely on
+changelogs to find out whether those promises change.</p>
+<h2 id="don-t-confuse-epistemic-claims-and-promises">don&rsquo;t confuse <a href="https://konubinix.eu/braindump/posts/epistemique/?title=epistemique#">epistemic</a> claims and promises</h2>
+<p>Now imagine that instead of using uuidgen, you used another function whose API
+is:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">id</span>():
+</span></span><span style="display:flex;"><span>   <span style="color:#d14">&#34;Return a unique id&#34;</span>
+</span></span></code></pre></div><p>I think you may agree that it is a bad idea to make the promise of returning a
+UUID in that case. You have no promise to support yours.</p>
+<p>Now, imagine that all your previous calls to this function have returned
+something that looked like an RFC 4122 compliant object. Then, you might be
+tempted, by <a href="https://konubinix.eu/braindump/posts/logic/?title=inductive_argument#inductive-argument">induction</a>, to feel confident saying that id returns UUIDs. .</p>
+<p>You just made an <a href="https://konubinix.eu/braindump/posts/epistemique/?title=epistemique#">epistemic</a> claim. You found a reason to believe that the
+current implementation of <code>id</code> return some UUIDs. But it is still not 100%.</p>
+<p>Imagine that during all your life, all the swans you have seen were white. You
+could be tempted to say that &ldquo;all swans are white&rdquo;, until you see a black swan
+and realize you were wrong. The claim &ldquo;all swans are white&rdquo; was still a pretty
+good claim, in the sense that it was very likely to be right and you had good
+confidence saying that the next swan you would see would be white.</p>
+<p>Now, is this a good enough reason to promise returning a UUID yourself? I don&rsquo;t
+think so.</p>
+<p>Making a promise is about making sure of something about the future. You
+basically are promising that your API <strong>will</strong> behave like that. Making a
+<a href="https://konubinix.eu/braindump/posts/logic/?title=inductive_argument#inductive-argument">induction</a> is more making sure of something about the past and draw likely
+conclusions about the future. You basically are saying that your API <strong>may very
+well</strong> behave like that.</p>
+<p>In other terms, I think that <strong>promising a thing</strong> is more engaging than saying that
+you have good reasons to <strong>believe in the thing</strong>.</p>
+<p>It would be ok in case the API were Bayesians though, you could write something like.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">get_id</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;Returns a unique id, being a UUID with a prior of 90%&#34;</span>
+</span></span></code></pre></div><p>But, as you may imagine, in API creation, we generally ask about more than just
+very high probabilities.</p>
+<h2 id="what-if-i-am-100-sure">what if I am 100% sure?</h2>
+<p>Now, imagine that you took a look at the code and that it is like this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">id</span>():
+</span></span><span style="display:flex;"><span>   <span style="color:#d14">&#34;Return a uniq id&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#000;font-weight:bold">return</span> uuidgen()
+</span></span></code></pre></div><p>Then, you are 100% confident that id returns UUIDs, in its current
+implementation.</p>
+<p>Now, is this a good enough reason to promise returning a UUID yourself? Well,
+maybe.</p>
+<p>Say that you release your product now, people use it and are happy. Now suppose
+you update your dependency in the future. You checked the changelog and did not
+see any relevant difference. Then your users complain that your function does
+not fulfil it promise anymore and returns non RFC 4122 compliant objects.</p>
+<p>Say that by looking at the code of <code>id</code>, you realize they changed their
+implementation to return something else.</p>
+<p>Then your users will be legitimate blaming you, as you broke your promise. But
+you won&rsquo;t be legitimate blaming <code>id</code>, as no promise was broken.</p>
+<p>Therefore, in that case, I would :</p>
+<ol>
+<li>either write explicit tests that check that the hypothesis &ldquo;id return UUID&rdquo; remains true,</li>
+<li>or have a more complicated update checklist in which I would add &ldquo;take a look at <code>id</code>&rsquo;s implementation to ascertain it still returns UUIDs&rdquo;,</li>
+</ol>
+<p>2 seems daunting to me, so I would rather do 1.</p>
+<h2 id="my-opinion">my opinion</h2>
+<p>In my opinion, I would:</p>
+<ul>
+<li>not make promises based on some kind of inference about the third party libraries I use,</li>
+<li>make sure I keep my promises, adding some dedicated tests if need be,</li>
+</ul>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="https://konubinix.eu/braindump/posts/verified_proved_promised_contracts_based_programming/?title=verified_proved_promised_contracts_based_programming#">verified/proved promised contracts based programming</a> (braindump)</li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/2da04e8c-350e-4e23-815b-06b2db485ffa?title=making_an_api_is_making_a_promise">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>You can of course create extra checks that uuidgen indeed returns what it
+is meant to return. This would be some kind of hardcore defensive programming
+and it totally ok I guess.</p>
+<!--more-->
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+  </article>
+  <aside class="date"><time>Last updated: 16 Feb 2022</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 15 Feb 2022</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

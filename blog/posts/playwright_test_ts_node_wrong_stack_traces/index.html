@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Playwright/Test &#43; Ts-Node = Wrong Stack Traces &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Playwright/Test &#43; Ts-Node = Wrong Stack Traces</h1>
+	</header>
+  <article>
+	<p><a href="https://konubinix.eu/braindump/posts/playwright/?title=playwright#">Playwright</a> is an awesome browser automation library. <a href="https://konubinix.eu/braindump/posts/typescript/?title=typescript#">typescript</a> is a nice
+programming language and using <a href="https://konubinix.eu/braindump/posts/ts_node/?title=ts_node#">ts-node</a> with <code>--require ts-node/register</code> is
+becoming one obvious way of running node programs. It is very practical to run a
+typescript program while using the power of playwright.</p>
+<p>playwright/test provides nice helpers, like expect that can assert the page
+<code>toBeVisible</code>.</p>
+<p>But, as soon as you import playwright/test, the stack trace becomes messy. This
+makes debugging very annoying.</p>
+<p>Note that I investigated the issue only with a <a href="https://konubinix.eu/braindump/posts/commonjs/?title=commonjs#">CommonJS</a> project, but a quick
+look at the code of both ts-node and playwright suggests that the issue is the
+same.</p>
+<p>Let&rsquo;s see how ts-node and playwright/test transpile typescript code on the
+fly. Then, let&rsquo;s see them work together and explain how they conflict. Finally,
+let&rsquo;s discuss some work around this issue.</p>
+<h2 id="df5a4c2c-6731-4dfa-96c4-ed42dfc7ff24">in ts-node</h2>
+<p>You enable the on-the-fly transpilation of <a href="https://konubinix.eu/braindump/posts/typescript/?title=typescript#">typescript</a> by requiring
+ts-node/register. Its code installs the appropriate `require.extension[&ldquo;ts&rdquo;]`
+to tell nodejs how to deal with typescript files, transpiling them on the fly and
+inlining the source map code in the output code.</p>
+<p>Then, it installs the <code>sourceMapSupport</code> from @cspotcode to deal with the
+stack trace. This code is barely customized, as it finds out the source map
+data from the output content by itself as we would expect.</p>
+<p>Looking at the code of <code>@cspotcode/source-map-support</code>, we can see that it
+provides a way to make it have an effect only once, even of run several
+times. To me, this is a good design choice, but this will impact us later in
+this article.</p>
+<h2 id="67247522-86da-4a6f-b4c8-cb0ad0e16721">in playwright</h2>
+<p>playwright/test loads the project files in a particular way. The code run
+globally in each file performs the needed registering for playwright to run
+its tests.</p>
+<p>To deal with typescript, it does not use <code>require</code>. Instead, it contains a
+special function called <code>requireOrImport</code>.</p>
+<p>This function does the following:</p>
+<ol>
+<li>it calls a function called <code>installTransform</code> that uses <a href="https://konubinix.eu/braindump/posts/danez_pirates/?title=danez_pirates#">pirates</a> to install
+babel transpilation hooks</li>
+<li>it loads the file, during that time, the hooks:
+<ol>
+<li>put the temporary source map in /tmp/playwright-transform-cache-&lt;PID&gt;/file.js.map</li>
+<li>put the temporary compiled content in /tmp/playwright-transform-cache-&lt;PID&gt;/file.js</li>
+<li>remembers internally (in compilationCache.js:sourceMaps) the association file-&gt;map</li>
+</ol>
+</li>
+<li>the previous step is recursively run for each file loaded, hence the whole
+tree of required files is transpiled.</li>
+<li>revert the transpilation hooks put at step 2.</li>
+</ol>
+<p>At the step 2. of the above flow, the module <code>compilationCache.js</code> is
+loaded. This module has the side effect of installing a source map support
+compatible with how the files where transpiled. This code looks for the
+<code>sourceMaps</code> variables. If there is no match, it simply returns, inferring
+there is no source map.</p>
+<p>We can see that the lifecycle of the transpilation hooks and the one of the
+source map support is not the same at all. We can have the source map support
+left setup while the hooks are reverted.</p>
+<p>It would be nice that playwright would install and uninstall the source map
+support when the transpilation is installed and uninstalled, because it makes
+no sense to have one and not the other.</p>
+<h2 id="08a50df1-777c-4e6e-ae26-73f228a568f1">put together</h2>
+<p>Let&rsquo;s get our hands dirty.</p>
+<p>Let&rsquo;s start by installing ts-node and playwright.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>npm i ts-node @playwright/test
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>added 21 packages in 3s
+</span></span></code></pre></div><p>Imagine you run the following typescript code.</p>
+<p><a id="code-snippet--code"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-typescript" data-lang="typescript"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> { expect } <span style="color:#000;font-weight:bold">from</span> <span style="color:#d14">&#34;@playwright/test&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">let</span> b <span style="color:#000;font-weight:bold">=</span> expect <span style="color:#998;font-style:italic">// to avoid tree shaking
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">class</span> A{} <span style="color:#998;font-style:italic">// to increase the likelyhood that the js file is longer than the typescript file
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">throw</span> <span style="color:#000;font-weight:bold">new</span> <span style="color:#0086b3">Error</span>()
+</span></span></code></pre></div><p>This code will throw an error at line <strong>4</strong>.</p>
+<p>Let&rsquo;s try it, using ts-node to load the typescript content.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>node --require ts-node/register code.ts
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Error:
+</span></span><span style="display:flex;"><span>    at Object.&lt;anonymous&gt; (/home/sam/tmp/tmp.gaWFjR7cm1/code.ts:7:7)
+</span></span><span style="display:flex;"><span>    at Module._compile (node:internal/modules/cjs/loader:1254:14)
+</span></span><span style="display:flex;"><span>    at Module.m._compile (/home/sam/tmp/tmp.gaWFjR7cm1/node_modules/ts-node/src/index.ts:1618:23)
+</span></span><span style="display:flex;"><span>    at Module._extensions..js (node:internal/modules/cjs/loader:1308:10)
+</span></span><span style="display:flex;"><span>    at Object.require.extensions.&lt;computed&gt; [as .ts] (/home/sam/tmp/tmp.gaWFjR7cm1/node_modules/ts-node/src/index.ts:1621:12)
+</span></span><span style="display:flex;"><span>    at Module.load (node:internal/modules/cjs/loader:1117:32)
+</span></span><span style="display:flex;"><span>    at Function.Module._load (node:internal/modules/cjs/loader:958:12)
+</span></span><span style="display:flex;"><span>    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:81:12)
+</span></span><span style="display:flex;"><span>    at node:internal/main/run_main_module:23:47
+</span></span></code></pre></div><p>It shows an error at line 7 instead at line 4.</p>
+<p>Based on the previous description, we can explain what happens:</p>
+<ol>
+<li>ts-node/register sets up the transpilation code as well as the associated source map support</li>
+<li>our code is loaded, triggering the loading of @playwright/test that loads
+modules that load module&hellip; that load ./compilationCache.js. This installs
+its own source map support, overriding the one from ts-node</li>
+<li>note that nothing called <code>requireOrImport</code>. Therefore
+<code>compilationCache.js:sourceMap</code> is left empty.</li>
+<li>the error is thrown</li>
+<li>the source map support of playwright is triggered and does nothing because
+<code>compilationCache.js:sourceMap</code> is empty.</li>
+<li>this leads to this stack trace, with the lines of the generated javascript
+content rather than the typescript content.</li>
+</ol>
+<h2 id="80d59c4a-cdac-4582-ad8c-80583b9d5bb2">workarounds</h2>
+<p>We want to have the transpilation hooks and the source maps support that comes
+with it. It could be either the one of playwright, or the one of ts-node.</p>
+<h3 id="69335597-cee8-4848-b287-8729cf7311d9">trying to use the code of ts-node</h3>
+<p>As we could see previously, it is the transpilation hooks of ts-node that are
+used when we simply run node. Therefore, we only need to focus of the
+sourcemap support.</p>
+<p>It is to be noted that the source map support used in ts-node is meant to be
+called only once. Therefore, when we initially install it via <code>--require ts-node/register</code>, it prevents us from being able to reinstall it later.</p>
+<p>Moreover, when using playwright/test, the source map support of playwright
+will overwrite the one of ts-node. Also, because it is done in a global
+instruction when compilationCache is loaded, this happens only once in the
+lifetime of the program.</p>
+<p>What we need is a way to first let playwright install its sourceMap, and then
+overwrite it.</p>
+<p>This is actually quite simple using a commonjs shim scripts that first loads
+playwright and then loads ts-node/register. Fortunately, the compilationCache
+module that installs the source map support is exported, so the code of the shim
+then is simply:</p>
+<p><a id="code-snippet--shim-tsnode"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span>require(<span style="color:#d14">&#34;@playwright/test/lib/transform/compilationCache&#34;</span>);
+</span></span><span style="display:flex;"><span>require(<span style="color:#d14">&#34;ts-node&#34;</span>).register();
+</span></span></code></pre></div><p>This code can be required the same way we required ts-node/register.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>node --require ./shim-tsnode code.ts
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/home/sam/tmp/tmp.gaWFjR7cm1/code.ts:4
+</span></span><span style="display:flex;"><span>throw new Error()
+</span></span><span style="display:flex;"><span>      ^
+</span></span><span style="display:flex;"><span>Error
+</span></span><span style="display:flex;"><span>    at Object.&lt;anonymous&gt; (/home/sam/tmp/tmp.gaWFjR7cm1/code.ts:4:7)
+</span></span><span style="display:flex;"><span>    at Module._compile (node:internal/modules/cjs/loader:1254:14)
+</span></span><span style="display:flex;"><span>    at Module.m._compile (/home/sam/tmp/tmp.gaWFjR7cm1/node_modules/ts-node/src/index.ts:1618:23)
+</span></span><span style="display:flex;"><span>    at Module._extensions..js (node:internal/modules/cjs/loader:1308:10)
+</span></span><span style="display:flex;"><span>    at Object.require.extensions.&lt;computed&gt; [as .ts] (/home/sam/tmp/tmp.gaWFjR7cm1/node_modules/ts-node/src/index.ts:1621:12)
+</span></span><span style="display:flex;"><span>    at Module.load (node:internal/modules/cjs/loader:1117:32)
+</span></span><span style="display:flex;"><span>    at Function.Module._load (node:internal/modules/cjs/loader:958:12)
+</span></span><span style="display:flex;"><span>    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:81:12)
+</span></span><span style="display:flex;"><span>    at node:internal/main/run_main_module:23:47
+</span></span></code></pre></div><p>Now the lines are correctly shown!</p>
+<h3 id="eac1aba8-7481-4d86-b54c-61d596c7d18b">using the code of playwright</h3>
+<p>In that case, there is nothing to be done about the source map support, but
+we need to setup its transpilation hooks.</p>
+<p>We know that this is done using <code>installTransform</code>. It would be nice to
+simply load transform and load this code. Like this.</p>
+<p><a id="code-snippet--shim-playwright"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span>require(<span style="color:#d14">&#34;@playwright/test/lib/transform/transform&#34;</span>).installTransform();
+</span></span></code></pre></div><p>Unfortunately, this code is not exported, so we cannot actually use it.</p>
+<p>Let&rsquo;s try it anyway for the sake of the analysis, by patching the installed
+playwright/test to export <code>installTransform</code>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> node_modules/@playwright/test
+</span></span><span style="display:flex;"><span>cat<span style="color:#d14">&lt;&lt;EOF | patch
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">--- ./node_modules/@playwright/test/package.json
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">+++ ./node_modules/@playwright/test/package.json
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">@@ -20,6 +20,7 @@
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">     &#34;./lib/cli&#34;: &#34;./lib/cli.js&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">     &#34;./lib/transform/babelBundle&#34;: &#34;./lib/transform/babelBundle.js&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">     &#34;./lib/transform/compilationCache&#34;: &#34;./lib/transform/compilationCache.js&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">+    &#34;./lib/transform/transform&#34;: &#34;./lib/transform/transform.js&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">     &#34;./lib/transform/esmLoader&#34;: &#34;./lib/transform/esmLoader.js&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">     &#34;./lib/internalsForTest&#34;: &#34;./lib/internalsForTest.js&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">     &#34;./lib/plugins&#34;: &#34;./lib/plugins/index.js&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> node_modules/@playwright/test/lib/transform
+</span></span><span style="display:flex;"><span>cat<span style="color:#d14">&lt;&lt;EOF | patch
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">--- transform.js
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">+++ transform.js
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">@@ -8,6 +8,7 @@
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"> exports.setTransformConfig = setTransformConfig;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"> exports.shouldTransform = shouldTransform;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"> exports.transformConfig = transformConfig;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">+exports.installTransform = installTransform
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"> exports.transformHook = transformHook;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"> exports.wrapFunctionWithLocation = wrapFunctionWithLocation;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"> var _crypto = _interopRequireDefault(require(&#34;crypto&#34;));
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>~/tmp/tmp.1c1NtlwuW4/node_modules/@playwright/test ~/tmp/tmp.1c1NtlwuW4
+</span></span><span style="display:flex;"><span>patching file package.json
+</span></span><span style="display:flex;"><span>~/tmp/tmp.1c1NtlwuW4
+</span></span><span style="display:flex;"><span>org_babel_sh_prompt&gt; ~/tmp/tmp.1c1NtlwuW4/node_modules/@playwright/test/lib/transform ~/tmp/tmp.1c1NtlwuW4
+</span></span><span style="display:flex;"><span>patching file transform.js
+</span></span><span style="display:flex;"><span>~/tmp/tmp.1c1NtlwuW4
+</span></span></code></pre></div><p>And see what happens:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>node --require ./shim-playwright.js code.ts
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/home/sam/tmp/tmp.1c1NtlwuW4/code.ts:6
+</span></span><span style="display:flex;"><span>throw new Error();
+</span></span><span style="display:flex;"><span>^
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Error:
+</span></span><span style="display:flex;"><span>    at Object.&lt;anonymous&gt; (/home/sam/tmp/tmp.1c1NtlwuW4/code.ts:4:7)
+</span></span><span style="display:flex;"><span>    at Module._compile (node:internal/modules/cjs/loader:1254:14)
+</span></span><span style="display:flex;"><span>    at Module.f._compile (/home/sam/tmp/tmp.1c1NtlwuW4/node_modules/@playwright/test/lib/utilsBundleImpl.js:16:994)
+</span></span><span style="display:flex;"><span>    at Module._extensions..js (node:internal/modules/cjs/loader:1308:10)
+</span></span><span style="display:flex;"><span>    at Object.i.&lt;computed&gt;.ut._extensions.&lt;computed&gt; [as .ts] (/home/sam/tmp/tmp.1c1NtlwuW4/node_modules/@playwright/test/lib/utilsBundleImpl.js:16:1010)
+</span></span><span style="display:flex;"><span>    at Module.load (node:internal/modules/cjs/loader:1117:32)
+</span></span><span style="display:flex;"><span>    at Function.Module._load (node:internal/modules/cjs/loader:958:12)
+</span></span><span style="display:flex;"><span>    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:81:12)
+</span></span><span style="display:flex;"><span>    at node:internal/main/run_main_module:23:47
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Node.js v18.15.0
+</span></span></code></pre></div><p>Here it is! A stack trace generated using the code of playwright.</p>
+<h3 id="79d82f6b-596f-434e-9eaf-77a2c1e29aca">which should I prefer?</h3>
+<p>Using ts-node, we have the following pros</p>
+<ol>
+<li>it is meant to be used that way (<a href="https://konubinix.eu/braindump/posts/single_responsibility_principle/?title=single_responsibility_principle#">SRP</a>),</li>
+<li>we may eventually remove the shim if in the future playwright deals with
+this issue more nicely with us, we won&rsquo;t have anything else to do,</li>
+</ol>
+<p>The cons are:</p>
+<ol>
+<li>it is not meant to be overwritten and then rerun. We may encounter issues
+if it does not override correctly what has been done by playwright.</li>
+</ol>
+<p>Using playwright, on the other hand, has this pro: we don&rsquo;t use ts-node at
+all, so we don&rsquo;t deal with the possible issues of them overlapping. But it
+also has the downside that we have to patch it. Also we are linked to
+playwright and the day we change our browser automation tool, we have to
+think of putting back ts-node.</p>
+<p>Actually, if we don&rsquo;t mind patching playwright, we could remove the code that
+deals with source map support. With a diff like this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">--- compilationCache.js
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd"></span><span style="color:#000;background-color:#dfd">+++ compilationCache.js
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#dfd"></span><span style="color:#aaa">@@ -50,6 +50,20 @@
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa"></span>const fileDependencies = new Map();
+</span></span><span style="display:flex;"><span>// Dependencies resolved by the external bundler.
+</span></span><span style="display:flex;"><span>const externalDependencies = new Map();
+</span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-Error.stackTraceLimit = 200;
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-_utilsBundle.sourceMapSupport.install({
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-  environment: &#39;node&#39;,
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-  handleUncaughtExceptions: false,
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-  retrieveSourceMap(source) {
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-    if (!sourceMaps.has(source)) return null;
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-    const sourceMapPath = sourceMaps.get(source);
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-    if (!_fs.default.existsSync(sourceMapPath)) return null;
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-    return {
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-      map: JSON.parse(_fs.default.readFileSync(sourceMapPath, &#39;utf-8&#39;)),
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-      url: source
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-    };
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-  }
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-});
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd"></span>function _innerAddToCompilationCache(filename, options) {
+</span></span><span style="display:flex;"><span>sourceMaps.set(options.moduleUrl || filename, options.sourceMapPath);
+</span></span><span style="display:flex;"><span>memoryCache.set(filename, options);
+</span></span></code></pre></div><p>That way, only ts-node would deal with transpiling and there would be no more
+overlapping.</p>
+<h2 id="117639f0-fb4c-47e5-be12-f14207209d9d">conclusion</h2>
+<p>In the end, there are three dimensions to consider:</p>
+<ol>
+<li>whether we don&rsquo;t mind patching something,</li>
+<li>the likelyhood of two systems interfering with one another,</li>
+<li>the <a href="https://konubinix.eu/braindump/posts/single_responsibility_principle/?title=single_responsibility_principle#">single-responsibility principle</a>,</li>
+</ol>
+<p>There seem to be no clear winner, those seem like <a href="https://konubinix.eu/braindump/posts/pareto_efficiency/?title=pareto_efficiency#">pareto optima</a>. Depending of
+how those criteria are important to you, you might prefer one or another.</p>
+<p>In my opinion, eventually, the best scenario would be that playwright fixes
+that situation of leaving the sourceMap support when the transpilation hooks
+are uninstalled, but that does not seem like an easy task.</p>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="https://konubinix.eu/braindump/posts/to_transpile_data_in_nodejs/?title=to_transpile_data_in_nodejs#">to transpile data in nodejs</a> (braindump)</li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/c47e70d1-a159-416b-8319-0a2fa00d28f9?title=playwright_test_ts_node_wrong_stack_traces">Permalink</a></h2>
+  </article>
+  <aside class="date"><time>Last updated: 14 Nov 2023</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 10 Aug 2023</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Why Do the Same Git Commits Not Have the Same Hash? &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Why Do the Same Git Commits Not Have the Same Hash?</h1>
+	<span class="badge badge-pill badge-warning"><a href="/blog/tags/evergreen/">Evergreen</a></span></header>
+  <article>
+	<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#how-is-computed-the-git-commit-hash">how is computed the git commit hash?</a></li>
+<li><a href="#then-what-is-the-true-commit-hash">then, what is the &ldquo;true&rdquo; commit hash?</a></li>
+<li><a href="#what-about-the-next-commit">what about the next commit?</a></li>
+<li><a href="#what-about-the-promise-of-content-addressable-storage">what about the promise of content addressable storage?</a></li>
+<li><a href="#gitlab-in-the-way">gitlab in the way?</a></li>
+<li><a href="#what-does-fsck-say">what does fsck say?</a></li>
+<li><a href="#a-change-of-algorithm-with-retro-compatible-support">a change of algorithm with retro compatible support?</a></li>
+<li><a href="#a-move-to-sha256">a move to sha256?</a></li>
+<li><a href="#is-gpgsig-causing-the-issue">is gpgsig causing the issue?</a></li>
+<li><a href="#why-did-it-not-appear-when-running-git-cat-file-in-my-first-repository">why did it not appear when running git cat-file in my first repository?</a>
+<ul>
+<li><a href="#are-the-refs-messing-up-with-the-signature">are the refs messing up with the signature?</a></li>
+</ul>
+</li>
+<li><a href="#beware-git-replace">beware git-replace</a></li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>Why do the same <a href="https://konubinix.eu/braindump/posts/git/?title=git#">git</a> commits not have the same hash?</p>
+<p>To avoid the <a href="https://konubinix.eu/braindump/posts/survivorship_bias/?title=survivorship_bias#">survivorship bias</a>, I kept the whole analysis, but it only shows
+that I did not know <a href="https://konubinix.eu/braindump/posts/git_replace/?title=git_replace#">git-replace</a> and the relevant part is in <a href="#beware-git-replace">the end</a>.</p>
+<p>After applying a <a href="https://konubinix.eu/braindump/posts/git_filter_repo/?title=git_filter_repo#">git-filter-repo</a> to replace a mail address in a whole
+repository, I found out that it changed the hash of the first commit, while this
+commit was not subject to change.</p>
+<p>This does not make sense, for by its content addressable nature, git must have
+the same hash when the commit is exactly the same.</p>
+<p>This commit, before running git-filter-repo had the hash
+4c10dbdd7ca357948521ad741182e119dd45d963 and after git-filter-repo, it had the
+hash bcefe2e6d93da969156da74a6d1df99483e8251e.</p>
+<p>I immediately asked git what is different between those two commits, identified
+by two distinct hashes.</p>
+<p><code>git cat-file</code> shows enough information to see exactly what differs between two
+commits. It contains the metadata, including the tree hash, the committer and
+author mails and dates are the same. And it is actually from the output of <code>git cat-file</code> that the hash is computed (see below).</p>
+<p>This means that, for two hashes A and B, <code>git cat-file A == git cat-file B =&gt; A == B</code>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>diff -u &lt;<span style="color:#000;font-weight:bold">(</span>git cat-file -p 4c10dbdd7ca357948521ad741182e119dd45d963<span style="color:#000;font-weight:bold">)</span> &lt;<span style="color:#000;font-weight:bold">(</span>git cat-file -p bcefe2e6d93da969156da74a6d1df99483e8251e<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>The fact that the diff is empty implies that those commit have the same hash,
+while obviously they don&rsquo;t.</p>
+<p>Then what the hell is going on?</p>
+<h2 id="how-is-computed-the-git-commit-hash">how is computed the git commit hash?</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://gist.github.com/masak/2415865">https://gist.github.com/masak/2415865</a>
+I need to dig a little bit into how the hash is computed to find out why the
+hash might be different.</p>
+<blockquote>
+<p>I thought it was something like these things that went into a commit:</p>
+<p>$ git cat-file commit HEAD</p>
+<p>[&hellip;]</p>
+<p>it turns out there is also a NUL-terminated header that gets appended to this,
+containing the word &ldquo;commit&rdquo;, and the length in bytes of all of the above
+information</p>
+<p>[&hellip;]</p>
+<p>Put this header and the rest of the information together</p>
+<p>[&hellip;]</p>
+<p>&hellip;and what you get hashes to the right sha1!</p>
+<p>$ (printf &ldquo;commit %s\0&rdquo; $(git cat-file commit HEAD | wc -c); git cat-file commit HEAD) | sha1sum</p>
+<p>&ndash; <a href="https://gist.github.com/masak/2415865">https://gist.github.com/masak/2415865</a></p>
+</blockquote>
+<p>As I expected, it is actually the content of <code>git cat-file</code> that is used to
+compute the hash.</p>
+<p>Taking the code from the gist, I have the following function to compute some
+hashes.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>compute <span style="color:#000;font-weight:bold">(</span> <span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">local</span> <span style="color:#008080">commit</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">1</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">printf</span> <span style="color:#d14">&#34;commit %s\0&#34;</span> <span style="color:#000;font-weight:bold">$(</span>git cat-file commit <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">commit</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> | wc -c<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>        git cat-file commit <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">commit</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">}</span> | sha1sum | cut -f1 -d<span style="color:#d14">&#39; &#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div></li>
+</ul>
+<h2 id="then-what-is-the-true-commit-hash">then, what is the &ldquo;true&rdquo; commit hash?</h2>
+<p>What of 4c10dbdd7ca357948521ad741182e119dd45d963 or
+bcefe2e6d93da969156da74a6d1df99483e8251e is the correct hash of my first
+commit?</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>compute 4c10dbdd7ca357948521ad741182e119dd45d963
+</span></span><span style="display:flex;"><span>compute bcefe2e6d93da969156da74a6d1df99483e8251e
+</span></span></code></pre></div><p>It looks like the correct hash is bcefe2e6d93da969156da74a6d1df99483e8251e
+(the one after git-filter-repo has run). And also the fact that compute find
+the same value for both commits shows that I was right guessing those where
+the same commit (actually, by looking at the code, is should be obvious, but
+still&hellip;).</p>
+<p>It also appears that the &ldquo;correct&rdquo; sha1 was made by git-filter-repo and then
+where the hell does 4c10dbdd7ca357948521ad741182e119dd45d963 come from?</p>
+<h2 id="what-about-the-next-commit">what about the next commit?</h2>
+<p>Was only the first commit miscalculated? Are the next hashes different only
+because they have a different parent?</p>
+<p>Let&rsquo;s take a look at some of the next commits to see how it goes.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>compare <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">local</span> <span style="color:#008080">old</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">1</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">local</span> <span style="color:#008080">new</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">2</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">old_hash</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>compute <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">old</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">new_hash</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>compute <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">new</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">[</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">old_hash</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">old</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;old&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">elif</span> <span style="color:#000;font-weight:bold">[</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">new_hash</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">new</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;new&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">else</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;neither </span><span style="color:#d14">${</span><span style="color:#008080">old</span><span style="color:#d14">}</span><span style="color:#d14"> -&gt; </span><span style="color:#d14">${</span><span style="color:#008080">old_hash</span><span style="color:#d14">}</span><span style="color:#d14">, </span><span style="color:#d14">${</span><span style="color:#008080">new</span><span style="color:#d14">}</span><span style="color:#d14"> -&gt; </span><span style="color:#d14">${</span><span style="color:#008080">new_hash</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    compare 3b3832c38937af16d3c4b5b5b30d960621584c13 2dc165f712788c95aeffbabd29e52738721f7044
+</span></span><span style="display:flex;"><span>    compare b239c45ad3b3468bbdccb4738432471bf352cd88 001553e349bd3179aa34a0ce5d16f1ce721b6d06
+</span></span><span style="display:flex;"><span>    compare f9c88063f2561fdaa0d0abcfd0c3a8c9144e2330 bead4ecbae9275913409e9b7fad25538abe1e032
+</span></span><span style="display:flex;"><span>    compare 8f4647284698245f7e7db8881d54cef3060ccfa0 bc41628b1be91bc9e10f42b2ec014d8c670c83bd
+</span></span><span style="display:flex;"><span>    compare b20339d21fcd1dc43b2db4be71a6e956f14f87da 757d373434f0a1a9882498ea387229a5016d6ffb
+</span></span><span style="display:flex;"><span>    compare da0abf68c1f0cbdd66dc4b8b588550e0f2cb13c9 cf5a4ef6e60e947a6039c7c1c845677442eda22d
+</span></span><span style="display:flex;"><span>    compare 50a5e45c316eaee0c7671c73ec98429c7fa22280 25372939c6c1dc685ae5613b9820045ba3fa74af
+</span></span><span style="display:flex;"><span>    compare 4f1962f7a9ab85e10972e78387993d0287a8e741 e9e6566aea3236db1dac062fe9f3933ff529f88d
+</span></span><span style="display:flex;"><span>    compare ad082ff26b13212e4231a1ad69bdde7680a2622a b56e9274d29f524d8bdd7224ce816a847e4dc927
+</span></span><span style="display:flex;"><span>    compare 16134d0a0238d112b56d7c1741902c5bf0595f51 07655986600d6ff3685f1565c82ffb2bca9fec82
+</span></span><span style="display:flex;"><span>    compare 33ad3afe29f66de89d3fd02352891166feb0aae6 dba364babf158247ac6fbc59fc05ac329e7e4f8c
+</span></span><span style="display:flex;"><span>    compare 71b5587fe2dd2a0a409e975b32f65d0338e8acf9 e80955f1022c3ca1b3ffe79607067a17ed343b79
+</span></span><span style="display:flex;"><span>    compare ce59e7d9be2fa343b1f4e4719a782851d3466d5c daf17752b253828e3a1230721ada7d457279fd78
+</span></span><span style="display:flex;"><span>    compare 9974db6909049e6875dac301358cb5fa4db6ba8e 8bcc30988fef6ac29ae8aa70a8ae7c3bfa7076ca
+</span></span><span style="display:flex;"><span>    compare 79f380d8d1ab728d2b273e160ac7bc4462828160 1f9bf3340055dea47080836380f2170982e9a419
+</span></span><span style="display:flex;"><span>    compare fb1bf1c940006c71eba57dc296e0d664168581e3 e68bb46ae543db3f3cbae9a78c530ceb93d4927f
+</span></span><span style="display:flex;"><span>    compare f254874518247f1b38e2ca355d4bee56712ed419 3cfb8638bfd9d32f67ccf33f52e9e01bf94b1890
+</span></span><span style="display:flex;"><span>    compare dabe4a8215d312c57e6da60f143981a5c519c23e cf559bc775574bf4ea50cda6aaad3fe8dcb3711f
+</span></span><span style="display:flex;"><span>    compare 163b39dc747211c110fa964cc9a94531313bf52b 9a18f7ddf13d249d834c1d24fbc8b77dc58f2f0a
+</span></span><span style="display:flex;"><span>    compare f6210a78e75dc5aa657a3140c682e4767c86a2b8 142fe0bf373b6738592cc1bd1eeebc01bc82c502
+</span></span><span style="display:flex;"><span>    compare a1220e55a68438038c6fcb40ca069314602da0f4 54fb8a496a6ff353ef2d408fa57e1eb10d980c10
+</span></span><span style="display:flex;"><span>    compare b42c1152a4299edfa70fd889bd25a4d0dbcdb317 be66eaacd75c62bbc6bc8486e7b244773fb99bb7
+</span></span><span style="display:flex;"><span>    compare 7c3b9599f5e118df5472d2269a656d43535c3769 b7de8468df616bb19e580ba1bbae051a00c00c39
+</span></span><span style="display:flex;"><span>    compare 1ded7f9f7ada98b001b7ef7a7610bc0d427cca8d 5fda9cee37868993af14ff6e67281d3ddf5db704
+</span></span><span style="display:flex;"><span>    compare ab4116d05049799e148ddff4c4ac8e9ef422c126 2bd1043f7ac6a3f625ecfcd0c673e26466164dd3
+</span></span><span style="display:flex;"><span>    compare 9214b68a3a2c227b5339724be52ebf93644136d1 4ffe06c0bc6f834b1aad616235a3e992645a5622
+</span></span><span style="display:flex;"><span>    compare 16947ecd3ead8a7d678404aecfea86f5d066c79c f99eaee0af2ec7a867d8176af2c954d6c6b239fe
+</span></span><span style="display:flex;"><span>    compare 555a23f3ca1e1d85ed6a5e8f38541f7a578e63de a7ca84cacb015c62c35eb74debcd77a544ea1bce
+</span></span><span style="display:flex;"><span>    compare 789a99911f61bdb6dd47a9a4d3459ec0e5741609 a6c87c4681777a1079839adff5d020096db5bdf6
+</span></span><span style="display:flex;"><span>    compare cf45694669be7458cd55444ca1ceb862529886bc cf3a2cc1f2a904eadc5b9f1b6dc479b127b84acf
+</span></span><span style="display:flex;"><span>    compare 749eae84bbef56fb2fcbc81c60a4043454bc2f8d f0a8f3e6e88b1951b71d041befd514aff245c1e0
+</span></span><span style="display:flex;"><span>    compare 55521cf4aada3062b7aecb075df5867d023de117 9bf851f83d6573c148a818a3fd7823ad85e8b1dc
+</span></span><span style="display:flex;"><span>    compare cf1d231aa4b9839be361a1995e971a15f44012b3 5dd7e7d3a3eb70b2b438d9c41e15b1f54415a9cf
+</span></span><span style="display:flex;"><span>    compare ea6df5b9670e632da902793508101a376618d171 9097af0e7cd1f00e2b22b347decd3a8585e5b2e0
+</span></span><span style="display:flex;"><span>    compare 11662d898d51f9ca8cc2b9765e8d758601d57ca1 1d31ae207748a2484df1697264b412fc4a15a0cc
+</span></span><span style="display:flex;"><span>    compare e84d73bff8f842d328e05f993dcc32921a95476b c6fafab5c5066ec05bc849a9b8871500fba99c75
+</span></span><span style="display:flex;"><span>    compare 1d3aae362e97a12e0559a6dc1d8b682cdc7ab397 1fe0fac6cd184909a50a2b4d9789ad6146052d21
+</span></span><span style="display:flex;"><span>    compare 64b5d98b43aefcdd81637f1bc91183e1483c0e17 147da931c2c96f858e87a20d1b22d5e6a1344bae
+</span></span><span style="display:flex;"><span>    compare 5ddc0a6cd5629397de33ecd31c38810953653677 ef7a698a82140b5330df889112f467ef999d51c5
+</span></span><span style="display:flex;"><span>    compare 97a80154e8ce6a6a3b027fa0a731a2e1c0d06b1a e7348d4ceb8273d19406650b0266d7903a3d7160
+</span></span><span style="display:flex;"><span>    compare e89c883754427c0a6d597f90dccb43304b654fb7 c049e38d81645889d9463648f030750f3c11c101
+</span></span><span style="display:flex;"><span>    compare a33c65989d571e882211969a4d43e796b585f02f 23f2746ea80e320e17cf4c75797098805a94df66
+</span></span><span style="display:flex;"><span>    compare bb9ef4ea3fbf808c8c4e41619f9e586e23616655 77e131d03013866b6c96633d172b9553b4393737
+</span></span><span style="display:flex;"><span>    compare 665b3eea270ab249b0a9ced06c3752749793c05b a7adc4bed1036ce59bebe2659a0e03e5f8103f15
+</span></span><span style="display:flex;"><span>    compare cbf79ce8f08da927d560e8d0ab09720ffa937a12 22df456599763dc5871c70623ee8d4b9db47cc27
+</span></span><span style="display:flex;"><span>    compare fcf111040f94a33869e76f3f95c75ff9c436c058 5c61ca749a3632fa97147cfb97c2e050b82288dd
+</span></span><span style="display:flex;"><span>    compare 45e7db124614de7a4c0f0bc10f443b2e18af3318 ac3b5770940f2552a14694b5ed178d5b787169b2
+</span></span><span style="display:flex;"><span>    compare 24d2851a6e44d3b0024c800488e43146fae54c97 e119237c29232fca2b1d8461bdc791a06db75481
+</span></span><span style="display:flex;"><span>    compare 13ac5c989afc29cbf79a5313cf92b501aee4024a c147cc4f2e727538479c29d196447bdd50a9cfde
+</span></span><span style="display:flex;"><span>    compare f2d06e39e1ec38edef9d3e1f950095c2385665a7 d08a27616f9095e33711f0fb348c5de9bb82cf2b
+</span></span><span style="display:flex;"><span>    compare 64c75de2dd861d7618eb507416c43cc87e5a322e b184e73f66740325bd14e00a21f68f0e7aee95ca
+</span></span><span style="display:flex;"><span>    compare b70a6749eec07762f941036bcc41b15d9381fc6e 477c6267e0b81c183e1549567321b743e171387f
+</span></span><span style="display:flex;"><span>    compare 892c1a0a644241093831dda558d01988b7ffabaf 51febc6ee3e23a0fac317985d7b14a277b96204e
+</span></span><span style="display:flex;"><span>    compare ad40d5ee9d6849d7cacd3281c082d4c77f268ab3 40bcb22592d8a4b66bc05f783b7d85a6f72d75b5
+</span></span><span style="display:flex;"><span>    compare a65b41683f8d6672dc0e96869b3e57efa07113d6 8aa90d8200b9477136f74e6c00e45c4570d60a28
+</span></span><span style="display:flex;"><span>    compare 93d8d472c7199c208728e8f7dbde6a7a8e46ffb3 975f24cb6a13e59fd151adffae4f222838cdc94c
+</span></span><span style="display:flex;"><span>    compare 2cce9dc110a7aef6cddf8318fe4a13c11a416b4b 5f775d7c21c5efd50da0d49eac7d6c5e9a4fe9da
+</span></span><span style="display:flex;"><span>    compare 40d723d13e35b35102fd56aece6767f5781a4d1d 32a39c4361028931fc3a8f211fe583f6085f8494
+</span></span><span style="display:flex;"><span>    compare fe8290a1498e6f11c62c73b917e2a70910d89358 2bd879a4b36c13ab868875948b8046b858aaa8d7
+</span></span><span style="display:flex;"><span>    compare 285cba189904bb6d2b6bee41afedf1250b93a50d 66a0a695b935cd91ce62ad88ea17a2a820851c68
+</span></span><span style="display:flex;"><span>    compare 3417ab05886dbdc70e9f66941d00a298a3e8a039 be1e907be594c320c3d4e72b3e91e66eb4351330
+</span></span><span style="display:flex;"><span>    compare 17bf8af2dfb5d49d84b82aa21d20f4081f98cf5e be0fc1d9991c8660c371a73d32f1598b39324f19
+</span></span><span style="display:flex;"><span>    compare 8bbe642011a2bc0d23f20df6427ec96a0194404c eb3c892d3fb36f87c2963bffb5b48a77704d253f
+</span></span><span style="display:flex;"><span>    compare f489e253724727a908301577b17439673edb848c 26e11dcfb0662270c5514d4ab2118bbd1c5fcc8f
+</span></span><span style="display:flex;"><span>    compare bb2f578e2d35961b786279e4c358a30fb006c1f4 5e5ac0ed0cd6b289a44097ba1be3a69283b4fb80
+</span></span><span style="display:flex;"><span>    compare f32da423739c282b48aa8cba0258eee1afc8f229 ef2ca6e34c93df1f65806ea2819118df2a8151d0
+</span></span><span style="display:flex;"><span>    compare 102dbdef3d8ac31f951b462faf922662d049a733 b63d580f8b02eafc1ad4de751216f3dea67d6e7f
+</span></span><span style="display:flex;"><span>    compare 41d3041a4b36a174dd988b3cf425c4ee4bb5e4c8 5598ad24d6cd9e11b1731d362f2cf0b77fd0a1af
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span> | sort | uniq -c
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>68 new
+</span></span></code></pre></div><p>It&rsquo;s like my repository is containing commits that were computed using a
+different hash algorithm. Yet, considering that <a href="https://gist.github.com/masak/2415865">the gist</a> is 10 years old, it
+looks like this algorithm did not change recently.</p>
+<h2 id="what-about-the-promise-of-content-addressable-storage">what about the promise of <a href="https://konubinix.eu/braindump/posts/content_addressable_storage/?title=content_addressable_storage#">content addressable storage</a>?</h2>
+<p>I tend to trust content addressable storage, like git or <a href="https://konubinix.eu/braindump/posts/ipfs/?title=ipfs#">ipfs</a>, because of
+the promise that you will always find the content, provided the hash.</p>
+<p>Now that I can see that I can have two hashes that identify the same commit,
+how can I trust one or the other. Now that I pushed the new repository with
+the new hashes in the remote, the old hashes, like
+4c10dbdd7ca357948521ad741182e119dd45d963, will eventually disappear. This
+means that all my previous communications that included git hash became
+obsolete?</p>
+<p>Now, I feel like git might be not as trustworthy as I thought&hellip;</p>
+<h2 id="gitlab-in-the-way">gitlab in the way?</h2>
+<p>This repository was hosted by gitlab. Maybe gitlab does some stuff to change
+the commit hashes?</p>
+<p>After force pushing the content in gitlab, I tried getting a fresh clone, and
+the hashes as obtained after git-filter-repo are still in here. So I guess
+gitlab is not the culprit here.</p>
+<h2 id="what-does-fsck-say">what does fsck say?</h2>
+<p>The git-fsck help says:</p>
+<blockquote>
+<p>git-fsck tests SHA-1 and general object sanity,</p>
+</blockquote>
+<p>So it should realize that and complain.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>git fsck --strict
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>(256/256)
+</span></span><span style="display:flex;"><span>Checking object directories: 100% (256/256), done.
+</span></span><span style="display:flex;"><span>(0/2478)
+</span></span><span style="display:flex;"><span>Checking objects:  100% (2478/2478), done.
+</span></span><span style="display:flex;"><span>dangling tag 4c13828c2d8ee3a30d21910a97a93c759f897db1
+</span></span><span style="display:flex;"><span>dangling tag c229d644acc0890696333022f355b689302db48d
+</span></span><span style="display:flex;"><span>dangling tag 4dcaf994d6edc84d3b4acf01d0deb2332168e26a
+</span></span></code></pre></div><p>It sounds like it did not find that those objects are bad. Then git knows how
+to compute this other hash and there is definitely something going on there.</p>
+<h2 id="a-change-of-algorithm-with-retro-compatible-support">a change of algorithm with retro compatible support?</h2>
+<p>We know for sure that git-filter-repo outputs hashes
+that are using the same algorithm than the gist.</p>
+<p>Maybe git-filter-repo uses an old algorithm and git is retro compatible.</p>
+<p>It&rsquo;s quite simple to test. We can simply create a new commit with git and see
+whether its hash also follows the algorithm of the gist.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;hello&#34;</span> &gt; a
+</span></span><span style="display:flex;"><span>git add a
+</span></span><span style="display:flex;"><span>git commit -m <span style="color:#d14">&#34;try a new commit from git itself and not git-filter-repo&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">hash</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>git <span style="color:#0086b3">hash</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">hash</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>compute <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">hash</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span> 1 file changed, 1 insertion(+)
+</span></span><span style="display:flex;"><span> create mode 100644 a
+</span></span><span style="display:flex;"><span>ae3bd673558021739efdf054c8565d297b9c6e66
+</span></span><span style="display:flex;"><span>ae3bd673558021739efdf054c8565d297b9c6e66
+</span></span></code></pre></div><p>We can reject the hypotheses of a difference of algorithm between git and
+git-filter-repo.</p>
+<h2 id="a-move-to-sha256">a move to sha256?</h2>
+<p>It could be due to the change of hash algorithm to sha256</p>
+<p><a href="https://stackoverflow.com/questions/60087759/git-is-moving-to-new-hashing-algorithm-sha-256-but-why-git-community-settled-on">https://stackoverflow.com/questions/60087759/git-is-moving-to-new-hashing-algorithm-sha-256-but-why-git-community-settled-on</a></p>
+<p>I don&rsquo;t honestly believe in this, because the gist is 10 years old and my git is
+recent enough.</p>
+<p>Also, all the facts are against this hypothesis.</p>
+<p>First, according to the man page of git</p>
+<blockquote>
+<p>extensions.objectFormat
+Specify the hash algorithm to use. The acceptable values are sha1 and sha256. If not specified, sha1 is assumed. It is an error to specify this key unless core.repositoryFormatVersion is 1.</p>
+<p>Note that this setting should only be set by git-init(1) or git-clone(1). Trying to change it after initialization will not work and will produce hard-to-diagnose issues.</p>
+</blockquote>
+<p>Then</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>git config core.repositoryFormatVersion
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>0
+</span></span></code></pre></div><p>In addition, the commits I create with git are compatible with the gist, using sha1.</p>
+<p>Finally, even bootstrapping a new repository uses sha1.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    git init
+</span></span><span style="display:flex;"><span>    git config extensions.objectFormat
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Initialized empty Git repository in /home/sam/tmp/tmp.B6lPLJivt2/.git/
+</span></span><span style="display:flex;"><span>0
+</span></span></code></pre></div><p>Those are may be not enough to definitely reject the idea that somehow my git
+was using sha256 at some point. But they are strong enough to not investigate
+much effort in that direction.</p>
+<h2 id="is-gpgsig-causing-the-issue">is gpgsig causing the issue?</h2>
+<p>I remembered that I sign all my commit. But <a href="https://konubinix.eu/braindump/posts/git_signing_previous_commits/?title=git_signing_previous_commits#">git-filter-repo did not</a>.</p>
+<p>I should have seen the gpgsig header in the git cat-file of the initial commit. It is strange that I did not.</p>
+<p>Cloning the repository in a fresh location shows something interesting.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>git clone . <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>diff -u &lt;<span style="color:#000;font-weight:bold">(</span>git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> cat-file -p 4c10dbdd7ca357948521ad741182e119dd45d963<span style="color:#000;font-weight:bold">)</span> &lt;<span style="color:#000;font-weight:bold">(</span>git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> cat-file -p bcefe2e6d93da969156da74a6d1df99483e8251e<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>compute 4c10dbdd7ca357948521ad741182e119dd45d963
+</span></span><span style="display:flex;"><span>compute bcefe2e6d93da969156da74a6d1df99483e8251e
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Cloning into &#39;/home/sam/tmp/tmp.OusIb8K4iX&#39;...
+</span></span><span style="display:flex;"><span>done.
+</span></span><span style="display:flex;"><span>--- /dev/fd/63	2021-10-14 10:27:54.713320894 +0200
+</span></span><span style="display:flex;"><span>+++ /dev/fd/62	2021-10-14 10:27:54.713320894 +0200
+</span></span><span style="display:flex;"><span>@@ -1,17 +1,6 @@
+</span></span><span style="display:flex;"><span> tree 732db1c7196d230d9d5175342c8109c38edc81c7
+</span></span><span style="display:flex;"><span>1623168292 +0200
+</span></span><span style="display:flex;"><span>1623168292 +0200
+</span></span><span style="display:flex;"><span>-gpgsig -----BEGIN PGP SIGNATURE-----
+</span></span><span style="display:flex;"><span>-
+</span></span><span style="display:flex;"><span>- iQFIBAABCgAyFiEEWZO+etpl4tkGzlw2ddI87XQ5EGoFAmC/lSQUHGtvbnViaW5p
+</span></span><span style="display:flex;"><span>- eEBnbWFpbC5jb20ACgkQddI87XQ5EGrjCQgAoBRkhuBK4JtGDpdW+3OYwKwhd6Qk
+</span></span><span style="display:flex;"><span>- kVITkX+TgRcrb2kYG5EF3cqyEI6XECWBKeFdD4liJhnRv03J08uTqauv3+epmHqG
+</span></span><span style="display:flex;"><span>- Upgc04EVBmQ2cm5/kLDw22YCPXqJ5g1pRHgt8lxctAv7xo21haX/+SlpMP+lW/6w
+</span></span><span style="display:flex;"><span>- m1Xe9vNUqIpnt2agQTigf3RUYKz7Uikzgnb9gm7rdlYz7B8HAc848DYieKTOPkJJ
+</span></span><span style="display:flex;"><span>- P6MnZWE931dB5FQAyDuhGX7xmW+EJly5gEPOpBH3ZO/ebwnJRvFffNmlixApVj6v
+</span></span><span style="display:flex;"><span>- Ddd/qaAtjqG2g/Xcm3KJ2wTZ11yw94vYQulC3qi1OoTCJtPWplrs6l+7kA==
+</span></span><span style="display:flex;"><span>- =vepN
+</span></span><span style="display:flex;"><span>- -----END PGP SIGNATURE-----
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> First commit
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>4c10dbdd7ca357948521ad741182e119dd45d963
+</span></span><span style="display:flex;"><span>bcefe2e6d93da969156da74a6d1df99483e8251e
+</span></span></code></pre></div><p>Here we go. The difference appears to be explained by the presence of the gpgsig.</p>
+<p>Also, the algorithm now returns the correct value for both commits.</p>
+<h2 id="why-did-it-not-appear-when-running-git-cat-file-in-my-first-repository">why did it not appear when running git cat-file in my first repository?</h2>
+<p>Even running <code>git show --show-signature 4c10dbdd7ca357948521ad741182e119dd45d963</code> shows the signature in a fresh clone but not in my initial one.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>git show --show-signature 4c10dbdd7ca357948521ad741182e119dd45d963|gi <span style="color:#d14">&#34;signature&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> show --show-signature 4c10dbdd7ca357948521ad741182e119dd45d963|gi <span style="color:#d14">&#34;signature&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>gpg: Signature made Tue Jun  8 18:04:52 2021 CEST
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>git verify-commit 4c10dbdd7ca357948521ad741182e119dd45d963
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> verify-commit 4c10dbdd7ca357948521ad741182e119dd45d963
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>gpg: Signature made Tue Jun  8 18:04:52 2021 CEST
+</span></span><span style="display:flex;"><span>gpg:                using RSA key 5993BE7ADA65E2D906CE5C3675D23CED7439106A
+</span></span><span style="display:flex;"><span>gpg:                issuer &#34;konubinix@gmail.com&#34;
+</span></span></code></pre></div><p>That is event stranger. All the git command behave as if the commit did not have
+a signature at all, except that the hash shows that it is a signed commit.</p>
+<h3 id="are-the-refs-messing-up-with-the-signature">are the refs messing up with the signature?</h3>
+<p>One of the main differences between a clone and the initial repository are the references.
+Let&rsquo;s try putting back the references in the fresh clone</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>git pack-refs
+</span></span><span style="display:flex;"><span>git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> pack-refs
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>cp <span style="color:#d14">&#34;.git/packed-refs&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> verify-commit 4c10dbdd7ca357948521ad741182e119dd45d963
+</span></span></code></pre></div><p>And now by removing the refs.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>rm <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> verify-commit 4c10dbdd7ca357948521ad741182e119dd45d963
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>gpg: Signature made Tue Jun  8 18:04:52 2021 CEST
+</span></span><span style="display:flex;"><span>gpg:                using RSA key 5993BE7ADA65E2D906CE5C3675D23CED7439106A
+</span></span><span style="display:flex;"><span>gpg:                issuer &#34;konubinix@gmail.com&#34;
+</span></span></code></pre></div><p>The signature is back</p>
+<p>It looks like this is a good path to understanding the issue.</p>
+<p>Let&rsquo;s try putting the refs one by one to find out which one causes the issue.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>can_see_signature <span style="color:#000;font-weight:bold">(</span> <span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> verify-commit 4c10dbdd7ca357948521ad741182e119dd45d963 2&gt;&amp;1|grep -q signature
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>rm <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>cat .git/packed-refs | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> line
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt;&gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> ! can_see_signature
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">break</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>bcefe2e6d93da969156da74a6d1df99483e8251e refs/replace/4c10dbdd7ca357948521ad741182e119dd45d963
+</span></span></code></pre></div><p>This is not very surprising to find out a ref related to the troubling commit.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>can_see_signature <span style="color:#000;font-weight:bold">(</span> <span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> verify-commit 4c10dbdd7ca357948521ad741182e119dd45d963 2&gt;&amp;1|grep -q signature
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>rm <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>can_see_signature <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;I can see the signature&#34;</span> <span style="color:#000;font-weight:bold">||</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;I cannot see the signature&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;bcefe2e6d93da969156da74a6d1df99483e8251e refs/replace/4c10dbdd7ca357948521ad741182e119dd45d963&#34;</span> &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>can_see_signature <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;I can see the signature&#34;</span> <span style="color:#000;font-weight:bold">||</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;I cannot see the signature&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>I can see the signature
+</span></span><span style="display:flex;"><span>I cannot see the signature
+</span></span></code></pre></div><p>Is it the fact that the commit hash is part of a name of ref that causes the issue</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>can_see_signature <span style="color:#000;font-weight:bold">(</span> <span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    git -C <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> verify-commit 4c10dbdd7ca357948521ad741182e119dd45d963 2&gt;&amp;1|grep -q signature
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>test_signature <span style="color:#000;font-weight:bold">(</span> <span style="color:#000;font-weight:bold">){</span>
+</span></span><span style="display:flex;"><span>    can_see_signature <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;I can see the signature&#34;</span> <span style="color:#000;font-weight:bold">||</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;I cannot see the signature&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# Without any ref&#34;</span>
+</span></span><span style="display:flex;"><span>rm <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>test_signature
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# Trying appending to the ref&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;bcefe2e6d93da969156da74a6d1df99483e8251e refs/replace/4c10dbdd7ca357948521ad741182e119dd45d963_andsomethingelse&#34;</span> &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>test_signature
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# Trying appending to the ref without underscore&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;bcefe2e6d93da969156da74a6d1df99483e8251e refs/replace/4c10dbdd7ca357948521ad741182e119dd45d963andsomethingelse&#34;</span> &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>test_signature
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# Trying prefixing to the ref&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;bcefe2e6d93da969156da74a6d1df99483e8251e refs/replace/something_4c10dbdd7ca357948521ad741182e119dd45d963&#34;</span> &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>test_signature
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# Trying removing part of the hash&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;bcefe2e6d93da969156da74a6d1df99483e8251e refs/replace/4c10dbdd7ca357948521ad741182e119dd45d96&#34;</span> &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>test_signature
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# Trying pointing to another hash&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;bcefe2e6d93da969156da74a6d1df99483e8251f refs/replace/4c10dbdd7ca357948521ad741182e119dd45d963&#34;</span> &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">OTHER_LOCATION</span><span style="color:#d14">}</span><span style="color:#d14">/.git/packed-refs&#34;</span>
+</span></span><span style="display:flex;"><span>test_signature
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span># Without any ref
+</span></span><span style="display:flex;"><span>I can see the signature
+</span></span><span style="display:flex;"><span># Trying appending to the ref
+</span></span><span style="display:flex;"><span>I cannot see the signature
+</span></span><span style="display:flex;"><span># Trying appending to the ref without underscore
+</span></span><span style="display:flex;"><span>I cannot see the signature
+</span></span><span style="display:flex;"><span># Trying prefixing to the ref
+</span></span><span style="display:flex;"><span>I can see the signature
+</span></span><span style="display:flex;"><span># Trying removing part of the hash
+</span></span><span style="display:flex;"><span>I can see the signature
+</span></span><span style="display:flex;"><span># Trying pointing to another hash
+</span></span><span style="display:flex;"><span>I cannot see the signature
+</span></span></code></pre></div><p>It appears to have something to do with references that look like <code>refs/replace/XX</code>.</p>
+<h2 id="beware-git-replace">beware <a href="https://konubinix.eu/braindump/posts/git_replace/?title=git_replace#">git-replace</a></h2>
+<blockquote>
+<p>every time you refer to this object, pretend it’s a different object</p>
+<p>&mdash; <a href="https://git-scm.com/book/en/v2/Git-Tools-Replace">https://git-scm.com/book/en/v2/Git-Tools-Replace</a></p>
+</blockquote>
+<p>Looking after <code>refs/replace/XX</code> I learn about <a href="https://konubinix.eu/braindump/posts/git_replace/?title=git_replace#">git replace</a> and found out that the
+commands of git may show information about another commit than the one
+referenced.</p>
+<p>For instance, let&rsquo;s use a new repository in which I create two commits that respectively add a file named &ldquo;a&rdquo; with the content a and a file named b with the content &ldquo;b&rdquo;</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">TEMP_DIR</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TEMP_DIR</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    git init
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> a &gt; a
+</span></span><span style="display:flex;"><span>    git add a
+</span></span><span style="display:flex;"><span>    git commit -m <span style="color:#d14">&#34;Adding a&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">REF_ADDING_A</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>git <span style="color:#0086b3">hash</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> b &gt; b
+</span></span><span style="display:flex;"><span>    git add b
+</span></span><span style="display:flex;"><span>    git commit -m <span style="color:#d14">&#34;Adding b&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">REF_ADDING_B</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>git <span style="color:#0086b3">hash</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Initialized empty Git repository in /home/sam/tmp/tmp.MTOlVoCLPn/.git/
+</span></span><span style="display:flex;"><span>[develop (root-commit) c0ec27c] Adding a
+</span></span><span style="display:flex;"><span> 1 file changed, 1 insertion(+)
+</span></span><span style="display:flex;"><span> create mode 100644 a
+</span></span><span style="display:flex;"><span>[develop de6f218] Adding b
+</span></span><span style="display:flex;"><span> 1 file changed, 1 insertion(+)
+</span></span><span style="display:flex;"><span> create mode 100644 b
+</span></span></code></pre></div><p>When I take a look at the commit that added a and the commit that added b, it is
+no surprise that git shows the correct commits.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>show_a_and_b <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TEMP_DIR</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;####### Showing the commit that added A: </span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_A</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        git show <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_A</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;####### Showing the commit that added B: </span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_B</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        git show <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_B</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>show_a_and_b
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>####### Showing the commit that added A: c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>commit c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>Author: Samuel Loury &lt;konubinixweb@gmail.com&gt;
+</span></span><span style="display:flex;"><span>Date:   Tue Oct 19 10:14:52 2021 +0200
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    Adding a
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>diff --git a/a b/a
+</span></span><span style="display:flex;"><span>new file mode 100644
+</span></span><span style="display:flex;"><span>index 0000000..7898192
+</span></span><span style="display:flex;"><span>--- /dev/null
+</span></span><span style="display:flex;"><span>+++ b/a
+</span></span><span style="display:flex;"><span>@@ -0,0 +1 @@
+</span></span><span style="display:flex;"><span>+a
+</span></span><span style="display:flex;"><span>####### Showing the commit that added B: de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span>commit de6f218ea53534e59f9ab006a30a7047bd5333ca (HEAD -&gt; develop)
+</span></span><span style="display:flex;"><span>Author: Samuel Loury &lt;konubinixweb@gmail.com&gt;
+</span></span><span style="display:flex;"><span>Date:   Tue Oct 19 10:14:52 2021 +0200
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    Adding b
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>diff --git a/b b/b
+</span></span><span style="display:flex;"><span>new file mode 100644
+</span></span><span style="display:flex;"><span>index 0000000..6178079
+</span></span><span style="display:flex;"><span>--- /dev/null
+</span></span><span style="display:flex;"><span>+++ b/b
+</span></span><span style="display:flex;"><span>@@ -0,0 +1 @@
+</span></span><span style="display:flex;"><span>+b
+</span></span></code></pre></div><p>And, also without surprise, computing the hashes will find the correct hashes.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TEMP_DIR</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    compute c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>    compute de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span></code></pre></div><p>Now, add a special ref with the value of REF_ADDING_A that points to REF_ADDING_B. And see what happens.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TEMP_DIR</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    mkdir -p <span style="color:#d14">&#34;.git/refs/replace/&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_B</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; <span style="color:#d14">&#34;.git/refs/replace/</span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_A</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>show_a_and_b
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>####### Showing the commit that added A: c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>commit c0ec27c33608d091fde5964804d396a3900c94f4 (replaced)
+</span></span><span style="display:flex;"><span>Author: Samuel Loury &lt;konubinixweb@gmail.com&gt;
+</span></span><span style="display:flex;"><span>Date:   Tue Oct 19 10:14:52 2021 +0200
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    Adding b
+</span></span><span style="display:flex;"><span>####### Showing the commit that added B: de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span>commit de6f218ea53534e59f9ab006a30a7047bd5333ca (HEAD -&gt; develop)
+</span></span><span style="display:flex;"><span>Author: Samuel Loury &lt;konubinixweb@gmail.com&gt;
+</span></span><span style="display:flex;"><span>Date:   Tue Oct 19 10:14:52 2021 +0200
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    Adding b
+</span></span></code></pre></div><p>Now you can see that even though git shows the correct ref for a and b
+(respectively c0ec27c33608d091fde5964804d396a3900c94f4 and
+de6f218ea53534e59f9ab006a30a7047bd5333ca).</p>
+<p>The content is actually the one of de6f218ea53534e59f9ab006a30a7047bd5333ca in both cases.</p>
+<p>And now, computing the hashes will show the same hash (the one of adding b) for
+both.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TEMP_DIR</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    compute c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>    compute de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span>de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span></code></pre></div><p>By the way, creating such a ref can be eased with the replace command.</p>
+<p>I can remove the previously created replacement with :</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TEMP_DIR</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    git replace -d <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_A</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    compute c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>    compute de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Deleted replace ref &#39;c0ec27c33608d091fde5964804d396a3900c94f4&#39;
+</span></span><span style="display:flex;"><span>c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span></code></pre></div><p>And I can put it back.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TEMP_DIR</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    git replace <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_A</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">REF_ADDING_B</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    compute c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>    compute de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span>de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span></code></pre></div><p>Actually, git-filter-repo explains that they make use of git-replace to make old
+links still work while now showing the new content.</p>
+<blockquote>
+<p>Additionally, several concerns are handled automatically (many of these
+can be overridden, but they are all on by default):</p>
+<p>[&hellip;]</p>
+<p>•   creating replace-refs (see git-replace(1)) for old commit hashes,
+which if manually pushed and fetched will allow users to continue
+to refer to new commits using (unabbreviated) old commit IDs
+[&hellip;]
+Parent rewriting
+&ndash;replace-refs {delete-no-add, delete-and-add, update-no-add,
+update-or-add, update-and-add}
+Replace refs (see git-replace(1)) are used to rewrite parents
+(unless turned off by the usual git mechanism); this flag specifies
+what do do with those refs afterward. Replace refs can either be
+deleted or updated to point at new commit hashes. Also, new replace
+refs can be added for each commit rewrite. With update-or-add, new
+replace refs are only added for commit rewrites that aren’t used to
+update an existing replace ref. default is update-and-add if
+$GIT_DIR/filter-repo/already_ran does not exist; update-or-add
+otherwise.</p>
+<p><strong>Man 1 git-filter-repo</strong></p>
+</blockquote>
+<p>That looks to me like a legitimate use of git-replace.</p>
+<p>Finally, the documentation of <code>git replace</code> tells how to disable this behavior.</p>
+<blockquote>
+<p>It is possible to disable use of replacement references for any command
+using the &ndash;no-replace-objects option just after git.</p>
+<p>For example if commit foo has been replaced by commit bar:</p>
+<p>$ git &ndash;no-replace-objects cat-file commit foo</p>
+<p>shows information about commit foo, while:</p>
+<p>$ git cat-file commit foo</p>
+<p>shows information about commit bar.</p>
+<p>The GIT_NO_REPLACE_OBJECTS environment variable can be set to achieve
+the same effect as the &ndash;no-replace-objects option.</p>
+<p><strong>Man 1 git-replace</strong></p>
+</blockquote>
+<p>Let&rsquo;s try for example using <code>GIT_NO_REPLACE_OBJECTS</code> and let&rsquo;s see if the commit
+gets replaced.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">export</span> GIT_NO_REPLACE_OBJECTS
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TEMP_DIR</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    compute c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>    compute de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>c0ec27c33608d091fde5964804d396a3900c94f4
+</span></span><span style="display:flex;"><span>de6f218ea53534e59f9ab006a30a7047bd5333ca
+</span></span></code></pre></div><p>It looks like it works. Hopefully in the future when I have an issue with two
+apparently identical commit I will remember to export this variable in my
+investigation.</p>
+<p>As a conclusion, I don&rsquo;t have anymore the feeling that two identical commits
+have different hashes and can continue thinking that git is one of the most
+incredible tools :-).</p>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/9b9dc018-3a12-4fd4-960b-52737ac9f671?title=why_do_the_same_git_commits_not_have_the_same_hash">Permalink</a></h2>
+  </article>
+  <aside class="date"><time>Last updated: 14 Apr 2023</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 13 Oct 2021</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>

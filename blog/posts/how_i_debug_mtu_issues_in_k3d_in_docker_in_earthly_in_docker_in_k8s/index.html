@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>How I Debug MTU Issues in K3d in Docker in Earthly in Docker in K8s &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">How I Debug MTU Issues in K3d in Docker in Earthly in Docker in K8s</h1>
+	</header>
+  <article>
+	<p><a href="https://konubinix.eu/braindump/posts/earthly/?title=earthly#">earthly</a> is awesome because it unlocks a bunch of use cases that were impossible
+otherwise. But it comes with several layers of abstraction that may be worth
+understanding.</p>
+<p>In the past, I have already been confronted to issues with running <a href="https://konubinix.eu/braindump/posts/docker/?title=docker#">docker</a> in
+some containerized environment. The last one was about the fact that <a href="https://konubinix.eu/braindump/posts/docker_mtu_issues_and_solutions/?title=docker_does_not_check_the_mtu_at_startup#docker-does-not-check-the-mtu-at-startup">docker does
+not check the mtu at startup</a>.</p>
+<p>I fell into a similar issue today. I needed to dig deeper into all the layer of
+abstraction I set up in the <a href="https://konubinix.eu/braindump/posts/continuous_integration/?title=continuous_integration#">CI</a>. I take advantage of this to write down what I
+learned.</p>
+<p>When I need to tests software in the context of <a href="https://konubinix.eu/braindump/posts/kubernetes/?title=kubernetes#">k8s</a>, my CI looks like this:</p>
+<ol>
+<li>a virtual machine hosted on <a href="https://konubinix.eu/braindump/posts/hetzner/?title=hetzner#">hetzner</a>,</li>
+<li>running <a href="https://konubinix.eu/braindump/posts/k3s/?title=k3s#">k3s</a>, hence <a href="https://konubinix.eu/braindump/posts/containerd/?title=containerd#">containerd</a>,</li>
+<li>running an <a href="https://konubinix.eu/braindump/posts/actions_runner_controller/?title=actions_runner_controller#">actions-runner-controller</a>,</li>
+<li>running <a href="https://konubinix.eu/braindump/posts/earthly/?title=earthly#">earthly</a>, hence earthly-buildkitd in docker,</li>
+<li>running buildkit-<a href="https://konubinix.eu/braindump/posts/runc/?title=runc#">runc</a>,</li>
+<li>running docker (because of WITH DOCKER) to run k3d,</li>
+<li>running k3s, hence <a href="https://konubinix.eu/braindump/posts/containerd/?title=containerd#">containerd</a>,</li>
+<li>running the pods in am interested in.</li>
+</ol>
+<p>All those layers make sense and provide a comfortable development
+environment.</p>
+<p>1-3 make the handling of the CI infrastructure easy and allows fine tuning
+horizontal scaling.</p>
+<p>4-5 comes with earthly, bring high reproducibility power, ease organising ones
+code and artifacts and free the developers from having to adapt to CI provider
+subtleties<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</p>
+<p>6-8 brings the ease of testing stuff in a reproducible way. Since there are a
+lot of code in the helm charts and values, it is very useful to run tests in
+that way<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</p>
+<p>But when something goes wrong and you need to get into it, that may become a bit
+tricky.</p>
+<p>This setup did not work out of the box. The cluster never started. Therefore I
+needed to get into the running github action.</p>
+<p>Because I already have some issues with the <a href="https://konubinix.eu/braindump/posts/maximum_transmission_unit/?title=maximum_transmission_unit#">MTU</a>, I started looking at it.</p>
+<ul>
+<li>ssh in the hetzner machine -&gt; ip a | grep mtu -&gt; 1430</li>
+<li>kubectl exec -t -i myrunningrunner sh
+<ul>
+<li>ip a | grep mtu -&gt; 1430</li>
+<li>dk exec -ti earthly-buildkitd sh
+<ul>
+<li>ip a|grep mtu -&gt; 1400 (because of <a href="https://konubinix.eu/braindump/posts/actions_runner_controller/?title=fix_docker_mtu_issues_and_solutions_in_actions_runner_controller#fix-docker-mtu-issues-and-solutions-in-actions-runner-controller">fix Docker MTU issues and solutions in actions-runner-controller</a>)</li>
+<li>buildkit-runc exec -t sw7b9iz0d6ulw7l2rlriozqaz bash (use buildkit-runc list to find the container)
+<ul>
+<li>apt install &ndash;yes iproute2</li>
+<li>ip a|grep mtu -&gt; 1400 for eth0, but <strong>1500 for docker</strong> -&gt; that&rsquo;s a bad sign</li>
+<li>docker exec -ti clk-k8s-control-plane bash
+<ul>
+<li>ip a|grep mtu -&gt; <strong>1500, that sucks</strong></li>
+<li>ctr image pull -&gt; error</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<figure><img src="https://konubinix.eu/ipfs/bafybeiei3cqsjim3wnantnoymg6vitnd647eu5dti4bdwl3ehzyt7hi3pq?filename=a.png">
+</figure>
+
+<p>There are two issues here:</p>
+<p>First, the docker spawned by earthly (using WITH DOCKER) did not have an
+appropriate mtu (1500, which is greater than 1400 in the outside network).</p>
+<p>Unfortunately, <a href="https://github.com/earthly/earthly/blob/877ec53f97a86a61609cccdc8bfb87dc065e79be/buildkitd/dockerd-wrapper.sh#L103">the current code</a> does not provide a mean to change it. But it
+does not overwrite whatever config already exists.</p>
+<p>Hence we added just before WITH DOCKER the following line.</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">RUN mkdir -p /etc/docker &amp;&amp; echo &#39;{&#34;mtu&#34;: 1400}&#39; &gt; /etc/docker/daemon.json
+</code></pre><p>That way, the spawned docker has the appropriate mtu.</p>
+<p>The second problem is that k3d (using <code>k3d registry create</code> and
+<code>--registry-use</code>) spawns a container in a network without guessing the
+mtu. Docker falls back on 1500 (even though docker itself is configured to use
+mtu 1400).</p>
+<p>I could extend <a href="https://konubinix.eu/braindump/posts/clk_k8s/?title=clk_k8s#">clk k8s</a> to run create a network with the correct mtu using
+<code>docker network create somename --opt com.docker.network.driver.mtu=1400</code> and
+then use <code>k3d cluster create --network somename</code> and <code>k3d registry create --default-network somename</code>.</p>
+<p>But I got pragmatic and used <a href="https://konubinix.eu/braindump/posts/kubernetes/?title=kind#kind">kind</a> instead, than actually infer the appropriate
+value of mtu: 1400.</p>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/blog/posts/clk_k8s_and_earthly_in_a_local_dev_env/">clk k8s and earthly in a local dev env</a></li>
+<li><a href="https://konubinix.eu/braindump/posts/debug_k8s_in_docker_in_earthly/?title=debug_k8s_in_docker_in_earthly#">debug k8s in docker in earthly</a> (braindump)</li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/blog/d83c0a76-e113-48e5-8099-c18f3c144da4?title=how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>The CI job becomes as simple as:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">ci</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">runs-on</span>:<span style="color:#bbb"> </span>[self-hosted]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">steps</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>- <span style="color:#000080">uses</span>:<span style="color:#bbb"> </span>earthly/actions-setup@v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">id</span>:<span style="color:#bbb"> </span>setup<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">with</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">version</span>:<span style="color:#bbb"> </span>v0.6.29<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span>- <span style="color:#000080">run</span>:<span style="color:#bbb"> </span>earthly -P --push +ci<span style="color:#bbb">
+</span></span></span></code></pre></div><!--more-->
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
+<p>In the Earthfile I can test my code in a cluster with something like</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">myimage:
+   FROM alpine
+   ...
+   SAVE IMAGE myremotename
+
+ci:
+    FROM earthly/dind:ubuntu
+    RUN apt-get update &amp;&amp; apt-get install --yes git wget python3-distutils python3-pytest
+    RUN wget -O - https://clk-project.org/install.sh | env CLK_EXTENSIONS=k8s bash
+    WORKDIR /app
+    COPY --dir myfiles /app
+    WITH DOCKER --load 127.0.0.1:5000/myimage:dev=+myimage
+        RUN /app/test.sh
+    END
+</code></pre><p>And then in the test (I use <a href="https://konubinix.eu/braindump/posts/clk_k8s/?title=clk_k8s#">clk k8s</a>).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic">#!/bin/bash
+</span></span></span><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic"></span>
+</span></span><span style="display:flex;"><span>clk k8s flow
+</span></span><span style="display:flex;"><span>docker push --quiet 127.0.0.1:5000/myimage:dev
+</span></span><span style="display:flex;"><span>helm dependency-update /app/helm
+</span></span><span style="display:flex;"><span>helm install myapp /app/helm <span style="color:#d14">\
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>     --values /app/helm/values-dev.yaml <span style="color:#d14">\
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>     --set myapp.image.repository<span style="color:#000;font-weight:bold">=</span>localhost:5000/myimage <span style="color:#d14">\
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>     --set myapp.image.tag<span style="color:#000;font-weight:bold">=</span>dev
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>kubectl <span style="color:#0086b3">wait</span> pods -l app.kubernetes.io/name<span style="color:#000;font-weight:bold">=</span>myimage --for <span style="color:#008080">condition</span><span style="color:#000;font-weight:bold">=</span>Ready --timeout<span style="color:#000;font-weight:bold">=</span>2m
+</span></span><span style="display:flex;"><span>pytest /app/tests
+</span></span></code></pre></div>&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+  </article>
+  <aside class="date"><time>Last updated: 17 Oct 2024</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 22 Dec 2022</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2025 Samuel Loury</p>
+</footer>
+</body>
+</html>
