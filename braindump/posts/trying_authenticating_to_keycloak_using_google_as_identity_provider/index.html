@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html><title>trying authenticating to keycloak using google as Identity Provider</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Trying Authenticating to Keycloak Using Google as Identity Provider</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>see,
+<ul>
+<li><a href="https://konubinix.eu/blog/posts/make_sense_of_keycloak_openid_connect_oauth_2_0_jwt_jws/?title=make_sense_of_keycloak_openid_connect_oauth_2_0_jwt_jws#">make sense of keycloak, openid connect, oauth 2.0, jwt, jws</a>,</li>
+<li><a href="/braindump/posts/identity_provider/">Identity Provider</a>,</li>
+</ul>
+</li>
+</ul>
+<p>Trying authenticating to <a href="/braindump/posts/keycloak/">keycloak</a> using <a href="/braindump/posts/google_sign_in/">google sign-in</a> following this tutorial</p>
+<p><a href="https://keycloakthemes.com/blog/how-to-setup-sign-in-with-google-using-keycloak">https://keycloakthemes.com/blog/how-to-setup-sign-in-with-google-using-keycloak</a>.</p>
+<p>First, a small precision: <a href="/braindump/posts/using_google_as_identity_provider_is_not_doing_sso/">this is not doing SSO at all</a>, because it does not
+replace the policy handling of keycloak.</p>
+<p>The tutorial is great, but I need to get a little bit into the details to
+challenge my understanding.</p>
+<p>I will try with a dev keycloak run like this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>docker run -p 8080:8080 -e <span style="color:#008080">KEYCLOAK_USER</span><span style="color:#000;font-weight:bold">=</span>admin -e <span style="color:#008080">KEYCLOAK_PASSWORD</span><span style="color:#000;font-weight:bold">=</span>admin quay.io/keycloak/keycloak:15.1.0
+</span></span></code></pre></div><p>Then I can connect to it using the following url</p>
+<p><a href="http://localhost:8080/auth/admin/master/console/#/realms/master">http://localhost:8080/auth/admin/master/console/#/realms/master</a>.</p>
+<p>Then, creating a test realm with a test client allowing the standard and
+implicit flow of <a href="/braindump/posts/oauth_2_0/">OAuth 2.0</a> with the valid redirection to
+<code>http://localhost:8081</code>.</p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreie4jctjqleipfa2g4vbiji3zng6fmtswiemthoedmmthzhgqydnnm?filename=a.png">
+</figure>
+
+<p>I will use <a href="/braindump/posts/oauth_2_0/#e296ff6e-e206-4d1e-840e-1971682b45e2">implicit grant</a> not to bother with the intermediate code.</p>
+<p>It is important to realize here that there are two flows going on:</p>
+<ol>
+<li>I trigger an open id connect flow with keycloak and the client id test, here
+the three OAuth actors (there are four actors, but the resource server is not
+involved in the part of the flow I&rsquo;m interested about) are:
+<ul>
+<li><strong>resource owner:</strong> me</li>
+<li><strong>client:</strong> my browser</li>
+<li><strong>authorization server:</strong> keycloak</li>
+</ul>
+</li>
+<li>keycloak will perform a nested flow with
+<ul>
+<li><strong>resource owner:</strong> still me</li>
+<li><strong>client:</strong> keycloak</li>
+<li><strong>authorization server:</strong> google</li>
+</ul>
+</li>
+</ol>
+<p>In the second (nested) flow, keycloak will try to get an identity token from
+google about me in order to create my keycloak account.</p>
+<p>According to the RFC:</p>
+<blockquote>
+<p>Authorization Request</p>
+<p>The client constructs the request URI by adding the following
+parameters to the query component of the authorization endpoint URI
+using the &ldquo;application/x-www-form-urlencoded&rdquo; format, per Appendix B:</p>
+<dl>
+<dt>response_type</dt>
+<dd>REQUIRED.  Value MUST be set to &ldquo;token&rdquo;.</dd>
+<dt>client_id</dt>
+<dd>REQUIRED.  The client identifier as described in Section 2.2.</dd>
+<dt>redirect_uri</dt>
+<dd>OPTIONAL.  As described in Section 3.1.2.</dd>
+<dt>scope</dt>
+<dd>OPTIONAL.  The scope of the access request as described by Section 3.3</dd>
+<dt>state</dt>
+<dd>RECOMMENDED.  An opaque value used by the client to maintain state
+between the request and callback.  The authorization server includes this
+value when redirecting the user-agent back to the client.  The parameter
+SHOULD be used for preventing cross-site request forgery as described in
+Section 10.12.</dd>
+</dl>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.2">https://datatracker.ietf.org/doc/html/rfc6749#section-4.2</a></p>
+</blockquote>
+<p>Then, I can open the following url in my browser</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>http://localhost:8080/auth/realms/test/protocol/openid-connect/auth?response_type=token&amp;client_id=test&amp;redirect_url=http://localhost:8081
+</span></span></code></pre></div><p>It shows me the login screen of keycloak</p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreid4hllfkygeexohufz5zoqqzahs2dnmaien3a7xxj6tyhstrvzup4?filename=a.png">
+</figure>
+
+<p>When I try using the method using google as <a href="/braindump/posts/identity_provider/">Identity Provider</a>, it:</p>
+<ol>
+<li>
+<p>opens the endpoint of keycloak to deal with the google broker</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>http://localhost:8080/auth/realms/test/broker/google/login?
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        client_id=test
+</span></span><span style="display:flex;"><span>       &amp;tab_id=sG4RPI75z5I
+</span></span><span style="display:flex;"><span>       &amp;session_code=H3TIlkvrMkPNSw7nWZ0l25mhZXvyhN0uhtaqI11W-VI
+</span></span></code></pre></div></li>
+<li>
+<p>that immediately redirects me to the google sign in screen</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>https://accounts.google.com/o/oauth2/v2/auth?
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>         scope=openid+profile+email
+</span></span><span style="display:flex;"><span>        &amp;state=IsqEILwW6QB0NBOo4DmCd_J5Y8eOd7r44onHyTYC3Ew.MeU8vINP53c.test
+</span></span><span style="display:flex;"><span>        &amp;response_type=code
+</span></span><span style="display:flex;"><span>        &amp;client_id=MYCLIENTID
+</span></span><span style="display:flex;"><span>        &amp;redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fauth%2Frealms%2Ftest%2Fbroker%2Fgoogle%2Fendpoint
+</span></span><span style="display:flex;"><span>        &amp;nonce=5fa1WUvjcVPaH0wjXzAJ9Q
+</span></span></code></pre></div><p>Note the openid scope, indicating they are talking in <a href="/braindump/posts/openid_connect/">OpenID Connect</a>
+protocol. Also, this is the beginning of the nested flow, using another
+client id.</p>
+<p>Here, keycloak uses the standard flow, the server will respond with the code
+to get the access token and not directly with the access token.</p>
+<p>This shows the sign in screen to get access to the application.</p>
+</li>
+</ol>
+<figure><img src="https://konubinix.eu/ipfs/bafkreigzdsbeevgkbhdbjikaieyvhoaketojgj4mu3delmx4mch3sohbqq?filename=a.png">
+</figure>
+
+<ol>
+<li>
+<p>I&rsquo;m redirected to the redirect url of the nested flow</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>http://localhost:8080/auth/realms/test/broker/google/endpoint?
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        state=IsqEILwW6QB0NBOo4DmCd_J5Y8eOd7r44onHyTYC3Ew.MeU8vINP53c.test
+</span></span><span style="display:flex;"><span>       &amp;code=4%2F0AX4XfWjptKJdbVwWl5P3DmEdkGRxXTsq8m0AGFazVq6O3_aZRhpNX6RIKXP1pWLc6YIw3g
+</span></span><span style="display:flex;"><span>       &amp;scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email
+</span></span><span style="display:flex;"><span>       &amp;authuser=0
+</span></span><span style="display:flex;"><span>       &amp;hd=SOMEHOSTEDDOMAIN
+</span></span><span style="display:flex;"><span>       &amp;prompt=consent
+</span></span></code></pre></div><p>Note that it added a few of its own scopes and gave an authorization
+code. Also note that the state parameter is the same, meaning I did not fall
+into a <a href="/braindump/posts/cross_site_request_forgery/">cross-site request forgery</a>.</p>
+</li>
+<li>
+<p>here, something happens under the hood, keycloak uses the <a href="/braindump/posts/oauth_2_0/#def201dd-26c7-44f9-8456-ad5d3c631731">code</a> to asks google
+about the ID token. This does not use my browser, so I cannot see the
+communication.</p>
+<p>By using tcpdump, I can indeed see some traffik between the docker container
+running keycloak and some server at google (with oauth2.googleapis.com.).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>12:03:21.060963 IP 172.17.0.8.35055 &gt; myrouter: 44109+ A? oauth2.googleapis.com. (39)
+</span></span><span style="display:flex;"><span>12:03:21.064306 IP myrouter &gt; 172.17.0.8.35055: 44109 1/0/0 A 142.250.75.234 (55)
+</span></span><span style="display:flex;"><span>12:03:21.064502 IP 172.17.0.8.37792 &gt; par10s41-in-f10.1e100.net.https: Flags [S], seq 4218726088, win 64240, options [mss 1460,sackOK,TS val 963198246 ecr 0,nop,wscale 7], length 0
+</span></span><span style="display:flex;"><span>12:03:21.074882 IP par21s05-in-f138.1e100.net.https &gt; 172.17.0.8.45674: Flags [R], seq 3137516732, win 0, length 0
+</span></span><span style="display:flex;"><span>12:03:21.078601 IP par10s41-in-f10.1e100.net.https &gt; 172.17.0.8.37792: Flags [S.], seq 2497217181, ack 4218726089, win 65535, options [mss 1430,sackOK,TS val 417428570 ecr 963198246,nop,wscale 8], length 0
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div></li>
+<li>
+<p>at that moment, the nested flow is over. keycloak has my identity token and can create a user of me.</p>
+</li>
+<li>
+<p>in the end, keycloak redirects me to my initial redirect url, with a fresh id
+token and access token relative to my flow (the one with client_id=test)</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>http://localhost:8081/#
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        session_state=7577f2d7-6988-45e5-a450-ce749ab32d72
+</span></span><span style="display:flex;"><span>        &amp;access_token=
+</span></span><span style="display:flex;"><span>              eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJQTl9ybnEtbVNobGpRX3dzdU1rSW5GTmRoTEltNDExLXp2MW9IaVh3WFZNIn0
+</span></span><span style="display:flex;"><span>              .
+</span></span><span style="display:flex;"><span>              eyJleHAiOjE2NDAxMDU2ODYsImlhdCI6MTY0MDEwNDc4NiwiYXV0aF90aW1lIjoxNjQwMTA0Nzg2LCJqdGkiOiIwZDY0MjM5OC01ZjNmLTQzZGItYTU1MS0wMmI0ZjdhNGFkOWIiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvYXV0aC9yZWFsbXMvdGVzdCIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiJkYTE0NDE1OC1lNzE4LTRjODgtYmNhYy1kZDExN2U1ZmZlZGUiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJ0ZXN0Iiwic2Vzc2lvbl9zdGF0ZSI6Ijc1NzdmMmQ3LTY5ODgtNDVlNS1hNDUwLWNlNzQ5YWIzMmQ3MiIsImFjciI6IjEiLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiZGVmYXVsdC1yb2xlcy10ZXN0Iiwib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6Ijc1NzdmMmQ3LTY5ODgtNDVlNS1hNDUwLWNlNzQ5YWIzMmQ3MiIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IktvbnViaW5peCBLb251YmluaXgiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJrb251YmluaXhAZ21haWwuY29tIiwiZ2l2ZW5fbmFtZSI6IktvbnViaW5peCIsImZhbWlseV9uYW1lIjoiS29udWJpbml4IiwiZW1haWwiOiJrb251YmluaXhAZ21haWwuY29tIn0
+</span></span><span style="display:flex;"><span>              .
+</span></span><span style="display:flex;"><span>              PkA2Je5BYgLeOdByWGchvVILr9EROnjLQ_NJSxzWN2r0QT7aOTUX4d4jI-7U2_NHTk8VLgvXWtEskEMLxMYhNXHILiuBXKj4PjaPU0zo_AX06NZMKNxtM_yRkoaA4u2w0dOkgYcWNX38sbinMYlO2uILTV6EWUHXByRYzA8EJiWD41A6yNZvxEc0_GUNnCszvki1MhYEcIvfSvJVrkHJ5G9xa84gJoIQaw2EX9dNMp4pxCJka5uyUYS1sEMtJKSbxU65
+</span></span></code></pre></div></li>
+</ol>
+<p>I can take a look at my new access token.</p>
+<p><a id="code-snippet--parse-access-token"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">access_token</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>| cut -f2 -d. | base64 -d|jq -M
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1640105686,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1640104786,
+</span></span><span style="display:flex;"><span>  &#34;auth_time&#34;: 1640104786,
+</span></span><span style="display:flex;"><span>  &#34;jti&#34;: &#34;0d642398-5f3f-43db-a551-02b4f7a4ad9b&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;http://localhost:8080/auth/realms/test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;aud&#34;: &#34;account&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;da144158-e718-4c88-bcac-dd117e5ffede&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;Bearer&#34;,
+</span></span><span style="display:flex;"><span>  &#34;azp&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;session_state&#34;: &#34;7577f2d7-6988-45e5-a450-ce749ab32d72&#34;,
+</span></span><span style="display:flex;"><span>  &#34;acr&#34;: &#34;1&#34;,
+</span></span><span style="display:flex;"><span>  &#34;realm_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>      &#34;default-roles-test&#34;,
+</span></span><span style="display:flex;"><span>      &#34;offline_access&#34;,
+</span></span><span style="display:flex;"><span>      &#34;uma_authorization&#34;
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;resource_access&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;account&#34;: {
+</span></span><span style="display:flex;"><span>      &#34;roles&#34;: [
+</span></span><span style="display:flex;"><span>        &#34;manage-account&#34;,
+</span></span><span style="display:flex;"><span>        &#34;manage-account-links&#34;,
+</span></span><span style="display:flex;"><span>        &#34;view-profile&#34;
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;profile email&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sid&#34;: &#34;7577f2d7-6988-45e5-a450-ce749ab32d72&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email_verified&#34;: false,
+</span></span><span style="display:flex;"><span>  &#34;name&#34;: &#34;Konubinix Konubinix&#34;,
+</span></span><span style="display:flex;"><span>  &#34;preferred_username&#34;: &#34;konubinix@gmail.com&#34;,
+</span></span><span style="display:flex;"><span>  &#34;given_name&#34;: &#34;Konubinix&#34;,
+</span></span><span style="display:flex;"><span>  &#34;family_name&#34;: &#34;Konubinix&#34;,
+</span></span><span style="display:flex;"><span>  &#34;email&#34;: &#34;konubinix@gmail.com&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="5f45750e-4fe9-4b4c-a141-e8a2ccd2b2af">keycloak provide many user related information in the access token by default.</h2>
+<p>This access token contains my username, family name and email: that&rsquo;s strange.</p>
+<p>I assume that this is linked to what is said in the <a href="/braindump/posts/jwt_access_tokens_profile_for_oauth_2_0/">RFC 9068</a></p>
+<blockquote>
+<p>often include resource owner attributes directly in access tokens so that
+resource servers can consume them directly for authorization or other purposes
+without any further round trips to introspection</p>
+<p>&mdash; <a href="https://datatracker.ietf.org/doc/html/rfc9068">https://datatracker.ietf.org/doc/html/rfc9068</a></p>
+</blockquote>
+<p>Yet, I have a hard time imagining why my family name matters here. Actually, I
+tend to think that there is a confusion with <a href="/braindump/posts/openid_connect/#6796313b-7141-4013-848f-bc08edd02472">ID Token</a>. Actually, discussing the
+topic with colleagues, I realize that some client dev often expect the access
+token to be <a href="/braindump/posts/json_web_signature/#f06e78f0-b9af-4f2c-963f-3298184eef45">JWS Compact Serialization</a> of a <a href="/braindump/posts/json_web_tokens/">JWT</a> and that read user information in
+it, while this is exactly the purpose of the id token (<a href="/braindump/posts/id_tokens_vs_access_tokens/">ID Tokens vs Access
+Tokens</a>).</p>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/making_sense_of_github_oidc_flow/">making sense of github OIDC flow</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/bf00b5d9-e5f9-4f20-9a21-eb1bd7cb8994?title=trying_authenticating_to_keycloak_using_google_as_identity_provider">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 18 Nov 2023</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 21 Dec 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

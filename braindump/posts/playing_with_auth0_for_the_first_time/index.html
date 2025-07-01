@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html><title>playing with auth0 for the first time</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Playing With Auth0 for the First Time</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p><a href="/braindump/posts/auth0/">Auth0</a></p>
+<p>I want a simple <a href="/braindump/posts/single_page_application/">SPA</a>. So IIUC, I only need an application, no API.</p>
+<p>Once created, I get a domain, a client id and a client secret.</p>
+<p>I can request the domain to find out the <a href="/braindump/posts/well_known_uniform_resource_identifiers/">well-known</a> <a href="/braindump/posts/oauth_2_0_authorization_server_metadata/">OAuth 2.0 Authorization Server Metadata</a> urls.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -fsSL https://<span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span>/.well-known/oauth-authorization-server 2&gt;&amp;<span style="color:#099">1</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>curl: (22) The requested URL returned error: 404
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -fsSL https://<span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span>/.well-known/openid-configuration | jq | sed <span style="color:#d14">&#34;s|</span><span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span><span style="color:#d14">|\${domain}|&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;issuer&#34;: &#34;https://${domain}/&#34;,
+</span></span><span style="display:flex;"><span>  &#34;authorization_endpoint&#34;: &#34;https://${domain}/authorize&#34;,
+</span></span><span style="display:flex;"><span>  &#34;token_endpoint&#34;: &#34;https://${domain}/oauth/token&#34;,
+</span></span><span style="display:flex;"><span>  &#34;device_authorization_endpoint&#34;: &#34;https://${domain}/oauth/device/code&#34;,
+</span></span><span style="display:flex;"><span>  &#34;userinfo_endpoint&#34;: &#34;https://${domain}/userinfo&#34;,
+</span></span><span style="display:flex;"><span>  &#34;mfa_challenge_endpoint&#34;: &#34;https://${domain}/mfa/challenge&#34;,
+</span></span><span style="display:flex;"><span>  &#34;jwks_uri&#34;: &#34;https://${domain}/.well-known/jwks.json&#34;,
+</span></span><span style="display:flex;"><span>  &#34;registration_endpoint&#34;: &#34;https://${domain}/oidc/register&#34;,
+</span></span><span style="display:flex;"><span>  &#34;revocation_endpoint&#34;: &#34;https://${domain}/oauth/revoke&#34;,
+</span></span><span style="display:flex;"><span>  &#34;scopes_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;openid&#34;,
+</span></span><span style="display:flex;"><span>    &#34;profile&#34;,
+</span></span><span style="display:flex;"><span>    &#34;offline_access&#34;,
+</span></span><span style="display:flex;"><span>    &#34;name&#34;,
+</span></span><span style="display:flex;"><span>    &#34;given_name&#34;,
+</span></span><span style="display:flex;"><span>    &#34;family_name&#34;,
+</span></span><span style="display:flex;"><span>    &#34;nickname&#34;,
+</span></span><span style="display:flex;"><span>    &#34;email&#34;,
+</span></span><span style="display:flex;"><span>    &#34;email_verified&#34;,
+</span></span><span style="display:flex;"><span>    &#34;picture&#34;,
+</span></span><span style="display:flex;"><span>    &#34;created_at&#34;,
+</span></span><span style="display:flex;"><span>    &#34;identities&#34;,
+</span></span><span style="display:flex;"><span>    &#34;phone&#34;,
+</span></span><span style="display:flex;"><span>    &#34;address&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;response_types_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;code&#34;,
+</span></span><span style="display:flex;"><span>    &#34;token&#34;,
+</span></span><span style="display:flex;"><span>    &#34;id_token&#34;,
+</span></span><span style="display:flex;"><span>    &#34;code token&#34;,
+</span></span><span style="display:flex;"><span>    &#34;code id_token&#34;,
+</span></span><span style="display:flex;"><span>    &#34;token id_token&#34;,
+</span></span><span style="display:flex;"><span>    &#34;code token id_token&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;code_challenge_methods_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;S256&#34;,
+</span></span><span style="display:flex;"><span>    &#34;plain&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;response_modes_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;query&#34;,
+</span></span><span style="display:flex;"><span>    &#34;fragment&#34;,
+</span></span><span style="display:flex;"><span>    &#34;form_post&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;subject_types_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;public&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;token_endpoint_auth_methods_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;client_secret_basic&#34;,
+</span></span><span style="display:flex;"><span>    &#34;client_secret_post&#34;,
+</span></span><span style="display:flex;"><span>    &#34;private_key_jwt&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;claims_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;aud&#34;,
+</span></span><span style="display:flex;"><span>    &#34;auth_time&#34;,
+</span></span><span style="display:flex;"><span>    &#34;created_at&#34;,
+</span></span><span style="display:flex;"><span>    &#34;email&#34;,
+</span></span><span style="display:flex;"><span>    &#34;email_verified&#34;,
+</span></span><span style="display:flex;"><span>    &#34;exp&#34;,
+</span></span><span style="display:flex;"><span>    &#34;family_name&#34;,
+</span></span><span style="display:flex;"><span>    &#34;given_name&#34;,
+</span></span><span style="display:flex;"><span>    &#34;iat&#34;,
+</span></span><span style="display:flex;"><span>    &#34;identities&#34;,
+</span></span><span style="display:flex;"><span>    &#34;iss&#34;,
+</span></span><span style="display:flex;"><span>    &#34;name&#34;,
+</span></span><span style="display:flex;"><span>    &#34;nickname&#34;,
+</span></span><span style="display:flex;"><span>    &#34;phone_number&#34;,
+</span></span><span style="display:flex;"><span>    &#34;picture&#34;,
+</span></span><span style="display:flex;"><span>    &#34;sub&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;request_uri_parameter_supported&#34;: false,
+</span></span><span style="display:flex;"><span>  &#34;request_parameter_supported&#34;: false,
+</span></span><span style="display:flex;"><span>  &#34;id_token_signing_alg_values_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;HS256&#34;,
+</span></span><span style="display:flex;"><span>    &#34;RS256&#34;,
+</span></span><span style="display:flex;"><span>    &#34;PS256&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;token_endpoint_auth_signing_alg_values_supported&#34;: [
+</span></span><span style="display:flex;"><span>    &#34;RS256&#34;,
+</span></span><span style="display:flex;"><span>    &#34;RS384&#34;,
+</span></span><span style="display:flex;"><span>    &#34;PS256&#34;
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  &#34;backchannel_logout_supported&#34;: true,
+</span></span><span style="display:flex;"><span>  &#34;backchannel_logout_session_supported&#34;: true,
+</span></span><span style="display:flex;"><span>  &#34;end_session_endpoint&#34;: &#34;https://${domain}/oidc/logout&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>That&rsquo;s better.</p>
+<p>Let&rsquo;s try the <a href="/braindump/posts/oauth_2_0/#e296ff6e-e206-4d1e-840e-1971682b45e2">implicit grant</a>.</p>
+<p>According to the documentation, I should point a browser to the url</p>
+<p><a href="https://$%7Bdomain%7D/authorize?client_id=$%7Bclient_id%7D&amp;response_type=token">https://${domain}/authorize?client_id=$%7Bclient_id%7D&amp;response_type=token</a></p>
+<p>and get a token.</p>
+<p>By doing this (in a private session), I indeed get the login page, the consent
+screen, but eventually, it raises a 500 error.</p>
+<p>Now, trying adding a redirect_uri</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>qutebrowser_dump_cookies.sh
+</span></span><span style="display:flex;"><span>curl --cookie <span style="color:#008080">$XDG_RUNTIME_DIR</span>/cookies.txt <span style="color:#d14">&#34;https://</span><span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span><span style="color:#d14">/authorize?client_id=</span><span style="color:#d14">${</span><span style="color:#008080">client_id</span><span style="color:#d14">}</span><span style="color:#d14">&amp;response_type=token&amp;redirect_uri=http://localhost:3000&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Found. Redirecting to http://localhost:3000/#access_token=ey...&amp;expires_in=7200&amp;token_type=Bearer
+</span></span></code></pre></div><p>Note that I first ran the flow i <a href="/braindump/posts/qutebrowser/">qutebrowser</a>, then used its cookies to document the flow in here.</p>
+<p>It seems that the optional redirect_uri is required after all.</p>
+<p>Analysing the access_token (putting it in jwt.io for instance), this is the content I find.</p>
+<p>header:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;alg&#34;: &#34;dir&#34;,
+</span></span><span style="display:flex;"><span>  &#34;enc&#34;: &#34;A256GCM&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;https://dev-idf8pew4o81663vw.us.auth0.com/&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>payload: &quot;&quot;</p>
+<p>The payload makes sense, as we did not specify a scope. Yet, it uses a <a href="/braindump/posts/json_web_encryption/">JWE</a>
+with a symmetric key.</p>
+<p>I remember that using the <a href="/braindump/posts/audience_claim/">audience claim</a>, we could get a <a href="/braindump/posts/json_web_signature/">JWS</a> token. By digging
+into the API section, I can see that auth0 created an API for my application,
+and that this API is associated to an audience -&gt; <a href="https://$%7Bdomain%7D/api/v2/">https://${domain}/api/v2/</a></p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreid5f5gn3ipoh342dy25hnk3cwybivw62rzj5gjakilwaajn3tdxkm?filename=a.png">
+</figure>
+
+<p>Let&rsquo;s try with it.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>qutebrowser_dump_cookies.sh
+</span></span><span style="display:flex;"><span>curl --cookie <span style="color:#008080">$XDG_RUNTIME_DIR</span>/cookies.txt <span style="color:#d14">&#34;https://</span><span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span><span style="color:#d14">/authorize?client_id=</span><span style="color:#d14">${</span><span style="color:#008080">client_id</span><span style="color:#d14">}</span><span style="color:#d14">&amp;response_type=token&amp;redirect_uri=http://localhost:3000&amp;audience=https://</span><span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span><span style="color:#d14">/api/v2/&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Found. Redirecting to http://localhost:3000/#access_token=ey...&amp;expires_in=7200&amp;token_type=Bearer
+</span></span></code></pre></div><p>Analyzing this token I get</p>
+<p>header</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;alg&#34;: &#34;RS256&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;JWT&#34;,
+</span></span><span style="display:flex;"><span>  &#34;kid&#34;: &#34;....&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>payload</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;https://${domain}/&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;google-oauth2|...&#34;,
+</span></span><span style="display:flex;"><span>  &#34;aud&#34;: &#34;https://${domain}/api/v2/&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1730886611,
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1730893811,
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;&#34;,
+</span></span><span style="display:flex;"><span>  &#34;azp&#34;: &#34;${client_id}&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>I can see the minimal piece of information: my subject, as logged in using google.</p>
+<p>So far so good. Now, let&rsquo;s try to add a custom claim, as I want to use auth0 as
+an authorization server, to authorized access to scoped resources.</p>
+<p>Looking at this default API, it cannot be edited and provide scopes for manipulating auth0 resources.</p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreihw3wdl73di7o4o7vsxx5vx7hxvj3v5srieyf3w5lgkogg32ak4gy?filename=a.png">
+</figure>
+
+<p>Therefore, I suppose I need to create another API.</p>
+<p>I created an API using &ldquo;RFC 9068&rdquo; instead of auth0 for the <a href="/braindump/posts/json_web_tokens/">JWT</a> format and
+provided the audience &ldquo;test&rdquo;</p>
+<p>This automatically created an application, called &ldquo;test (Test Application)&rdquo; of
+type &ldquo;machine to machine&rdquo;. By digging a little bit, I understand that it is
+meant to run a client credential grant, therefore no something I want to use for
+now. So I just removed the created application.</p>
+<p>Then, in the &ldquo;permission&rdquo; tab of the API settings, I can add custom ones. Is
+seems like &ldquo;permission&rdquo; is the term auth0 uses for scope.</p>
+<p>I added a test scope. Let&rsquo;s see if I can use it.</p>
+<p>I suppose I only need to provide the audience=test and scope=test</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>qutebrowser_dump_cookies.sh
+</span></span><span style="display:flex;"><span>curl --cookie <span style="color:#008080">$XDG_RUNTIME_DIR</span>/cookies.txt <span style="color:#d14">&#34;https://</span><span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span><span style="color:#d14">/authorize?client_id=</span><span style="color:#d14">${</span><span style="color:#008080">client_id</span><span style="color:#d14">}</span><span style="color:#d14">&amp;response_type=token&amp;redirect_uri=http://localhost:3000&amp;audience=test&amp;scope=test&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Found. Redirecting to http://localhost:3000/#access_token=...&amp;scope=test&amp;expires_in=7200&amp;token_type=Bearer
+</span></span></code></pre></div><p>I can see in the consent screen the description of my scope.</p>
+<p>Let&rsquo;s decompose the received access token.</p>
+<p>header</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;alg&#34;: &#34;RS256&#34;,
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;at+jwt&#34;,
+</span></span><span style="display:flex;"><span>  &#34;kid&#34;: &#34;...&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Interestingly, it now provides the <a href="/braindump/posts/application_at_jwt/">application/at+jwt</a> <a href="/braindump/posts/json_web_signature/#9c9f0154-6832-404b-91b4-6576cd92dc66">typ</a>, letting me know that
+it understood its status as an <a href="/braindump/posts/oauth_2_0/#ead7dfac-e39a-4262-8066-a9e594d1b8a3">authorization server</a>.</p>
+<p>payload</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;https://${domain}/&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;google-oauth2|...&#34;,
+</span></span><span style="display:flex;"><span>  &#34;aud&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1730888197,
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1730895397,
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;jti&#34;: &#34;1HcdiAATYin7RFT2ch5e6Q&#34;,
+</span></span><span style="display:flex;"><span>  &#34;client_id&#34;: &#34;${client_id}&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>It provided not only the scope, but also a jti. That&rsquo;s a good sign.</p>
+<p>Now, let&rsquo;s validate this token.</p>
+<p>As per the well-known uri, we know that the keys are in <a href="https://$%7Bdomain%7D/.well-known/jwks.json">https://${domain}/.well-known/jwks.json</a>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl http https://<span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span>/.well-known/jwks.json | jq
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;keys&#34;: [
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      &#34;kty&#34;: &#34;RSA&#34;,
+</span></span><span style="display:flex;"><span>      &#34;use&#34;: &#34;sig&#34;,
+</span></span><span style="display:flex;"><span>      &#34;n&#34;: &#34;...&#34;,
+</span></span><span style="display:flex;"><span>      &#34;e&#34;: &#34;AQAB&#34;,
+</span></span><span style="display:flex;"><span>      &#34;kid&#34;: &#34;...&#34;,
+</span></span><span style="display:flex;"><span>      &#34;x5t&#34;: &#34;...&#34;,
+</span></span><span style="display:flex;"><span>      &#34;x5c&#34;: [
+</span></span><span style="display:flex;"><span>        &#34;...&#34;
+</span></span><span style="display:flex;"><span>      ],
+</span></span><span style="display:flex;"><span>      &#34;alg&#34;: &#34;RS256&#34;
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>  ...
+</span></span><span style="display:flex;"><span>  ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Without surprise, we can find the appropriate key, let&rsquo;s use it to validate the signature.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">JWKS_URI</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;https://</span><span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span><span style="color:#d14">/.well-known/jwks.json&#34;</span>
+</span></span><span style="display:flex;"><span>jwt decode --ignore-exp --secret <span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>curl <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">JWKS_URI</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">token</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>|sed -r -e <span style="color:#d14">&#34;s|</span><span style="color:#d14">${</span><span style="color:#008080">client_id</span><span style="color:#d14">}</span><span style="color:#d14">|\${client_id}|&#34;</span> -e <span style="color:#d14">&#34;s|</span><span style="color:#d14">${</span><span style="color:#008080">domain</span><span style="color:#d14">}</span><span style="color:#d14">|\${domain}|&#34;</span> -e <span style="color:#d14">&#39;s/google-oauth2\|[0-9]+/google-oauth2|.../&#39;</span> -e <span style="color:#d14">&#39;s/&#34;kid&#34;: &#34;.+&#34;/&#34;kid&#34;: &#34;...&#34;/&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Token header
+</span></span><span style="display:flex;"><span>------------
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;typ&#34;: &#34;at+jwt&#34;,
+</span></span><span style="display:flex;"><span>  &#34;alg&#34;: &#34;RS256&#34;,
+</span></span><span style="display:flex;"><span>  &#34;kid&#34;: &#34;...&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Token claims
+</span></span><span style="display:flex;"><span>------------
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;aud&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;client_id&#34;: &#34;${client_id}&#34;,
+</span></span><span style="display:flex;"><span>  &#34;exp&#34;: 1730917957,
+</span></span><span style="display:flex;"><span>  &#34;iat&#34;: 1730910757,
+</span></span><span style="display:flex;"><span>  &#34;iss&#34;: &#34;https://${domain}/&#34;,
+</span></span><span style="display:flex;"><span>  &#34;jti&#34;: &#34;6dYrkLiagV6yYEQWbddjw4&#34;,
+</span></span><span style="display:flex;"><span>  &#34;scope&#34;: &#34;test&#34;,
+</span></span><span style="display:flex;"><span>  &#34;sub&#34;: &#34;google-oauth2|...&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Although not very explicit, using jwt-cli with <code>--secret=</code> implies a signature verification.</p>
+<p>We went through the whole process of creating an auth0 application, an API and
+then issue an access token and validate it. Now, we are ready to do real life
+stuff.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/400ddfac-c749-42f0-bc72-8de40cec3b95?title=playing_with_auth0_for_the_first_time">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 06 Nov 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 05 Nov 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

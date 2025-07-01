@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html><title>issues with docker multi stage build and cache invalidation in rust</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Issues With Docker Multi Stage Build and Cache Invalidation in Rust</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>Context: I want to build a wasm package from a project consisting on a rust library.</p>
+<p>Layout</p>
+<ul>
+<li>./common
+<ul>
+<li>./Cargo.lock</li>
+<li>./Cargo.toml</li>
+<li>./Earthfile</li>
+<li>./src</li>
+</ul>
+</li>
+<li>./wasm-client
+<ul>
+<li>./Cargo.lock</li>
+<li>./Cargo.toml</li>
+<li>./Earthfile</li>
+<li>./src</li>
+</ul>
+</li>
+</ul>
+<h2 id="38087ccc-e5ef-4e6b-b54d-da9105c20349">first try</h2>
+<p>In common</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">src:
+    FROM rust
+    RUN rustup component add clippy rustfmt
+    WORKDIR /app
+    COPY Cargo.lock Cargo.toml  .
+    RUN mkdir -p src &amp;&amp; touch src/lib.rs
+    RUN cargo build
+    COPY --dir src .
+    SAVE ARTIFACT /app src
+</code></pre><p>In wasm-client</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">wasm:
+    FROM rust
+    RUN rustup component add clippy rustfmt
+    WORKDIR /app
+    RUN apt update &amp;&amp; apt install -y build-essential
+    WORKDIR /app/wasm-client
+    RUN cargo install wasm-pack wasm-opt
+    COPY Cargo.lock Cargo.toml .
+    COPY ../common+deps/common ../common
+    RUN mkdir -p src &amp;&amp; touch src/lib.rs
+    RUN wasm-pack build --target web --release # to have a cache of the dependencies
+    COPY --dir src /app/wasm-client
+    COPY ../common+src/src /app/common
+    RUN wasm-pack build --target web --release
+</code></pre><p>This is what happens</p>
+<ul>
+<li>when COPYing stuff, the dates are put to &ldquo;Apr 16 2020&rdquo;.</li>
+<li>when running the caching build, the target files have the date of now.</li>
+<li>then, when copying the actual sources, they get the date &ldquo;apr 16 2020&rdquo; and</li>
+<li>the build will ignore them.</li>
+</ul>
+<h2 id="5f008929-819b-4b4e-a990-b1c3145e82ad">second try, with &ndash;keep-ts</h2>
+<p>I can add a &ndash;keep-ts instruction when moving the sources.</p>
+<p>In common</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">src:
+    FROM rust
+    RUN rustup component add clippy rustfmt
+    WORKDIR /app
+    COPY Cargo.lock Cargo.toml  .
+    RUN mkdir -p src &amp;&amp; touch src/lib.rs
+    RUN cargo build
+    COPY --keep-ts --dir src .
+    SAVE ARTIFACT --keep-ts /app src
+</code></pre><p>In wasm-client</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">wasm:
+    FROM rust
+    RUN rustup component add clippy rustfmt
+    WORKDIR /app
+    RUN apt update &amp;&amp; apt install -y build-essential
+    WORKDIR /app/wasm-client
+    RUN cargo install wasm-pack wasm-opt
+    COPY Cargo.lock Cargo.toml .
+    COPY ../common+deps/common ../common
+    RUN mkdir -p src &amp;&amp; touch src/lib.rs
+    RUN wasm-pack build --target web --release # to have a cache of the dependencies
+    COPY --keep-ts --dir src /app/wasm-client
+    COPY --keep-ts ../common+src/src /app/common
+    RUN wasm-pack build --target web --release
+</code></pre><p>Consider that the sources have a date like &ldquo;now-1h&rdquo; this is what happens:</p>
+<ul>
+<li>when COPYing stuff, the dates are put to &ldquo;now-1h&rdquo;.</li>
+<li>when running the caching build, the target files have the date of now.</li>
+<li>then, when copying the actual sources, they get the date &ldquo;now-1h&rdquo; that is
+still &lt; now and</li>
+<li>the build will ignore them.</li>
+</ul>
+<h2 id="bf22bbed-1ef5-4ef3-83e4-d8cdca09236c">trying using a target dating to &ldquo;Apr 16 2020&rdquo;</h2>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">src:
+    FROM rust
+    RUN rustup component add clippy rustfmt
+    WORKDIR /app
+    COPY Cargo.lock Cargo.toml  .
+    RUN mkdir -p src &amp;&amp; touch src/lib.rs
+    RUN cargo build
+    COPY --keep-ts --dir src .
+    SAVE ARTIFACT --keep-ts /app src
+</code></pre><p>In wasm-client</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">cached-target:
+    FROM rust
+    RUN rustup component add clippy rustfmt
+    WORKDIR /app
+    RUN apt update &amp;&amp; apt install -y build-essential
+    WORKDIR /app/wasm-client
+    RUN cargo install wasm-pack wasm-opt
+    COPY Cargo.lock Cargo.toml .
+    COPY ../common+deps/common ../common
+    RUN mkdir -p src &amp;&amp; touch src/lib.rs
+    RUN wasm-pack build --target web --release # to have a cache of the dependencies
+    SAVE ARTIFACT target
+
+wasm:
+    FROM rust
+    COPY --keep-ts --dir src /app/wasm-client
+    COPY --keep-ts ../common+src/src /app/common
+    COPY --dir +cached-target/target .
+    RUN wasm-pack build --target web --release
+</code></pre><p>This happens</p>
+<ul>
+<li>when COPYing stuff, the dates are put to &ldquo;now-1h&rdquo;,</li>
+<li>when running the caching build, the target files have the date of now,</li>
+<li>when copying its artifact, the target gets the date &ldquo;Apr 16 2020&rdquo;,</li>
+<li>then, when copying the actual sources, they get the date &ldquo;now-1h&rdquo; that is
+always &gt; &ldquo;Apr 16 2020&rdquo;</li>
+<li>the build will be triggered everytime, but at least the dependencies won&rsquo;t
+be built again.</li>
+</ul>
+<h2 id="65473b57-bea1-4538-b35c-ddf46ae30e62">trying with the cache instruction</h2>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">src:
+    FROM rust
+    RUN rustup component add clippy rustfmt
+    WORKDIR /app
+    COPY Cargo.lock Cargo.toml  .
+    RUN mkdir -p src &amp;&amp; touch src/lib.rs
+    RUN cargo build
+    COPY --keep-ts --dir src .
+    SAVE ARTIFACT --keep-ts /app src
+</code></pre><p>In wasm-client</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">cached-target:
+    FROM rust
+    RUN rustup component add clippy rustfmt
+    WORKDIR /app
+    RUN apt update &amp;&amp; apt install -y build-essential
+    WORKDIR /app/wasm-client
+    RUN cargo install wasm-pack wasm-opt
+    COPY Cargo.lock Cargo.toml .
+    COPY ../common+deps/common ../common
+    RUN mkdir -p src &amp;&amp; touch src/lib.rs
+    RUN cargo fetch
+    COPY --keep-ts --dir src /app/wasm-client
+    COPY --keep-ts ../common+src/src /app/common
+    RUN --mount=type=cache,target=/app/wasm-client/target wasm-pack build --target web --release
+</code></pre><p>Note that we only fetched the dependencies before hand. We did not run the build.</p>
+<p>This happens:</p>
+<ul>
+<li>when COPYing stuff, the dates are put to &ldquo;now-1h&rdquo;,</li>
+<li>when building, the cache will keep the dates</li>
+<li>when building again, only the new things are built</li>
+</ul>
+<p>With this, we loose a bit of control about where the data resides, as there is
+a cache somewhere that we need to deal with. We also cannot take a look at
+this cache as easily as using the trick of RUN false and earthly -i .</p>
+<p>But it provides the most correct build-when-needed behavior.</p>
+<p>Note also that doing this, we NEED to &ndash;keep-ts every sources, or the build
+system will always think that the target is up-to-date.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/a57b06d1-5839-4d8f-95ce-9b33ad12d7e1?title=issues_with_docker_multi_stage_build_and_cache_invalidation_in_rust">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 18 Jun 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 18 Jun 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

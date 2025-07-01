@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html><title>discovering deployment strategies</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Discovering Deployment Strategies</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>External reference: <a href="https://medium.com/buildpiper/canary-vs-blue-green-deployment-which-one-should-you-choose-a7d86d2929f0">https://medium.com/buildpiper/canary-vs-blue-green-deployment-which-one-should-you-choose-a7d86d2929f0</a></li>
+</ul>
+<p>Before getting head first into a shinny geeky deployment method, one is advised
+to beware the <a href="/braindump/posts/charge_mentale/">cognitive load</a> of people that will work with it<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>. Also, it is
+good practice to accompany those with some monitoring to ensure the deployment
+did not induce regressions<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</p>
+<p>Deployment may be run either manually, or automatically. In the later case, we
+will call it <a href="/braindump/posts/deployment_vocabulary/#fa32d48f-1529-4295-b3b7-9625c06a2c80">continuous deployment</a><sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>.</p>
+<p>When deploying resources, you can either deploy everything at once, or do it
+incrementally.</p>
+<p>The known strategies to deploy everything at once are:</p>
+<ol>
+<li>recreate: you shut the old resources down and start the new ones<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup><sup>, </sup><sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup><sup>, </sup><sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>,</li>
+<li>big bang: you start the new resources and shut the old resources down<sup id="fnref:7"><a href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup><sup>, </sup><sup id="fnref:8"><a href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup><sup>, </sup><sup id="fnref:9"><a href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup>,</li>
+<li>blue/green: you start everything in a (green) environment beside the
+production (blue), test this new deployment and if reach your expectation
+switch all the traffic to the new
+one<sup id="fnref:10"><a href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup><sup>, </sup><sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup><sup>, </sup><sup id="fnref:12"><a href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup><sup>, </sup><sup id="fnref:13"><a href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup><sup>, </sup><sup id="fnref:14"><a href="#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>. This implies some data structure
+compatibility between the old and the new version<sup id="fnref:15"><a href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.</li>
+</ol>
+<p>Incremental deployments supposedly allow a more Zen approach, where you can more
+easily observe the deployment process and rollback if need be<sup id="fnref:16"><a href="#fn:16" class="footnote-ref" role="doc-noteref">16</a></sup>, while
+having no down time<sup id="fnref:17"><a href="#fn:17" class="footnote-ref" role="doc-noteref">17</a></sup>. On the other hand, that requires a way to deal with
+the continuity of the user experience<sup id="fnref:18"><a href="#fn:18" class="footnote-ref" role="doc-noteref">18</a></sup>.</p>
+<p>It is unclear to me whether rolling deployment is the same as incremental
+deployment. In the articles I read, I could see rolling deployment as described
+to be about increasing gradually<sup id="fnref:19"><a href="#fn:19" class="footnote-ref" role="doc-noteref">19</a></sup> the number of users<sup id="fnref:20"><a href="#fn:20" class="footnote-ref" role="doc-noteref">20</a></sup>,
+servers<sup id="fnref:21"><a href="#fn:21" class="footnote-ref" role="doc-noteref">21</a></sup>, nodes<sup id="fnref1:21"><a href="#fn:21" class="footnote-ref" role="doc-noteref">21</a></sup> or applications<sup id="fnref:22"><a href="#fn:22" class="footnote-ref" role="doc-noteref">22</a></sup>.</p>
+<p>In the case of rolling the servers, people call it
+ramped<sup id="fnref:23"><a href="#fn:23" class="footnote-ref" role="doc-noteref">23</a></sup><sup>, </sup><sup id="fnref:24"><a href="#fn:24" class="footnote-ref" role="doc-noteref">24</a></sup>. Actually, I also often see rolling as describing ramped
+deployments<sup id="fnref:25"><a href="#fn:25" class="footnote-ref" role="doc-noteref">25</a></sup><sup>, </sup><sup id="fnref:26"><a href="#fn:26" class="footnote-ref" role="doc-noteref">26</a></sup>, while canary is used to describe rolling at the application
+level<sup id="fnref:27"><a href="#fn:27" class="footnote-ref" role="doc-noteref">27</a></sup><sup>, </sup><sup id="fnref:28"><a href="#fn:28" class="footnote-ref" role="doc-noteref">28</a></sup>.</p>
+<p>There are two kinds of deployments that are not to upgrade the stack per se:
+<a href="/braindump/posts/deployment_vocabulary/#8a803877-df22-4746-87ee-f58ed955d64c">shadow deployment</a> and A/B testing. The former uses a &ldquo;shadow&rdquo; environment that
+will get a copy of user requests<sup id="fnref:29"><a href="#fn:29" class="footnote-ref" role="doc-noteref">29</a></sup><sup>, </sup><sup id="fnref:30"><a href="#fn:30" class="footnote-ref" role="doc-noteref">30</a></sup> and whose responses will never be
+sent back to the user<sup id="fnref:31"><a href="#fn:31" class="footnote-ref" role="doc-noteref">31</a></sup>. It helps monitoring how it behaves before deciding
+to validate a release or not<sup id="fnref1:31"><a href="#fn:31" class="footnote-ref" role="doc-noteref">31</a></sup><sup>, </sup><sup id="fnref:32"><a href="#fn:32" class="footnote-ref" role="doc-noteref">32</a></sup>. The later temporary redirect the
+traffic of a subset of users to an alternative version of a feature to find out
+how they behave<sup id="fnref:33"><a href="#fn:33" class="footnote-ref" role="doc-noteref">33</a></sup><sup>, </sup><sup id="fnref:34"><a href="#fn:34" class="footnote-ref" role="doc-noteref">34</a></sup>. Those two kinds of deployment are about measuring
+stuff before actually upgrading anything.</p>
+<p>When you want a finer grain about the dynamic of the upgrade, you can deploy the
+new version aside the current one<sup id="fnref:35"><a href="#fn:35" class="footnote-ref" role="doc-noteref">35</a></sup> and incrementally redirect users to
+it<sup id="fnref:36"><a href="#fn:36" class="footnote-ref" role="doc-noteref">36</a></sup><sup>, </sup><sup id="fnref:37"><a href="#fn:37" class="footnote-ref" role="doc-noteref">37</a></sup>. That way, you can monitor how things happen before adding more
+users. This most likely use similar tooling than A/B testing, but the aim is
+here to upgrade the stack, not just monitor user behaviors<sup id="fnref:38"><a href="#fn:38" class="footnote-ref" role="doc-noteref">38</a></sup>. This is
+particularly useful if you feel like something may go wrong and don&rsquo;t want to
+impact everyone at once<sup id="fnref:39"><a href="#fn:39" class="footnote-ref" role="doc-noteref">39</a></sup><sup>, </sup><sup id="fnref:40"><a href="#fn:40" class="footnote-ref" role="doc-noteref">40</a></sup><sup>, </sup><sup id="fnref:41"><a href="#fn:41" class="footnote-ref" role="doc-noteref">41</a></sup>. Therefore, you may want to spot a
+particular subset of users that will expect cutting edge stuffs that might
+become unstable from time to time<sup id="fnref:42"><a href="#fn:42" class="footnote-ref" role="doc-noteref">42</a></sup><sup>, </sup><sup id="fnref:43"><a href="#fn:43" class="footnote-ref" role="doc-noteref">43</a></sup>. If on the other end, you feel
+confident with the upgrade, a blue/green deployment is likely more
+suited<sup id="fnref:44"><a href="#fn:44" class="footnote-ref" role="doc-noteref">44</a></sup>. Also, to provide a consistent user experience, you need to deal
+with sticky sessions here.</p>
+<p>Now, if you want even finer grain on what the end users will be able to see,
+consider adopting <a href="/braindump/posts/trunk_based_development/">trunk based development</a>, in which features are hidden
+behind feature flags. You can test the latest version (with all flags turn on)
+and the production version (with only the production flags turned on) and deploy
+often<sup id="fnref:45"><a href="#fn:45" class="footnote-ref" role="doc-noteref">45</a></sup>. Because you deploy the artifacts in disabled state, there is less
+fear of stuff going wrong and incrementally deploying becomes less needed. The
+incremental upgrade can be done at the level you want<sup id="fnref:46"><a href="#fn:46" class="footnote-ref" role="doc-noteref">46</a></sup>. You can even
+imagine a user sending a particular header to ask for the new version of a
+feature<sup id="fnref:47"><a href="#fn:47" class="footnote-ref" role="doc-noteref">47</a></sup>. The aim is still to enable all the flags, but this can be done much
+smoother<sup id="fnref:48"><a href="#fn:48" class="footnote-ref" role="doc-noteref">48</a></sup>. You can implement the blue/green, A/B testing and canary
+deployments using features flags<sup id="fnref:49"><a href="#fn:49" class="footnote-ref" role="doc-noteref">49</a></sup>, more easily than trying to do it at the network and session layers<sup id="fnref:50"><a href="#fn:50" class="footnote-ref" role="doc-noteref">50</a></sup>. On the other hand, it
+requires a big amount of work beforehand to test the code appropriately and to
+have a team doing trunk based development.</p>
+<p>Launch darkly made a nice summary of this:</p>
+<blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>Strategy</th>
+          <th>Description</th>
+          <th>Benefits</th>
+          <th>Drawbacks</th>
+          <th>When to use</th>
+          <th>Downtime mitigation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Big-bang deployment</td>
+          <td>Simultaneous deployment of all changes, impacting all users at once</td>
+          <td>Simple and fast implementation</td>
+          <td>High risk, no easy rollback, downtime for entire application</td>
+          <td>For small, non-critical applications</td>
+          <td>Limited; consider feature flags for quick disabling of features</td>
+      </tr>
+      <tr>
+          <td>Rolling deployment</td>
+          <td>Gradual rollout to smaller user groups, reducing risk and allowing rollback</td>
+          <td>Lower risk, easier rollback, less downtime</td>
+          <td>More complex, higher user impact than canary/blue-green</td>
+          <td>When release frequency is a high priority</td>
+          <td>Gradual rollout limits impact; easier rollback</td>
+      </tr>
+      <tr>
+          <td>Recreate deployment</td>
+          <td>Recreation of the entire environment with new changes</td>
+          <td>Simple, predictable</td>
+          <td>Downtime, limited testing, scalability limitations</td>
+          <td>When only a single app version can run at a time</td>
+          <td>Limited; consider scheduling during off-peak hours</td>
+      </tr>
+      <tr>
+          <td>Canary deployment</td>
+          <td>Subset of users receive changes for early issue detection</td>
+          <td>Early issue detection, real user feedback, easy rollback</td>
+          <td>Slower release, increased infrastructure costs</td>
+          <td>When real user feedback is a priority</td>
+          <td>Limited impact; quick rollback possible</td>
+      </tr>
+      <tr>
+          <td>Blue/green deployment</td>
+          <td>Two identical production environments for seamless switchovers</td>
+          <td>Easy rollbacks, improved incident response, zero downtime</td>
+          <td>Extra infrastructure cost, not suitable for user-dependent rollouts</td>
+          <td>When release frequency is a priority with low risk tolerance</td>
+          <td>Instant rollback; zero downtime during switch</td>
+      </tr>
+      <tr>
+          <td>Shadow deployment</td>
+          <td>Deploys changes in parallel, unseen by users</td>
+          <td>Low-risk testing with real-world data</td>
+          <td>Complex setup, monitoring overhead, not suitable for all changes</td>
+          <td>When load testing is a priority and downtime tolerance is low</td>
+          <td>No impact on production; thorough pre-deployment testing</td>
+      </tr>
+  </tbody>
+</table>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+<h2 id="013be5bc-264e-4110-bdc8-6c831a440095"><a href="/braindump/posts/no_silver_bullet/">no silver bullet</a></h2>
+<p>There appears to be no ideal deployment method. If you have a bunch of users
+using the application frequently and you can &ldquo;test&rdquo; the user experience on a
+few users, a canary might be a good candidate.</p>
+<p>If, on the other hand, the application is very seldom used, a canary might be
+too long (because of the long feedback loop) and a simple recreate might be
+enough.</p>
+<p>Doing canary also comes with the rabbit hole of sticky sessions.</p>
+<p>Also, you have to possibly replicate user behavior from the old to the new
+infrastructure so that when a user is transitioned to the new environment,
+everything that was done in the previous one is kept.</p>
+<p>blue/green lacks the possibility to incrementally upgrade and the comfort of a
+feedback loop that comes with it, but it does not comes with the sticky
+session hell. Like canary, it needs a way to &ldquo;copy&rdquo; the user data from blue to
+green dynamically so that the transition goes well.</p>
+<p>recreate implies user downtime, but it does not have the issue of playing with
+several deployments.</p>
+<p>If you want more power over the upgrade, <a href="/braindump/posts/trunk_based_development/">trunk based development</a> might
+help, but it require much effort (technical, but mostly psychological) to be
+put in place.</p>
+<p>In conclusion, no deployment is to be advised for all situations, your mileage
+may vary<sup id="fnref:51"><a href="#fn:51" class="footnote-ref" role="doc-noteref">51</a></sup>. They all have a kind of Zen attitude on some dimension and are hard
+to deal with on other dimensions.</p>
+<p>Prior to deciding what deployment method is well suited for your use case, you
+definitely need:</p>
+<ol>
+<li>have to a good monitoring to guess the user behavior,</li>
+<li>a good idea of the code change to find out how hellish will be keeping two
+environments side by side,</li>
+</ol>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/gitops/">gitops</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/2c9c8407-c962-4f55-b71c-5fbf2b658337?title=discovering_deployment_strategies">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<blockquote>
+<p>A complex strategy might increase your risk if it overtaxes your team&rsquo;s capabilities</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+<!--more-->
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
+<blockquote>
+<p>No matter what deployment strategy you&rsquo;re using, it&rsquo;s important to keep tabs on what&rsquo;s happening in your environments</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:3">
+<blockquote>
+<p>Continuous Deployment (CD) is an approach where every change that passes
+automated testing is automatically deployed to production. It’s all about
+speed and automation without human intervention</p>
+<p>&mdash; <a href="https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/">https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Continuous Deployment (CD) is a software deployment strategy that allows you
+to release new versions of your application to production at any time,
+without human intervention</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:4">
+<blockquote>
+<p>In this deployment strategy, you shut down the old version of the application
+completely, deploy the new version, and then turn the whole system back
+on. This means there will be a downtime while the old software is shut down
+and the new one is booted up.</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:5">
+<blockquote>
+<p>Unlike the big-bang deployment, which overwrites the older version on a
+running environment, recreate deployments involve terminating the previous
+version’s deployment and recreating the entire environment with the newly
+deployed application</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:6">
+<blockquote>
+<p>recreate deployment, the old version is completely shut down, the new version
+is deployed, and then the server is turned back on for users. Like big-bang,
+this is quite a simple approach but inevitably results in downtime.</p>
+<p>&mdash; <a href="https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/">https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:7">
+<blockquote>
+<p>big bang deployment is a type of software deployment in which all of the
+changes are deployed to the production environment all at once.</p>
+<p>[&hellip;]</p>
+<p>contrast to a phased or incremental deployment, where the changes are
+deployed in stages or in small batches</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:8">
+<blockquote>
+<p>As the name suggests, this deployment strategy involves deploying all changes
+at once, impacting all users simultaneously.</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:9">
+<blockquote>
+<p>big-bang deployment is perhaps the simplest strategy, but it’s also the
+riskiest. In this approach, the software is delivered all at once, replacing
+the old version in an instantaneous transition</p>
+<p>&mdash; <a href="https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/">https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:10">
+<blockquote>
+<p>With this deployment strategy, we&rsquo;ll have both the old and new versions of
+the software running side by side. You might also know it as the red/black
+deployment strategy. Just to clarify, the stable, or older version of the
+application is always referred to as blue (or red), while the newer version
+is green (or black).</p>
+<p>[&hellip;]</p>
+<p>Once the new version has been thoroughly tested and meets all the
+requirements, the load balancer will automatically switch traffic over to it</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:11">
+<blockquote>
+<p>A blue/green deployment is one in which the existing application (blue
+environment) and the new deployment (green) are independently running in two
+identical production environments. Once testing is complete on the green
+environment, live traffic is redirected to it making it live for all users</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:12">
+<blockquote>
+<p>Once the &lsquo;Green&rsquo; environment is verified and ready, a router or load balancer is used to switch traffic from &lsquo;Blue&rsquo; to &lsquo;Green.&rsquo;
+The &lsquo;Blue&rsquo; environment now becomes the staging environment for the next release</p>
+<p>&mdash; <a href="https://dev.to/yogini16/understanding-different-types-of-deployments-38c0">https://dev.to/yogini16/understanding-different-types-of-deployments-38c0</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:13">
+<blockquote>
+<p>environments are called Blue and Green environments. At any time, only one of
+these is ‘live’ and serving users, with the other being updated to reflect
+new changes. When you want to update your application, you do so in the
+environment that isn’t live – e.g., the blue environment is live, the green
+environment is updated, then users switch over to the green environment.</p>
+<p>&mdash; <a href="https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/">https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:13" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:14">
+<blockquote>
+<p>running two identical environments, one serving as the active production
+environment (blue) and the other as a new release candidate (green). The new
+release candidate is thoroughly tested before being switched with the
+production environment, allowing for a smooth transition without any downtime
+or errors</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:15">
+<blockquote>
+<p>For this to work, both environments must have the same database schema to
+share data seamlessly, or a system to synchronize different schema versions</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:15" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:16">
+<blockquote>
+<p>rolls out changes incrementally, reducing the risk of downtime and allowing for easy rollbacks in case of errors</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:16" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:17">
+<blockquote>
+<p>allows for the new version to be deployed while the old version is still
+running, ensuring that there is no interruption to service</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:17" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:18">
+<blockquote>
+<p>incremental deployments are difficult to manage and requires routing a
+percentage of traffic to the updated application and ensuring that this change
+is sticky (i.e., the user continues to see the same version rather than switch
+between versions on subsequent requests).</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:18" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:19">
+<blockquote>
+<p>rolling deployment is a strategy for updating and deploying new versions of
+software in a controlled and gradual manner</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:19" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:20">
+<blockquote>
+<p>Rolling deployments (or rolling updates) adopt a gradual rollout approach,
+where changes are exposed to an increasing percentage of users incrementally
+until fully released</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:20" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:21">
+<blockquote>
+<p>In a Rolling Deployment, the new version is deployed incrementally to
+subsets of servers or nodes, usually behind a load balancer. Each subset is
+taken offline, updated, and brought back into the rotation.</p>
+<p>&mdash; <a href="https://dev.to/yogini16/understanding-different-types-of-deployments-38c0">https://dev.to/yogini16/understanding-different-types-of-deployments-38c0</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:21" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a href="#fnref1:21" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:22">
+<blockquote>
+<p>creating a new replica set with the updated version of the software while
+gradually scaling down the old replica set</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:22" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:23">
+<blockquote>
+<p>ramped deployment, we start by updating a small percentage of servers at a
+time and gradually increase that percentage over time</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:23" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:24">
+<blockquote>
+<p>ramped option gradually increases the percentage of each server running the
+new version, whereas the rolling approach takes turns to update each server
+in one go.</p>
+<p>&mdash; <a href="https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/">https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:24" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:25">
+<blockquote>
+<p>some servers run the new version of the application, while others continue to
+host the older one. As traffic comes in to the application, some users interact
+with the new code, while others land on the known-good production version.</p>
+<p>&mdash; <a href="https://www.techtarget.com/searchitoperations/answer/When-to-use-canary-vs-blue-green-vs-rolling-deployment">https://www.techtarget.com/searchitoperations/answer/When-to-use-canary-vs-blue-green-vs-rolling-deployment</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-17 Thu]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:25" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:26">
+<blockquote>
+<p>In a rolling deployment, infrastructure instances of the previous version are slowly replaced with nodes running the new version iteratively</p>
+<p>&mdash; <a href="https://www.koyeb.com/blog/blue-green-rolling-and-canary-continuous-deployments-explained#blue-green-deployment-">https://www.koyeb.com/blog/blue-green-rolling-and-canary-continuous-deployments-explained#blue-green-deployment-</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-17 Thu]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:26" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:27">
+<blockquote>
+<p>small percentage of traffic is then routed to the new replica set, while the
+majority of the traffic continues to be served by the original replica set.</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:27" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:28">
+<blockquote>
+<p>In a canary deployment, the new version is released to a small number of users</p>
+<p>&mdash; <a href="https://www.koyeb.com/blog/blue-green-rolling-and-canary-continuous-deployments-explained#rolling-deployment-">https://www.koyeb.com/blog/blue-green-rolling-and-canary-continuous-deployments-explained#rolling-deployment-</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-17 Thu]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:28" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:29">
+<blockquote>
+<p>In this deployment strategy, we&rsquo;ll deploy the new version alongside the old
+one, but users won&rsquo;t have access to the new version right away. It&rsquo;s like the
+new version is hiding in the shadows. We&rsquo;ll send a copy or &ldquo;fork&rdquo; of the
+requests the old version receives to the shadow version to see how it will
+handle them when it goes live.</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:29" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:30">
+<blockquote>
+<p>Shadow Deployment, a copy of the production traffic is mirrored to a shadow
+environment where a new version or feature is tested. The results of the
+testing are observed without affecting the live environment</p>
+<p>&mdash; <a href="https://dev.to/yogini16/understanding-different-types-of-deployments-38c0">https://dev.to/yogini16/understanding-different-types-of-deployments-38c0</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:30" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:31">
+<blockquote>
+<p>shadow deployments differ is that they can simulate real traffic patterns
+under real load by replicating actual requests from production traffic and
+sending them to the shadow environment in real-time. The output of these
+requests are discarded and never shown to the user (thus the name &ldquo;shadow&rdquo;),
+but the metrics they provide can help uncover any issues that might occur in
+a real-world production environment.</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:31" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a href="#fnref1:31" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:32">
+<blockquote>
+<p>shadow deployment, also known as dark launching, the new version runs
+alongside the current version but doesn’t receive any real user
+traffic. Instead, it receives a copy of the production traffic, allowing
+DevOps engineers to test how it performs under real conditions without
+affecting users</p>
+<p>&mdash; <a href="https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/">https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:32" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:33">
+<blockquote>
+<p>A/B testing deployment is a way for developers to test out new versions of
+their software. They do this by deploying the new version alongside the
+older version, but only making the new version available to a select group
+of users.</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:33" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:34">
+<blockquote>
+<p>A/B testing deployment involves running two versions of the application side
+by side and directing a portion of traffic to a select group of users. This
+allows you to compare the performance or user acceptance of different
+versions side-by-side</p>
+<p>&mdash; <a href="https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/">https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:34" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:35">
+<blockquote>
+<p>done by creating a new replica set with the updated version of the software while keeping the original replica set running</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:35" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:36">
+<blockquote>
+<p>canary deployment, we&rsquo;ll set up the new version and slowly shift production
+traffic from the older version to the new one. For instance, during the
+deployment process, the older version might still handle 75% of all traffic
+while the newer version handles the remaining 25%.</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:36" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:37">
+<blockquote>
+<p>canary deployment is a technique for rolling out new features or changes to a
+small subset of users or servers before releasing the update to the entire
+system</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:37" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:38">
+<blockquote>
+<p>Canary deployments should not be confused with A/B testing, which is for testing user experience and engagement across potential new versions</p>
+<p>&mdash; <a href="https://www.koyeb.com/blog/blue-green-rolling-and-canary-continuous-deployments-explained#rolling-deployment-">https://www.koyeb.com/blog/blue-green-rolling-and-canary-continuous-deployments-explained#rolling-deployment-</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-17 Thu]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:38" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:39">
+<blockquote>
+<p>fraction of the users (the &ldquo;canaries&rdquo;) is selected for the new version
+rollout.  Performance and stability are monitored in real-time.  If the
+canaries don&rsquo;t experience issues, more users are switched over to the new
+version.  This process continues incrementally until the new version is
+fully deployed or any issues are identified, in which case the deployment is
+halted.</p>
+<p>&mdash; <a href="https://dev.to/yogini16/understanding-different-types-of-deployments-38c0">https://dev.to/yogini16/understanding-different-types-of-deployments-38c0</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:39" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:40">
+<blockquote>
+<p>Canary deployment allows you to dip your toe in the water before jumping
+in. A small subset of users or servers receives the new updates first (the
+canary release), allowing you to test the functionality and assess how it
+may impact the user experience before increasing traffic to the updated
+server (and thus the number of users) over time</p>
+<p>&mdash; <a href="https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/">https://www.nearshore-it.eu/articles/deployment-strategies-101-types-pros-cons-devops-more/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:40" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:41">
+<blockquote>
+<p>If issues are detected during the canary deployment, it can be quickly rolled back to the original replica set</p>
+<p>&mdash; <a href="https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p">https://dev.to/pavanbelagatti/kubernetes-deployments-rolling-vs-canary-vs-blue-green-4k9p</a></p>
+</blockquote>
+&#160;<a href="#fnref:41" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:42">
+<blockquote>
+<p>&ldquo;canary&rdquo; users are typically chosen randomly, but they can also be selected
+based on their current usage patterns or other characteristics that may make
+them more likely to respond positively to the change.</p>
+<p>&mdash; <a href="https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/">https://devopsbootcamp.org/8-deployment-strategies-explained-and-compared/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:42" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:43">
+<blockquote>
+<p>canary deployments are designed to target a small subset of users to allow
+for the early detection of issues without impacting the entire user base.</p>
+<p>[&hellip;]</p>
+<p>Besides early detection of bugs, this process usually targets a specific
+subset of &ldquo;power users&rdquo; who can provide user feedback on changes.</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:43" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:44">
+<blockquote>
+<p>While <a href="/braindump/posts/deployment_vocabulary/#51edc637-7121-4c26-b72b-9b7a826af9d2">Blue/green</a> deployments are used to eliminate downtime, Canary
+deployments are used to test a new feature in a production environment with
+minimal risk.</p>
+<p>&mdash; <a href="https://medium.com/buildpiper/canary-vs-blue-green-deployment-which-one-should-you-choose-a7d86d2929f0">https://medium.com/buildpiper/canary-vs-blue-green-deployment-which-one-should-you-choose-a7d86d2929f0</a></p>
+</blockquote>
+&#160;<a href="#fnref:44" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:45">
+<blockquote>
+<p>Strategies like trunk-based development, whereby code is constantly merged
+into the main branch, combined with continuous integration and continuous
+delivery (CI/CD) mean that new code is constantly being pushed to a
+production environment. However, it is only when the relevant feature flag
+is enabled, that the new features are actually released.</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:45" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:46">
+<blockquote>
+<p>means that release doesn&rsquo;t encompass the entire application code, but can be thought of on a feature-by-feature basis</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:46" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:47">
+<blockquote>
+<p>Features are developed and included in the codebase but hidden behind a toggle.
+The toggle can be controlled externally, enabling or disabling features for different users or groups.
+Features can be gradually rolled out by toggling them on for specific users or groups, monitoring performance and user feedback.</p>
+<p>&mdash; <a href="https://dev.to/yogini16/understanding-different-types-of-deployments-38c0">https://dev.to/yogini16/understanding-different-types-of-deployments-38c0</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:47" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:48">
+<blockquote>
+<p>original concept of DevOps, release came before the deployment process within
+the software development and release cycle. A release consisted of freezing
+code, after it had undergone testing and validation in the staging
+environment, and marking it ready for deployment to production. The
+application deployment was the process of moving this code to a production
+environment, thereby making it live.</p>
+<p>The introduction of feature flags changed this. In a modern DevOps process,
+deployment now comes before release. This is because feature flags decouple
+the deploy from the release. Even though code is deployed to production, the
+code may not be running. Users will see the old version until the new version
+of the application is enabled. Strategies like trunk-based development,
+whereby code is constantly merged into the main branch, combined with
+continuous integration and continuous delivery (CI/CD) mean that new code is
+constantly being pushed to a production environment. However, it is only when
+the relevant feature flag is enabled, that the new features are actually
+released.</p>
+<p>This also means that release doesn&rsquo;t encompass the entire application code,
+but can be thought of on a feature-by-feature basis.</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:48" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:49">
+<blockquote>
+<p>using feature flags it is possible to replicate a blue/green deployment
+strategy without requiring duplicate environments. The green deployment code
+would be deployed to the standard production environment but hidden behind a
+feature flag. The new functionality would only be visible to the internal
+testing team via targeting and, once the release has been validated, the
+flag would be turned on for all users.</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:49" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:50">
+<blockquote>
+<p>Feature flags alter the equation when it comes to rolling or incremental releases because they become relatively trivial to manage</p>
+<p>&mdash; <a href="https://launchdarkly.com/blog/deployment-strategies/">https://launchdarkly.com/blog/deployment-strategies/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:50" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:51">
+<blockquote>
+<p>Here are some scenarios where using feature flags make more sense than blue/green deployments. Like everything else in software, it’s about trade-offs,</p>
+<p>&mdash; <a href="https://www.getunleash.io/blog/blue-green-deployments">https://www.getunleash.io/blog/blue-green-deployments</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-16 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:51" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+      </div>
+	  <aside class="date"><time>Last updated: 23 Apr 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 07 Apr 2023</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

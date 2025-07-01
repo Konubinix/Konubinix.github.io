@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html><title>k8s nginx ingress controller</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>K8s Nginx Ingress Controller</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p><a href="/braindump/posts/kubernetes/">k8s</a> <a href="/braindump/posts/nginx/">nginx</a> <a href="/braindump/posts/kubernetes/#5cebe683-1fbc-49cd-9596-dc34944386d8">ingress</a> <a href="/braindump/posts/kubernetes/#663150d3-a0d4-4302-b020-d10dcce3d7ef">controller</a></p>
+<h2 id="5e5ed3d1-2589-4118-94b0-70465ba8145d">basic Authentication</h2>
+<ul>
+<li>External reference: <a href="https://kubernetes.github.io/ingress-nginx/examples/auth/basic/">https://kubernetes.github.io/ingress-nginx/examples/auth/basic/</a></li>
+</ul>
+<blockquote>
+<p>htpasswd -c auth foo
+kubectl create secret generic basic-auth &ndash;from-file=auth
+kubectl get secret basic-auth -o yaml</p>
+<p>metadata:
+name: ingress-with-auth
+annotations:</p>
+<p>nginx.ingress.kubernetes.io/auth-type: basic</p>
+<p>nginx.ingress.kubernetes.io/auth-secret: basic-auth</p>
+<pre><code>nginx.ingress.kubernetes.io/auth-realm: 'Authentication Required - foo'
+</code></pre>
+<p>spec:</p>
+<p>&mdash; <a href="https://kubernetes.github.io/ingress-nginx/examples/auth/basic/">https://kubernetes.github.io/ingress-nginx/examples/auth/basic/</a></p>
+</blockquote>
+<h2 id="3a034329-d31c-4b90-9f9c-1363a2dd99ec">how it deals with <a href="/braindump/posts/strict_transport_security/">HSTS</a></h2>
+<blockquote>
+<table>
+  <thead>
+      <tr>
+          <th></th>
+          <th>hsts</th>
+          <th>hsts-include-subdomains</th>
+          <th>hsts-max-age</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>type</td>
+          <td>bool</td>
+          <td>bool</td>
+          <td>string</td>
+      </tr>
+      <tr>
+          <td>default</td>
+          <td>&ldquo;true&rdquo;</td>
+          <td>&ldquo;true&rdquo;</td>
+          <td>&ldquo;31536000&rdquo;</td>
+      </tr>
+  </tbody>
+</table>
+<p>&mdash; <a href="https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/configmap.md">https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/configmap.md</a></p>
+</blockquote>
+<h2 id="71403ac7-498c-4474-b0de-18a6bc52fbd9">NGINX ingress controller timing out request after 60s</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://stackoverflow.com/questions/54366082/nginx-ingress-controller-timing-out-request-after-60s">https://stackoverflow.com/questions/54366082/nginx-ingress-controller-timing-out-request-after-60s</a></p>
+<blockquote>
+<p>kind: Ingress
+metadata:
+name: aks-ingress
+annotations:
+kubernetes.io/ingress.class: nginx
+certmanager.k8s.io/cluster-issuer: <a href="/braindump/posts/letsencrypt/">letsencrypt</a>
+nginx.ingress.kubernetes.io/rewrite-target: /
+[&hellip;]
+nginx.ingress.kubernetes.io/proxy-connect-timeout: &ldquo;180&rdquo;
+nginx.ingress.kubernetes.io/proxy-read-timeout: &ldquo;180&rdquo;
+nginx.ingress.kubernetes.io/proxy-send-timeout: &ldquo;180&rdquo;</p>
+<p>spec:
+[&hellip;]
+&mdash; <a href="https://stackoverflow.com/questions/54366082/nginx-ingress-controller-timing-out-request-after-60s">https://stackoverflow.com/questions/54366082/nginx-ingress-controller-timing-out-request-after-60s</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>I am setting those parameters in my ingress resource deffinition:</p>
+<p>kind: Ingress
+metadata:
+name: my-foobar-ingress
+namespace: foobar
+annotations:
+nginx.org/proxy-send-timeout: &ldquo;10s&rdquo;
+nginx.org/proxy-connect-timeout: &ldquo;10s&rdquo;
+nginx.org/proxy-read-timeout: &ldquo;10s&rdquo;</p>
+<p>[&hellip;]</p>
+<p>Are you sure these are the correct annotations? Have a look at ingress/annotations/proxy/main.go, where the following constants are defined:</p>
+<p>connect      = &ldquo;ingress.kubernetes.io/proxy-connect-timeout&rdquo;
+send         = &ldquo;ingress.kubernetes.io/proxy-send-timeout&rdquo;
+read         = &ldquo;ingress.kubernetes.io/proxy-read-timeout&rdquo;</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/45628844/how-to-configure-nginx-ingress-resource-timeout-parameters">https://stackoverflow.com/questions/45628844/how-to-configure-nginx-ingress-resource-timeout-parameters</a></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="2cea0238-accc-4023-9941-e9ca4c10ee58">503 in Kubernetes NGINX Ingress</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://serverfault.com/questions/1068310/how-to-solve-error-503-in-kubernetes-nginx-ingress">https://serverfault.com/questions/1068310/how-to-solve-error-503-in-kubernetes-nginx-ingress</a>
+<a href="/braindump/posts/kubernetes/">kubernetes</a> <a href="/braindump/posts/nginx/">nginx</a></p>
+<blockquote>
+<p>encountered the 503 error as nginx was sending a request to a port that was not
+hosting the dashboard (433 -&gt; 443).</p>
+<p>&mdash; <a href="https://serverfault.com/questions/1068310/how-to-solve-error-503-in-kubernetes-nginx-ingress">https://serverfault.com/questions/1068310/how-to-solve-error-503-in-kubernetes-nginx-ingress</a></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/bc8c765c-b29d-4c4e-836b-0fcc6555295b?title=k8s_nginx_ingress_controller">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 16 Aug 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 19 Jun 2023</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

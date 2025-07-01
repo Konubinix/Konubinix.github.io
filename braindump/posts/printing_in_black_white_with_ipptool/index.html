@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html><title>printing in black&amp;white with ipptool</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Printing in Black&amp;white With Ipptool</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>printing in black&amp;white with <a href="/braindump/posts/internet_printing_protocol/#ipptool">ipptool</a></p>
+<p>Reading the documentation of <a href="/braindump/posts/internet_printing_protocol/">IPP</a>, I understand I need to add a job
+attribute to set the color.</p>
+<h2 id="finding-out-the-available-attributes-in-my-printer">Finding out the available attributes in my printer</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk pdf print . --command get-job-template-attributes |gi color-mode
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>print-color-mode-supported (1setOf keyword) = monochrome,color
+</span></span><span style="display:flex;"><span>print-color-mode-default (keyword) = color
+</span></span></code></pre></div><p>I need to provide this job, in a job attribute group.</p>
+<p>There is already an ipp test file to print with the default attributes.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cat /usr/share/cups/ipptool/print-job-and-wait.test
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span># Print a test page using print-job
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	# The name of the test...
+</span></span><span style="display:flex;"><span>	NAME &#34;Print file using Print-Job&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	# The operation to use
+</span></span><span style="display:flex;"><span>	OPERATION Print-Job
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	# Attributes, starting in the operation group...
+</span></span><span style="display:flex;"><span>	GROUP operation-attributes-tag
+</span></span><span style="display:flex;"><span>	ATTR charset attributes-charset utf-8
+</span></span><span style="display:flex;"><span>	ATTR language attributes-natural-language en
+</span></span><span style="display:flex;"><span>	ATTR uri printer-uri $uri
+</span></span><span style="display:flex;"><span>	ATTR name requesting-user-name $user
+</span></span><span style="display:flex;"><span>	ATTR mimeMediaType document-format $filetype
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	GROUP job-attributes-tag
+</span></span><span style="display:flex;"><span>	ATTR integer copies 1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	FILE $filename
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	# What statuses are OK?
+</span></span><span style="display:flex;"><span>	STATUS successful-ok
+</span></span><span style="display:flex;"><span>	STATUS successful-ok-ignored-or-substituted-attributes
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	# What attributes do we expect?
+</span></span><span style="display:flex;"><span>	EXPECT job-id
+</span></span><span style="display:flex;"><span>	EXPECT job-uri
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	NAME &#34;Wait for job to complete...&#34;
+</span></span><span style="display:flex;"><span>	OPERATION Get-Job-Attributes
+</span></span><span style="display:flex;"><span>	GROUP operation-attributes-tag
+</span></span><span style="display:flex;"><span>	ATTR charset attributes-charset utf-8
+</span></span><span style="display:flex;"><span>	ATTR language attributes-natural-language en
+</span></span><span style="display:flex;"><span>	ATTR uri printer-uri $uri
+</span></span><span style="display:flex;"><span>	ATTR integer job-id $job-id
+</span></span><span style="display:flex;"><span>	ATTR name requesting-user-name $user
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	STATUS successful-ok
+</span></span><span style="display:flex;"><span>	EXPECT job-id
+</span></span><span style="display:flex;"><span>	EXPECT job-state WITH-VALUE &gt;5 REPEAT-NO-MATCH
+</span></span><span style="display:flex;"><span>	DISPLAY job-state
+</span></span><span style="display:flex;"><span>	DISPLAY job-state-reasons
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>I can simply copy this one and add the monochrome job attribute.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk pdf print --command - somefile <span style="color:#d14">&lt;&lt;EOF
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"># Print a test page using print-job
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">{
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    # The name of the test...
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    NAME &#34;Print file using Print-Job&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    # The operation to use
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    OPERATION Print-Job
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    # Attributes, starting in the operation group...
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    GROUP operation-attributes-tag
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR charset attributes-charset utf-8
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR language attributes-natural-language en
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR uri printer-uri $uri
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR name requesting-user-name $user
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR mimeMediaType document-format $filetype
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    GROUP job-attributes-tag
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR integer copies 1
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR keyword print-color-mode monochrome
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    FILE $filename
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    # What statuses are OK?
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    STATUS successful-ok
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    STATUS successful-ok-ignored-or-substituted-attributes
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    # What attributes do we expect?
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    EXPECT job-id
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    EXPECT job-uri
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">}
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">{
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    NAME &#34;Wait for job to complete...&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    OPERATION Get-Job-Attributes
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    GROUP operation-attributes-tag
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR charset attributes-charset utf-8
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR language attributes-natural-language en
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR uri printer-uri $uri
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR integer job-id $job-id
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    ATTR name requesting-user-name $user
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    STATUS successful-ok
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    EXPECT job-id
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    EXPECT job-state WITH-VALUE &gt;5 REPEAT-NO-MATCH
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    DISPLAY job-state
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    DISPLAY job-state-reasons
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">}
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>    Print-Job:
+</span></span><span style="display:flex;"><span>        attributes-charset (charset) = utf-8
+</span></span><span style="display:flex;"><span>        attributes-natural-language (naturalLanguage) = en
+</span></span><span style="display:flex;"><span>        printer-uri (uri) = ipp://127.0.0.1:8080/printers/Canon_MG5700_series
+</span></span><span style="display:flex;"><span>        requesting-user-name (nameWithoutLanguage) = sam
+</span></span><span style="display:flex;"><span>        document-format (mimeMediaType) = application/octet-stream
+</span></span><span style="display:flex;"><span>        copies (integer) = 1
+</span></span><span style="display:flex;"><span>        print-color-mode (keyword) = monochrome
+</span></span><span style="display:flex;"><span>    Print file using Print-Job                                           [PASS]
+</span></span><span style="display:flex;"><span>        RECEIVED: 193 bytes in response
+</span></span><span style="display:flex;"><span>        status-code = successful-ok (successful-ok)
+</span></span><span style="display:flex;"><span>        attributes-charset (charset) = utf-8
+</span></span><span style="display:flex;"><span>        attributes-natural-language (naturalLanguage) = en
+</span></span><span style="display:flex;"><span>        job-uri (uri) = ipp://127.0.0.1:8080/jobs/2
+</span></span><span style="display:flex;"><span>        job-id (integer) = 2
+</span></span><span style="display:flex;"><span>        job-state (enum) = pending
+</span></span><span style="display:flex;"><span>        job-state-message (textWithoutLanguage) =
+</span></span><span style="display:flex;"><span>        job-state-reasons (keyword) = none
+</span></span><span style="display:flex;"><span>    Get-Job-Attributes:
+</span></span><span style="display:flex;"><span>        attributes-charset (charset) = utf-8
+</span></span><span style="display:flex;"><span>        attributes-natural-language (naturalLanguage) = en
+</span></span><span style="display:flex;"><span>        printer-uri (uri) = ipp://127.0.0.1:8080/printers/Canon_MG5700_series
+</span></span><span style="display:flex;"><span>        job-id (integer) = 2
+</span></span><span style="display:flex;"><span>        requesting-user-name (nameWithoutLanguage) = sam
+</span></span><span style="display:flex;"><span>    Wait for job to complete...                                          [0001]
+</span></span><span style="display:flex;"><span>        job-state (enum) = processing
+</span></span><span style="display:flex;"><span>        job-state-reasons (keyword) = job-printing
+</span></span><span style="display:flex;"><span>    Wait for job to complete...                                          [0002]
+</span></span><span style="display:flex;"><span>        job-state (enum) = processing
+</span></span><span style="display:flex;"><span>        job-state-reasons (keyword) = job-printing
+</span></span><span style="display:flex;"><span>    Wait for job to complete...                                          [0003]
+</span></span><span style="display:flex;"><span>        job-state (enum) = processing
+</span></span><span style="display:flex;"><span>        job-state-reasons (keyword) = job-printing
+</span></span><span style="display:flex;"><span>    Wait for job to complete...                                          [0004]
+</span></span><span style="display:flex;"><span>        job-state (enum) = processing
+</span></span><span style="display:flex;"><span>        job-state-reasons (keyword) = job-printing
+</span></span><span style="display:flex;"><span>    Wait for job to complete...                                          [0005]
+</span></span><span style="display:flex;"><span>        job-state (enum) = processing
+</span></span><span style="display:flex;"><span>        job-state-reasons (keyword) = job-printing
+</span></span><span style="display:flex;"><span>    Wait for job to complete...                                          [PASS]
+</span></span><span style="display:flex;"><span>        RECEIVED: 1224 bytes in response
+</span></span><span style="display:flex;"><span>        status-code = successful-ok (successful-ok)
+</span></span><span style="display:flex;"><span>        attributes-charset (charset) = utf-8
+</span></span><span style="display:flex;"><span>        attributes-natural-language (naturalLanguage) = en
+</span></span><span style="display:flex;"><span>        number-of-documents (integer) = 1
+</span></span><span style="display:flex;"><span>        job-media-progress (integer) = 0
+</span></span><span style="display:flex;"><span>        job-more-info (uri) = http://127.0.0.1:8080/jobs/2
+</span></span><span style="display:flex;"><span>        job-preserved (boolean) = true
+</span></span><span style="display:flex;"><span>        job-printer-up-time (integer) = 1639669548
+</span></span><span style="display:flex;"><span>        job-printer-uri (uri) = ipp://127.0.0.1:8080/printers/Canon_MG5700_series
+</span></span><span style="display:flex;"><span>        job-uri (uri) = ipp://127.0.0.1:8080/jobs/2
+</span></span><span style="display:flex;"><span>        printer-uri (uri) = ipp://127.0.0.1:8080/printers/Canon_MG5700_series
+</span></span><span style="display:flex;"><span>        job-originating-user-name (nameWithoutLanguage) = sam
+</span></span><span style="display:flex;"><span>        document-format (mimeMediaType) = application/pdf
+</span></span><span style="display:flex;"><span>        copies (integer) = 1
+</span></span><span style="display:flex;"><span>        print-color-mode (keyword) = monochrome
+</span></span><span style="display:flex;"><span>        document-format-supplied (mimeMediaType) = application/octet-stream
+</span></span><span style="display:flex;"><span>        document-format-detected (mimeMediaType) = application/pdf
+</span></span><span style="display:flex;"><span>        job-priority (integer) = 50
+</span></span><span style="display:flex;"><span>        job-name (nameWithoutLanguage) = Untitled
+</span></span><span style="display:flex;"><span>        job-uuid (uri) = urn:uuid:a7390322-eefd-37d8-543b-fd2637889b65
+</span></span><span style="display:flex;"><span>        job-originating-host-name (nameWithoutLanguage) = 172.17.0.1
+</span></span><span style="display:flex;"><span>        date-time-at-completed (dateTime) = 2021-12-16T15:45:44Z
+</span></span><span style="display:flex;"><span>        date-time-at-creation (dateTime) = 2021-12-16T15:45:23Z
+</span></span><span style="display:flex;"><span>        date-time-at-processing (dateTime) = 2021-12-16T15:45:23Z
+</span></span><span style="display:flex;"><span>        time-at-completed (integer) = 1639669544
+</span></span><span style="display:flex;"><span>        time-at-creation (integer) = 1639669523
+</span></span><span style="display:flex;"><span>        time-at-processing (integer) = 1639669523
+</span></span><span style="display:flex;"><span>        job-id (integer) = 2
+</span></span><span style="display:flex;"><span>        job-state (enum) = completed
+</span></span><span style="display:flex;"><span>        job-state-reasons (keyword) = processing-to-stop-point
+</span></span><span style="display:flex;"><span>        job-impressions-completed (integer) = 1
+</span></span><span style="display:flex;"><span>        job-media-sheets-completed (integer) = 1
+</span></span><span style="display:flex;"><span>        job-k-octets (integer) = 97
+</span></span><span style="display:flex;"><span>        job-hold-until (keyword) = no-hold
+</span></span><span style="display:flex;"><span>        job-sheets (1setOf nameWithoutLanguage) = none,none
+</span></span><span style="display:flex;"><span>        job-printer-state-message (textWithoutLanguage) =
+</span></span><span style="display:flex;"><span>        job-printer-state-reasons (keyword) = none
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Summary: 2 tests, 2 passed, 0 failed, 0 skipped
+</span></span><span style="display:flex;"><span>Score: 100%
+</span></span></code></pre></div><h2 id="permalink"><a href="https://konubinix.eu/braindump/202d113e-302b-4fda-878f-8ebd7e80b143?title=printing_in_black_white_with_ipptool">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 16 Dec 2021</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 16 Dec 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html><title>trying rust in webassembly</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Trying Rust in Webassembly</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#50d492ae-f57d-4b4f-894a-34abbc75e870">using the wasmtime python library to load the wasm content</a></li>
+<li><a href="#9175594d-dd9e-4778-a438-3ab41c1e83c0">first step, the add function</a>
+<ul>
+<li><a href="#92ff0e94-ccdd-44ac-b580-0db8c7eb8d7e">trying without wasm-bindgen</a></li>
+<li><a href="#135237aa-b1b2-4b29-8978-bdbaf5924567">trying with wasi</a></li>
+<li><a href="#22c7c602-ebd2-40a2-912e-2ddab20412ea">putting back the old content</a></li>
+<li><a href="#8e9feec9-795d-457d-85e4-48318287e637">trying with a raw build</a></li>
+<li><a href="#2209cdb0-b5b8-4b87-a1fa-401a804db474">using wasm-bindgen</a>
+<ul>
+<li><a href="#101c27c4-2aaa-435e-862b-93212d169f7d">testing with deno</a></li>
+<li><a href="#a35b8e19-5397-4399-9bc1-7e92f85e069a">trying the nodejs target</a></li>
+<li><a href="#c7354ee8-7c3e-4b9b-a58f-f6db9a26a1ca">trying the web target</a>
+<ul>
+<li><a href="#f6bd8f37-1921-45ac-b839-07baadbd7ca0">esm</a>
+<ul>
+<li><a href="#b28560f3-9ee6-4426-9c5f-5a82c5152d8c">does it work in nodejs?</a>
+<ul>
+<li><a href="#53d27308-5a68-4e19-ad92-fb083af48522">reading the file from the command line</a></li>
+<li><a href="#602f6004-1256-4d9d-9f73-1ca79d123f0e">reading the file using fetch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#ad397b5c-ecd2-4e88-8235-10e9543c8f0c">plain script mode (only meant for browser)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#8b37d2ac-2c4a-4bb9-8057-fbb46e4f2bf8">trying wasm-pack</a></li>
+</ul>
+</li>
+<li><a href="#51ac4918-0b67-4021-8d0d-8f3bbd261207">adding some web features</a>
+<ul>
+<li><a href="#abd17b70-765c-402d-ba4c-b6c4b75aaf3d">with wasm-pack</a></li>
+<li><a href="#d213681b-ed42-4a07-8b95-15e10e59f3d8">back to wasm-bindgen</a>
+<ul>
+<li><a href="#35a86090-fa77-418b-9b21-d11f256be57e">with deno</a></li>
+<li><a href="#7f01ff72-a72f-4345-834d-fadc2b984dbb">esm</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p><a href="/braindump/posts/rust/">rust</a> <a href="/braindump/posts/webassembly/">wasm</a>, <a href="/braindump/posts/wasm_in_rust/">wasm in rust</a></p>
+<p>The outcome I want to achieve is to have a rust library exposing a function that
+fetches some content on the web that I can use in plain javascript, using node
+or a browser.</p>
+<p>rust already build natively in <a href="/braindump/posts/webassembly/#a3443a45-8fe2-4c89-a37b-4d9cad26f388">WASI</a> and <a href="/braindump/posts/webassembly/">wasm</a> (I assume the former does not do
+what I want, it is more about running a &ldquo;program&rdquo; rather than importing a
+library).</p>
+<h2 id="50d492ae-f57d-4b4f-894a-34abbc75e870">using the wasmtime python library to load the wasm content</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pdm init -n
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Creating a pyproject.toml for PDM...
+</span></span><span style="display:flex;"><span>Project is initialized successfully
+</span></span><span style="display:flex;"><span>INFO: PDM 2.12.3 is installed, while 2.12.4 is available.
+</span></span><span style="display:flex;"><span>Please run `pipx upgrade pdm` to upgrade.
+</span></span><span style="display:flex;"><span>Run `pdm config check_update false` to disable the check.
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pdm add wasmtime
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Adding packages to default dependencies: wasmtime
+</span></span><span style="display:flex;"><span>STATUS: Resolving dependencies
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin python&gt;=3.11,&lt;3.12
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin wasmtime 18.0.0
+</span></span><span style="display:flex;"><span>STATUS: Fetching hashes for resolved packages...
+</span></span><span style="display:flex;"><span>🔒 Lock successful
+</span></span><span style="display:flex;"><span>Changes are written to pyproject.toml.
+</span></span><span style="display:flex;"><span>STATUS: Resolving packages from lockfile...
+</span></span><span style="display:flex;"><span>All packages are synced to date, nothing to do.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>🎉 All complete!
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>INFO: PDM 2.12.3 is installed, while 2.12.4 is available.
+</span></span><span style="display:flex;"><span>Please run `pipx upgrade pdm` to upgrade.
+</span></span><span style="display:flex;"><span>Run `pdm config check_update false` to disable the check.
+</span></span></code></pre></div><h2 id="9175594d-dd9e-4778-a438-3ab41c1e83c0">first step, the add function</h2>
+<p>Let&rsquo;s copy the add function from the examples of <a href="/braindump/posts/wasm_in_rust/#300a9f16-1133-4090-b8d3-d42fcaa42a49">wasm-bindgen</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">cd</span> ~/test
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># git clone https://github.com/rustwasm/wasm-bindgen</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># cp -r ~/test/wasm-bindgen/examples/add add</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">cd</span> add
+</span></span></code></pre></div><h3 id="92ff0e94-ccdd-44ac-b580-0db8c7eb8d7e">trying without wasm-bindgen</h3>
+<p>Just for the sake of having a reference.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cp src/lib.rs<span style="color:#000;font-weight:bold">{</span>,-old<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>cat<span style="color:#d14">&lt;&lt;EOF&gt;src/lib.rs
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">pub fn add(a: u32, b: u32) -&gt; u32 {
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    a + b
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">}
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cargo build --target wasm32-unknown-unknown
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Compiling add v0.1.0 (/home/sam/test/add)
+</span></span><span style="display:flex;"><span>    Finished dev [unoptimized + debuginfo] target(s) in 0.34s
+</span></span></code></pre></div><p>Let&rsquo;s see its exported symbols</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-objdump -x ./target/wasm32-unknown-unknown/debug/add.wasm |gi -A3 <span style="color:#0086b3">export</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Export[3]:
+</span></span><span style="display:flex;"><span> - memory[0] -&gt; &#34;memory&#34;
+</span></span><span style="display:flex;"><span> - global[1] -&gt; &#34;__data_end&#34;
+</span></span><span style="display:flex;"><span> - global[2] -&gt; &#34;__heap_base&#34;
+</span></span></code></pre></div><p>There is no add exported symbol. So there is no use of going further.</p>
+<h3 id="135237aa-b1b2-4b29-8978-bdbaf5924567">trying with wasi</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cargo build --target wasm32-wasi
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Compiling wasm-bindgen v0.2.91
+</span></span><span style="display:flex;"><span>   Compiling cfg-if v1.0.0
+</span></span><span style="display:flex;"><span>   Compiling add v0.1.0 (/home/sam/test/add)
+</span></span><span style="display:flex;"><span>    Finished dev [unoptimized + debuginfo] target(s) in 0.96s
+</span></span></code></pre></div><p>Let&rsquo;s see its export symbols</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-objdump -x ./target/wasm32-wasi/debug/add.wasm |gi -A3 <span style="color:#0086b3">export</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Export[1]:
+</span></span><span style="display:flex;"><span> - memory[0] -&gt; &#34;memory&#34;
+</span></span><span style="display:flex;"><span>Code[2]:
+</span></span><span style="display:flex;"><span> - func[0] size=2 &lt;dummy&gt;
+</span></span></code></pre></div><p>No more luck</p>
+<h3 id="22c7c602-ebd2-40a2-912e-2ddab20412ea">putting back the old content</h3>
+<p>let&rsquo;s get the wasm bindgen example original content</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#998;font-style:italic"># mv src/lib.rs{-old,}</span>
+</span></span><span style="display:flex;"><span>cat src/lib.rs
+</span></span></code></pre></div><h3 id="8e9feec9-795d-457d-85e4-48318287e637">trying with a raw build</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cargo build --target wasm32-unknown-unknown
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Compiling add v0.1.0 (/home/sam/test/add)
+</span></span><span style="display:flex;"><span>    Finished dev [unoptimized + debuginfo] target(s) in 0.18s
+</span></span></code></pre></div><p>Let&rsquo;s see if it contains the appropriate symbols</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-objdump -x ./target/wasm32-unknown-unknown/debug/add.wasm |gi -A3 <span style="color:#0086b3">export</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Export[13]:
+</span></span><span style="display:flex;"><span> - memory[0] -&gt; &#34;memory&#34;
+</span></span><span style="display:flex;"><span> - func[9] &lt;add&gt; -&gt; &#34;add&#34;
+</span></span><span style="display:flex;"><span> - func[10] &lt;__wbindgen_describe_add&gt; -&gt; &#34;__wbindgen_describe_add&#34;
+</span></span></code></pre></div><p>Great, let&rsquo;s use it.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;./target/wasm32-unknown-unknown/debug/&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    pdm run python -c <span style="color:#d14">&#39;import wasmtime.loader;import add;print(add.add(1, 2))&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Traceback (most recent call last):
+</span></span><span style="display:flex;"><span>  File &#34;&lt;string&gt;&#34;, line 1, in &lt;module&gt;
+</span></span><span style="display:flex;"><span>  File &#34;/home/sam/.local/pipx/venvs/clk/lib/python3.11/site-packages/wasmtime/loader.py&#34;, line 73, in exec_module
+</span></span><span style="display:flex;"><span>    imported_module = importlib.import_module(module_name)
+</span></span><span style="display:flex;"><span>                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+</span></span><span style="display:flex;"><span>  File &#34;/usr/lib/python3.11/importlib/__init__.py&#34;, line 126, in import_module
+</span></span><span style="display:flex;"><span>    return _bootstrap._gcd_import(name[level:], package, level)
+</span></span><span style="display:flex;"><span>           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+</span></span><span style="display:flex;"><span>ModuleNotFoundError: No module named &#39;__wbindgen_placeholder__&#39;
+</span></span></code></pre></div><p>It does not work out of the box</p>
+<h3 id="2209cdb0-b5b8-4b87-a1fa-401a804db474">using wasm-bindgen</h3>
+<p>the code built using wasm-bindgen is meant to be used with some glue code.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cargo build --target wasm32-unknown-unknown
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Finished dev [unoptimized + debuginfo] target(s) in 0.01s
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target web ./target/wasm32-unknown-unknown/debug/add.wasm
+</span></span></code></pre></div><p>It creates a new wasm file, much smaller.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-objdump -x ./pkg/add_bg.wasm |gi -A3 <span style="color:#0086b3">export</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Export[1]:
+</span></span><span style="display:flex;"><span> - memory[0] -&gt; &#34;memory&#34;
+</span></span><span style="display:flex;"><span>Custom:
+</span></span><span style="display:flex;"><span> - name: &#34;producers&#34;
+</span></span></code></pre></div><p>This one does not export the add function anymore. That&rsquo;s strange.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cargo build --target wasm32-unknown-unknown --release
+</span></span><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target web ./target/wasm32-unknown-unknown/release/add.wasm
+</span></span><span style="display:flex;"><span>wasm-objdump -x ./pkg/add_bg.wasm |gi -A3 <span style="color:#0086b3">export</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Finished release [optimized] target(s) in 0.03s
+</span></span><span style="display:flex;"><span>Export[2]:
+</span></span><span style="display:flex;"><span> - memory[0] -&gt; &#34;memory&#34;
+</span></span><span style="display:flex;"><span> - func[0] &lt;add&gt; -&gt; &#34;add&#34;
+</span></span><span style="display:flex;"><span>Code[1]:
+</span></span></code></pre></div><p>Hmm. It looks like it works only in release mode.</p>
+<p>Also, because it provides some js glue code, it can only be run with a js
+host.</p>
+<p>Worse than that, it provides several targets depending on the js host it runs
+into. The &ldquo;build once, run everywhere&rdquo; moto is not yet here.</p>
+<h4 id="101c27c4-2aaa-435e-862b-93212d169f7d">testing with deno</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target deno ./target/wasm32-unknown-unknown/release/add.wasm
+</span></span></code></pre></div><p><a id="code-snippet--denocode"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-typescript" data-lang="typescript"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> {add} <span style="color:#000;font-weight:bold">from</span> <span style="color:#d14">&#34;./pkg/add.js&#34;</span>
+</span></span><span style="display:flex;"><span>console.log(add(<span style="color:#099">1</span>, <span style="color:#099">2</span>))
+</span></span></code></pre></div><h4 id="a35b8e19-5397-4399-9bc1-7e92f85e069a">trying the nodejs target</h4>
+<p>It actually uses <a href="/braindump/posts/commonjs/">CommonJS</a> export.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target nodejs ./target/wasm32-unknown-unknown/release/add.wasm
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span>wasm <span style="color:#000;font-weight:bold">=</span> require(<span style="color:#d14">&#34;/home/sam/test/add/pkg/add.js&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">return</span> wasm.add(<span style="color:#099">3</span>, <span style="color:#099">2</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>5
+</span></span></code></pre></div><h4 id="c7354ee8-7c3e-4b9b-a58f-f6db9a26a1ca">trying the web target</h4>
+<h5 id="f6bd8f37-1921-45ac-b839-07baadbd7ca0">esm</h5>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>rm -rf pkg
+</span></span><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target web ./target/wasm32-unknown-unknown/release/add.wasm
+</span></span></code></pre></div><p><a id="code-snippet--esm"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span>&lt;<span style="color:#000080">html</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">meta</span> <span style="color:#008080">charset</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;UTF-8&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">meta</span> <span style="color:#008080">name</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;viewport&#34;</span> <span style="color:#008080">content</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;width=device-width, initial-scale=1.0&#34;</span> /&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafybeihp5kzlgqt56dmy5l4z7kpymfc4kn3fnehrrtr7cid7cn7ra36yha?orig=https://cdn.tailwindcss.com/3.4.3&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">defer</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;module&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">import</span> init, { add } from <span style="color:#d14">&#39;./add.js&#39;</span>;
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">await</span> init()
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">window</span>.rust <span style="color:#000;font-weight:bold">=</span> {
+</span></span><span style="display:flex;"><span>          add<span style="color:#000;font-weight:bold">:</span> add
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">import</span> alpinejs from <span style="color:#d14">&#39;https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/+esm&#39;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">window</span>.Alpine <span style="color:#000;font-weight:bold">=</span> alpinejs
+</span></span><span style="display:flex;"><span>      alpinejs.start();
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span> <span style="color:#008080">x-data</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-data</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;{n1: 1, n2: 2}&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      N1: &lt;<span style="color:#000080">input</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;number&#34;</span> <span style="color:#008080">x-model</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;n1&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>      N2: &lt;<span style="color:#000080">input</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;number&#34;</span> <span style="color:#008080">x-model</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;n2&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>      RES: &lt;<span style="color:#000080">span</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;window.rust ? rust.add(n1, n2) : &#39;NA&#39;&#34;</span>&gt;&lt;/<span style="color:#000080">span</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#000080">html</span>&gt;
+</span></span></code></pre></div><div class="iframe-container ratio169">
+<iframe src="/ipfs/bafybeicmzosrmabobvyhjvoqxedo66xvo5uaalnx36pe6xovdujkmjjgfa?filename=pkg" width="600" height="200" style="border:0;" allow="fullscreen" allowfullscreen="true" loading="lazy"></iframe>
+</div>
+<h6 id="b28560f3-9ee6-4426-9c5f-5a82c5152d8c">does it work in nodejs?</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>rm -rf pkg
+</span></span><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target web ./target/wasm32-unknown-unknown/release/add.wasm
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mv pkg/add.<span style="color:#000;font-weight:bold">{</span>,m<span style="color:#000;font-weight:bold">}</span>js
+</span></span></code></pre></div><!--list-separator-->
+<ul>
+<li>
+<p>reading the file from the command line</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span>fs <span style="color:#000;font-weight:bold">=</span> require(<span style="color:#d14">&#34;fs&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">function</span> run() {
+</span></span><span style="display:flex;"><span>    a <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> <span style="color:#000;font-weight:bold">import</span>(<span style="color:#d14">&#34;/home/sam/test/add/pkg/add.mjs&#34;</span>)
+</span></span><span style="display:flex;"><span>    wasm <span style="color:#000;font-weight:bold">=</span> a.initSync(fs.readFileSync(<span style="color:#d14">&#34;/home/sam/test/add/pkg/add_bg.wasm&#34;</span>))
+</span></span><span style="display:flex;"><span>    console.log(wasm.add(<span style="color:#099">1</span>, <span style="color:#099">3</span>))
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>run()
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>4
+</span></span></code></pre></div></li>
+</ul>
+<!--list-separator-->
+<ul>
+<li>
+<p>reading the file using fetch</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>python3 -m http.server <span style="color:#099">9904</span> --directory pkg
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">function</span> run() {
+</span></span><span style="display:flex;"><span>    a <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> <span style="color:#000;font-weight:bold">import</span>(<span style="color:#d14">&#34;/home/sam/test/add/pkg/add.mjs&#34;</span>)
+</span></span><span style="display:flex;"><span>    wasm <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> a.<span style="color:#000;font-weight:bold">default</span>(<span style="color:#d14">&#34;http://127.0.0.1:9904/add_bg.wasm&#34;</span>)
+</span></span><span style="display:flex;"><span>    console.log(wasm.add(<span style="color:#099">1</span>, <span style="color:#099">3</span>))
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>run()
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>4
+</span></span></code></pre></div></li>
+</ul>
+<h5 id="ad397b5c-ecd2-4e88-8235-10e9543c8f0c">plain script mode (only meant for browser)</h5>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>rm -rf pkg
+</span></span><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target no-modules ./target/wasm32-unknown-unknown/release/add.wasm
+</span></span></code></pre></div><p><a id="code-snippet--umd"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span>&lt;<span style="color:#000080">html</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">meta</span> <span style="color:#008080">charset</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;UTF-8&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">meta</span> <span style="color:#008080">name</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;viewport&#34;</span> <span style="color:#008080">content</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;width=device-width, initial-scale=1.0&#34;</span> /&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafybeihp5kzlgqt56dmy5l4z7kpymfc4kn3fnehrrtr7cid7cn7ra36yha?orig=https://cdn.tailwindcss.com/3.4.3&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">defer</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafkreic33rowgvvugzgzajagkuwidfnit2dyqyn465iygfs67agsukk24i?orig=https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;./add.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">document</span>.addEventListener(<span style="color:#d14">&#39;alpine:init&#39;</span>, () =&gt; {
+</span></span><span style="display:flex;"><span>          Alpine.data(<span style="color:#d14">&#39;app&#39;</span>, () =&gt; ({
+</span></span><span style="display:flex;"><span>              message<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>              wasm<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> init () {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.wasm <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> wasm_bindgen()
+</span></span><span style="display:flex;"><span>      },
+</span></span><span style="display:flex;"><span>      }))
+</span></span><span style="display:flex;"><span>      })
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span> <span style="color:#008080">x-data</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;app&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-data</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;{n1: 1, n2: 2}&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      N1: &lt;<span style="color:#000080">input</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;number&#34;</span> <span style="color:#008080">x-model</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;n1&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>      N2: &lt;<span style="color:#000080">input</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;number&#34;</span> <span style="color:#008080">x-model</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;n2&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>      RES: &lt;<span style="color:#000080">span</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;wasm ? wasm.add(n1, n2) : &#39;na&#39;&#34;</span>&gt;&lt;/<span style="color:#000080">span</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#000080">html</span>&gt;
+</span></span></code></pre></div><div class="iframe-container ratio169">
+<iframe src="/ipfs/bafybeidrwtqlrccycdh5w2fvhwukdmx5mapk4dwj47da4c7ytlwratuh2m?filename=pkg" width="600" height="200" style="border:0;" allow="fullscreen" allowfullscreen="true" loading="lazy"></iframe>
+</div>
+<h3 id="8b37d2ac-2c4a-4bb9-8057-fbb46e4f2bf8">trying <a href="/braindump/posts/wasm_in_rust/#6539acca-ccfe-4244-86e5-59108449717b">wasm-pack</a></h3>
+<p>Wasm-pack is supposed to wrap the whole things together to make it easier.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-pack build --target web
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[INFO]: 🎯  Checking for the Wasm target...
+</span></span><span style="display:flex;"><span>[INFO]: 🌀  Compiling to Wasm...
+</span></span><span style="display:flex;"><span>    Finished release [optimized] target(s) in 0.01s
+</span></span><span style="display:flex;"><span>[INFO]: Optimizing wasm binaries with `wasm-opt`...
+</span></span><span style="display:flex;"><span>[INFO]: Optional fields missing from Cargo.toml: &#39;description&#39;, &#39;repository&#39;, and &#39;license&#39;. These are not necessary, but recommended
+</span></span><span style="display:flex;"><span>[INFO]: ✨   Done in 0.23s
+</span></span><span style="display:flex;"><span>[INFO]: 📦   Your wasm pkg is ready to publish at /home/sam/test/add/pkg.
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-objdump -x ./pkg/add_bg.wasm |gi -A3 <span style="color:#0086b3">export</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Export[2]:
+</span></span><span style="display:flex;"><span> - memory[0] -&gt; &#34;memory&#34;
+</span></span><span style="display:flex;"><span> - func[0] &lt;add&gt; -&gt; &#34;add&#34;
+</span></span><span style="display:flex;"><span>Code[1]:
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;./pkg&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    pdm run python -c <span style="color:#d14">&#39;import wasmtime.loader;import add_bg;print(add_bg.add(1, 2))&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>3
+</span></span></code></pre></div><p>That&rsquo;s interesting, wasm-pack did something with the wasm file so that I
+don&rsquo;t need the wasm-bindgen magic anymore.</p>
+<h2 id="51ac4918-0b67-4021-8d0d-8f3bbd261207">adding some web features</h2>
+<p>Let&rsquo;s try to do the same thing with the fetch example</p>
+<p>The add example worked out of the box in wasmtime using wasm-pack, let&rsquo;s try it here.</p>
+<h3 id="abd17b70-765c-402d-ba4c-b6c4b75aaf3d">with wasm-pack</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">cd</span> ~/test
+</span></span><span style="display:flex;"><span>cp -r ~/test/wasm-bindgen/examples/fetch fetch
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">cd</span> fetch
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-pack build --target web
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[INFO]: 🎯  Checking for the Wasm target...
+</span></span><span style="display:flex;"><span>[INFO]: 🌀  Compiling to Wasm...
+</span></span><span style="display:flex;"><span>   Compiling proc-macro2 v1.0.78
+</span></span><span style="display:flex;"><span>   Compiling unicode-ident v1.0.12
+</span></span><span style="display:flex;"><span>   Compiling wasm-bindgen-shared v0.2.92
+</span></span><span style="display:flex;"><span>   Compiling bumpalo v3.15.3
+</span></span><span style="display:flex;"><span>   Compiling log v0.4.21
+</span></span><span style="display:flex;"><span>   Compiling once_cell v1.19.0
+</span></span><span style="display:flex;"><span>   Compiling wasm-bindgen v0.2.92
+</span></span><span style="display:flex;"><span>   Compiling cfg-if v1.0.0
+</span></span><span style="display:flex;"><span>   Compiling quote v1.0.35
+</span></span><span style="display:flex;"><span>   Compiling syn v2.0.52
+</span></span><span style="display:flex;"><span>   Compiling wasm-bindgen-backend v0.2.92
+</span></span><span style="display:flex;"><span>   Compiling wasm-bindgen-macro-support v0.2.92
+</span></span><span style="display:flex;"><span>   Compiling wasm-bindgen-macro v0.2.92
+</span></span><span style="display:flex;"><span>   Compiling js-sys v0.3.69
+</span></span><span style="display:flex;"><span>   Compiling web-sys v0.3.69
+</span></span><span style="display:flex;"><span>   Compiling wasm-bindgen-futures v0.4.42
+</span></span><span style="display:flex;"><span>   Compiling fetch v0.1.0 (/home/sam/test/fetch)
+</span></span><span style="display:flex;"><span>    Finished release [optimized] target(s) in 11.61s
+</span></span><span style="display:flex;"><span>[INFO]: Optimizing wasm binaries with `wasm-opt`...
+</span></span><span style="display:flex;"><span>[INFO]: Optional fields missing from Cargo.toml: &#39;description&#39;, &#39;repository&#39;, and &#39;license&#39;. These are not necessary, but recommended
+</span></span><span style="display:flex;"><span>[INFO]: ✨   Done in 12.18s
+</span></span><span style="display:flex;"><span>[INFO]: 📦   Your wasm pkg is ready to publish at /home/sam/test/fetch/pkg.
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-objdump -x ./pkg/fetch_bg.wasm |gi -A3 <span style="color:#0086b3">export</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Export[8]:
+</span></span><span style="display:flex;"><span> - memory[0] -&gt; &#34;memory&#34;
+</span></span><span style="display:flex;"><span> - func[70] &lt;run&gt; -&gt; &#34;run&#34;
+</span></span><span style="display:flex;"><span> - func[80] &lt;__wbindgen_malloc&gt; -&gt; &#34;__wbindgen_malloc&#34;
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span> - table[0] -&gt; &#34;__wbindgen_export_2&#34;
+</span></span><span style="display:flex;"><span> - func[99] &lt;_dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hf541efccf9213a9f&gt; -&gt; &#34;_dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hf541efccf9213a9f&#34;
+</span></span><span style="display:flex;"><span> - func[111] &lt;__wbindgen_exn_store&gt; -&gt; &#34;__wbindgen_exn_store&#34;
+</span></span><span style="display:flex;"><span> - func[96] &lt;wasm_bindgen__convert__closures__invoke2_mut__h20266e39809c0e2f&gt; -&gt; &#34;wasm_bindgen__convert__closures__invoke2_mut__h20266e39809c0e2f&#34;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pdm init -n
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Creating a pyproject.toml for PDM...
+</span></span><span style="display:flex;"><span>Project is initialized successfully
+</span></span><span style="display:flex;"><span>INFO: PDM 2.12.3 is installed, while 2.12.4 is available.
+</span></span><span style="display:flex;"><span>Please run `pipx upgrade pdm` to upgrade.
+</span></span><span style="display:flex;"><span>Run `pdm config check_update false` to disable the check.
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;./pkg&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    pdm run python -c <span style="color:#d14">&#39;import wasmtime.loader;import fetch_bg;print(fetch_bg.run(&#34;rustwasm/wasm-bindgen&#34;))&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Traceback (most recent call last):
+</span></span><span style="display:flex;"><span>  File &#34;&lt;string&gt;&#34;, line 1, in &lt;module&gt;
+</span></span><span style="display:flex;"><span>  File &#34;/home/sam/.local/pipx/venvs/clk/lib/python3.11/site-packages/wasmtime/loader.py&#34;, line 73, in exec_module
+</span></span><span style="display:flex;"><span>    imported_module = importlib.import_module(module_name)
+</span></span><span style="display:flex;"><span>                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+</span></span><span style="display:flex;"><span>  File &#34;/usr/lib/python3.11/importlib/__init__.py&#34;, line 126, in import_module
+</span></span><span style="display:flex;"><span>    return _bootstrap._gcd_import(name[level:], package, level)
+</span></span><span style="display:flex;"><span>           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+</span></span><span style="display:flex;"><span>ModuleNotFoundError: No module named &#39;wbg&#39;
+</span></span></code></pre></div><p>No luck.</p>
+<h3 id="d213681b-ed42-4a07-8b95-15e10e59f3d8">back to wasm-bindgen</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cargo build --target wasm32-unknown-unknown --release
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Finished release [optimized] target(s) in 0.09s
+</span></span></code></pre></div><h4 id="35a86090-fa77-418b-9b21-d11f256be57e">with deno</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target deno ./target/wasm32-unknown-unknown/release/fetch.wasm
+</span></span></code></pre></div><p><a id="code-snippet--denocode-fetch"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-typescript" data-lang="typescript"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> {run} <span style="color:#000;font-weight:bold">from</span> <span style="color:#d14">&#34;./pkg/fetch.js&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">var</span> data <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> run(<span style="color:#d14">&#34;rustwasm/wasm-bindgen&#34;</span>)
+</span></span><span style="display:flex;"><span>console.log(<span style="color:#d14">&#34;The latest commit to the wasm-bindgen %s branch is:&#34;</span>, data.name);
+</span></span><span style="display:flex;"><span>console.log(<span style="color:#d14">&#34;%s, authored by %s &lt;%s&gt;&#34;</span>, data.commit.sha, data.commit.commit.author.name, data.commit.commit.author.email);
+</span></span></code></pre></div><p>It works well.</p>
+<h4 id="7f01ff72-a72f-4345-834d-fadc2b984dbb">esm</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wasm-bindgen --out-dir pkg --target web ./target/wasm32-unknown-unknown/release/fetch.wasm
+</span></span></code></pre></div><p><a id="code-snippet--esm-fetch"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span>&lt;<span style="color:#000080">html</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">meta</span> <span style="color:#008080">charset</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;UTF-8&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">meta</span> <span style="color:#008080">name</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;viewport&#34;</span> <span style="color:#008080">content</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;width=device-width, initial-scale=1.0&#34;</span> /&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafybeihp5kzlgqt56dmy5l4z7kpymfc4kn3fnehrrtr7cid7cn7ra36yha?orig=https://cdn.tailwindcss.com/3.4.3&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">defer</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;module&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">import</span> init, { run } from <span style="color:#d14">&#39;./fetch.js&#39;</span>;
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">await</span> init()
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">window</span>.wasm <span style="color:#000;font-weight:bold">=</span> {
+</span></span><span style="display:flex;"><span>          run<span style="color:#000;font-weight:bold">:</span> run
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">import</span> alpinejs from <span style="color:#d14">&#39;https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/+esm&#39;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">window</span>.Alpine <span style="color:#000;font-weight:bold">=</span> alpinejs
+</span></span><span style="display:flex;"><span>      alpinejs.start();
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-data</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;{data: null, async init() {this.data = await wasm.run(&#39;rustwasm/wasm-bindgen&#39;) }}&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">template</span> <span style="color:#008080">x-if</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;data&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>          &lt;<span style="color:#000080">span</span>&gt;The latest commit to the wasm-bindgen &lt;<span style="color:#000080">span</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;data.name&#34;</span>&gt;&lt;/<span style="color:#000080">span</span>&gt; branch is:&lt;/<span style="color:#000080">span</span>&gt;
+</span></span><span style="display:flex;"><span>          &lt;<span style="color:#000080">span</span>&gt;(&#34;&lt;<span style="color:#000080">span</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;data.commit.sha&#34;</span>&gt;&lt;/<span style="color:#000080">span</span>&gt;, authored by &lt;<span style="color:#000080">span</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;data.commit.commit.author.name&#34;</span>&gt;&lt;/<span style="color:#000080">span</span>&gt; <span style="color:#a61717;background-color:#e3d2d2">&lt;</span>&lt;<span style="color:#000080">span</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;data.commit.commit.author.email&#34;</span>&gt;&lt;/<span style="color:#000080">span</span>&gt;&gt;)&lt;/<span style="color:#000080">span</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;/<span style="color:#000080">template</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#000080">html</span>&gt;
+</span></span></code></pre></div><div class="iframe-container ratio169">
+<iframe src="/ipfs/bafybeidczg7s46sfdmu5i5dypbh67otyjj2jvkmnscscllnmcpjs3ewxwe?filename=pkg" width="600" height="200" style="border:0;" allow="fullscreen" allowfullscreen="true" loading="lazy"></iframe>
+</div>
+<h2 id="permalink"><a href="/braindump/efd1fa38-dbf1-47cf-8211-1de80c5bbd5b?title=trying_rust_in_webassembly">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 14 Nov 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 01 Mar 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

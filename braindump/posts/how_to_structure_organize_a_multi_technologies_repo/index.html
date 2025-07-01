@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html><title>how to structure/organize a multi technologies repo?</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>How to Structure/Organize a Multi Technologies Repo?</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>I honestly don&rsquo;t know what is a <a href="/braindump/posts/monorepo/">monorepo</a>. Therefore I will avoid calling that a
+monorepo, even though I intuitively guess there might be similarities.</p>
+<p>Imagine you are working on a project where all components are put in the same
+repository. For instance, imagine the classical scenario;</p>
+<ul>
+<li>a frontend, in javascript,</li>
+<li>a backend, in go,</li>
+<li>an <a href="/braindump/posts/identification_and_access_manager/">IAM</a>, like <a href="/braindump/posts/keycloak/">keycloak</a>, with home made plugins written in java,</li>
+<li>a vault, with home made plugins written in go,</li>
+</ul>
+<p>Intuitively, the project layout should look like:</p>
+<ul>
+<li>frontend
+<ul>
+<li>package.json</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>backend
+<ul>
+<li>go.mod</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>iam
+<ul>
+<li>plugins
+<ul>
+<li>plugin1
+<ul>
+<li>pom.xml</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>vault
+<ul>
+<li>plugin1
+<ul>
+<li>go.mod</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Chances are that people from different background will contribute to this
+project. Some javascript guys will likely work in the frontend, while go guys
+will work in the backend or vault plugins.</p>
+<p>Also, it is likely that these component might be related somehow. For instance,
+the frontend might consume an <a href="/braindump/posts/openapi/">openapi</a> document generated from the
+backend. Also, the vault and the backend might have shared libraries.</p>
+<h2 id="organising-the-repository-to-deal-with-shared-libraries">Organising the repository to deal with shared libraries</h2>
+<p>When two co-located projects have a need for a shared library, it is common to
+look for a common ancestor folder to put such dependency.</p>
+<p>For example, imagine the following layout.</p>
+<ul>
+<li>a
+<ul>
+<li>b1
+<ul>
+<li>c
+<ul>
+<li>d</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>b2
+<ul>
+<li>e</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Imagine that d and e share the need for a common library, it is intuitive to put this library in a.</p>
+<ul>
+<li>a
+<ul>
+<li>common</li>
+<li>b1
+<ul>
+<li>c
+<ul>
+<li>d -&gt; ../../../common</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>b2
+<ul>
+<li>e -&gt; ../../common</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>In case of the organisation per component, the only common ancestor is the repository itself.</p>
+<p>Also, each technology comes with its own conventions about how to deal with
+shared libraries development. I kinda like the one of go, with internal/ pkg/
+and vendor/ that makes things quite clear.</p>
+<p>So I suggest to put those in /internal or /pkg depending on whether those shared
+libraries are meant to be published.</p>
+<p>The layout would then look like.</p>
+<ul>
+<li>frontend
+<ul>
+<li>package.json</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>backend
+<ul>
+<li>go.mod -&gt; ../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>iam
+<ul>
+<li>plugins
+<ul>
+<li>plugin1
+<ul>
+<li>pom.xml</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>internal</li>
+<li>vault
+<ul>
+<li>plugin1
+<ul>
+<li>go.mod -&gt; ../../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Of course, choosing the way of doing of one technology might make some people
+angry. An attempt at fixing this would be to organise per technology rather than
+component.</p>
+<ul>
+<li>js
+<ul>
+<li>frontend
+<ul>
+<li>package.json</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>go
+<ul>
+<li>internal</li>
+<li>backend
+<ul>
+<li>go.mod -&gt; ../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>vault
+<ul>
+<li>plugin1
+<ul>
+<li>go.mod -&gt; ../../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>java
+<ul>
+<li>iam
+<ul>
+<li>plugins
+<ul>
+<li>plugin1
+<ul>
+<li>pom.xml</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>This would work, but somehow people (including me) tend to dislike this and
+prefer the component based organisation.</p>
+<h3 id="building-the-docker-images">building the docker images</h3>
+<p>Another challenge is to decide how to build a docker image of each component,
+provided that the docker context needs to be in a folder that contain all the
+dependencies.</p>
+<p>In the following example, building a docker image for the backend needs the following parts.</p>
+<ul>
+<li>frontend
+<ul>
+<li>package.json</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li><strong>backend</strong>
+<ul>
+<li>go.mod -&gt; ../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>iam
+<ul>
+<li>plugins
+<ul>
+<li>plugin1
+<ul>
+<li>pom.xml</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>internal</strong></li>
+<li>vault
+<ul>
+<li>plugin1
+<ul>
+<li>go.mod -&gt; ../../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>To keep things <a href="/braindump/posts/keep_it_simple_stupid/">kiss</a> and have a similar look and feel in the docker images
+construction than the repository, I suggest to use the repository as docker
+context. I tend to like when a Dockerfile is in located in the expected docker
+context folder, hence I recommend putting the dockerfiles in the root
+repository, like this :</p>
+<ul>
+<li>frontend
+<ul>
+<li>package.json</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>backend.Dockerfile</li>
+<li>backend
+<ul>
+<li>go.mod -&gt; ../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>iam
+<ul>
+<li>plugins
+<ul>
+<li>plugin1
+<ul>
+<li>pom.xml</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>internal</li>
+<li>vault
+<ul>
+<li>plugin1
+<ul>
+<li>go.mod -&gt; ../../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="sharing-a-common-docker-configuration">Sharing a common docker configuration</h4>
+<p>It is likely that you will want to have similarities in the construction of the
+docker images.</p>
+<p>To do so, you could either try to build base images and make those images depend
+on the base images. That would require dancing with the docker registry so as to
+have base images in your local docker cache as well as in the remote team registry.</p>
+<p>I prefer using a tool like <a href="/braindump/posts/dockermake/">DockerMake</a> to build several images using the same
+template.</p>
+<p>Because it allows to print the dockerfile instead of directly building the
+docker image, you can even use it along with tools using dockerfile like
+<a href="/braindump/posts/tilt/">tilt</a>.</p>
+<p>I then recommend replacing the dockerfiles by a single DockerMake.yml document
+at the root.</p>
+<ul>
+<li>DockerMake.yml</li>
+<li>frontend
+<ul>
+<li>package.json</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>backend
+<ul>
+<li>go.mod -&gt; ../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+<li>iam
+<ul>
+<li>plugins
+<ul>
+<li>plugin1
+<ul>
+<li>pom.xml</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>internal</li>
+<li>vault
+<ul>
+<li>plugin1
+<ul>
+<li>go.mod -&gt; ../../internal</li>
+<li>&hellip;</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="organising-the-artifact-transportation">Organising the artifact transportation</h2>
+<p>Now, in case you want some artifact from one component to be available in
+another, I think you can</p>
+<ol>
+<li>either make images depend on each other,</li>
+<li>or create images with the same dockerfile content (using <a href="/braindump/posts/dockermake/">DockerMake</a> to help factorizing the code),</li>
+<li>or build <a href="/braindump/posts/artifact/">artifact</a>s locally and put them in some registry so that they can be downloaded when creating images
+<ol>
+<li>either a shared registry</li>
+<li>or directly commit them into the code (using <a href="/braindump/posts/git_lfs/">git-lfs</a>)</li>
+</ol>
+</li>
+</ol>
+<p>I tend to prefer the third option, because chances are that you need the
+artifact in your development anyway. Also, because we tend to move to <a href="/braindump/posts/container_based_development/">container
+based development</a>, chances are that you local setup is exactly the same as the
+one in the <a href="/braindump/posts/continuous_integration/">continuous integration</a>, and then you can simply generate the
+artifact yourself.</p>
+<p>Also, because tools like <a href="/braindump/posts/tilt/">tilt</a> help ensuring that your <a href="/braindump/posts/artifact/">artifacts</a> remain up
+to date, you have no excuse to forget to build and commit the artifact.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/52a1ee5c-9b21-4842-9efc-fbfac3ca5af5?title=how_to_structure_organize_a_multi_technologies_repo">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 11 Mar 2022</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Mar 2022</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

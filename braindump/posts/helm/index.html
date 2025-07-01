@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html><title>helm</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Helm</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>A tool to template <a href="/braindump/posts/kubernetes/">k8s</a> installations, like <a href="/braindump/posts/kustomize/">kustomize</a>.</p>
+<h2 id="5b648404-b964-4796-a72e-62244a4880bd">debug given values to template</h2>
+<p>If your values are split into several values.yaml valus-something.yaml and on
+the fly generated &ndash;set instructions, it may become hard to find out why helm
+template gave the result it did.</p>
+<p>A quick trick to understand better what .Values will eventually be is to use a
+dumb chart that simply does that: dump the .Values. You have to call it with
+the same command that the one you want to debug, but with the additional -f
+./mychart/values.yaml first.</p>
+<p>I could use helm create to build the dump template, but then I have to remove
+a lot of files. I&rsquo;d rather build the only two files I need manually.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir -p dumb
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">cd</span> dumb
+</span></span><span style="display:flex;"><span>cat<span style="color:#d14">&lt;&lt;EOF &gt; Chart.yaml
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">apiVersion: v2
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">name: dumb
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">description: Some dumb helm chart to display the values
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">type: application
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">version: 0.1.0
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">appVersion: &#34;1.16.0&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>mkdir templates
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>cat<span style="color:#d14">&lt;&lt;EOF &gt; templates/dump-values.yaml
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">{{ .Values | toYaml }}
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span></code></pre></div><p>Then, if my command was:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>helm template releasename ./mychart -f somevalues.yaml --set some.thing<span style="color:#000;font-weight:bold">=</span>value
+</span></span></code></pre></div><p>I simply call</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>helm template releasename ./dumb -f ./mychart/values.yaml -f somevalues.yaml --set some.thing<span style="color:#000;font-weight:bold">=</span>value
+</span></span></code></pre></div><h2 id="2fe1fb25-ef88-4244-a55a-563db5c250dd">chart</h2>
+<h3 id="791fe8af-41cb-4345-8b06-ad6e0323a72a">list available charts</h3>
+<p>If using <a href="/braindump/posts/oci/">oci</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>crane ls registry-1.docker.io/bitnamicharts 2&gt;&amp;<span style="color:#099">1</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Error: reading tags for registry-1.docker.io/bitnamicharts: GET https://registry-1.docker.io/v2/bitnamicharts/tags/list?n=1000: UNAUTHORIZED: authentication required; [map[Action:pull Class: Name:bitnamicharts Type:repository]]
+</span></span></code></pre></div><p>unfortunately, this is a bad example because we don&rsquo;t have the right to list them. I don&rsquo;t know if this is doable.</p>
+<p>If using standard https interface</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">repo</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;https://blockscout.github.io/helm-charts&#34;</span>
+</span></span><span style="display:flex;"><span>curl -s https://blockscout.github.io/helm-charts/index.yaml|yq -r <span style="color:#d14">&#39;.entries|keys[]&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>autoscout
+</span></span><span style="display:flex;"><span>blockscout-admin
+</span></span><span style="display:flex;"><span>blockscout-ens
+</span></span><span style="display:flex;"><span>blockscout-points
+</span></span><span style="display:flex;"><span>blockscout-proxy-verifier
+</span></span><span style="display:flex;"><span>blockscout-stack
+</span></span><span style="display:flex;"><span>chainscout
+</span></span><span style="display:flex;"><span>cloudflare-tunnel
+</span></span><span style="display:flex;"><span>da-indexer
+</span></span><span style="display:flex;"><span>eth-rpc-exporter
+</span></span><span style="display:flex;"><span>eth-tx-summary-api
+</span></span><span style="display:flex;"><span>graph-node
+</span></span><span style="display:flex;"><span>metabase
+</span></span><span style="display:flex;"><span>pganalyzer
+</span></span><span style="display:flex;"><span>quicknode-marketplace-integration
+</span></span><span style="display:flex;"><span>redstone-mud
+</span></span><span style="display:flex;"><span>remix-project
+</span></span><span style="display:flex;"><span>rpc-node
+</span></span><span style="display:flex;"><span>scoutcloud
+</span></span><span style="display:flex;"><span>smart-contract-verification
+</span></span><span style="display:flex;"><span>smart-guessr
+</span></span><span style="display:flex;"><span>sql-exporter
+</span></span><span style="display:flex;"><span>swapscout
+</span></span><span style="display:flex;"><span>verification-app
+</span></span><span style="display:flex;"><span>visualizer
+</span></span><span style="display:flex;"><span>yopass
+</span></span></code></pre></div><h3 id="c2ccb13e-53fb-432f-a52b-02b5ff5a50e5">list available versions</h3>
+<p>If using <a href="/braindump/posts/oci/">oci</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">repo</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;oci://registry-1.docker.io/bitnamicharts&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">chart</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;postgresql&#34;</span>
+</span></span><span style="display:flex;"><span>crane ls <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">repo</span>#oci://*<span style="color:#d14">}</span><span style="color:#d14">/</span><span style="color:#d14">${</span><span style="color:#008080">chart</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>|grep --invert-match sha256|sort --reverse --version-sort|head
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>16.0.5
+</span></span><span style="display:flex;"><span>16.0.4
+</span></span><span style="display:flex;"><span>16.0.3
+</span></span><span style="display:flex;"><span>16.0.2
+</span></span><span style="display:flex;"><span>16.0.1
+</span></span><span style="display:flex;"><span>16.0.0
+</span></span><span style="display:flex;"><span>15.5.38
+</span></span><span style="display:flex;"><span>15.5.37
+</span></span><span style="display:flex;"><span>15.5.36
+</span></span><span style="display:flex;"><span>15.5.35
+</span></span></code></pre></div><p>If using standard https interface</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">repo</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;https://blockscout.github.io/helm-charts&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">chart</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;blockscout-stack&#34;</span>
+</span></span><span style="display:flex;"><span>curl -s <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">repo</span><span style="color:#d14">}</span><span style="color:#d14">/index.yaml&#34;</span>|yq --raw-output <span style="color:#d14">&#34;.entries[\&#34;</span><span style="color:#d14">${</span><span style="color:#008080">chart</span><span style="color:#d14">}</span><span style="color:#d14">\&#34;][].version&#34;</span>|sort --reverse --version-sort|head
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1.6.8
+</span></span><span style="display:flex;"><span>1.6.7
+</span></span><span style="display:flex;"><span>1.6.6
+</span></span><span style="display:flex;"><span>1.6.5
+</span></span><span style="display:flex;"><span>1.6.4
+</span></span><span style="display:flex;"><span>1.6.3
+</span></span><span style="display:flex;"><span>1.6.2
+</span></span><span style="display:flex;"><span>1.6.1
+</span></span><span style="display:flex;"><span>1.6.0
+</span></span><span style="display:flex;"><span>1.5.1
+</span></span></code></pre></div><h3 id="ba5b822e-a52b-422b-8420-07f69fc55aad">download for inspection</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    helm pull <span style="color:#d14">&#34;oci://registry-1.docker.io/bitnamicharts/postgresql&#34;</span> --version 15.5.23 2&gt;&amp;<span style="color:#099">1</span>
+</span></span><span style="display:flex;"><span>    ls
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Pulled: registry-1.docker.io/bitnamicharts/postgresql:15.5.23
+</span></span><span style="display:flex;"><span>Digest: sha256:9876f3f4c152acd448c6ec62d0915ff17a6b8f7c5e98e63ca296abfb92de8df0
+</span></span><span style="display:flex;"><span>postgresql-15.5.23.tgz
+</span></span></code></pre></div><h3 id="04e72daa-2d86-4691-88e0-9f26ee0854c5">install using <a href="/braindump/posts/oci/">oci</a></h3>
+<p>make sure to have the appropriate tag in the Chart.yaml file and that the name is the one you want.</p>
+<p>then</p>
+<p>helm push /app/package.tgz oci://registry</p>
+<p>Don&rsquo;t specify neither the repository or the tag, helm will read the chart.yaml</p>
+<p>So, if the chart contains name: something and version: 0.1.0, then the
+published image will be registry/repository:version</p>
+<p>helm pull oci://registry/repository/name &ndash;version tag
+helm install oci://registry/repository/name &ndash;version tag</p>
+<h2 id="aa2549db-7c70-4ec4-a963-6eca05f0de07">beware non deterministic package</h2>
+<p>running helm package twice result in two packages with different sha256sum</p>
+<p><a href="https://github.com/helm/helm/issues/3612">https://github.com/helm/helm/issues/3612</a></p>
+<p>So far, I used this workaround to get a hash</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>tar xf package.tgz <span style="color:#000;font-weight:bold">&amp;&amp;</span> sed -i <span style="color:#d14">&#39;/^generated:/d&#39;</span> <span style="color:#d14">${</span><span style="color:#008080">name</span><span style="color:#d14">}</span>/Chart.lock <span style="color:#000;font-weight:bold">&amp;&amp;</span> find <span style="color:#d14">${</span><span style="color:#008080">name</span><span style="color:#d14">}</span> -type f -exec sha256sum <span style="color:#000;font-weight:bold">{}</span> <span style="color:#d14">\;</span>|sort | sha256sum | cut -c 1-60 &gt; hash.txt
+</span></span></code></pre></div><h2 id="937b5547-16d9-4a9a-9074-b59bf06f4938">Hooks</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://helm.sh/docs/topics/charts_hooks/">https://helm.sh/docs/topics/charts_hooks/</a></p>
+<blockquote>
+<p>hook mechanism to allow chart developers to intervene at certain points in a release&rsquo;s life cycle</p>
+<p>&mdash; <a href="https://helm.sh/docs/topics/charts_hooks/">https://helm.sh/docs/topics/charts_hooks/</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="c72f4bfc-e29a-4fe7-8a50-e03ad59ae1dc">does not work with <a href="#e49d0043-f529-41cb-be78-889eb9cfe9fe">post-renderer</a></h3>
+<p><a href="https://github.com/helm/helm/issues/7891">https://github.com/helm/helm/issues/7891</a></p>
+<h2 id="e49d0043-f529-41cb-be78-889eb9cfe9fe">post-renderer</h2>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/avionix/">avionix</a></li>
+<li><a href="/braindump/posts/postgresql/#79c99355-2a0d-4782-8238-dbc4552c0447">bitnami ne se configure pas bien</a></li>
+<li><a href="/braindump/posts/helm_ne_supprime_pas_les_pvc_des_statefulset/">helm ne supprime pas les pvc des statefulset</a></li>
+<li><a href="/braindump/posts/helm_needs_semver_compatible_versions/">helm needs semver compatible versions</a></li>
+<li><a href="/braindump/posts/helm_vs_vendor_lock_in/">helm vs vendor lock in</a></li>
+<li><a href="/braindump/posts/helm_template_function_list/">Helm | Template Function List</a></li>
+<li><a href="/braindump/posts/how_to_add_auto_initialization_in_the_vault_helm_chart_from_hashicorp/">how to add auto initialization in the vault helm chart from hashicorp</a></li>
+<li><a href="/braindump/posts/how_to_download_a_helm_chart/">how to download a helm chart</a></li>
+<li><a href="/braindump/posts/how_to_organise_the_inter_subchart_networkpolicies/">how to organise the inter subchart networkpolicies?</a></li>
+<li><a href="/braindump/posts/how_to_set_the_component_part_of_values_of_kubernetes/">how to set the component/part-of values of kubernetes?</a></li>
+<li><a href="/braindump/posts/k8s_deadlock_if_job_helm_sh_hook_postinstall_using_a_pvc/">k8s deadlock if job helm.sh/hook postinstall using a pvc</a></li>
+<li><a href="/braindump/posts/k8s_templating_solutions/">k8s templating solutions</a></li>
+<li><a href="/braindump/posts/pvc_geres_par_un_statefulset_sont_persistes_par_helm_delete_alors_que_supprimes_si_par_deployment/">pvc gérés par un statefulset sont persistés par helm delete alors que supprimés si par deployment</a></li>
+<li><a href="/braindump/posts/several_flavors_of_testing_one_s_code/">several flavors of testing one&rsquo;s code</a></li>
+<li><a href="/braindump/posts/storing_app_helm_charts_docker_images_in_one_registry/">storing app helm charts &amp; docker images in one registry</a></li>
+<li><a href="/braindump/posts/using_helm/">using helm</a></li>
+<li><a href="/braindump/posts/using_helm_and_kustomize_to_build_more_declarative_kubernetes_workloads/">using helm and kustomize to build more declarative kubernetes workloads</a></li>
+</ul>
+<h2 id="permalink"><a href="/braindump/4a7697dc-406e-4d55-8244-a7c414c630b3?title=helm">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 30 Jun 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 05 Jan 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html><title>access hardware volume keys in kivy</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Access Hardware Volume Keys in Kivy</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <h2 id="17793243-bf68-4b6c-8b0c-b5d27698194a">when the application in is focus</h2>
+<p>need to implement Acticity::dispatchKeyEvent</p>
+<p>This needs to be in the main PythonActivity
+(python-for-android/pythonforandroid/bootstraps/sdl2/build/src/main/java/org/kivy/android/PythonActivity.java::public
+class PythonActivity extends SDLActivity {) but nothing was done</p>
+<p>I can change the smali code to add some custom behavior, like logging test, by adding it in poc/smali/org/kivy/android/PythonActivity.smali</p>
+<p>This prints test and resturn true (to preempt the event).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>.method public dispatchKeyEvent(Landroid/view/KeyEvent;)Z
+</span></span><span style="display:flex;"><span>    .locals 2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Log the string &#34;test&#34;
+</span></span><span style="display:flex;"><span>    const-string v0, &#34;MyApp&#34;
+</span></span><span style="display:flex;"><span>    const-string v1, &#34;test&#34;
+</span></span><span style="display:flex;"><span>    invoke-static {v0, v1}, Landroid/util/Log;-&gt;d(Ljava/lang/String;Ljava/lang/String;)I
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    const/4 v0, 0x1
+</span></span><span style="display:flex;"><span>    return v0
+</span></span><span style="display:flex;"><span>.end method
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>apktool b poc <span style="color:#000;font-weight:bold">&amp;&amp;</span> apksigner sign --ks your-keystore.jks --ks-key-alias your-alias --ks-pass pass:000000 ./poc/dist/poc.apk
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>I: Using Apktool 2.10.0 with 4 thread(s).
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Smaling smali folder into classes.dex...
+</span></span><span style="display:flex;"><span>I: Checking whether resources has changed...
+</span></span><span style="display:flex;"><span>I: Building resources...
+</span></span><span style="display:flex;"><span>I: Building apk file...
+</span></span><span style="display:flex;"><span>I: Copying unknown files/dir...
+</span></span><span style="display:flex;"><span>I: Built apk into: poc/dist/poc.apk
+</span></span></code></pre></div><p>And I can see the log and no more volume control.</p>
+<p>Now, I want to call a callback set by jnius.</p>
+<p>in poc/smali/com/example/KeyEventCallback.smali, put</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>.class public interface abstract Leu/konubinix/konixpoc/KeyEventCallback;
+</span></span><span style="display:flex;"><span>.super Ljava/lang/Object;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Define the method signature for the callback
+</span></span><span style="display:flex;"><span>.method public abstract onKeyEvent(Landroid/view/KeyEvent;)Z
+</span></span><span style="display:flex;"><span>.end method
+</span></span></code></pre></div><p>In poc/smali/org/kivy/android/PythonActivity.smali</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span># add the callback attribute
+</span></span><span style="display:flex;"><span>.field public keyEventCallback:Leu/konubinix/konixpoc/KeyEventCallback;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>.method protected onCreate(Landroid/os/Bundle;)V
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>    # init keyEventCallback to null
+</span></span><span style="display:flex;"><span>    const/4 v0, 0x0
+</span></span><span style="display:flex;"><span>    iput-object v0, p0, Lorg/kivy/android/PythonActivity;-&gt;keyEventCallback:Leu/konubinix/konixpoc/KeyEventCallback;
+</span></span></code></pre></div><p>Beware the .locals, it defines v0, v1 etc</p>
+<p>In the same file, implement dispatchKeyEvent that calls the callback if it is set</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>.method public dispatchKeyEvent(Landroid/view/KeyEvent;)Z
+</span></span><span style="display:flex;"><span>    .locals 3
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    const-string v1, &#34;poc&#34;
+</span></span><span style="display:flex;"><span>        const-string v2, &#34;Calling call back&#34;
+</span></span><span style="display:flex;"><span>        invoke-static {v1, v2}, Landroid/util/Log;-&gt;d(Ljava/lang/String;Ljava/lang/String;)I
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Retrieve the keyEventCallback attribute
+</span></span><span style="display:flex;"><span>    iget-object v0, p0, Lorg/kivy/android/PythonActivity;-&gt;keyEventCallback:Leu/konubinix/konixpoc/KeyEventCallback;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Check if keyEventCallback is set (not null)
+</span></span><span style="display:flex;"><span>    if-eqz v0, :super_call
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Call the callback with the KeyEvent parameter
+</span></span><span style="display:flex;"><span>    invoke-interface {v0, p1}, Leu/konubinix/konixpoc/KeyEventCallback;-&gt;onKeyEvent(Landroid/view/KeyEvent;)Z
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Get the result of the callback
+</span></span><span style="display:flex;"><span>    move-result v0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Return the result of the callback
+</span></span><span style="display:flex;"><span>    return v0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    :super_call
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    const-string v1, &#34;poc&#34;
+</span></span><span style="display:flex;"><span>    const-string v2, &#34;No callback&#34;
+</span></span><span style="display:flex;"><span>    invoke-static {v1, v2}, Landroid/util/Log;-&gt;d(Ljava/lang/String;Ljava/lang/String;)I
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Fallback to the superclass dispatchKeyEvent if no callback is set
+</span></span><span style="display:flex;"><span>    invoke-super {p0, p1}, Lorg/kivy/android/PythonActivity;-&gt;dispatchKeyEvent(Landroid/view/KeyEvent;)Z
+</span></span><span style="display:flex;"><span>    move-result v0
+</span></span><span style="display:flex;"><span>    return v0
+</span></span><span style="display:flex;"><span>.end method
+</span></span></code></pre></div><p>In the python code, implement the callback and register it in the activity</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass, PythonJavaClass, java_method
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># Access the activity</span>
+</span></span><span style="display:flex;"><span>PythonActivity <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;org.kivy.android.PythonActivity&#39;</span>)
+</span></span><span style="display:flex;"><span>KeyEvent <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.KeyEvent&#39;</span>)
+</span></span><span style="display:flex;"><span>activity <span style="color:#000;font-weight:bold">=</span> PythonActivity<span style="color:#000;font-weight:bold">.</span>mActivity
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># Create a Python implementation of KeyEventCallback</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">MyKeyEventCallback</span>(PythonJavaClass):
+</span></span><span style="display:flex;"><span>    __javainterfaces__ <span style="color:#000;font-weight:bold">=</span> [<span style="color:#d14">&#39;eu/konubinix/konixpoc/KeyEventCallback&#39;</span>]
+</span></span><span style="display:flex;"><span>    __javacontext__ <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#39;app&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#3c5d5d;font-weight:bold">@java_method</span>(<span style="color:#d14">&#39;(Landroid/view/KeyEvent;)Z&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">onKeyEvent</span>(<span style="color:#999">self</span>, key_event):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> key_event<span style="color:#000;font-weight:bold">.</span>getKeyCode() <span style="color:#000;font-weight:bold">==</span> KeyEvent<span style="color:#000;font-weight:bold">.</span>KEYCODE_VOLUME_DOWN:
+</span></span><span style="display:flex;"><span>            action <span style="color:#000;font-weight:bold">=</span> key_event<span style="color:#000;font-weight:bold">.</span>getAction()
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> action <span style="color:#000;font-weight:bold">==</span> KeyEvent<span style="color:#000;font-weight:bold">.</span>ACTION_DOWN:
+</span></span><span style="display:flex;"><span>                <span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;volume down pressed&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">elif</span> action <span style="color:#000;font-weight:bold">==</span> KeyEvent<span style="color:#000;font-weight:bold">.</span>ACTION_UP:
+</span></span><span style="display:flex;"><span>                <span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;volume down released&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">raise</span> <span style="color:#900;font-weight:bold">NotImplementedError</span>()
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">return</span> <span style="color:#000;font-weight:bold">True</span>  <span style="color:#998;font-style:italic"># or False depending on your logic</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># Set the callback</span>
+</span></span><span style="display:flex;"><span>callback <span style="color:#000;font-weight:bold">=</span> MyKeyEventCallback()
+</span></span><span style="display:flex;"><span>activity<span style="color:#000;font-weight:bold">.</span>keyEventCallback <span style="color:#000;font-weight:bold">=</span> callback
+</span></span></code></pre></div><h2 id="482a7d71-47fa-4af4-a9db-3ef536d6bd91">when the application is not</h2>
+<p>You need to implement a VolumeProvider and initialize a MediaSession, like it is done in <a href="/braindump/posts/malp/">MALP</a> (<a href="https://gitlab.com/gateship-one/malp/-/blob/master/app/src/main/java/org/gateshipone/malp/application/background/NotificationManager.java?ref_type=heads#L155">https://gitlab.com/gateship-one/malp/-/blob/master/app/src/main/java/org/gateshipone/malp/application/background/NotificationManager.java?ref_type=heads#L155</a>)</p>
+<p>In python, this would look like</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> java_method
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> PythonJavaClass, JavaClass, MetaJavaClass
+</span></span><span style="display:flex;"><span>MediaSession <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#34;android.media.session.MediaSession&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">MyVolumeProvider</span>(PythonJavaClass, metaclass<span style="color:#000;font-weight:bold">=</span>MetaJavaClass):
+</span></span><span style="display:flex;"><span>    __javaclass__ <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#39;android/media/VolumeProvider&#39;</span>
+</span></span><span style="display:flex;"><span>    __javainterfaces__ <span style="color:#000;font-weight:bold">=</span> []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">onAdjustVolume</span>(<span style="color:#999">self</span>, direction):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">print</span>(direction)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span>mediaSession <span style="color:#000;font-weight:bold">=</span> MediaSession(mActivity, <span style="color:#d14">&#34;konubinix&#34;</span>)
+</span></span><span style="display:flex;"><span>volumeprovider <span style="color:#000;font-weight:bold">=</span> MyVolumeProvider()
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;created volume provider&#34;</span>)
+</span></span><span style="display:flex;"><span>mediaSession<span style="color:#000;font-weight:bold">.</span>setPlaybackToRemote(volumeprovider)
+</span></span></code></pre></div><p>But this won&rsquo;t work, because <a href="https://developer.android.com/reference/android/media/VolumeProvider">android.media.VolumeProvider</a> is an abstract class
+(not an interface) and <a href="/braindump/posts/java_classes_from_python/#e8d30a83-7823-4ad0-baf3-c74f81722cc5">can implement only interfaces, not abstract classes</a>.</p>
+<p>Therefore, it would need to provide a java implementation on
+android.media.VolumeProvider that would in turn call the python callbacks.</p>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="https://konubinix.eu/blog/posts/a_python_runtime_on_android/?title=a_legacy_from_another_lifetime#a-legacy-from-another-lifetime">a legacy from another lifetime</a> (blog)</li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/9a2189f9-2a9c-412e-b1a7-c6e1bb466064?title=access_hardware_volume_keys_in_kivy">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 11 Dec 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 03 Dec 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

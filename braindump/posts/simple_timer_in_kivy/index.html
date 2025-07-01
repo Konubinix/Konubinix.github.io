@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html><title>simple timer in kivy</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Simple Timer in Kivy</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p><a id="code-snippet--main-ex"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-org" data-lang="org"><span style="display:flex;"><span>import os
+</span></span><span style="display:flex;"><span>from datetime import datetime, timedelta
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>import math
+</span></span><span style="display:flex;"><span>import time
+</span></span><span style="display:flex;"><span>import requests
+</span></span><span style="display:flex;"><span>from kivy.app import App
+</span></span><span style="display:flex;"><span>from kivy.clock import Clock
+</span></span><span style="display:flex;"><span>from kivy.graphics import Color, Rectangle
+</span></span><span style="display:flex;"><span>from kivy.properties import BooleanProperty, NumericProperty, StringProperty
+</span></span><span style="display:flex;"><span>from kivy.uix.boxlayout import BoxLayout
+</span></span><span style="display:flex;"><span>from plyer import orientation
+</span></span><span style="display:flex;"><span>from kivy.uix.button import Button
+</span></span><span style="display:flex;"><span>from kivy.uix.gridlayout import GridLayout
+</span></span><span style="display:flex;"><span>from kivy.uix.label import Label
+</span></span><span style="display:flex;"><span>from kivy.uix.progressbar import ProgressBar
+</span></span><span style="display:flex;"><span>from kivy.uix.screenmanager import Screen, ScreenManager, ScreenManagerException
+</span></span><span style="display:flex;"><span>from kivy.core.audio import SoundLoader
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>from helpers.osc import oschandler, to_service
+</span></span><span style="display:flex;"><span>from helpers.wakelock import WakeLock
+</span></span><span style="display:flex;"><span>from helpers.notify import notify
+</span></span><span style="display:flex;"><span>from android.runnable import run_on_ui_thread
+</span></span><span style="display:flex;"><span>from logging import getLogger
+</span></span><span style="display:flex;"><span>from kivy.lang import Builder
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>logger = getLogger(__name__)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pink = (1, 0.75, 0.8)
+</span></span><span style="display:flex;"><span>orange = (1, 0.5, 0)
+</span></span><span style="display:flex;"><span>cyan = (0, 1, 1)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Builder.load_string(&#34;&#34;&#34;
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># copy from the source code of kivy, but increased</span>
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#d14">ProgressBar</span>&gt;:
+</span></span><span style="display:flex;"><span>    canvas:
+</span></span><span style="display:flex;"><span>        Color:
+</span></span><span style="display:flex;"><span>            rgb: 1, 1, 1
+</span></span><span style="display:flex;"><span>        BorderImage:
+</span></span><span style="display:flex;"><span>            border: (12, 12, 12, 12)
+</span></span><span style="display:flex;"><span>            pos: self.x, self.y
+</span></span><span style="display:flex;"><span>            size: self.width, self.height
+</span></span><span style="display:flex;"><span>            source: &#39;atlas://data/images/defaulttheme<span style="color:#000;font-style:italic">/progressbar_background&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        BorderImage:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">            border: [int(min(self.width * (self.value /</span> float(self.max)) if self.max else 0, 12))] * 4
+</span></span><span style="display:flex;"><span>            pos: self.x, self.y
+</span></span><span style="display:flex;"><span>            size: self.width * (self.value <span style="color:#000;font-style:italic">/ float(self.max)) if self.max else 0, self.height
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">            source: &#39;atlas:/</span>/data/images/defaulttheme/progressbar&#39;
+</span></span><span style="display:flex;"><span>&#34;&#34;&#34;)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>class StateMachine(object):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def __init__(self, manager, duration, remaining_time=None):
+</span></span><span style="display:flex;"><span>        self.manager = manager
+</span></span><span style="display:flex;"><span>        self.duration = duration
+</span></span><span style="display:flex;"><span>        self.state = &#34;step&#34;
+</span></span><span style="display:flex;"><span>        self.timer = self.manager.get_screen(&#39;simpletimer:timer&#39;)
+</span></span><span style="display:flex;"><span>        self.remaining_time = remaining_time
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def update(self):
+</span></span><span style="display:flex;"><span>        if self.state == &#34;step&#34;:
+</span></span><span style="display:flex;"><span>            self.timer.finish()
+</span></span><span style="display:flex;"><span>        else:
+</span></span><span style="display:flex;"><span>            raise NotImplementedError()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def start(self):
+</span></span><span style="display:flex;"><span>        sound_map={}
+</span></span><span style="display:flex;"><span>        for time in [300]:
+</span></span><span style="display:flex;"><span>            location = &#34;/sdcard<span style="color:#000;font-style:italic">/Alarms/</span>{}.ogg&#34;.format(time)
+</span></span><span style="display:flex;"><span>            if os.path.exists(location):
+</span></span><span style="display:flex;"><span>                sound_map[time] = SoundLoader.load(location)
+</span></span><span style="display:flex;"><span>        self.timer.start_timer(
+</span></span><span style="display:flex;"><span>            what=&#34;Tic, Tac...&#34;,
+</span></span><span style="display:flex;"><span>            color=cyan,
+</span></span><span style="display:flex;"><span>            duration=self.duration,
+</span></span><span style="display:flex;"><span>            on_done=self.update,
+</span></span><span style="display:flex;"><span>            sound_map=sound_map,
+</span></span><span style="display:flex;"><span>            remaining_time=self.remaining_time,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>class SettingsScreen(Screen):
+</span></span><span style="display:flex;"><span>    duration = NumericProperty(60)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def _update_rect(self, instance, value):
+</span></span><span style="display:flex;"><span>        self.rect.pos = instance.pos
+</span></span><span style="display:flex;"><span>        self.rect.size = instance.size
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def __init__(self, *<span style="font-weight:bold">*kwargs):
+</span></span></span><span style="display:flex;"><span><span style="font-weight:bold">        super(SettingsScreen, self).__init__(*</span>*kwargs)
+</span></span><span style="display:flex;"><span>        self.remaining_time = None
+</span></span><span style="display:flex;"><span>        with self.canvas.before:
+</span></span><span style="display:flex;"><span>            self.color = Color(1, 1, 1, 1)
+</span></span><span style="display:flex;"><span>            self.rect = Rectangle(size=self.size, pos=self.pos)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.bind(size=self._update_rect, pos=self._update_rect)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout <span style="color:#458;font-weight:bold">= BoxLayout(orientation=</span>&#39;vertical&#39;)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        duration_layout <span style="color:#458;font-weight:bold">= BoxLayout(size_hint=</span>(1, 0.15))
+</span></span><span style="display:flex;"><span>        duration_layout.add_widget(
+</span></span><span style="display:flex;"><span>            Button(text=&#34;-&#34;,
+</span></span><span style="display:flex;"><span>                   background_color=(0, 0, 1, 1),
+</span></span><span style="display:flex;"><span>                   color=(1, 1, 1, 1),
+</span></span><span style="display:flex;"><span>                   on_press=self.decrease_duration))
+</span></span><span style="display:flex;"><span>        self.duration_label <span style="color:#458;font-weight:bold">= Label(text=</span>&#34;&#34;, color=(0, 0, 0, 1))
+</span></span><span style="display:flex;"><span>        duration_layout.add_widget(self.duration_label)
+</span></span><span style="display:flex;"><span>        duration_layout.add_widget(
+</span></span><span style="display:flex;"><span>            Button(text=&#34;<span style="color:#000;background-color:#fdd">+&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                   background_color=(0, 0, 1, 1),
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                   color=(1, 1, 1, 1),
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                   on_press=self.increase_duration))
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        layout.add_widget(duration_layout)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        # Go button
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        go_button = Button(text=&#34;Go !!!&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                           background_color=(0, 0, 1, 1),
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                           color=(1, 1, 1, 1),
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                           size_hint=(1, 0.15))
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        go_button.bind(on_press=self.start_timer)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        layout.add_widget(go_button)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.add_widget(layout)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.update_display()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.bind(on_pre_enter=self.pre_enter_handler)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        @oschandler(&#34;alarmtimer:start&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        def _(config):
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.duration = config[&#34;duration&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.remaining_time = config.get(&#34;remaining_time&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.update_display()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.start_timer()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">    def pre_enter_handler(self, *_):
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        to_service(&#34;simpletimer:settings&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        orientation.set_sensor()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">    def update_display(self):
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.duration_label.text = &#34;Temps: &#34; +</span> str(self.duration // 60) <span style="color:#000;background-color:#fdd">+ &#34;m&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">    def increase_duration(self, instance):
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.duration +</span>= 60
+</span></span><span style="display:flex;"><span>        self.update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def decrease_duration(self, instance):
+</span></span><span style="display:flex;"><span>        if self.duration &gt; 60:
+</span></span><span style="display:flex;"><span>            self.duration -= 60
+</span></span><span style="display:flex;"><span>            self.update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def start_timer(self, *instance):
+</span></span><span style="display:flex;"><span>        app = App.get_running_app()
+</span></span><span style="display:flex;"><span>        app.root.state_machine = StateMachine(
+</span></span><span style="display:flex;"><span>            self.manager,
+</span></span><span style="display:flex;"><span>            self.duration,
+</span></span><span style="display:flex;"><span>            remaining_time = self.remaining_time,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        app.root.state_machine.start()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>class TimerScreen(Screen):
+</span></span><span style="display:flex;"><span>    remaining_time = NumericProperty(0)
+</span></span><span style="display:flex;"><span>    duration = NumericProperty(0)
+</span></span><span style="display:flex;"><span>    timer_running = BooleanProperty(False)
+</span></span><span style="display:flex;"><span>    what = StringProperty(&#34;&#34;)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def _update_rect(self, instance, value):
+</span></span><span style="display:flex;"><span>        self.rect.pos = instance.pos
+</span></span><span style="display:flex;"><span>        self.rect.size = instance.size
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def __init__(self, *<span style="font-weight:bold">*kwargs):
+</span></span></span><span style="display:flex;"><span><span style="font-weight:bold">        super(TimerScreen, self).__init__(*</span>*kwargs)
+</span></span><span style="display:flex;"><span>        self.leave_is_background = True
+</span></span><span style="display:flex;"><span>        self.alarm = SoundLoader.load(&#34;/sdcard/Alarms/alarm.ogg&#34;)
+</span></span><span style="display:flex;"><span>        if self.alarm is None:
+</span></span><span style="display:flex;"><span>            raise Exception(&#34;Alarm could not be loaded&#34;)
+</span></span><span style="display:flex;"><span>        with self.canvas.before:
+</span></span><span style="display:flex;"><span>            self.color = Color(0, 1, 1, 1)
+</span></span><span style="display:flex;"><span>            self.rect = Rectangle(size=self.size, pos=self.pos)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.bind(size=self._update_rect, pos=self._update_rect)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout = GridLayout(cols=1)
+</span></span><span style="display:flex;"><span>        self.progress <span style="color:#458;font-weight:bold">= ProgressBar(size_hint=</span>(1, 0.5))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout.add_widget(self.progress)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.time_label <span style="color:#458;font-weight:bold">= Label(text=</span>&#34;&#34;, font_size<span style="color:#458;font-weight:bold">=&#39;50sp&#39;, color=</span>(0, 0, 0, 1))
+</span></span><span style="display:flex;"><span>        layout.add_widget(self.time_label)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.endtime_label <span style="color:#458;font-weight:bold">= Label(text=</span>&#34;&#34;, font_size<span style="color:#458;font-weight:bold">=&#39;50sp&#39;, color=</span>(0, 0, 0, 1))
+</span></span><span style="display:flex;"><span>        layout.add_widget(self.endtime_label)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.what_label <span style="color:#458;font-weight:bold">= Label(text=</span>&#34;&#34;, font_size<span style="color:#458;font-weight:bold">=&#39;20sp&#39;, color=</span>(0, 0, 0, 1))
+</span></span><span style="display:flex;"><span>        layout.add_widget(self.what_label)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        button_layout = BoxLayout()
+</span></span><span style="display:flex;"><span>        self.pause_button <span style="color:#458;font-weight:bold">= Button(text=</span>&#34;Pause&#34;,
+</span></span><span style="display:flex;"><span>                                   background_color=(0, 0, 1, 1),
+</span></span><span style="display:flex;"><span>                                   color=(1, 1, 1, 1))
+</span></span><span style="display:flex;"><span>        self.pause_button.bind(on_press=self.toggle_clock)
+</span></span><span style="display:flex;"><span>        # Change color when pressed and released
+</span></span><span style="display:flex;"><span>        def on_state(instance, value):
+</span></span><span style="display:flex;"><span>            if value == &#34;down&#34;:
+</span></span><span style="display:flex;"><span>                instance.background_color = (1, 1, 0, 1)  # Red when pressed
+</span></span><span style="display:flex;"><span>            else:
+</span></span><span style="display:flex;"><span>                instance.background_color = (0, 0, 1, 1)  # Blue when released
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.pause_button.bind(state=on_state)
+</span></span><span style="display:flex;"><span>        button_layout.add_widget(self.pause_button)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout.add_widget(button_layout)
+</span></span><span style="display:flex;"><span>        self.add_widget(layout)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.bind(on_pre_enter=self.pre_enter_handler)
+</span></span><span style="display:flex;"><span>        self.bind(on_pre_leave=self.pre_leave_handler)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        with WakeLock(&#34;simpletimer&#34;, wakeup=True):
+</span></span><span style="display:flex;"><span>            self.keep_screen_on()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def keep_screen_on(self, revert=False):
+</span></span><span style="display:flex;"><span>        from android import mActivity
+</span></span><span style="display:flex;"><span>        from jnius import autoclass
+</span></span><span style="display:flex;"><span>        from android.runnable import run_on_ui_thread
+</span></span><span style="display:flex;"><span>        LayoutParams = autoclass(&#39;android.view.WindowManager$LayoutParams&#39;)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        @run_on_ui_thread
+</span></span><span style="display:flex;"><span>        def do():
+</span></span><span style="display:flex;"><span>            if revert:
+</span></span><span style="display:flex;"><span>                logger.debug(&#34;Leaving screen always on&#34;)
+</span></span><span style="display:flex;"><span>                mActivity.getWindow().clearFlags(LayoutParams.FLAG_KEEP_SCREEN_ON)
+</span></span><span style="display:flex;"><span>            else:
+</span></span><span style="display:flex;"><span>                logger.debug(&#34;Entering screen always on&#34;)
+</span></span><span style="display:flex;"><span>                mActivity.getWindow().addFlags(LayoutParams.FLAG_KEEP_SCREEN_ON)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        do()
+</span></span><span style="display:flex;"><span>        time.sleep(0.5)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def pre_leave_handler(self, *args):
+</span></span><span style="display:flex;"><span>        self.stop_clock()
+</span></span><span style="display:flex;"><span>        if self.alarmtime_clock:
+</span></span><span style="display:flex;"><span>            self.alarmtime_clock.cancel()
+</span></span><span style="display:flex;"><span>            self.alarmtime_clock = None
+</span></span><span style="display:flex;"><span>        self.keep_screen_on(revert=True)
+</span></span><span style="display:flex;"><span>        if self.alarm:
+</span></span><span style="display:flex;"><span>            self.alarm.stop()
+</span></span><span style="display:flex;"><span>            self.alarm.seek(0)
+</span></span><span style="display:flex;"><span>        from jnius import autoclass
+</span></span><span style="display:flex;"><span>        from android import mActivity
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        View = autoclass(&#39;android.view.View&#39;)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        option = View.SYSTEM_UI_FLAG_VISIBLE
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        @run_on_ui_thread
+</span></span><span style="display:flex;"><span>        def fs():
+</span></span><span style="display:flex;"><span>            logger.debug(&#34;Leaving fullscreen mode&#34;)
+</span></span><span style="display:flex;"><span>            mActivity.getWindow().getDecorView().setSystemUiVisibility(option)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        fs()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def pre_enter_handler(self, *args):
+</span></span><span style="display:flex;"><span>        self.keep_screen_on()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        from jnius import autoclass
+</span></span><span style="display:flex;"><span>        from android import mActivity
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        View = autoclass(&#39;android.view.View&#39;)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        option = View.SYSTEM_UI_FLAG_FULLSCREEN
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        @run_on_ui_thread
+</span></span><span style="display:flex;"><span>        def fs():
+</span></span><span style="display:flex;"><span>            logger.debug(&#34;Entering fullscreen mode&#34;)
+</span></span><span style="display:flex;"><span>            mActivity.getWindow().getDecorView().setSystemUiVisibility(option)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        fs()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def start_timer(
+</span></span><span style="display:flex;"><span>            self,
+</span></span><span style="display:flex;"><span>            what,
+</span></span><span style="display:flex;"><span>            color,
+</span></span><span style="display:flex;"><span>            duration,
+</span></span><span style="display:flex;"><span>            on_done,
+</span></span><span style="display:flex;"><span>            sound_map,
+</span></span><span style="display:flex;"><span>            remaining_time=None,
+</span></span><span style="display:flex;"><span>    ):
+</span></span><span style="display:flex;"><span>        self.alarm = SoundLoader.load(&#34;/sdcard/Alarms<span style="color:#000;font-style:italic">/alarm.ogg&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        if self.alarm is None:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">            raise Exception(&#34;Alarm could not be loaded&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.wanted_color = color
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.color.rgb = self.wanted_color
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        App.get_running_app().goto(&#34;simpletimer:timer&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.duration = duration
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.what = what
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.elapsed_alarm_time = 0.
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.duration_alarm_fade_in = 90.
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.duration_alarm_fade_out = 90.
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.alarmtime_clock = None
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.remaining_time = remaining_time or duration
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.on_done = on_done
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.finished = False
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.sound_map = sound_map
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.sound = self.sound_map.get(None)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        if self.sound:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">            logger.info(&#34;Playing sound at startup&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">            self.sound.play()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.start_clock()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">    def update_display(self):
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        self.what_label.text = self.what
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">        if self.clock:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">            dimfactor = min(1, float(self.remaining_time) /</span> self.duration_alarm_fade_out)
+</span></span><span style="display:flex;"><span>            self.color.rgb = [component * dimfactor for component in self.wanted_color]
+</span></span><span style="display:flex;"><span>            self.pause_button.text = &#34;Pause&#34;
+</span></span><span style="display:flex;"><span>        else:
+</span></span><span style="display:flex;"><span>            if self.finished:
+</span></span><span style="display:flex;"><span>                self.what_label.text = &#34;C&#39;est fini !!!&#34;
+</span></span><span style="display:flex;"><span>                self.pause_button.text = &#34;Ok&#34;
+</span></span><span style="display:flex;"><span>            else:
+</span></span><span style="display:flex;"><span>                self.color.rgb = orange
+</span></span><span style="display:flex;"><span>                self.pause_button.text = &#34;Continue ?&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.time_label.text = str(self.remaining_time)
+</span></span><span style="display:flex;"><span>        self.endtime_label.text = (datetime.now() <span style="color:#000;background-color:#fdd">+ timedelta(seconds=self.remaining_time)).strftime(&#34;%H:%M:%S&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.progress.max = self.duration
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.progress.value = self.remaining_time
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">    def countdown(self, dt):
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        if self.remaining_time &gt; 0:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.remaining_time -= 1
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        else:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.stop_clock()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.alarmtime_clock = Clock.schedule_interval(self.alarmtime, 1)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.alarm.loop = True
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.alarm.volume = 0
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.color.rgb = (0, 0, 0)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.alarm.play()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.finished = True
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            try:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                notify(&#34;Timer finished&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            except Exception as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                logger.error(e)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                pass # this is unfortunate, but should not prevent the music to play
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.update_display()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        new_sound = self.sound_map.get(self.remaining_time)
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        if new_sound:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            logger.info(&#34;Playing sound at time {}&#34;.format(self.remaining_time))
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            if self.sound:
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">                self.sound.stop()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.sound = new_sound
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">            self.sound.play()
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">    def alarmtime(self, *_):
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">        self.elapsed_alarm_time +</span>= 1
+</span></span><span style="display:flex;"><span>        self.time_label.text = str(int(self.elapsed_alarm_time))
+</span></span><span style="display:flex;"><span>        if self.elapsed_alarm_time &lt; self.duration_alarm_fade_in:
+</span></span><span style="display:flex;"><span>            normalized_time = self.elapsed_alarm_time <span style="color:#000;font-style:italic">/ self.duration_alarm_fade_in
+</span></span></span><span style="display:flex;"><span><span style="color:#000;font-style:italic">            vol = math.sin(normalized_time * math.pi /</span> 2)
+</span></span><span style="display:flex;"><span>            self.color.rgb = (vol,) * 3
+</span></span><span style="display:flex;"><span>            logger.debug(&#34;Alarm volume: {}&#34;.format(vol))
+</span></span><span style="display:flex;"><span>            self.alarm.volume = vol
+</span></span><span style="display:flex;"><span>        else:
+</span></span><span style="display:flex;"><span>            self.alarm.volume = 1.0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def start_clock(self):
+</span></span><span style="display:flex;"><span>        self.clock = Clock.schedule_interval(self.countdown, 1)
+</span></span><span style="display:flex;"><span>        self.update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def stop_clock(self):
+</span></span><span style="display:flex;"><span>        Clock.unschedule(self.clock)
+</span></span><span style="display:flex;"><span>        self.clock = None
+</span></span><span style="display:flex;"><span>        self.update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def toggle_clock(self, instance=None):
+</span></span><span style="display:flex;"><span>        if self.finished:
+</span></span><span style="display:flex;"><span>            self.leave()
+</span></span><span style="display:flex;"><span>        elif self.clock:
+</span></span><span style="display:flex;"><span>            self.stop_clock()
+</span></span><span style="display:flex;"><span>        else:
+</span></span><span style="display:flex;"><span>            self.start_clock()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def finish(self):
+</span></span><span style="display:flex;"><span>        self.finished = True
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def leave(self, instance=None):
+</span></span><span style="display:flex;"><span>        if self.alarm:
+</span></span><span style="display:flex;"><span>            self.alarm.stop()
+</span></span><span style="display:flex;"><span>        if self.leave_is_background:
+</span></span><span style="display:flex;"><span>            from android import mActivity
+</span></span><span style="display:flex;"><span>            mActivity.moveTaskToBack(True)
+</span></span><span style="display:flex;"><span>        else:
+</span></span><span style="display:flex;"><span>            App.get_running_app().back()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>class SimpleTimerApp(App):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def goto(self, screen):
+</span></span><span style="display:flex;"><span>        self.manager.current = screen
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def back(self):
+</span></span><span style="display:flex;"><span>        self.manager.current = &#39;simpletimer:settings&#39;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    @staticmethod
+</span></span><span style="display:flex;"><span>    def populate(sm):
+</span></span><span style="display:flex;"><span>        try:
+</span></span><span style="display:flex;"><span>            sm.get_screen(&#39;simpletimer:settings&#39;)
+</span></span><span style="display:flex;"><span>            return
+</span></span><span style="display:flex;"><span>        except ScreenManagerException:
+</span></span><span style="display:flex;"><span>            pass # not populated yet
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        sm.add_widget(SettingsScreen(name=&#39;simpletimer:settings&#39;))
+</span></span><span style="display:flex;"><span>        sm.add_widget(TimerScreen(name=&#39;simpletimer:timer&#39;))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def build(self):
+</span></span><span style="display:flex;"><span>        sm = ScreenManager()
+</span></span><span style="display:flex;"><span>        self.populate(sm)
+</span></span><span style="display:flex;"><span>        return sm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>def run():
+</span></span><span style="display:flex;"><span>    SimpleTimerApp().run()
+</span></span></code></pre></div><p><a id="code-snippet--main"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">datetime</span> <span style="color:#000;font-weight:bold">import</span> datetime, timedelta
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">math</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">time</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">requests</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.app</span> <span style="color:#000;font-weight:bold">import</span> App
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.clock</span> <span style="color:#000;font-weight:bold">import</span> Clock
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.graphics</span> <span style="color:#000;font-weight:bold">import</span> Color, Rectangle
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.properties</span> <span style="color:#000;font-weight:bold">import</span> BooleanProperty, NumericProperty, StringProperty
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.boxlayout</span> <span style="color:#000;font-weight:bold">import</span> BoxLayout
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">plyer</span> <span style="color:#000;font-weight:bold">import</span> orientation
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.button</span> <span style="color:#000;font-weight:bold">import</span> Button
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.gridlayout</span> <span style="color:#000;font-weight:bold">import</span> GridLayout
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.label</span> <span style="color:#000;font-weight:bold">import</span> Label
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.progressbar</span> <span style="color:#000;font-weight:bold">import</span> ProgressBar
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.uix.screenmanager</span> <span style="color:#000;font-weight:bold">import</span> Screen, ScreenManager, ScreenManagerException
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.core.audio</span> <span style="color:#000;font-weight:bold">import</span> SoundLoader
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.osc</span> <span style="color:#000;font-weight:bold">import</span> oschandler, to_service
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.wakelock</span> <span style="color:#000;font-weight:bold">import</span> WakeLock
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">helpers.notify</span> <span style="color:#000;font-weight:bold">import</span> notify
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.runnable</span> <span style="color:#000;font-weight:bold">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">logging</span> <span style="color:#000;font-weight:bold">import</span> getLogger
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.lang</span> <span style="color:#000;font-weight:bold">import</span> Builder
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>logger <span style="color:#000;font-weight:bold">=</span> getLogger(__name__)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pink <span style="color:#000;font-weight:bold">=</span> (<span style="color:#099">1</span>, <span style="color:#099">0.75</span>, <span style="color:#099">0.8</span>)
+</span></span><span style="display:flex;"><span>orange <span style="color:#000;font-weight:bold">=</span> (<span style="color:#099">1</span>, <span style="color:#099">0.5</span>, <span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>cyan <span style="color:#000;font-weight:bold">=</span> (<span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Builder<span style="color:#000;font-weight:bold">.</span>load_string(<span style="color:#d14">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"># copy from the source code of kivy, but increased
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&lt;ProgressBar&gt;:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    canvas:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        Color:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            rgb: 1, 1, 1
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        BorderImage:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            border: (12, 12, 12, 12)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            pos: self.x, self.y
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            size: self.width, self.height
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            source: &#39;atlas://data/images/defaulttheme/progressbar_background&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        BorderImage:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            border: [int(min(self.width * (self.value / float(self.max)) if self.max else 0, 12))] * 4
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            pos: self.x, self.y
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            size: self.width * (self.value / float(self.max)) if self.max else 0, self.height
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            source: &#39;atlas://data/images/defaulttheme/progressbar&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&#34;&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">StateMachine</span>(<span style="color:#0086b3">object</span>):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>, manager, duration, remaining_time<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">None</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>manager <span style="color:#000;font-weight:bold">=</span> manager
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration <span style="color:#000;font-weight:bold">=</span> duration
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>state <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;step&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timer <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>manager<span style="color:#000;font-weight:bold">.</span>get_screen(<span style="color:#d14">&#39;simpletimer:timer&#39;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time <span style="color:#000;font-weight:bold">=</span> remaining_time
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">update</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>state <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;step&#34;</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timer<span style="color:#000;font-weight:bold">.</span>finish()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">raise</span> <span style="color:#900;font-weight:bold">NotImplementedError</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">start</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        sound_map<span style="color:#000;font-weight:bold">=</span>{}
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">for</span> time <span style="color:#000;font-weight:bold">in</span> [<span style="color:#099">300</span>]:
+</span></span><span style="display:flex;"><span>            location <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;/sdcard/Alarms/</span><span style="color:#d14">{}</span><span style="color:#d14">.ogg&#34;</span><span style="color:#000;font-weight:bold">.</span>format(time)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> os<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>exists(location):
+</span></span><span style="display:flex;"><span>                sound_map[time] <span style="color:#000;font-weight:bold">=</span> SoundLoader<span style="color:#000;font-weight:bold">.</span>load(location)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>timer<span style="color:#000;font-weight:bold">.</span>start_timer(
+</span></span><span style="display:flex;"><span>            what<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;Tic, Tac...&#34;</span>,
+</span></span><span style="display:flex;"><span>            color<span style="color:#000;font-weight:bold">=</span>cyan,
+</span></span><span style="display:flex;"><span>            duration<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration,
+</span></span><span style="display:flex;"><span>            on_done<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>update,
+</span></span><span style="display:flex;"><span>            sound_map<span style="color:#000;font-weight:bold">=</span>sound_map,
+</span></span><span style="display:flex;"><span>            remaining_time<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">SettingsScreen</span>(Screen):
+</span></span><span style="display:flex;"><span>    duration <span style="color:#000;font-weight:bold">=</span> NumericProperty(<span style="color:#099">60</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_update_rect</span>(<span style="color:#999">self</span>, instance, value):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>rect<span style="color:#000;font-weight:bold">.</span>pos <span style="color:#000;font-weight:bold">=</span> instance<span style="color:#000;font-weight:bold">.</span>pos
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>rect<span style="color:#000;font-weight:bold">.</span>size <span style="color:#000;font-weight:bold">=</span> instance<span style="color:#000;font-weight:bold">.</span>size
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">**</span>kwargs):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(SettingsScreen, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__(<span style="color:#000;font-weight:bold">**</span>kwargs)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">with</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>canvas<span style="color:#000;font-weight:bold">.</span>before:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>color <span style="color:#000;font-weight:bold">=</span> Color(<span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>rect <span style="color:#000;font-weight:bold">=</span> Rectangle(size<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>size, pos<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pos)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(size<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>_update_rect, pos<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>_update_rect)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout <span style="color:#000;font-weight:bold">=</span> BoxLayout(orientation<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;vertical&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        duration_layout <span style="color:#000;font-weight:bold">=</span> BoxLayout(size_hint<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1</span>, <span style="color:#099">0.15</span>))
+</span></span><span style="display:flex;"><span>        duration_layout<span style="color:#000;font-weight:bold">.</span>add_widget(
+</span></span><span style="display:flex;"><span>            Button(text<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;-&#34;</span>,
+</span></span><span style="display:flex;"><span>                   background_color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>),
+</span></span><span style="display:flex;"><span>                   color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>),
+</span></span><span style="display:flex;"><span>                   on_press<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>decrease_duration))
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration_label <span style="color:#000;font-weight:bold">=</span> Label(text<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;&#34;</span>, color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>))
+</span></span><span style="display:flex;"><span>        duration_layout<span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration_label)
+</span></span><span style="display:flex;"><span>        duration_layout<span style="color:#000;font-weight:bold">.</span>add_widget(
+</span></span><span style="display:flex;"><span>            Button(text<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;+&#34;</span>,
+</span></span><span style="display:flex;"><span>                   background_color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>),
+</span></span><span style="display:flex;"><span>                   color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>),
+</span></span><span style="display:flex;"><span>                   on_press<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>increase_duration))
+</span></span><span style="display:flex;"><span>        layout<span style="color:#000;font-weight:bold">.</span>add_widget(duration_layout)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic"># Go button</span>
+</span></span><span style="display:flex;"><span>        go_button <span style="color:#000;font-weight:bold">=</span> Button(text<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;Go !!!&#34;</span>,
+</span></span><span style="display:flex;"><span>                           background_color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>),
+</span></span><span style="display:flex;"><span>                           color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>),
+</span></span><span style="display:flex;"><span>                           size_hint<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1</span>, <span style="color:#099">0.15</span>))
+</span></span><span style="display:flex;"><span>        go_button<span style="color:#000;font-weight:bold">.</span>bind(on_press<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>start_timer)
+</span></span><span style="display:flex;"><span>        layout<span style="color:#000;font-weight:bold">.</span>add_widget(go_button)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>add_widget(layout)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_enter<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_enter_handler)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@oschandler</span>(<span style="color:#d14">&#34;alarmtimer:start&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_</span>(config):
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration <span style="color:#000;font-weight:bold">=</span> config[<span style="color:#d14">&#34;duration&#34;</span>]
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time <span style="color:#000;font-weight:bold">=</span> config<span style="color:#000;font-weight:bold">.</span>get(<span style="color:#d14">&#34;remaining_time&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>update_display()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>start_timer()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_enter_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>_):
+</span></span><span style="display:flex;"><span>        to_service(<span style="color:#d14">&#34;simpletimer:settings&#34;</span>)
+</span></span><span style="display:flex;"><span>        orientation<span style="color:#000;font-weight:bold">.</span>set_sensor()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">update_display</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration_label<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Temps: &#34;</span> <span style="color:#000;font-weight:bold">+</span> <span style="color:#0086b3">str</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration <span style="color:#000;font-weight:bold">//</span> <span style="color:#099">60</span>) <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;m&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">increase_duration</span>(<span style="color:#999">self</span>, instance):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration <span style="color:#000;font-weight:bold">+=</span> <span style="color:#099">60</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">decrease_duration</span>(<span style="color:#999">self</span>, instance):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration <span style="color:#000;font-weight:bold">&gt;</span> <span style="color:#099">60</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration <span style="color:#000;font-weight:bold">-=</span> <span style="color:#099">60</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">start_timer</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>instance):
+</span></span><span style="display:flex;"><span>        app <span style="color:#000;font-weight:bold">=</span> App<span style="color:#000;font-weight:bold">.</span>get_running_app()
+</span></span><span style="display:flex;"><span>        app<span style="color:#000;font-weight:bold">.</span>root<span style="color:#000;font-weight:bold">.</span>state_machine <span style="color:#000;font-weight:bold">=</span> StateMachine(
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>manager,
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration,
+</span></span><span style="display:flex;"><span>            remaining_time <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        app<span style="color:#000;font-weight:bold">.</span>root<span style="color:#000;font-weight:bold">.</span>state_machine<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">TimerScreen</span>(Screen):
+</span></span><span style="display:flex;"><span>    remaining_time <span style="color:#000;font-weight:bold">=</span> NumericProperty(<span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>    duration <span style="color:#000;font-weight:bold">=</span> NumericProperty(<span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>    timer_running <span style="color:#000;font-weight:bold">=</span> BooleanProperty(<span style="color:#000;font-weight:bold">False</span>)
+</span></span><span style="display:flex;"><span>    what <span style="color:#000;font-weight:bold">=</span> StringProperty(<span style="color:#d14">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_update_rect</span>(<span style="color:#999">self</span>, instance, value):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>rect<span style="color:#000;font-weight:bold">.</span>pos <span style="color:#000;font-weight:bold">=</span> instance<span style="color:#000;font-weight:bold">.</span>pos
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>rect<span style="color:#000;font-weight:bold">.</span>size <span style="color:#000;font-weight:bold">=</span> instance<span style="color:#000;font-weight:bold">.</span>size
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> __init__(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">**</span>kwargs):
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">super</span>(TimerScreen, <span style="color:#999">self</span>)<span style="color:#000;font-weight:bold">.</span>__init__(<span style="color:#000;font-weight:bold">**</span>kwargs)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>leave_is_background <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">True</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm <span style="color:#000;font-weight:bold">=</span> SoundLoader<span style="color:#000;font-weight:bold">.</span>load(<span style="color:#d14">&#34;/sdcard/Alarms/alarm.ogg&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm <span style="color:#000;font-weight:bold">is</span> <span style="color:#000;font-weight:bold">None</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">raise</span> <span style="color:#900;font-weight:bold">Exception</span>(<span style="color:#d14">&#34;Alarm could not be loaded&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">with</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>canvas<span style="color:#000;font-weight:bold">.</span>before:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>color <span style="color:#000;font-weight:bold">=</span> Color(<span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>rect <span style="color:#000;font-weight:bold">=</span> Rectangle(size<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>size, pos<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pos)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(size<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>_update_rect, pos<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>_update_rect)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout <span style="color:#000;font-weight:bold">=</span> GridLayout(cols<span style="color:#000;font-weight:bold">=</span><span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>progress <span style="color:#000;font-weight:bold">=</span> ProgressBar(size_hint<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1</span>, <span style="color:#099">0.5</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout<span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>progress)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>time_label <span style="color:#000;font-weight:bold">=</span> Label(text<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;&#34;</span>, font_size<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;50sp&#39;</span>, color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>))
+</span></span><span style="display:flex;"><span>        layout<span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>time_label)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>endtime_label <span style="color:#000;font-weight:bold">=</span> Label(text<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;&#34;</span>, font_size<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;50sp&#39;</span>, color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>))
+</span></span><span style="display:flex;"><span>        layout<span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>endtime_label)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>what_label <span style="color:#000;font-weight:bold">=</span> Label(text<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;&#34;</span>, font_size<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;20sp&#39;</span>, color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>))
+</span></span><span style="display:flex;"><span>        layout<span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>what_label)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        button_layout <span style="color:#000;font-weight:bold">=</span> BoxLayout()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pause_button <span style="color:#000;font-weight:bold">=</span> Button(text<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;Pause&#34;</span>,
+</span></span><span style="display:flex;"><span>                                   background_color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>),
+</span></span><span style="display:flex;"><span>                                   color<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>))
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pause_button<span style="color:#000;font-weight:bold">.</span>bind(on_press<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>toggle_clock)
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic"># Change color when pressed and released</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">on_state</span>(instance, value):
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> value <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;down&#34;</span>:
+</span></span><span style="display:flex;"><span>                instance<span style="color:#000;font-weight:bold">.</span>background_color <span style="color:#000;font-weight:bold">=</span> (<span style="color:#099">1</span>, <span style="color:#099">1</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>)  <span style="color:#998;font-style:italic"># Red when pressed</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>                instance<span style="color:#000;font-weight:bold">.</span>background_color <span style="color:#000;font-weight:bold">=</span> (<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">1</span>, <span style="color:#099">1</span>)  <span style="color:#998;font-style:italic"># Blue when released</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pause_button<span style="color:#000;font-weight:bold">.</span>bind(state<span style="color:#000;font-weight:bold">=</span>on_state)
+</span></span><span style="display:flex;"><span>        button_layout<span style="color:#000;font-weight:bold">.</span>add_widget(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pause_button)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout<span style="color:#000;font-weight:bold">.</span>add_widget(button_layout)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>add_widget(layout)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_enter<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_enter_handler)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>bind(on_pre_leave<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pre_leave_handler)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">with</span> WakeLock(<span style="color:#d14">&#34;simpletimer&#34;</span>, wakeup<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>):
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>keep_screen_on()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">keep_screen_on</span>(<span style="color:#999">self</span>, revert<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">False</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.runnable</span> <span style="color:#000;font-weight:bold">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span>        LayoutParams <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.WindowManager$LayoutParams&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">do</span>():
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> revert:
+</span></span><span style="display:flex;"><span>                logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Leaving screen always on&#34;</span>)
+</span></span><span style="display:flex;"><span>                mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()<span style="color:#000;font-weight:bold">.</span>clearFlags(LayoutParams<span style="color:#000;font-weight:bold">.</span>FLAG_KEEP_SCREEN_ON)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>                logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Entering screen always on&#34;</span>)
+</span></span><span style="display:flex;"><span>                mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()<span style="color:#000;font-weight:bold">.</span>addFlags(LayoutParams<span style="color:#000;font-weight:bold">.</span>FLAG_KEEP_SCREEN_ON)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        do()
+</span></span><span style="display:flex;"><span>        time<span style="color:#000;font-weight:bold">.</span>sleep(<span style="color:#099">0.5</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_leave_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>stop_clock()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarmtime_clock:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarmtime_clock<span style="color:#000;font-weight:bold">.</span>cancel()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarmtime_clock <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>keep_screen_on(revert<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm<span style="color:#000;font-weight:bold">.</span>seek(<span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        View <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.View&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        option <span style="color:#000;font-weight:bold">=</span> View<span style="color:#000;font-weight:bold">.</span>SYSTEM_UI_FLAG_VISIBLE
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">fs</span>():
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Leaving fullscreen mode&#34;</span>)
+</span></span><span style="display:flex;"><span>            mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()<span style="color:#000;font-weight:bold">.</span>getDecorView()<span style="color:#000;font-weight:bold">.</span>setSystemUiVisibility(option)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        fs()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">pre_enter_handler</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>args):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>keep_screen_on()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        View <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.View&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        option <span style="color:#000;font-weight:bold">=</span> View<span style="color:#000;font-weight:bold">.</span>SYSTEM_UI_FLAG_FULLSCREEN
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">fs</span>():
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Entering fullscreen mode&#34;</span>)
+</span></span><span style="display:flex;"><span>            mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()<span style="color:#000;font-weight:bold">.</span>getDecorView()<span style="color:#000;font-weight:bold">.</span>setSystemUiVisibility(option)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        fs()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">start_timer</span>(
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span>,
+</span></span><span style="display:flex;"><span>            what,
+</span></span><span style="display:flex;"><span>            color,
+</span></span><span style="display:flex;"><span>            duration,
+</span></span><span style="display:flex;"><span>            on_done,
+</span></span><span style="display:flex;"><span>            sound_map,
+</span></span><span style="display:flex;"><span>            remaining_time<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">None</span>,
+</span></span><span style="display:flex;"><span>    ):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm <span style="color:#000;font-weight:bold">=</span> SoundLoader<span style="color:#000;font-weight:bold">.</span>load(<span style="color:#d14">&#34;/sdcard/Alarms/alarm.ogg&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm <span style="color:#000;font-weight:bold">is</span> <span style="color:#000;font-weight:bold">None</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">raise</span> <span style="color:#900;font-weight:bold">Exception</span>(<span style="color:#d14">&#34;Alarm could not be loaded&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>wanted_color <span style="color:#000;font-weight:bold">=</span> color
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>color<span style="color:#000;font-weight:bold">.</span>rgb <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>wanted_color
+</span></span><span style="display:flex;"><span>        App<span style="color:#000;font-weight:bold">.</span>get_running_app()<span style="color:#000;font-weight:bold">.</span>goto(<span style="color:#d14">&#34;simpletimer:timer&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration <span style="color:#000;font-weight:bold">=</span> duration
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>what <span style="color:#000;font-weight:bold">=</span> what
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>elapsed_alarm_time <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">0.</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration_alarm_fade_in <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">90.</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration_alarm_fade_out <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">90.</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarmtime_clock <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time <span style="color:#000;font-weight:bold">=</span> remaining_time <span style="color:#000;font-weight:bold">or</span> duration
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>on_done <span style="color:#000;font-weight:bold">=</span> on_done
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>finished <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound_map <span style="color:#000;font-weight:bold">=</span> sound_map
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound_map<span style="color:#000;font-weight:bold">.</span>get(<span style="color:#000;font-weight:bold">None</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound:
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>info(<span style="color:#d14">&#34;Playing sound at startup&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound<span style="color:#000;font-weight:bold">.</span>play()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>start_clock()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">update_display</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>what_label<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>what
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>clock:
+</span></span><span style="display:flex;"><span>            dimfactor <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">min</span>(<span style="color:#099">1</span>, <span style="color:#0086b3">float</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time) <span style="color:#000;font-weight:bold">/</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration_alarm_fade_out)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>color<span style="color:#000;font-weight:bold">.</span>rgb <span style="color:#000;font-weight:bold">=</span> [component <span style="color:#000;font-weight:bold">*</span> dimfactor <span style="color:#000;font-weight:bold">for</span> component <span style="color:#000;font-weight:bold">in</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>wanted_color]
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pause_button<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Pause&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>finished:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>what_label<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;C&#39;est fini !!!&#34;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pause_button<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Ok&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>color<span style="color:#000;font-weight:bold">.</span>rgb <span style="color:#000;font-weight:bold">=</span> orange
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>pause_button<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;Continue ?&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>time_label<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">str</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>endtime_label<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> (datetime<span style="color:#000;font-weight:bold">.</span>now() <span style="color:#000;font-weight:bold">+</span> timedelta(seconds<span style="color:#000;font-weight:bold">=</span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time))<span style="color:#000;font-weight:bold">.</span>strftime(<span style="color:#d14">&#34;%H:%M:%S&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>progress<span style="color:#000;font-weight:bold">.</span>max <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>progress<span style="color:#000;font-weight:bold">.</span>value <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">countdown</span>(<span style="color:#999">self</span>, dt):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time <span style="color:#000;font-weight:bold">&gt;</span> <span style="color:#099">0</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time <span style="color:#000;font-weight:bold">-=</span> <span style="color:#099">1</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>stop_clock()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarmtime_clock <span style="color:#000;font-weight:bold">=</span> Clock<span style="color:#000;font-weight:bold">.</span>schedule_interval(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarmtime, <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm<span style="color:#000;font-weight:bold">.</span>loop <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">True</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm<span style="color:#000;font-weight:bold">.</span>volume <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>color<span style="color:#000;font-weight:bold">.</span>rgb <span style="color:#000;font-weight:bold">=</span> (<span style="color:#099">0</span>, <span style="color:#099">0</span>, <span style="color:#099">0</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm<span style="color:#000;font-weight:bold">.</span>play()
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>finished <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">True</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>                notify(<span style="color:#d14">&#34;Timer finished&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">except</span> <span style="color:#900;font-weight:bold">Exception</span> <span style="color:#000;font-weight:bold">as</span> e:
+</span></span><span style="display:flex;"><span>                logger<span style="color:#000;font-weight:bold">.</span>error(e)
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">pass</span> <span style="color:#998;font-style:italic"># this is unfortunate, but should not prevent the music to play</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>update_display()
+</span></span><span style="display:flex;"><span>        new_sound <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound_map<span style="color:#000;font-weight:bold">.</span>get(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> new_sound:
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>info(<span style="color:#d14">&#34;Playing sound at time </span><span style="color:#d14">{}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">.</span>format(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>remaining_time))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound:
+</span></span><span style="display:flex;"><span>                <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound <span style="color:#000;font-weight:bold">=</span> new_sound
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>sound<span style="color:#000;font-weight:bold">.</span>play()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">alarmtime</span>(<span style="color:#999">self</span>, <span style="color:#000;font-weight:bold">*</span>_):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>elapsed_alarm_time <span style="color:#000;font-weight:bold">+=</span> <span style="color:#099">1</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>time_label<span style="color:#000;font-weight:bold">.</span>text <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">str</span>(<span style="color:#0086b3">int</span>(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>elapsed_alarm_time))
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>elapsed_alarm_time <span style="color:#000;font-weight:bold">&lt;</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration_alarm_fade_in:
+</span></span><span style="display:flex;"><span>            normalized_time <span style="color:#000;font-weight:bold">=</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>elapsed_alarm_time <span style="color:#000;font-weight:bold">/</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>duration_alarm_fade_in
+</span></span><span style="display:flex;"><span>            vol <span style="color:#000;font-weight:bold">=</span> math<span style="color:#000;font-weight:bold">.</span>sin(normalized_time <span style="color:#000;font-weight:bold">*</span> math<span style="color:#000;font-weight:bold">.</span>pi <span style="color:#000;font-weight:bold">/</span> <span style="color:#099">2</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>color<span style="color:#000;font-weight:bold">.</span>rgb <span style="color:#000;font-weight:bold">=</span> (vol,) <span style="color:#000;font-weight:bold">*</span> <span style="color:#099">3</span>
+</span></span><span style="display:flex;"><span>            logger<span style="color:#000;font-weight:bold">.</span>debug(<span style="color:#d14">&#34;Alarm volume: </span><span style="color:#d14">{}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">.</span>format(vol))
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm<span style="color:#000;font-weight:bold">.</span>volume <span style="color:#000;font-weight:bold">=</span> vol
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm<span style="color:#000;font-weight:bold">.</span>volume <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">1.0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">start_clock</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>clock <span style="color:#000;font-weight:bold">=</span> Clock<span style="color:#000;font-weight:bold">.</span>schedule_interval(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>countdown, <span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">stop_clock</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        Clock<span style="color:#000;font-weight:bold">.</span>unschedule(<span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>clock)
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>clock <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>update_display()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">toggle_clock</span>(<span style="color:#999">self</span>, instance<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">None</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>finished:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>leave()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">elif</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>clock:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>stop_clock()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>start_clock()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">finish</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>finished <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">True</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">leave</span>(<span style="color:#999">self</span>, instance<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">None</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm:
+</span></span><span style="display:flex;"><span>            <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>alarm<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>leave_is_background:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span>            mActivity<span style="color:#000;font-weight:bold">.</span>moveTaskToBack(<span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            App<span style="color:#000;font-weight:bold">.</span>get_running_app()<span style="color:#000;font-weight:bold">.</span>back()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">class</span> <span style="color:#458;font-weight:bold">SimpleTimerApp</span>(App):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">goto</span>(<span style="color:#999">self</span>, screen):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>manager<span style="color:#000;font-weight:bold">.</span>current <span style="color:#000;font-weight:bold">=</span> screen
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">back</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>manager<span style="color:#000;font-weight:bold">.</span>current <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#39;simpletimer:settings&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#3c5d5d;font-weight:bold">@staticmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">populate</span>(sm):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>            sm<span style="color:#000;font-weight:bold">.</span>get_screen(<span style="color:#d14">&#39;simpletimer:settings&#39;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">except</span> ScreenManagerException:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">pass</span> <span style="color:#998;font-style:italic"># not populated yet</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        sm<span style="color:#000;font-weight:bold">.</span>add_widget(SettingsScreen(name<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;simpletimer:settings&#39;</span>))
+</span></span><span style="display:flex;"><span>        sm<span style="color:#000;font-weight:bold">.</span>add_widget(TimerScreen(name<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;simpletimer:timer&#39;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">build</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>        sm <span style="color:#000;font-weight:bold">=</span> ScreenManager()
+</span></span><span style="display:flex;"><span>        <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>populate(sm)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> sm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">run</span>():
+</span></span><span style="display:flex;"><span>    SimpleTimerApp()<span style="color:#000;font-weight:bold">.</span>run()
+</span></span></code></pre></div><p>I used this Mario Kart Last Lap warning sound (from <a href="https://www.myinstants.com/en/instant/mario-kart-8-final-lap-1867/">https://www.myinstants.com/en/instant/mario-kart-8-final-lap-1867/</a>) as warning for the last 5 minutes.</p>
+<p><a href="https://konubinix.eu/ipfs/bafkreibzyleazgpnuguwsihazcqr5tt2otvfubbut6hspg24yixlgn5x5e?filename=300.ogg">300.ogg</a></p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/adc0b269-775d-49ae-ae7e-f8e8fbcec244?title=simple_timer_in_kivy">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 16 May 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 22 Dec 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

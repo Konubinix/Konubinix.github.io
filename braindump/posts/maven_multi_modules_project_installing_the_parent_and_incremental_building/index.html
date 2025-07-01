@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html><title>maven multi-modules project, installing the parent and incremental building</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Maven Multi-Modules Project, Installing the Parent and Incremental Building</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>When creating a classical <a href="/braindump/posts/maven_project_aggregation/">maven multi-modules project</a>, you generally have the following hierarchy.</p>
+<ul>
+<li>top level, declaring modules 1, 2, 3, &hellip;
+<ul>
+<li>module_1, declaring top level pom as parent</li>
+<li>module_2, declaring top level pom as parent and depending on module_1</li>
+<li>module_3, declaring top level pom as parent and depending on module_2</li>
+<li>etc&hellip;</li>
+</ul>
+</li>
+</ul>
+<p>Because the top level declares module and is referred to as parent, it is a
+<a href="/braindump/posts/maven_project_aggregation/">aggregator project</a> as well as a <a href="/braindump/posts/maven_project_inheritance/">parent project</a>.</p>
+<p>Say you want to build only module 2. You could use the <code>--project</code> flag.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>mvn --projects module2 --also-make install
+</span></span></code></pre></div><p>But in case you have a caching system based on folder changes, you might have to
+call this command again when a change in module_3 happened. Then you might want
+to copy only the needed module and the top level pom to the build process.</p>
+<p>In that case, you might want to build the dependencies independently, using the
+following commands.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> module_1 <span style="color:#000;font-weight:bold">&amp;&amp;</span> mvn install <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">popd</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> module_2 <span style="color:#000;font-weight:bold">&amp;&amp;</span> mvn install <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">popd</span>
+</span></span></code></pre></div><p>But in that case, you are likely to experience the top level pom not found in
+resolving the module_1 dependency. In the form</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[ERROR] Failed to execute goal on project module_2: Could not resolve dependencies for project groupid:module_1:jar:version: Failed to read artifact descriptor for groupid:module_1:jar:version: Could not find artifact groupid:toplevel:pom:version -&gt; [Help 1]
+</span></span></code></pre></div><p>This is because when installing module_2, it needs to read the installed
+module_1 and its dependencies. The dependencies are described in the top level
+module, not yet installed.</p>
+<p>Fortunately, you can install the top level project without building the subproject
+(this would break the incremental logic). Then the correct sequence is:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>mvn install --non-recursive <span style="color:#998;font-style:italic"># to install the top level pom</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> module_1 <span style="color:#000;font-weight:bold">&amp;&amp;</span> mvn install <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">popd</span> <span style="color:#998;font-style:italic"># to install the module_1, finds its top level pom in the upper directory (no need for installing the top level pom)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> module_2 <span style="color:#000;font-weight:bold">&amp;&amp;</span> mvn install <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">popd</span> <span style="color:#998;font-style:italic"># to install the module_2, finds its top level pom in the upper directory (no need for installing the top level pom), but also needs module_1 and then needs the installed top level pom to resolve its dependencies</span>
+</span></span></code></pre></div><p>For some reason, some people don&rsquo;t like this logic and rather want to make the
+<a href="/braindump/posts/maven_project_inheritance/">maven project inheritance</a> and <a href="/braindump/posts/maven_project_aggregation/">maven project aggregation</a> described in
+separate poms.</p>
+<p>In that situation, it is common to find the following hierarchy.</p>
+<ul>
+<li>top level, declaring modules parent, 1, 2, 3, &hellip;
+<ul>
+<li>parent, being the <a href="/braindump/posts/maven_project_inheritance/">maven parent</a></li>
+<li>module_1, declaring parent pom as parent with relativePath=../parent</li>
+<li>module_2, declaring parent pom as parent with relativePath=../parent and depending on module_1</li>
+<li>module_3, declaring parent pom as parent with relativePath=../parent and depending on module_2</li>
+<li>etc&hellip;</li>
+</ul>
+</li>
+</ul>
+<p>In that situation, you simply have to run the following command:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> parent <span style="color:#000;font-weight:bold">&amp;&amp;</span> mvn install <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">popd</span> <span style="color:#998;font-style:italic"># to install the parent pom</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> module_1 <span style="color:#000;font-weight:bold">&amp;&amp;</span> mvn install <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">popd</span> <span style="color:#998;font-style:italic"># to install the module_1, finds its parent pom in the relativePath (no need for installing the parent pom)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> module_2 <span style="color:#000;font-weight:bold">&amp;&amp;</span> mvn install <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">popd</span> <span style="color:#998;font-style:italic"># to install the module_2, finds its parent pom in the relativePath (no need for installing the parent pom), but also needs module_1 and then needs the installed parent pom to resolve its dependencies</span>
+</span></span></code></pre></div><h2 id="permalink"><a href="https://konubinix.eu/braindump/da9aebaf-28fc-4d48-a226-b50675f0e309?title=maven_multi_modules_project_installing_the_parent_and_incremental_building">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 09 Aug 2021</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 26 Apr 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html><title>stopmotion android apps</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Stopmotion Android Apps</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#82cb061e-8524-476d-ae05-e42241b56dd4">controlling the other device with gun.js?</a></li>
+<li><a href="#5ff1222f-85a5-4761-af21-1fa949229db5">using webrtc to send pictures?</a></li>
+<li><a href="#9f6db40f-c625-4916-bb32-f89cce35a8de">with webrtc and qr code signaling and offline mode?</a></li>
+<li><a href="#d8526843-2831-462f-be9a-d88bc80e95fe">with kivy then?</a></li>
+<li><a href="#d56a5ac2-0676-4d79-a94d-aa691dd66421">webrtc + servdroid -&gt; a first minimum viable product</a></li>
+<li><a href="#0e504431-68ad-4561-8c33-d436b9c13d04">peerjs + servdroid -&gt; going one step further in term of UX</a>
+<ul>
+<li><a href="#439a4796-4373-4893-82f2-ce0ef7a82f8e">code that runs on the camera</a></li>
+<li><a href="#e5d98d2c-1900-4fac-b048-1077464ccf62">code that runs on the controller</a></li>
+<li><a href="#4f599498-ef5a-43a7-ae28-86b2c730d062">code that runs on the server</a></li>
+</ul>
+</li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>I want to be able to use 2 <a href="/braindump/posts/android/">Android</a> phones to make some <a href="/braindump/posts/stopmotion/">stopmotion</a> videos
+with my kids.</p>
+<p>This is what I want to achieve.</p>
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafybeidgj7r4x75hmv2akuwvt3g7iq46djb3e4lncdbr4pqaobeibqkg34?filename=2024_01_05t09_41_47_01_00.png">
+</figure>
+
+<p>One device, the photo takers, is left untouched on a stick. The other is used to
+remotely trigger photos and manage the photos.</p>
+<ol>
+<li>the controller triggers the photo taker</li>
+<li>the photo takers sends the picture to the server</li>
+<li>the server computes the thumbnail and stores the picture</li>
+<li>the controller looks at the photos and organize them, downloading only thumbnails to do so</li>
+</ol>
+<p>All the machines are connected to a private network, in which</p>
+<ul>
+<li>creating a <a href="/braindump/posts/self_signed_certificate/">self signed certificate</a> and installing it on the devices is cumbersome,</li>
+<li>discussing over http is not an issue</li>
+</ul>
+<p>Also, I don&rsquo;t want to rely on online services. The system must use local only
+http (not https) connections.</p>
+<h2 id="82cb061e-8524-476d-ae05-e42241b56dd4">controlling the other device with <a href="/braindump/posts/offline_first/#76ab2bb1-670e-44f3-bde1-d20258bc7789">gun.js</a>?</h2>
+<p>Tried it. The update is not reliable. Some get send twice, some need the
+browser to be refreshed. Will add more work than not using it.</p>
+<h2 id="5ff1222f-85a5-4761-af21-1fa949229db5">using <a href="/braindump/posts/webrtc/">webrtc</a> to send pictures?</h2>
+<p>With <a href="/braindump/posts/webrtc/">webrtc</a>, we can programatically take photos</p>
+<p>Using this <a href="https://codepen.io/bhagwatchouhan/pen/jjLJoB">codepen</a> as an example, this is quite easy to achieve.</p>
+<div class="button-group">
+  <button id="btn-start" type="button" class="button">Start Streaming</button>
+  <button id="btn-stop" type="button" class="button">Stop Streaming</button>
+  <button id="btn-capture" type="button" class="button">Capture Image</button>
+</div>
+<!-- Video Element & Canvas -->
+<div class="play-area">
+  <div class="play-area-sub">
+    <h3>The Stream</h3>
+    <video id="stream" width="320" height="240"></video>
+  </div>
+  <div class="play-area-sub">
+    <h3>The Capture</h3>
+    <canvas id="capture" width="320" height="240"></canvas>
+    <div id="snapshot"></div>
+  </div>
+</div>
+<script>
+// The buttons to start & stop stream and to capture the image
+var btnStart = document.getElementById( "btn-start" );
+var btnStop = document.getElementById( "btn-stop" );
+var btnCapture = document.getElementById( "btn-capture" );
+
+// The stream & capture
+var stream = document.getElementById( "stream" );
+var capture = document.getElementById( "capture" );
+var snapshot = document.getElementById( "snapshot" );
+
+// The video stream
+var cameraStream = null;
+
+// Attach listeners
+btnStart.addEventListener( "click", startStreaming );
+btnStop.addEventListener( "click", stopStreaming );
+btnCapture.addEventListener( "click", captureSnapshot );
+
+// Start Streaming
+function startStreaming() {
+
+    var mediaSupport = 'mediaDevices' in navigator;
+
+    if( mediaSupport && null == cameraStream ) {
+
+        navigator.mediaDevices.getUserMedia( { video: true } )
+        .then( function( mediaStream ) {
+
+            cameraStream = mediaStream;
+
+            stream.srcObject = mediaStream;
+
+            stream.play();
+
+            alert("Taking picture in 2 seconds");
+            setTimeout(captureSnapshot, 2000);
+        })
+        .catch( function( err ) {
+
+            console.log( "Unable to access camera: " + err );
+        });
+    }
+    else {
+
+        alert( 'Your browser does not support media devices.' );
+
+        return;
+    }
+}
+
+// Stop Streaming
+function stopStreaming() {
+
+    if( null != cameraStream ) {
+
+        var track = cameraStream.getTracks()[ 0 ];
+
+        track.stop();
+        stream.load();
+
+        cameraStream = null;
+    }
+}
+
+function captureSnapshot() {
+
+    if( null != cameraStream ) {
+
+        var ctx = capture.getContext( '2d' );
+        var img = new Image();
+
+        ctx.drawImage( stream, 0, 0, capture.width, capture.height );
+
+        img.src		= capture.toDataURL( "image/png" );
+        img.width	= 240;
+
+        snapshot.innerHTML = '';
+
+        snapshot.appendChild( img );
+    }
+}
+</script>
+<p>I could write a small application in <a href="/braindump/posts/alpine_js/">alpine.js</a> to get the picture and send
+it to the server.</p>
+<p>But getUserMedia is only available in https. That breaks one of my
+conditions. Too bad.</p>
+<h2 id="9f6db40f-c625-4916-bb32-f89cce35a8de">with webrtc and <a href="/braindump/posts/qr_code/">qr code</a> <a href="/braindump/posts/webrtc/#0a72cbf5-f05a-4615-b67f-8603bc783e2b">signaling</a> and <a href="/braindump/posts/progressive_web_app/#7f1f528b-f27f-4c87-b36d-e60cc9fe5626">offline mode</a>?</h2>
+<p>I could write a <a href="/braindump/posts/progressive_web_app/">PWA</a> with</p>
+<ul>
+<li><a href="/braindump/posts/progressive_web_app/#7f1f528b-f27f-4c87-b36d-e60cc9fe5626">offline mode</a>,</li>
+<li><a href="/braindump/posts/qr_code/">QR code</a> for signaling the pages with each other</li>
+</ul>
+<p>But how can I signal the application to the server if it needs to be installed
+in https and the browser won&rsquo;t accept <a href="/braindump/posts/mixed_content/">mixed content</a> when communicating with
+the local server over http only?</p>
+<h2 id="d8526843-2831-462f-be9a-d88bc80e95fe">with <a href="/braindump/posts/kivy/">kivy</a> then?</h2>
+<p>kivy provides the mean to get access to the camera</p>
+<p><a href="https://github.com/kivy/kivy/issues/6995">https://github.com/kivy/kivy/issues/6995</a></p>
+<p>Yet, it sounds like a source of <a href="/braindump/posts/sketchplanations/#eae83856-7b22-4839-bd70-f71c7662c3c5">Yak shaving</a>, having to</p>
+<ul>
+<li>find an example that actually works,</li>
+<li>deal with old versions of android.</li>
+</ul>
+<h2 id="d56a5ac2-0676-4d79-a94d-aa691dd66421">webrtc + <a href="/braindump/posts/servdroid/">servdroid</a> -&gt; a first <a href="/braindump/posts/minimum_viable_product/">minimum viable product</a></h2>
+<p>Do I really need https to get access to getUserMedia? Isn&rsquo;t it supposed to
+work with <a href="http://localhost">http://localhost</a> as well?</p>
+<p>I can</p>
+<ul>
+<li>install servDroid on the device taking pictures</li>
+<li>host a local index.html with the code using getUserMedia</li>
+<li>send the data over http to my server</li>
+</ul>
+<p>stopmotion does not need real time stuff, so I don&rsquo;t even need to get fancy here</p>
+<ul>
+<li>the photo taker takes photos every second</li>
+<li>it sends them to the server</li>
+<li>the server stores the last one</li>
+<li>the controller gets the current photo every second</li>
+<li>when the user clicks on a button of the controller, it post the order to the
+server, keeping a copy of the current photo and sending its name so that the
+controller can get a list of kept photos to show to the user.</li>
+</ul>
+<p>The server can store scaled down version of the images to help making things
+smooth.</p>
+<p>The server code may look like this</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#998;font-style:italic">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># -*- coding:utf-8 -*-</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">base64</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">json</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">shutil</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">datetime</span> <span style="color:#000;font-weight:bold">import</span> datetime
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">pathlib</span> <span style="color:#000;font-weight:bold">import</span> Path
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">shlex</span> <span style="color:#000;font-weight:bold">import</span> split
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">subprocess</span> <span style="color:#000;font-weight:bold">import</span> check_call
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">flask</span> <span style="color:#000;font-weight:bold">import</span> Flask, make_response, redirect, render_template, request
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">flask_cors</span> <span style="color:#000;font-weight:bold">import</span> CORS
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>app <span style="color:#000;font-weight:bold">=</span> Flask(__name__)
+</span></span><span style="display:flex;"><span>CORS(app)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>root <span style="color:#000;font-weight:bold">=</span> Path(<span style="color:#d14">&#34;.&#34;</span>)
+</span></span><span style="display:flex;"><span>orig <span style="color:#000;font-weight:bold">=</span> root <span style="color:#000;font-weight:bold">/</span> <span style="color:#d14">&#34;orig&#34;</span>
+</span></span><span style="display:flex;"><span>cur <span style="color:#000;font-weight:bold">=</span> root <span style="color:#000;font-weight:bold">/</span> <span style="color:#d14">&#34;cur.jpg&#34;</span>
+</span></span><span style="display:flex;"><span>index <span style="color:#000;font-weight:bold">=</span> root <span style="color:#000;font-weight:bold">/</span> <span style="color:#d14">&#34;index.html&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@app.route</span>(<span style="color:#d14">&#34;/&#34;</span>, methods<span style="color:#000;font-weight:bold">=</span>[<span style="color:#d14">&#34;POST&#34;</span>, <span style="color:#d14">&#34;GET&#34;</span>])
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">add_or_index</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> request<span style="color:#000;font-weight:bold">.</span>method <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;POST&#34;</span>:
+</span></span><span style="display:flex;"><span>        cur<span style="color:#000;font-weight:bold">.</span>write_bytes(
+</span></span><span style="display:flex;"><span>            base64<span style="color:#000;font-weight:bold">.</span>b64decode(
+</span></span><span style="display:flex;"><span>                json<span style="color:#000;font-weight:bold">.</span>loads(request<span style="color:#000;font-weight:bold">.</span>data<span style="color:#000;font-weight:bold">.</span>decode())[<span style="color:#d14">&#34;img&#34;</span>]
+</span></span><span style="display:flex;"><span>                [<span style="color:#0086b3">len</span>(<span style="color:#d14">&#34;data:image/png;base64,&#34;</span>):]))
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">print</span>(datetime<span style="color:#000;font-weight:bold">.</span>now())
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> <span style="color:#d14">&#34;ok&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> index<span style="color:#000;font-weight:bold">.</span>read_text()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@app.route</span>(<span style="color:#d14">&#34;/click&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">click</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> orig<span style="color:#000;font-weight:bold">.</span>exists():
+</span></span><span style="display:flex;"><span>        os<span style="color:#000;font-weight:bold">.</span>makedirs(orig)
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> cur<span style="color:#000;font-weight:bold">.</span>exists():
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> <span style="color:#d14">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    now <span style="color:#000;font-weight:bold">=</span> datetime<span style="color:#000;font-weight:bold">.</span>now()
+</span></span><span style="display:flex;"><span>    name <span style="color:#000;font-weight:bold">=</span> now<span style="color:#000;font-weight:bold">.</span>isoformat() <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;.jpg&#34;</span>
+</span></span><span style="display:flex;"><span>    shutil<span style="color:#000;font-weight:bold">.</span>copy(cur, orig <span style="color:#000;font-weight:bold">/</span> name)
+</span></span><span style="display:flex;"><span>    cmd <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">f</span><span style="color:#d14">&#34;convert </span><span style="color:#d14">{</span>orig <span style="color:#000;font-weight:bold">/</span> name<span style="color:#d14">}</span><span style="color:#d14"> -scale 64 </span><span style="color:#d14">{</span>root <span style="color:#000;font-weight:bold">/</span> name<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">print</span>(cmd)
+</span></span><span style="display:flex;"><span>    check_call(split(cmd))
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> <span style="color:#d14">f</span><span style="color:#d14">&#34;/img/</span><span style="color:#d14">{</span>name<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@app.route</span>(<span style="color:#d14">&#34;/img/&lt;name&gt;&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">img</span>(name):
+</span></span><span style="display:flex;"><span>    img <span style="color:#000;font-weight:bold">=</span> root <span style="color:#000;font-weight:bold">/</span> name
+</span></span><span style="display:flex;"><span>    response <span style="color:#000;font-weight:bold">=</span> make_response(img<span style="color:#000;font-weight:bold">.</span>read_bytes())
+</span></span><span style="display:flex;"><span>    response<span style="color:#000;font-weight:bold">.</span>headers<span style="color:#000;font-weight:bold">.</span>set(<span style="color:#d14">&#39;Content-Type&#39;</span>, <span style="color:#d14">&#39;image/jpeg&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> response
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">if</span> __name__ <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    app<span style="color:#000;font-weight:bold">.</span>run(host<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;0.0.0.0&#34;</span>, port<span style="color:#000;font-weight:bold">=</span><span style="color:#099">9999</span>, debug<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>, threaded<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>)
+</span></span></code></pre></div><p>The controller would get the code from the server</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic">&lt;!DOCTYPE html&gt;</span>
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#000080">html</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">defer</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafkreic33rowgvvugzgzajagkuwidfnit2dyqyn465iygfs67agsukk24i?orig=https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-data</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#39;app&#39;</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">img</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;updateCur&#34;</span> <span style="color:#008080">x-bind:src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;cur&#34;</span> <span style="color:#008080">width</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;100&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>      &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">button</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;click&#34;</span>&gt;Click&lt;/<span style="color:#000080">button</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">template</span> <span style="color:#008080">x-for</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;frame in frames&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>          &lt;<span style="color:#000080">img</span> <span style="color:#008080">x-bind:src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;host + frame.url&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>        &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;/<span style="color:#000080">template</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">document</span>.addEventListener(<span style="color:#d14">&#39;alpine:init&#39;</span>, () =&gt; {
+</span></span><span style="display:flex;"><span>      Alpine.data(<span style="color:#d14">&#39;app&#39;</span>, () =&gt; ({
+</span></span><span style="display:flex;"><span>        cur<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>        host<span style="color:#000;font-weight:bold">:</span> <span style="color:#0086b3">window</span>.location,
+</span></span><span style="display:flex;"><span>        frames<span style="color:#000;font-weight:bold">:</span> [],
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">async</span> click() {
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">try</span> {
+</span></span><span style="display:flex;"><span>        res <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> fetch(<span style="color:#000;font-weight:bold">this</span>.host <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;/click&#34;</span>)
+</span></span><span style="display:flex;"><span>        } <span style="color:#000;font-weight:bold">catch</span>(error) {
+</span></span><span style="display:flex;"><span>        msg <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">`</span><span style="color:#d14">${</span>error<span style="color:#d14">}</span><span style="color:#d14"> : </span><span style="color:#d14">${</span>JSON.stringify(error)<span style="color:#d14">}</span><span style="color:#d14">`</span>
+</span></span><span style="display:flex;"><span>        console.log(msg)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        res <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> res.text()
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> (res <span style="color:#000;font-weight:bold">===</span> <span style="color:#d14">&#34;&#34;</span>) {
+</span></span><span style="display:flex;"><span>        alert(<span style="color:#d14">&#34;no photo&#34;</span>)
+</span></span><span style="display:flex;"><span>        } <span style="color:#000;font-weight:bold">else</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">this</span>.frames <span style="color:#000;font-weight:bold">=</span> [{url<span style="color:#000;font-weight:bold">:</span> res}].concat(<span style="color:#000;font-weight:bold">this</span>.frames)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        updateCur() {
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">this</span>.cur <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">this</span>.host <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;/img/cur.jpg?&#34;</span> <span style="color:#000;font-weight:bold">+</span> <span style="color:#000;font-weight:bold">new</span> <span style="color:#0086b3">Date</span>().getTime()
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        init () {
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">this</span>.updateCur()
+</span></span><span style="display:flex;"><span>        setInterval(() =&gt; {<span style="color:#000;font-weight:bold">this</span>.updateCur()}, <span style="color:#099">2000</span>)
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        }))
+</span></span><span style="display:flex;"><span>        })
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#000080">html</span>&gt;
+</span></span></code></pre></div><p>The photo taker, hosted locally with servDroid, would take pictures and send
+them to the server</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic">&lt;!DOCTYPE html&gt;</span>
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#000080">html</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">defer</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafkreic33rowgvvugzgzajagkuwidfnit2dyqyn465iygfs67agsukk24i?orig=https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;https://webrtc.github.io/adapter/adapter-latest.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-data</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">button</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;$store.app.click()&#34;</span>&gt;test&lt;/<span style="color:#000080">button</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;button-group&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">button</span> <span style="color:#008080">id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;btn-start&#34;</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;button&#34;</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;button&#34;</span>&gt;Start Streaming&lt;/<span style="color:#000080">button</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic">&lt;!-- Video Element &amp; Canvas --&gt;</span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;play-area&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;play-area-sub&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">h3</span>&gt;The Stream&lt;/<span style="color:#000080">h3</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">video</span> <span style="color:#008080">id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;stream&#34;</span> <span style="color:#008080">width</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;320&#34;</span> <span style="color:#008080">height</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;240&#34;</span>&gt;&lt;/<span style="color:#000080">video</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;play-area-sub&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">h3</span>&gt;The Capture&lt;/<span style="color:#000080">h3</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">canvas</span> <span style="color:#008080">id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;capture&#34;</span> <span style="color:#008080">width</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;1280&#34;</span> <span style="color:#008080">height</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;1024&#34;</span>&gt;&lt;/<span style="color:#000080">canvas</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">div</span> <span style="color:#008080">id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;snapshot&#34;</span>&gt;&lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">function</span> startStreaming() {
+</span></span><span style="display:flex;"><span>          <span style="color:#000;font-weight:bold">var</span> mediaSupport <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#39;mediaDevices&#39;</span> <span style="color:#000;font-weight:bold">in</span> navigator;
+</span></span><span style="display:flex;"><span>          <span style="color:#000;font-weight:bold">if</span>( mediaSupport <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#000;font-weight:bold">null</span> <span style="color:#000;font-weight:bold">==</span> cameraStream ) {
+</span></span><span style="display:flex;"><span>              mediaStream <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> navigator.mediaDevices.getUserMedia( { video<span style="color:#000;font-weight:bold">:</span> { facingMode<span style="color:#000;font-weight:bold">:</span> { exact<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;environment&#34;</span> } }} )
+</span></span><span style="display:flex;"><span>      cameraStream <span style="color:#000;font-weight:bold">=</span> mediaStream;
+</span></span><span style="display:flex;"><span>      stream.srcObject <span style="color:#000;font-weight:bold">=</span> mediaStream;
+</span></span><span style="display:flex;"><span>      stream.play();
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">else</span> {
+</span></span><span style="display:flex;"><span>      alert( <span style="color:#d14">&#39;Your browser does not support media devices.&#39;</span> );
+</span></span><span style="display:flex;"><span>      <span style="color:#000;font-weight:bold">return</span>;
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">document</span>.addEventListener(
+</span></span><span style="display:flex;"><span>      <span style="color:#d14">&#39;alpine:init&#39;</span>, () =&gt; {
+</span></span><span style="display:flex;"><span>        Alpine.store(
+</span></span><span style="display:flex;"><span>        <span style="color:#d14">&#39;app&#39;</span>,
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>        host<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;http://192.168.1.94:9999&#34;</span>,
+</span></span><span style="display:flex;"><span>        first<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>        click() {
+</span></span><span style="display:flex;"><span>        alert(<span style="color:#d14">&#34;clicked&#34;</span>)
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">async</span> captureSnapshot() {
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span>( <span style="color:#000;font-weight:bold">null</span> <span style="color:#000;font-weight:bold">!=</span> cameraStream ) {
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">var</span> ctx <span style="color:#000;font-weight:bold">=</span> capture.getContext( <span style="color:#d14">&#39;2d&#39;</span> );
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">var</span> img <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">new</span> Image();
+</span></span><span style="display:flex;"><span>        ctx.drawImage(stream, <span style="color:#099">0</span>, <span style="color:#099">0</span>, capture.width, capture.height);
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">var</span> content <span style="color:#000;font-weight:bold">=</span> capture.toDataURL( <span style="color:#d14">&#34;image/png&#34;</span> );
+</span></span><span style="display:flex;"><span>        img.src       <span style="color:#000;font-weight:bold">=</span> content
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">await</span> fetch(
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">this</span>.host,
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>        method<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;post&#34;</span>,
+</span></span><span style="display:flex;"><span>        body<span style="color:#000;font-weight:bold">:</span> JSON.stringify({
+</span></span><span style="display:flex;"><span>        img<span style="color:#000;font-weight:bold">:</span> content,
+</span></span><span style="display:flex;"><span>        })
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        img.width <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">240</span>;
+</span></span><span style="display:flex;"><span>        snapshot.innerHTML <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#39;&#39;</span>;
+</span></span><span style="display:flex;"><span>        snapshot.appendChild( img );
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">async</span> init() {
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">await</span> startStreaming()
+</span></span><span style="display:flex;"><span>        setInterval(() =&gt; {<span style="color:#000;font-weight:bold">this</span>.captureSnapshot()}, <span style="color:#099">1000</span>)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">var</span> btnStart <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">document</span>.getElementById( <span style="color:#d14">&#34;btn-start&#34;</span> );
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic">// The stream &amp; capture
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>        <span style="color:#000;font-weight:bold">var</span> stream <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">document</span>.getElementById( <span style="color:#d14">&#34;stream&#34;</span> );
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">var</span> capture <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">document</span>.getElementById( <span style="color:#d14">&#34;capture&#34;</span> );
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">var</span> snapshot <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">document</span>.getElementById( <span style="color:#d14">&#34;snapshot&#34;</span> );
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic">// The video stream
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>        <span style="color:#000;font-weight:bold">var</span> cameraStream <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">null</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic">// Attach listeners
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>        btnStart.addEventListener( <span style="color:#d14">&#34;click&#34;</span>, startStreaming );
+</span></span><span style="display:flex;"><span>        <span style="color:#998;font-style:italic">// Start Streaming
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>    &lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#000080">html</span>&gt;
+</span></span></code></pre></div><h2 id="0e504431-68ad-4561-8c33-d436b9c13d04"><a href="/braindump/posts/webrtc/#97101ea9-1c29-4a3f-8e61-625d9cc8d7d1">peerjs</a> + servdroid -&gt; going one step further in term of UX</h2>
+<p>webrtc is mostly known to be a <a href="/braindump/posts/peer_to_peer/">peer-to-peer</a> technology. So far, we only used
+its capacity yo take pictures, but we could actually make the controller see
+the video stream in real time. Only getUserMedia needs https or localhost, so
+the other device should work fine over http, as long as it simply gets and
+show the stream.</p>
+<p>So, in short:</p>
+<ul>
+<li>one device with <a href="/braindump/posts/servdroid/">servdroid</a> get the video stream,</li>
+<li>connection with the other device over <a href="/braindump/posts/webrtc/#97101ea9-1c29-4a3f-8e61-625d9cc8d7d1">peerjs</a>, using a local <a href="/braindump/posts/webrtc/#0a72cbf5-f05a-4615-b67f-8603bc783e2b">signaling</a> server provided by peerjs,</li>
+<li>streaming the video realtime from a device to the other</li>
+<li>discussion with the server as per <a href="#d56a5ac2-0676-4d79-a94d-aa691dd66421">webrtc + servdroid + flask</a></li>
+</ul>
+<p>This would make the <a href="/braindump/posts/user_experience/">UX</a> nicer, has the video won&rsquo;t give the feeling that
+it lags because it is refreshed every second.</p>
+<h3 id="439a4796-4373-4893-82f2-ce0ef7a82f8e">code that runs on the camera</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic">&lt;!DOCTYPE html&gt;</span>
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#000080">html</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">defer</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafkreic33rowgvvugzgzajagkuwidfnit2dyqyn465iygfs67agsukk24i?orig=https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">document</span>.addEventListener(<span style="color:#d14">&#39;alpine:init&#39;</span>, () =&gt; {
+</span></span><span style="display:flex;"><span>          Alpine.data(<span style="color:#d14">&#39;app&#39;</span>, () =&gt; ({
+</span></span><span style="display:flex;"><span>              peer<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              peerid<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              mediaStream<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              message<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>              wakelock<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              current_call<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> init() {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">new</span> Peer(<span style="color:#d14">&#34;camera&#34;</span>, {host<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;192.168.1.46&#34;</span>, port<span style="color:#000;font-weight:bold">:</span> <span style="color:#099">9999</span>, path<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;/peerjs/&#34;</span>, config<span style="color:#000;font-weight:bold">:</span> {
+</span></span><span style="display:flex;"><span>                      iceServers<span style="color:#000;font-weight:bold">:</span> [],
+</span></span><span style="display:flex;"><span>                      sdpSemantics<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;unified-plan&#34;</span>,
+</span></span><span style="display:flex;"><span>                  }})
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer.on(<span style="color:#d14">&#39;open&#39;</span>, (id) =&gt; {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">`connected to peerjs with id </span><span style="color:#d14">${</span>id<span style="color:#d14">}</span><span style="color:#d14">`</span>
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.peerid <span style="color:#000;font-weight:bold">=</span> id
+</span></span><span style="display:flex;"><span>                  });
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer.on(<span style="color:#d14">&#39;connection&#39;</span>, <span style="color:#000;font-weight:bold">async</span> (conn) =&gt; {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">&#34;connected to the controller&#34;</span>
+</span></span><span style="display:flex;"><span>                      conn.on(<span style="color:#d14">&#39;data&#39;</span>, <span style="color:#000;font-weight:bold">async</span> (data) =&gt; {
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">`got </span><span style="color:#d14">${</span>data<span style="color:#d14">}</span><span style="color:#d14">, calling back`</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">await</span> <span style="color:#000;font-weight:bold">this</span>.call()
+</span></span><span style="display:flex;"><span>                      });
+</span></span><span style="display:flex;"><span>                      conn.send(<span style="color:#d14">&#34;hello&#34;</span>)
+</span></span><span style="display:flex;"><span>                  });
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">if</span>(<span style="color:#d14">&#39;mediaDevices&#39;</span> <span style="color:#000;font-weight:bold">in</span> navigator) {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.mediaStream <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> navigator.mediaDevices.getUserMedia( { video<span style="color:#000;font-weight:bold">:</span>
+</span></span><span style="display:flex;"><span>                                                                                      <span style="color:#998;font-style:italic">// true
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>                                                                                      { facingMode<span style="color:#000;font-weight:bold">:</span> { exact<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;environment&#34;</span> } }
+</span></span><span style="display:flex;"><span>                                                                                    } )
+</span></span><span style="display:flex;"><span>                  }
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">else</span> {
+</span></span><span style="display:flex;"><span>                      alert( <span style="color:#d14">&#39;Your browser does not support media devices.&#39;</span> );
+</span></span><span style="display:flex;"><span>                  }
+</span></span><span style="display:flex;"><span>                  navigator.wakeLock.request(<span style="color:#d14">&#34;screen&#34;</span>).then(
+</span></span><span style="display:flex;"><span>                      (w) =&gt; {
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.wakelock <span style="color:#000;font-weight:bold">=</span> w;
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">&#34;wakelock acquired&#34;</span>
+</span></span><span style="display:flex;"><span>                      }
+</span></span><span style="display:flex;"><span>                  ).<span style="color:#000;font-weight:bold">catch</span>((err) =&gt; {
+</span></span><span style="display:flex;"><span>                      alert(<span style="color:#d14">`</span><span style="color:#d14">${</span>err.name<span style="color:#d14">}</span><span style="color:#d14">, </span><span style="color:#d14">${</span>err.message<span style="color:#d14">}</span><span style="color:#d14">`</span>);
+</span></span><span style="display:flex;"><span>                  });
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer.on(<span style="color:#d14">&#39;call&#39;</span>, (call) =&gt; {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">&#34;in call&#34;</span>
+</span></span><span style="display:flex;"><span>                      call.answer(<span style="color:#000;font-weight:bold">this</span>.mediaStream);
+</span></span><span style="display:flex;"><span>                      call.on(<span style="color:#d14">&#39;stream&#39;</span>, (stream) =&gt; {
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">&#34;got stream??&#34;</span>
+</span></span><span style="display:flex;"><span>                      });
+</span></span><span style="display:flex;"><span>                  });
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> call() {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.current_call <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">this</span>.peer.call(<span style="color:#d14">&#34;control&#34;</span>, <span style="color:#000;font-weight:bold">this</span>.mediaStream)
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> connect() {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer.connect(<span style="color:#d14">&#34;control&#34;</span>)
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> stop () {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.current_call.close()
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">if</span> (<span style="color:#000;font-weight:bold">this</span>.wakelock <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">null</span>) {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.wakelock.release().then(() =&gt; {
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.wakelock <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">null</span>;
+</span></span><span style="display:flex;"><span>                          <span style="color:#998;font-style:italic">// alert(&#34;released&#34;);
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>                      }).<span style="color:#000;font-weight:bold">catch</span>((err) =&gt; {
+</span></span><span style="display:flex;"><span>                          alert(<span style="color:#d14">`</span><span style="color:#d14">${</span>err.name<span style="color:#d14">}</span><span style="color:#d14">, </span><span style="color:#d14">${</span>err.message<span style="color:#d14">}</span><span style="color:#d14">`</span>);
+</span></span><span style="display:flex;"><span>                      });
+</span></span><span style="display:flex;"><span>                  }
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>          }))
+</span></span><span style="display:flex;"><span>      })
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-data</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;app&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;peerid&#34;</span>&gt;&lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">button</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;connect&#34;</span>&gt;Connect&lt;/<span style="color:#000080">button</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">button</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;call&#34;</span>&gt;Call&lt;/<span style="color:#000080">button</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;message&#34;</span>&gt;&lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#000080">html</span>&gt;
+</span></span></code></pre></div><h3 id="e5d98d2c-1900-4fac-b048-1077464ccf62">code that runs on the controller</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic">&lt;!DOCTYPE html&gt;</span>
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#000080">html</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">meta</span> <span style="color:#008080">name</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;viewport&#34;</span> <span style="color:#008080">content</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;width=device-width, initial-scale=1.0&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">link</span> <span style="color:#008080">rel</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;manifest&#34;</span> <span style="color:#008080">href</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;./manifest.json&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafybeihp5kzlgqt56dmy5l4z7kpymfc4kn3fnehrrtr7cid7cn7ra36yha?orig=https://cdn.tailwindcss.com/3.4.3&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">defer</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;/ipfs/bafkreic33rowgvvugzgzajagkuwidfnit2dyqyn465iygfs67agsukk24i?orig=https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span> <span style="color:#008080">src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js&#34;</span>&gt;&lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>      <span style="color:#0086b3">document</span>.addEventListener(<span style="color:#d14">&#39;alpine:init&#39;</span>, () =&gt; {
+</span></span><span style="display:flex;"><span>          Alpine.data(<span style="color:#d14">&#39;app&#39;</span>, () =&gt; ({
+</span></span><span style="display:flex;"><span>              peer<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              peerid<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              conn<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              video<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              message<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>              names<span style="color:#000;font-weight:bold">:</span> [],
+</span></span><span style="display:flex;"><span>              wakelock<span style="color:#000;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">null</span>,
+</span></span><span style="display:flex;"><span>              btnClass<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800&#34;</span>,
+</span></span><span style="display:flex;"><span>              btnClassAnim<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 focus:outline-none dark:focus:ring-green-800&#34;</span>,
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> init() {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.video<span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">document</span>.getElementById(<span style="color:#d14">&#39;videoElement&#39;</span>)
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">new</span> Peer(<span style="color:#d14">&#34;control&#34;</span>, {host<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;192.168.1.46&#34;</span>, port<span style="color:#000;font-weight:bold">:</span> <span style="color:#099">9999</span>, path<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;/peerjs/&#34;</span>, config<span style="color:#000;font-weight:bold">:</span> {
+</span></span><span style="display:flex;"><span>                           iceServers<span style="color:#000;font-weight:bold">:</span> [],
+</span></span><span style="display:flex;"><span>                           sdpSemantics<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;unified-plan&#34;</span>,
+</span></span><span style="display:flex;"><span>                       }})
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer.on(<span style="color:#d14">&#39;open&#39;</span>, (id) =&gt; {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">`connected to peerjs with id </span><span style="color:#d14">${</span>id<span style="color:#d14">}</span><span style="color:#d14">`</span>
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.peerid <span style="color:#000;font-weight:bold">=</span> id
+</span></span><span style="display:flex;"><span>                  });
+</span></span><span style="display:flex;"><span>                  <span style="color:#0086b3">document</span>.body.requestFullScreen()
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer.on(<span style="color:#d14">&#39;call&#39;</span>, (call) =&gt; {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">&#34;in call&#34;</span>
+</span></span><span style="display:flex;"><span>                      call.answer();
+</span></span><span style="display:flex;"><span>                      call.on(<span style="color:#d14">&#39;stream&#39;</span>, (stream) =&gt; {
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">&#34;getting stream&#34;</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.video.srcObject <span style="color:#000;font-weight:bold">=</span> stream;
+</span></span><span style="display:flex;"><span>                      });
+</span></span><span style="display:flex;"><span>                  });
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">const</span> resp <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> fetch(<span style="color:#d14">&#34;http://192.168.1.94:9999/list&#34;</span>)
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">const</span> text <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> resp.text()
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.names <span style="color:#000;font-weight:bold">=</span> JSON.parse(text)
+</span></span><span style="display:flex;"><span>                  setTimeout(<span style="color:#000;font-weight:bold">async</span> () =&gt; {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">await</span> <span style="color:#000;font-weight:bold">this</span>.connect()
+</span></span><span style="display:flex;"><span>                  }, <span style="color:#099">1000</span>)
+</span></span><span style="display:flex;"><span>                  navigator.wakeLock.request(<span style="color:#d14">&#34;screen&#34;</span>).then(
+</span></span><span style="display:flex;"><span>                      (w) =&gt; {
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.wakelock <span style="color:#000;font-weight:bold">=</span> w;
+</span></span><span style="display:flex;"><span>                          <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">&#34;wakelock acquired&#34;</span>
+</span></span><span style="display:flex;"><span>                      }
+</span></span><span style="display:flex;"><span>                  ).<span style="color:#000;font-weight:bold">catch</span>((err) =&gt; {
+</span></span><span style="display:flex;"><span>                      alert(<span style="color:#d14">`</span><span style="color:#d14">${</span>err.name<span style="color:#d14">}</span><span style="color:#d14">, </span><span style="color:#d14">${</span>err.message<span style="color:#d14">}</span><span style="color:#d14">`</span>);
+</span></span><span style="display:flex;"><span>                  });
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> call() {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.peer.call(<span style="color:#d14">&#34;camera&#34;</span>)
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> connect() {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">try</span> {
+</span></span><span style="display:flex;"><span>                      <span style="color:#0086b3">document</span>.getElementById(<span style="color:#d14">&#39;app&#39;</span>).requestFullscreen()
+</span></span><span style="display:flex;"><span>                  } <span style="color:#000;font-weight:bold">catch</span>(err) {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> err.toString()
+</span></span><span style="display:flex;"><span>                  }
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.conn <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">this</span>.peer.connect(<span style="color:#d14">&#34;camera&#34;</span>)
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.conn.on(<span style="color:#d14">&#34;open&#34;</span>, () =&gt; {
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.message <span style="color:#000;font-weight:bold">+=</span> <span style="color:#d14">&#34;connected to the camera&#34;</span>
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">this</span>.conn.send(<span style="color:#d14">&#34;hello&#34;</span>)
+</span></span><span style="display:flex;"><span>                  })
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> capture() {
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">var</span> canvas <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">document</span>.createElement(<span style="color:#d14">&#39;canvas&#39;</span>);
+</span></span><span style="display:flex;"><span>                  canvas.width <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">this</span>.video.videoWidth;
+</span></span><span style="display:flex;"><span>                  canvas.height <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">this</span>.video.videoHeight;
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">var</span> context <span style="color:#000;font-weight:bold">=</span> canvas.getContext(<span style="color:#d14">&#39;2d&#39;</span>);
+</span></span><span style="display:flex;"><span>                  context.drawImage(<span style="color:#000;font-weight:bold">this</span>.video, <span style="color:#099">0</span>, <span style="color:#099">0</span>, canvas.width, canvas.height);
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">var</span> content <span style="color:#000;font-weight:bold">=</span> canvas.toDataURL(<span style="color:#d14">&#39;image/png&#39;</span>);
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">let</span> resp
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">try</span> {
+</span></span><span style="display:flex;"><span>                      resp <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> fetch(
+</span></span><span style="display:flex;"><span>                          <span style="color:#d14">&#34;http://192.168.1.94:9999&#34;</span>,
+</span></span><span style="display:flex;"><span>                          {
+</span></span><span style="display:flex;"><span>                              method<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;post&#34;</span>,
+</span></span><span style="display:flex;"><span>                              body<span style="color:#000;font-weight:bold">:</span> JSON.stringify({
+</span></span><span style="display:flex;"><span>                                  img<span style="color:#000;font-weight:bold">:</span> content,
+</span></span><span style="display:flex;"><span>                              })
+</span></span><span style="display:flex;"><span>                          }
+</span></span><span style="display:flex;"><span>                      )
+</span></span><span style="display:flex;"><span>                  } <span style="color:#000;font-weight:bold">catch</span>(error) {
+</span></span><span style="display:flex;"><span>                      msg <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">`</span><span style="color:#d14">${</span>error<span style="color:#d14">}</span><span style="color:#d14"> : </span><span style="color:#d14">${</span>JSON.stringify(error)<span style="color:#d14">}</span><span style="color:#d14">`</span>
+</span></span><span style="display:flex;"><span>                      alert(msg)
+</span></span><span style="display:flex;"><span>                  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">const</span> name <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> resp.text()
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.names <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">this</span>.names.concat(name)
+</span></span><span style="display:flex;"><span>                  setTimeout(() =&gt; {
+</span></span><span style="display:flex;"><span>                      <span style="color:#0086b3">document</span>.getElementById(<span style="color:#d14">&#34;photos&#34;</span>).scrollLeft <span style="color:#000;font-weight:bold">+=</span> <span style="color:#0086b3">document</span>.getElementById(<span style="color:#d14">&#34;photos&#34;</span>).scrollWidth <span style="color:#998;font-style:italic">//10000
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>                  }, <span style="color:#099">500</span>)
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>              <span style="color:#000;font-weight:bold">async</span> edit(name) {
+</span></span><span style="display:flex;"><span>                  names <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">this</span>.names
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">let</span> index <span style="color:#000;font-weight:bold">=</span> names.indexOf(name);
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">if</span> (index <span style="color:#000;font-weight:bold">!==</span> <span style="color:#000;font-weight:bold">-</span><span style="color:#099">1</span>) {
+</span></span><span style="display:flex;"><span>                      names.splice(index, <span style="color:#099">1</span>);
+</span></span><span style="display:flex;"><span>                  }
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">this</span>.names <span style="color:#000;font-weight:bold">=</span> names
+</span></span><span style="display:flex;"><span>                  <span style="color:#000;font-weight:bold">try</span>{
+</span></span><span style="display:flex;"><span>                      <span style="color:#000;font-weight:bold">const</span> resp <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> fetch(
+</span></span><span style="display:flex;"><span>                          <span style="color:#d14">&#34;http://192.168.1.94:9999/img/&#34;</span> <span style="color:#000;font-weight:bold">+</span> name <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;.png&#34;</span>,
+</span></span><span style="display:flex;"><span>                          {
+</span></span><span style="display:flex;"><span>                              method<span style="color:#000;font-weight:bold">:</span> <span style="color:#d14">&#34;delete&#34;</span>,
+</span></span><span style="display:flex;"><span>                          }
+</span></span><span style="display:flex;"><span>                      )
+</span></span><span style="display:flex;"><span>                  } <span style="color:#000;font-weight:bold">catch</span>(error) {
+</span></span><span style="display:flex;"><span>                      msg <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">`</span><span style="color:#d14">${</span>error<span style="color:#d14">}</span><span style="color:#d14"> : </span><span style="color:#d14">${</span>JSON.stringify(error)<span style="color:#d14">}</span><span style="color:#d14">`</span>
+</span></span><span style="display:flex;"><span>                      alert(msg)
+</span></span><span style="display:flex;"><span>                  }
+</span></span><span style="display:flex;"><span>              },
+</span></span><span style="display:flex;"><span>          }))
+</span></span><span style="display:flex;"><span>      })
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">script</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">head</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-data</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;app&#34;</span> <span style="color:#008080">id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;app&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;peerid&#34;</span>&gt;&lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">button</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;button&#34;</span> <span style="color:#008080">:class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;btnClass&#34;</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;connect&#34;</span>&gt;Connect&lt;/<span style="color:#000080">button</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">button</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;button&#34;</span> <span style="color:#008080">:class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;btnClass&#34;</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;call&#34;</span>&gt;Call&lt;/<span style="color:#000080">button</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span> <span style="color:#008080">x-text</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;message&#34;</span>&gt;&lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">video</span> <span style="color:#008080">id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;videoElement&#34;</span> <span style="color:#008080">width</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;640&#34;</span> <span style="color:#008080">height</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;480&#34;</span> <span style="color:#008080">autoplay</span>&gt;&lt;/<span style="color:#000080">video</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;mb-6&#34;</span> <span style="color:#008080">x-data</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;{anim: false}&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">button</span> <span style="color:#008080">type</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;button&#34;</span> <span style="color:#008080">:class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;anim ? btnClassAnim : btnClass&#34;</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#a61717;background-color:#e3d2d2">.</span><span style="color:#008080">throttle</span><span style="color:#a61717;background-color:#e3d2d2">.</span><span style="color:#008080">500ms</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;anim = true; setTimeout(() =&gt; {anim = false},500)&#34;</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">click</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;capture&#34;</span>&gt;capture&lt;/<span style="color:#000080">button</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      &lt;<span style="color:#000080">div</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;flex justify-center h-32&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;<span style="color:#000080">div</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;list-none flex overflow-x-auto&#34;</span> <span style="color:#008080">id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;photos&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>          &lt;<span style="color:#000080">template</span> <span style="color:#008080">x-for</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;name in names&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>            &lt;<span style="color:#000080">img</span> <span style="color:#008080">class</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;m-1 rounded border-2 block&#34;</span> <span style="color:#a61717;background-color:#e3d2d2">@</span><span style="color:#008080">dblclick</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;edit(name)&#34;</span> <span style="color:#008080">:src</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;&#39;http://192.168.1.94:9999/img/&#39; + name + &#39;.png&#39;&#34;</span>/&gt;
+</span></span><span style="display:flex;"><span>          &lt;/<span style="color:#000080">template</span>&gt;
+</span></span><span style="display:flex;"><span>        &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>      &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;/<span style="color:#000080">div</span>&gt;
+</span></span><span style="display:flex;"><span>  &lt;/<span style="color:#000080">body</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#000080">html</span>&gt;
+</span></span></code></pre></div><h3 id="4f599498-ef5a-43a7-ae28-86b2c730d062">code that runs on the server</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir -p ~/test/stopmotion
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">cd</span> ~/test/stopmotion
+</span></span><span style="display:flex;"><span>pdm init --non-interactive
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pdm add flask flask-cors watchdog
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Adding packages to default dependencies: flask, flask-cors, watchdog
+</span></span><span style="display:flex;"><span>STATUS: Resolving dependencies
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin python&gt;=3.11,&lt;3.12
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin flask 3.0.1
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin flask-cors 4.0.0
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin watchdog 3.0.0
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin blinker 1.7.0
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin click 8.1.7
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin itsdangerous 2.1.2
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin jinja2 3.1.3
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin werkzeug 3.0.1
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin markupsafe 2.1.5
+</span></span><span style="display:flex;"><span>STATUS: Resolving: new pin colorama 0.4.6
+</span></span><span style="display:flex;"><span>STATUS: Fetching hashes for resolved packages...
+</span></span><span style="display:flex;"><span>🔒 Lock successful
+</span></span><span style="display:flex;"><span>Changes are written to pyproject.toml.
+</span></span><span style="display:flex;"><span>STATUS: Resolving packages from lockfile...
+</span></span><span style="display:flex;"><span>Synchronizing working set with resolved packages: 1 to add, 0 to update, 0 to remove
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  ✔ Install watchdog 3.0.0 successful
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>🎉 All complete!
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#998;font-style:italic">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># -*- coding:utf-8 -*-</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">base64</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">json</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">shutil</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">datetime</span> <span style="color:#000;font-weight:bold">import</span> datetime
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">pathlib</span> <span style="color:#000;font-weight:bold">import</span> Path
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">shlex</span> <span style="color:#000;font-weight:bold">import</span> split
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">subprocess</span> <span style="color:#000;font-weight:bold">import</span> check_call
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">flask</span> <span style="color:#000;font-weight:bold">import</span> Flask, make_response, redirect, render_template, request
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">flask_cors</span> <span style="color:#000;font-weight:bold">import</span> CORS
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>app <span style="color:#000;font-weight:bold">=</span> Flask(__name__)
+</span></span><span style="display:flex;"><span>CORS(app)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>root <span style="color:#000;font-weight:bold">=</span> Path(<span style="color:#d14">&#34;imgs&#34;</span>)
+</span></span><span style="display:flex;"><span>thumb <span style="color:#000;font-weight:bold">=</span> Path(<span style="color:#d14">&#34;thumbs&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> thumb<span style="color:#000;font-weight:bold">.</span>exists():
+</span></span><span style="display:flex;"><span>        os<span style="color:#000;font-weight:bold">.</span>makedirs(thumb)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">paths</span>(name):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> root <span style="color:#000;font-weight:bold">/</span> (name <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;.png&#34;</span>), thumb <span style="color:#000;font-weight:bold">/</span> (name <span style="color:#000;font-weight:bold">+</span> <span style="color:#d14">&#34;.png&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@app.route</span>(<span style="color:#d14">&#34;/&#34;</span>, methods<span style="color:#000;font-weight:bold">=</span>[<span style="color:#d14">&#34;POST&#34;</span>])
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">add</span>():
+</span></span><span style="display:flex;"><span>        data <span style="color:#000;font-weight:bold">=</span> json<span style="color:#000;font-weight:bold">.</span>loads(request<span style="color:#000;font-weight:bold">.</span>data<span style="color:#000;font-weight:bold">.</span>decode())
+</span></span><span style="display:flex;"><span>        now <span style="color:#000;font-weight:bold">=</span> datetime<span style="color:#000;font-weight:bold">.</span>now()
+</span></span><span style="display:flex;"><span>        name <span style="color:#000;font-weight:bold">=</span> now<span style="color:#000;font-weight:bold">.</span>isoformat()
+</span></span><span style="display:flex;"><span>        img <span style="color:#000;font-weight:bold">=</span> base64<span style="color:#000;font-weight:bold">.</span>b64decode(
+</span></span><span style="display:flex;"><span>                        data[<span style="color:#d14">&#34;img&#34;</span>]
+</span></span><span style="display:flex;"><span>                        [<span style="color:#0086b3">len</span>(<span style="color:#d14">&#34;data:image/png;base64,&#34;</span>):])
+</span></span><span style="display:flex;"><span>        p, t <span style="color:#000;font-weight:bold">=</span> paths(name)
+</span></span><span style="display:flex;"><span>        p<span style="color:#000;font-weight:bold">.</span>write_bytes(img)
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">print</span>(datetime<span style="color:#000;font-weight:bold">.</span>now())
+</span></span><span style="display:flex;"><span>        check_call([<span style="color:#d14">&#34;convert&#34;</span>, <span style="color:#0086b3">str</span>(p), <span style="color:#d14">&#34;-scale&#34;</span>, <span style="color:#d14">&#34;256&#34;</span>, <span style="color:#0086b3">str</span>(t)])
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> name
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@app.route</span>(<span style="color:#d14">&#34;/list&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">_list</span>():
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> json<span style="color:#000;font-weight:bold">.</span>dumps([
+</span></span><span style="display:flex;"><span>                <span style="color:#0086b3">str</span>(child)[:<span style="color:#000;font-weight:bold">-</span><span style="color:#0086b3">len</span>(<span style="color:#d14">&#34;.png&#34;</span>)] <span style="color:#000;font-weight:bold">for</span> child <span style="color:#000;font-weight:bold">in</span> <span style="color:#0086b3">sorted</span>(root<span style="color:#000;font-weight:bold">.</span>iterdir())
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">if</span> <span style="color:#0086b3">str</span>(child)<span style="color:#000;font-weight:bold">.</span>endswith(<span style="color:#d14">&#34;.png&#34;</span>)
+</span></span><span style="display:flex;"><span>        ])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@app.route</span>(<span style="color:#d14">&#34;/video&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">video</span>():
+</span></span><span style="display:flex;"><span>        check_call([<span style="color:#d14">&#34;clk&#34;</span>, <span style="color:#d14">&#34;images&#34;</span>, <span style="color:#d14">&#34;timelapse&#34;</span>, <span style="color:#d14">&#34;--fps&#34;</span>, <span style="color:#d14">&#34;3&#34;</span>, <span style="color:#d14">&#34;--ouptut&#34;</span>, <span style="color:#d14">&#34;output.webm&#34;</span>])
+</span></span><span style="display:flex;"><span>        response <span style="color:#000;font-weight:bold">=</span> make_response(t<span style="color:#000;font-weight:bold">.</span>read_bytes())
+</span></span><span style="display:flex;"><span>        response<span style="color:#000;font-weight:bold">.</span>headers<span style="color:#000;font-weight:bold">.</span>set(<span style="color:#d14">&#39;Content-Type&#39;</span>, <span style="color:#d14">&#39;application/x-matroska&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">return</span> response
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@app.route</span>(<span style="color:#d14">&#34;/img/&lt;name&gt;.png&#34;</span>, methods<span style="color:#000;font-weight:bold">=</span>[<span style="color:#d14">&#34;GET&#34;</span>, <span style="color:#d14">&#34;DELETE&#34;</span>])
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">img</span>(name):
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> request<span style="color:#000;font-weight:bold">.</span>method <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;GET&#34;</span>:
+</span></span><span style="display:flex;"><span>                p, t <span style="color:#000;font-weight:bold">=</span> paths(name)
+</span></span><span style="display:flex;"><span>                response <span style="color:#000;font-weight:bold">=</span> make_response(t<span style="color:#000;font-weight:bold">.</span>read_bytes())
+</span></span><span style="display:flex;"><span>                response<span style="color:#000;font-weight:bold">.</span>headers<span style="color:#000;font-weight:bold">.</span>set(<span style="color:#d14">&#39;Content-Type&#39;</span>, <span style="color:#d14">&#39;image/png&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">return</span> response
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">elif</span> request<span style="color:#000;font-weight:bold">.</span>method <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;DELETE&#34;</span>:
+</span></span><span style="display:flex;"><span>                p, t <span style="color:#000;font-weight:bold">=</span> paths(name)
+</span></span><span style="display:flex;"><span>                p<span style="color:#000;font-weight:bold">.</span>unlink()
+</span></span><span style="display:flex;"><span>                t<span style="color:#000;font-weight:bold">.</span>unlink()
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">return</span> <span style="color:#d14">&#34;ok&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">if</span> __name__ <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    app<span style="color:#000;font-weight:bold">.</span>run(host<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;0.0.0.0&#34;</span>, port<span style="color:#000;font-weight:bold">=</span><span style="color:#099">9999</span>, debug<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>, threaded<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>)
+</span></span></code></pre></div><h2 id="permalink"><a href="/braindump/26feff59-ddf5-492b-886f-1f93ab1c0300?title=stopmotion_android_apps">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 03 Apr 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 04 Jan 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html><title>k8s templating solutions</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>K8s Templating Solutions</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p><a href="/braindump/posts/kubernetes/">k8s</a> templating solutions</p>
+<p>When playing with <a href="/braindump/posts/kubernetes/">kubernetes</a>, you can do whatever you want, but you quickly feel
+like you could automate most of the definition of the resources.</p>
+<p><a href="/braindump/posts/kustomize/">kustomize</a> appears to be the good candidate, since it is</p>
+<ul>
+<li>suggested by the official documentation</li>
+<li>included in <a href="/braindump/posts/kubernetes/">kubektl</a></li>
+</ul>
+<p>After trying to use <a href="/braindump/posts/kustomize/">kustomize</a> for a while, I was disappointed by the lack
+of templating. Indeed, I needed to use the same value at several locations of my
+stack, like listen=&quot;<a href="https://%7Bmyip">https://{myip</a>}&quot; somewhere and api=&quot;{myip}&quot; somewhere else.</p>
+<p>I naturally came to <a href="/braindump/posts/helm/">helm</a> that provides a templating engine. Also, <a href="/braindump/posts/helm/">helm</a>
+provides a package manager, allowing to reuse charts made by other people. And
+this is kind of cool.</p>
+<p>The package manager is indeed very cool, but using <a href="/braindump/posts/gotemplate/">gotemplate</a> to template yaml
+files results easily in unreadable files. Also, I prefer the logic of
+<a href="/braindump/posts/kustomize/">kustomize</a> inheritance.</p>
+<p>Also, the package management stuff suggests that helm thought about the charts
+composition, while there are several clear impediments to do so.</p>
+<p>When you package a chart, all its dependencies are copied in the packaged, so
+you are not describing dependencies anymore but gluing several charts
+together. You cannot then (by design) use pin intervals.</p>
+<p>Also, it does not <a href="https://github.com/helm/helm/issues/2247">update the dependencies of subcharts</a>, making difficult
+developing a multi charts application.</p>
+<p>But the worst was the fact <a href="https://github.com/helm/helm/issues/2492">it does not allow to template the values.yaml
+file</a>. This breaks the promise of templating stuff. Because in my use case, I
+need to compose several charts by passing the same value.</p>
+<p>Then, even the simple example that convinced my to go to <a href="/braindump/posts/helm/">helm</a> is not doable
+in <a href="/braindump/posts/helm/">helm</a>.</p>
+<p>So far, people use ad-hoc solutions with bash scripts calling kustomize and helm
+and moving files around.</p>
+<blockquote>
+<p>Yes, this is a lot more work than just running helm install, however, the
+transparency you gain is worth it. As in any system, you don&rsquo;t want any unknowns
+lurking in the dark.</p>
+<p>&mdash; <a href="https://blog.container-solutions.com/using-helm-and-kustomize-to-build-more-declarative-kubernetes-workloads">https://blog.container-solutions.com/using-helm-and-kustomize-to-build-more-declarative-kubernetes-workloads</a></p>
+</blockquote>
+<p>I like this approach, but moving from <a href="/braindump/posts/docker_compose/">docker-compose</a> to <a href="/braindump/posts/kubernetes/">k8s</a> is a change of
+paradigm, and even if I understand the concepts and how to do what I want to
+achieve, teaching <a href="/braindump/posts/kubernetes/">k8s</a> to my colleagues by orchestrating several tools with
+overlapping responsibilities in ad-hoc bash scripts is a difficult task.</p>
+<p>I like the idea of <a href="/braindump/posts/avionix/">avionix</a> to build helm charts. This fixes the problem of
+templating values.yaml. Unfortunately, it does not fixes the subchart issue.</p>
+<p>Also, helm could integrate natively kustomize to render templates before.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/6b8d2f4b-5952-43ca-a935-8e74c5886243?title=k8s_templating_solutions">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 23 Dec 2021</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 10 Mar 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

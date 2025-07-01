@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html><title>ffmpeg</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Ffmpeg</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li><a href="#d1c1f7a9-8e37-46e2-8211-1eb4dbb45407">make ffmpeg more silent, quiet, less verbose</a>,</li>
+</ul>
+<h2 id="1cad4daa-6b12-4c8c-a4f9-db64849a956d">make it run of mobile</h2>
+<ul>
+<li>External reference: <a href="https://chatgpt.com/c/682d9b2e-a35c-800a-9d19-665d015adf04">https://chatgpt.com/c/682d9b2e-a35c-800a-9d19-665d015adf04</a></li>
+</ul>
+<blockquote>
+<p>Most mobile devices and browsers — including Chrome on tablets — do not support
+H.264 with 4:2:2 chroma subsampling (yuvj422p). They only support 4:2:0 (yuv420p
+or yuvj420p) for H.264 video streams in MP4 containers</p>
+<p>[&hellip;]</p>
+<p>ffmpeg -i input_ko.mp4 -c:v libx264 -pix_fmt yuv420p -c:a aac -ar 44100 -movflags +faststart output_fixed.mp4</p>
+<p>[&hellip;]</p>
+<p>To extract and display only the chroma subsampling format (e.g., 4:2:2 or 4:2:0)
+from a video using ffmpeg, you can use the following command-line one-liner:</p>
+<p>[&hellip;]</p>
+<p>ffprobe -v error -select_streams v:0 -show_entries stream=pix_fmt -of default=noprint_wrappers=1:nokey=1 input.mp4</p>
+<p>[&hellip;]</p>
+<p>Format	Color Range	Typical Use	Compatibility	Pros / Cons
+yuv420p	Limited (TV range)	Most standard video codecs &amp; players	Very wide compatibility (web, broadcast, players)	Standard for video playback; better for broadcast and streaming; some slight color compression due to limited range
+yuvj420p	Full (JPEG range)	JPEG-based codecs, still images, some special cases	Less widely supported for video playback	Better color precision if your workflow expects full range; can cause compatibility issues in players expecting limited range</p>
+<p>[&hellip;]</p>
+<p>Try forcing limited range explicitly with -color_range option, e.g.:</p>
+<p>ffmpeg -i input.mp4 -pix_fmt yuv420p -color_range tv output.mp4</p>
+<p>&mdash; <a href="https://chatgpt.com/c/">https://chatgpt.com/c/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-05-21 Wed]</span></span>)</p>
+</blockquote>
+<p>To track all my video for bad ones (taking advantage of the situation to also check that they are <a href="#aacc0d35-bb9c-4294-a6bf-ac0cd384ad58">streamable</a>)</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">source</span> _docs.sh
+</span></span><span style="display:flex;"><span>sql_raw -c <span style="color:#d14">&#34;\copy ( select web_cid from video where web_cid is not null order by cid ) to &#39;~/tmp/webcid.txt&#39;&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>COPY 8378
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">source</span> ~/Prog/Devel/lib/lib_bash.sh
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">source</span> _docs.sh
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">set</span> -eu
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">while</span> popline ~/tmp/webcid.txt webcid
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">cid</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>sql_raw -c <span style="color:#d14">&#34;\copy ( select cid from video where web_cid = &#39;</span><span style="color:#d14">${</span><span style="color:#008080">webcid</span><span style="color:#d14">}</span><span style="color:#d14">&#39; ) to stdout&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14"> -&gt; </span><span style="color:#d14">${</span><span style="color:#008080">webcid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">chromasubsampling</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>ffprobe -v error -select_streams v:0 -show_entries <span style="color:#008080">stream</span><span style="color:#000;font-weight:bold">=</span>pix_fmt -of <span style="color:#008080">default</span><span style="color:#000;font-weight:bold">=</span><span style="color:#008080">noprint_wrappers</span><span style="color:#000;font-weight:bold">=</span>1:nokey<span style="color:#000;font-weight:bold">=</span><span style="color:#099">1</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">webcid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">moovok</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>ffprobe -v trace -i <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">webcid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> 2&gt;&amp;<span style="color:#099">1</span> | awk <span style="color:#d14">&#39;/type:.moov./ {moov=NR} /type:.mdat./ {mdat=NR} END {if (moov &amp;&amp; mdat &amp;&amp; moov &lt; mdat) print &#34;moov ok&#34;; else print &#34;moov after mdat&#34;}&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> ! <span style="color:#0086b3">echo</span> <span style="color:#d14">${</span><span style="color:#008080">chromasubsampling</span><span style="color:#d14">}</span> | grep -q <span style="color:#d14">&#34;yuvj\?420p&#34;</span> <span style="color:#000;font-weight:bold">||</span> <span style="color:#0086b3">test</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">moovok</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> !<span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;moov ok&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#008080">msg</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">webcid</span><span style="color:#d14">}</span><span style="color:#d14"> is BAD! -&gt; </span><span style="color:#d14">${</span><span style="color:#008080">chromasubsampling</span><span style="color:#d14">}</span><span style="color:#d14">, </span><span style="color:#d14">${</span><span style="color:#008080">moovok</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> ! <span style="color:#0086b3">echo</span> <span style="color:#d14">${</span><span style="color:#008080">chromasubsampling</span><span style="color:#d14">}</span> | grep -q <span style="color:#d14">&#34;yuvj\?420p&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">then</span>
+</span></span><span style="display:flex;"><span>            clk ntfy <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">msg</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">fi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">msg</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#008080">cid</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>sql_raw -c <span style="color:#d14">&#34;\copy ( update video set web_cid = null, web_allocations = &#39;[]&#39; where web_cid = &#39;</span><span style="color:#d14">${</span><span style="color:#008080">webcid</span><span style="color:#d14">}</span><span style="color:#d14">&#39; returning cid ) to stdout&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;cid was </span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">exit</span> <span style="color:#099">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">else</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;ok, chromasubsampling=</span><span style="color:#d14">${</span><span style="color:#008080">chromasubsampling</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><h2 id="44a16e3a-a4fa-4908-92dc-a7dd7f6aa3d9">subtitle encoding currently only possible from text to text or bitmap to bitmap</h2>
+<p>Change the format or the subtitle codec</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ffmpeg -i input output.newformat
+</span></span></code></pre></div><p>or</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ffmpeg -i input -scodec webvtt output.newformat
+</span></span></code></pre></div><h2 id="38b582c2-56ad-4725-b881-9d0084fedec8">speed up/slow down a video</h2>
+<ul>
+<li>External reference: <a href="https://trac.ffmpeg.org/wiki/How%20to%20speed%20up%20/%20slow%20down%20a%20video">https://trac.ffmpeg.org/wiki/How%20to%20speed%20up%20/%20slow%20down%20a%20video</a></li>
+<li>External reference: <a href="https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg">https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg</a></li>
+</ul>
+<blockquote>
+<p>This does not affect the audio speed. Use -an to not include audio in the output</p>
+<p>&mdash; <a href="https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg">https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>ffmpeg -i input.mkv -filter:v &ldquo;setpts=PTS/60&rdquo; output.mkv</p>
+<p>&mdash; <a href="https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg">https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>To double the speed of the video with the setpts filter, you can use:</p>
+<p>ffmpeg -i input.mkv -filter:v &ldquo;setpts=0.5*PTS&rdquo; output.mkv</p>
+<p>&mdash; <a href="https://trac.ffmpeg.org/wiki/How%20to%20speed%20up%20/%20slow%20down%20a%20video">https://trac.ffmpeg.org/wiki/How%20to%20speed%20up%20/%20slow%20down%20a%20video</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>faster method, but which can have unexpected results with audio (pauses or async):</p>
+<p>ffmpeg -itsscale 0.01666 -i input.mkv -c copy output.mkv</p>
+<p>&mdash; <a href="https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg">https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>re-encode i.e. a timelapse, e.g. ffmpeg -i input -vf framestep=60,setpts=N/30/TB -r 30 -an out.mp4</p>
+<p>&mdash; <a href="https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg">https://superuser.com/questions/1261678/how-do-i-speed-up-a-video-by-60x-in-ffmpeg</a></p>
+</blockquote>
+<h2 id="a0b58e43-5c3d-4012-8efa-2943174f72f1">encode VP8</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://trac.ffmpeg.org/wiki/Encode/VP8">https://trac.ffmpeg.org/wiki/Encode/VP8</a>
+Encode/VP8 – FFmpeg</p>
+<blockquote>
+<p>Choose a higher bit rate if you want better quality. Note that you shouldn&rsquo;t leave out the -b:v option as the default settings will produce mediocre quality output.</p>
+<p>&mdash; <a href="https://trac.ffmpeg.org/wiki/Encode/VP8">https://trac.ffmpeg.org/wiki/Encode/VP8</a></p>
+</blockquote>
+</li>
+</ul>
+<blockquote>
+<p>there&rsquo;s a constant quality mode (like in the x264 encoder) that will ensure that every frame gets the number of bits it deserves to achieve a certain quality level, rather than forcing the stream to have an average bit rate. This results in better overall quality and should be your method of choice when you encode video with libvpx.</p>
+<p>&mdash; <a href="https://trac.ffmpeg.org/wiki/Encode/VP8">https://trac.ffmpeg.org/wiki/Encode/VP8</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>this case, the target bitrate becomes the maximum allowed bitrate. You enable the constant quality mode with the CRF parameter:</p>
+<p>ffmpeg -i input.mp4 -c:v libvpx -crf 10 -b:v 1M -c:a libvorbis output.webm</p>
+<p>&mdash; <a href="https://trac.ffmpeg.org/wiki/Encode/VP8">https://trac.ffmpeg.org/wiki/Encode/VP8</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>By default the CRF value can be from 4–63, and 10 is a good starting point. Lower values mean better quality.</p>
+<p>&mdash; <a href="https://trac.ffmpeg.org/wiki/Encode/VP8">https://trac.ffmpeg.org/wiki/Encode/VP8</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Important: If neither -b:v nor -crf are set, the encoder will use a low default bitrate and your result will probably look very bad. Always supply one of these options—ideally both.</p>
+<p>If you want to tweak the quality even further, you can set two more parameters:</p>
+<p>-<a href="#4101e701-097d-4276-8a30-739a570397e0">qmin</a> – the minimum quantizer (default 4, range 0–63)
+-<a href="#4101e701-097d-4276-8a30-739a570397e0">qmax</a> – the maximum quantizer (default 63, range qmin–63)</p>
+<p>These Q values are quantization parameters, and lower generally means &ldquo;better quality&rdquo;. If you set the bounds from 0 to 63, this means the encoder has free choice of how to assign the quality. For a better overall quality, you can try to set -qmin to 0 and -qmax to 50 or lower. For example:</p>
+<p>ffmpeg -i input.mp4 -c:v libvpx -qmin 0 -qmax 50 -crf 5 -b:v 1M -c:a libvorbis
+output.webm</p>
+<p>&mdash; <a href="https://trac.ffmpeg.org/wiki/Encode/VP8">https://trac.ffmpeg.org/wiki/Encode/VP8</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>should use constant bitrate encoding if you need your video files to have a
+certain size, or if you&rsquo;re streaming the videos over a channel that only allows
+a certain bit rate.</p>
+<p>&mdash; <a href="https://trac.ffmpeg.org/wiki/Encode/VP8">https://trac.ffmpeg.org/wiki/Encode/VP8</a></p>
+</blockquote>
+<h2 id="e7bd4283-4b47-407b-862a-662d656dd017">subtitles</h2>
+<h3 id="db950a66-cd39-4f2c-bd72-627b78886841">set subtitles track as default</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://stackoverflow.com/questions/26956762/ffmpeg-set-subtitles-track-as-default">https://stackoverflow.com/questions/26956762/ffmpeg-set-subtitles-track-as-default</a></p>
+<p>see also <a href="/braindump/posts/ffmpeg_convert_a_video_using_a_specific_audio_and_subtitle_track/">ffmpeg convert a video using a specific audio and subtitle track</a>, <a href="/braindump/posts/ffmpeg/">ffmpeg</a></p>
+<blockquote>
+<p>ffmpeg -i in.mp4 -i in.srt -c copy -disposition:s:0 default out.mkv</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/26956762/ffmpeg-set-subtitles-track-as-default">https://stackoverflow.com/questions/26956762/ffmpeg-set-subtitles-track-as-default</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="7b38c408-7c30-4661-b174-77eef60683df">setting metadata in subtitles (like the language in english)</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://www.baeldung.com/linux/subtitles-ffmpeg">https://www.baeldung.com/linux/subtitles-ffmpeg</a></p>
+<blockquote>
+<p>-metadata:s:s:0 language=eng</p>
+<p>[&hellip;]</p>
+<p>We’re also using the -metadata:s:s:0 option, which sets metadata for Stream:Subtitle: Number of the stream, starting with 0.</p>
+<p>Finally, the language=eng option sets the subtitle language to English</p>
+<p>&mdash; <a href="https://www.baeldung.com/linux/subtitles-ffmpeg">https://www.baeldung.com/linux/subtitles-ffmpeg</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="b8b94140-0189-4982-b7c6-769753deb83e">add a bunch of subtitles in a file stored in ipfs</h3>
+<p>ffmpeg add a bunch of subtitles in a file stored in ipfs
+Using</p>
+<ul>
+<li><a href="#db950a66-cd39-4f2c-bd72-627b78886841">ffmpeg set subtitles track as default</a>,</li>
+<li><a href="/braindump/posts/ffmpeg_convert_a_video_using_a_specific_audio_and_subtitle_track/">ffmpeg convert a video using a specific audio and subtitle track</a>,</li>
+<li><a href="#d1c1f7a9-8e37-46e2-8211-1eb4dbb45407">make ffmpeg more silent, quiet, less verbose</a>,</li>
+<li><a href="#7b38c408-7c30-4661-b174-77eef60683df">setting metadata in subtitles in ffmpeg</a>,</li>
+<li><a href="/braindump/posts/force_ffmpeg_into_non_interactive_mode/">force ffmpeg into non-interactive mode</a>,</li>
+</ul>
+<!--listend-->
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> filename srt
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#008080">$srt</span><span style="color:#d14"> -&gt; </span><span style="color:#008080">$filename</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    ffmpeg -nostdin -y -hide_banner -loglevel warning -stats -i <span style="color:#008080">$filename</span> -i <span style="color:#008080">$srt</span> -vcodec copy -acodec copy -map 0:a:0 -map 1:s:0 -metadata:s:s:0 <span style="color:#008080">language</span><span style="color:#000;font-weight:bold">=</span>eng -map 0:v:0 -disposition:s:0 default <span style="color:#008080">$srt</span>.webm
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span> &lt; data.txt
+</span></span></code></pre></div><p>In short,</p>
+<ol>
+<li>take the videos and the subtitles put in data.txt,</li>
+<li>get the video and audio from the file and the subtitle from the subtitle file,</li>
+<li>set the subtitle as shown by default,</li>
+<li>tell that it is in English,</li>
+</ol>
+<h2 id="aacc0d35-bb9c-4294-a6bf-ac0cd384ad58">making mp4 videos streamable</h2>
+<blockquote>
+<p>Fast start
+Flag: -movflags +<a href="/braindump/posts/any_downsides_to_always_using_the_movflags_faststart_parameter/">faststart</a>.
+Moves some data to the beginning of the file, allowing the video to be played before it is completely downloaded</p>
+<p>&mdash; <a href="https://gist.github.com/jaydenseric/220c785d6289bcfd7366">https://gist.github.com/jaydenseric/220c785d6289bcfd7366</a></p>
+</blockquote>
+<h2 id="d1c1f7a9-8e37-46e2-8211-1eb4dbb45407">more silent, quiet, less verbose</h2>
+<p>make <a href="/braindump/posts/ffmpeg/">ffmpeg</a> more silent (less verbose)</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>-hide_banner -loglevel warning -stats
+</span></span></code></pre></div><h2 id="7fa0491d-0ea0-4e7c-95a9-5fb544e443b4">What are reasonable values for -aq when creating mp3?</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://superuser.com/questions/1515824/ffmpeg-what-are-reasonable-values-for-aq-when-creating-mp3">https://superuser.com/questions/1515824/ffmpeg-what-are-reasonable-values-for-aq-when-creating-mp3</a></p>
+<blockquote>
+<p>Since the value is codec-specific, -q:a (or -aq) is mapped to the LAME -V
+parameter when using -c:a libmp3lame. According to the FFmpeg Wiki,</p>
+<p>a lower value is a higher quality. 0-3 will normally produce transparent
+results, 4 (default) should be close to perceptual transparency, and 6
+produces an &ldquo;acceptable&rdquo; quality</p>
+<p>&mdash; <a href="https://superuser.com/questions/1515824/ffmpeg-what-are-reasonable-values-for-aq-when-creating-mp3">https://superuser.com/questions/1515824/ffmpeg-what-are-reasonable-values-for-aq-when-creating-mp3</a></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="86af95f5-d4d1-4285-a607-bb72a0807119">cut from start time to end time</h2>
+<p><code>ffmpeg -ss 00:01:00 -to 00:02:00 -i input.mp4 -ss 00:01:00 -to 00:02:00  -c copy output.mp4</code></p>
+<p>Beware the order of arguments, <code>-i</code> after the <code>-ss</code> and <code>-to</code></p>
+<p>Also, think about adding <code>-movflags +faststart</code> or otherwise, in the resulting
+video, the moov will get after the mdat (<a href="#aacc0d35-bb9c-4294-a6bf-ac0cd384ad58">making mp4 videos streamable</a>)</p>
+<blockquote>
+<p>Interestingly, changing the parameter order solves the problem: ffmpeg -ss 00:01:00 -to 00:02:00 -i input.mp4 -ss 00:01:00 -to 00:02:00  -c copy output.mp4. Now, however, skipping is broken and the end time is not correct (in my case)</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/18444194/cutting-multimedia-files-based-on-start-and-end-time-using-ffmpeg">https://stackoverflow.com/questions/18444194/cutting-multimedia-files-based-on-start-and-end-time-using-ffmpeg</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-05-21 Wed]</span></span>)</p>
+</blockquote>
+<h2 id="39a8bf64-e1b7-40df-a6d8-21cfba5b7a32">crop a video</h2>
+<p>ffmpeg -y -i output_video.mp4 -filter:v &ldquo;crop=500:200:130:100&rdquo; a.mp4</p>
+<h2 id="e0ce56b9-7a6d-4ead-ba41-04858c6cf51b">set the creation time (for my <a href="/braindump/posts/timelapse/">timelapse</a>s)</h2>
+<p>ffmpeg -i a.mp4 -y  -metadata creation_time=2024-12-07T08:12:49 -c copy b.mp4</p>
+<h2 id="4101e701-097d-4276-8a30-739a570397e0">keeping quality during conversion</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://superuser.com/questions/525928/ffmpeg-keeping-quality-during-conversion">https://superuser.com/questions/525928/ffmpeg-keeping-quality-during-conversion</a></p>
+<p>The values of qmin, qmax, crf and b:v are interpreted differently depending on
+the encoder, see <a href="https://trac.ffmpeg.org/wiki/Encode/H.264">https://trac.ffmpeg.org/wiki/Encode/H.264</a> and <a href="https://trac.ffmpeg.org/wiki/Encode/VP8">https://trac.ffmpeg.org/wiki/Encode/VP8</a></p>
+<p>Generally speaking, using crf is supposed to provide better results than two
+passes.</p>
+<blockquote>
+<p>FFmpeg sets the -crf option to 23 by default</p>
+<p>&mdash; <a href="https://superuser.com/questions/525928/ffmpeg-keeping-quality-during-conversion">https://superuser.com/questions/525928/ffmpeg-keeping-quality-during-conversion</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>The CRF option sets the encode quality. The bit-rate will vary as necessary to
+provide a consistent quality throughout the video. 51 being the worst to 0 being
+the best — lossless.</p>
+<p>I tend to set all my encodes to 20 which happens to be Handbrake’s default and
+I’ve been happy with the quality. I suggest playing around with that value to
+find a level of quality that is acceptable to you.</p>
+<p>&mdash; <a href="https://superuser.com/questions/525928/ffmpeg-keeping-quality-during-conversion">https://superuser.com/questions/525928/ffmpeg-keeping-quality-during-conversion</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>The range of the CRF scale is 0–51, where 0 is lossless (for 8 bit only, for
+10 bit use -qp 0), 23 is the default, and 51 is worst quality possible. A
+lower value generally leads to higher quality, and a subjectively sane range
+is 17–28. Consider 17 or 18 to be visually lossless or nearly so; it should
+look the same or nearly the same as the input but it isn&rsquo;t technically
+lossless.</p>
+<p>&mdash; <a href="https://trac.ffmpeg.org/wiki/Encode/H.264">https://trac.ffmpeg.org/wiki/Encode/H.264</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-15 Tue]</span></span>)</p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>CRF locks in on a perceived visual quality. It also takes into account motion
+in the video, and can typically achieve better compression than 2-pass VBR</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/6311072/internet-video-ffmpeg-2-pass-encoding-vs-1-pass-crf">https://stackoverflow.com/questions/6311072/internet-video-ffmpeg-2-pass-encoding-vs-1-pass-crf</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-15 Tue]</span></span>)</p>
+</blockquote>
+</li>
+</ul>
+<p>generally speaking, smaller values here mean better results</p>
+<blockquote>
+<ul>
+<li>qmin integer (encoding,video)
+Set min video quantizer scale (VBR). Must be included between -1 and 69, default value is 2.</li>
+<li>qmax integer (encoding,video)
+Set max video quantizer scale (VBR). Must be included between -1 and 1024, default value is 31.</li>
+</ul>
+<p>&mdash; <a href="https://ffmpeg.org/ffmpeg-codecs.html">https://ffmpeg.org/ffmpeg-codecs.html</a></p>
+</blockquote>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/any_downsides_to_always_using_the_movflags_faststart_parameter/">Any downsides to always using the -movflags faststart parameter?</a></li>
+<li><a href="/braindump/posts/burn_subtitle_ffmpeg_handbrake/">burn subtitle ffmpeg handbrake</a></li>
+<li><a href="/braindump/posts/cutting_the_videos_based_on_start_and_end_time_using_ffmpeg/">cutting the videos based on start and end time using ffmpeg</a></li>
+<li><a href="/braindump/posts/ffmpeg_map_option/">ffmpeg -map option</a></li>
+<li><a href="/braindump/posts/ffmpeg_convert_a_video_using_a_specific_audio_and_subtitle_track/">ffmpeg convert a video using a specific audio and subtitle track</a></li>
+<li><a href="/braindump/posts/ffprobe/">ffprobe</a></li>
+<li><a href="/braindump/posts/handbrake/">handbrake</a></li>
+<li><a href="/braindump/posts/how_to_prevent_ffmpeg_from_dropping_metadata/">how to prevent ffmpeg from dropping metadata?</a></li>
+<li><a href="/braindump/posts/http_live_streaming_wikipedia/">HTTP Live Streaming - Wikipedia</a></li>
+<li><a href="/braindump/posts/phasher_crashes_with_some_videos/">phasher crashes with some videos</a></li>
+<li><a href="/braindump/posts/recover_delete_file_still_in_use_open/">recover delete file still in use (open)</a></li>
+<li><a href="/braindump/posts/video_engineering/">video engineering</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/ddc89119-fe8b-4454-90e3-fad48749e387?title=ffmpeg">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 09 Jun 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 18 Mar 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

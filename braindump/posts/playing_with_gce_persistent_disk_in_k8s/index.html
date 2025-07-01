@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html><title>playing with gce persistent disk in k8s</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Playing With Gce Persistent Disk in K8s</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>playing with <a href="/braindump/posts/gce_persistent_disk/">gce persistent disk</a> in <a href="/braindump/posts/kubernetes/">k8s</a></p>
+<p>Find out the region of your cluster</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>gcloud container clusters list |sed -r <span style="color:#d14">&#39;s/ +/ /g&#39;</span>|cut -f2 -d <span style="color:#d14">&#39; &#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>LOCATION
+</span></span><span style="display:flex;"><span>europe-west1-d
+</span></span></code></pre></div><p>Then, create the disk in this region.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>gcloud compute disks create --size<span style="color:#000;font-weight:bold">=</span>10GB --zone<span style="color:#000;font-weight:bold">=</span>europe-west1-d slo-test-disk
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NAME           ZONE            SIZE_GB  TYPE         STATUS
+</span></span><span style="display:flex;"><span>slo-test-disk  europe-west1-d  10       pd-standard  READY
+</span></span></code></pre></div><p><a href="/braindump/posts/google_kubernetes_engine/">gke</a> does not want to hear about disks under 10GB&hellip;</p>
+<p>Then, create the associated <a href="/braindump/posts/persistent_volume/">PersistentVolume</a>,</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;v1&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;PersistentVolume&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;slo-pv&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">capacity</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">storage</span>:<span style="color:#bbb"> </span>10Gi<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">accessModes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#d14">&#34;ReadWriteOnce&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">gcePersistentDisk</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">fsType</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;ext4&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">pdName</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;slo-test-disk&#34;</span><span style="color:#bbb">
+</span></span></span></code></pre></div><p>Then, add it to k8s</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kta ~/test/k8s/pv.yaml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>persistentvolume/slo-pv created
+</span></span></code></pre></div><p>See if the PV is correctly associated to the <a href="/braindump/posts/gce_persistent_disk/">gce persistent disk</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktl describe pv slo-pv
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Name:              slo-pv
+</span></span><span style="display:flex;"><span>Labels:            failure-domain.beta.kubernetes.io/region=europe-west1
+</span></span><span style="display:flex;"><span>                   failure-domain.beta.kubernetes.io/zone=europe-west1-d
+</span></span><span style="display:flex;"><span>Annotations:       pv.kubernetes.io/bound-by-controller: yes
+</span></span><span style="display:flex;"><span>Finalizers:        [kubernetes.io/pv-protection]
+</span></span><span style="display:flex;"><span>StorageClass:
+</span></span><span style="display:flex;"><span>Status:            Bound
+</span></span><span style="display:flex;"><span>Claim:             default/slo-pvc
+</span></span><span style="display:flex;"><span>Reclaim Policy:    Retain
+</span></span><span style="display:flex;"><span>Access Modes:      RWO
+</span></span><span style="display:flex;"><span>VolumeMode:        Filesystem
+</span></span><span style="display:flex;"><span>Capacity:          10Gi
+</span></span><span style="display:flex;"><span>Node Affinity:
+</span></span><span style="display:flex;"><span>  Required Terms:
+</span></span><span style="display:flex;"><span>    Term 0:        failure-domain.beta.kubernetes.io/zone in [europe-west1-d]
+</span></span><span style="display:flex;"><span>                   failure-domain.beta.kubernetes.io/region in [europe-west1]
+</span></span><span style="display:flex;"><span>Message:
+</span></span><span style="display:flex;"><span>Source:
+</span></span><span style="display:flex;"><span>    Type:       GCEPersistentDisk (a Persistent Disk resource in Google Compute Engine)
+</span></span><span style="display:flex;"><span>    PDName:     slo-test-disk
+</span></span><span style="display:flex;"><span>    FSType:     ext4
+</span></span><span style="display:flex;"><span>    Partition:  0
+</span></span><span style="display:flex;"><span>    ReadOnly:   false
+</span></span><span style="display:flex;"><span>Events:         &lt;none&gt;
+</span></span></code></pre></div><p>Great,</p>
+<p>Create the <a href="/braindump/posts/persistent_volume_claim/">PVC</a>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>PersistentVolumeClaim<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-pvc<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">storageClassName</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;&#34;</span><span style="color:#bbb"> </span><span style="color:#998;font-style:italic"># Empty string must be explicitly set otherwise default StorageClass will be set</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">volumeName</span>:<span style="color:#bbb"> </span>slo-pv<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">resources</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span><span style="color:#000080">requests</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">storage</span>:<span style="color:#bbb"> </span>100Mi<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">accessModes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- ReadWriteOnce<span style="color:#bbb">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kta ~/test/k8s/pvc.yaml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>persistentvolumeclaim/slo-pvc created
+</span></span></code></pre></div><p>Is it correctly bound to the PV?</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktl describe pvc slo-pvc
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Name:          slo-pvc
+</span></span><span style="display:flex;"><span>Namespace:     default
+</span></span><span style="display:flex;"><span>StorageClass:
+</span></span><span style="display:flex;"><span>Status:        Bound
+</span></span><span style="display:flex;"><span>Volume:        slo-pv
+</span></span><span style="display:flex;"><span>Labels:        &lt;none&gt;
+</span></span><span style="display:flex;"><span>Annotations:   pv.kubernetes.io/bind-completed: yes
+</span></span><span style="display:flex;"><span>Finalizers:    [kubernetes.io/pvc-protection]
+</span></span><span style="display:flex;"><span>Capacity:      10Gi
+</span></span><span style="display:flex;"><span>Access Modes:  RWO
+</span></span><span style="display:flex;"><span>VolumeMode:    Filesystem
+</span></span><span style="display:flex;"><span>Mounted By:    slo-pod
+</span></span><span style="display:flex;"><span>Events:        &lt;none&gt;
+</span></span></code></pre></div><p>Great,</p>
+<p>Now, let&rsquo;s try to write something into this volume, with a simple <a href="/braindump/posts/pod/">pod</a>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-writer<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>busybox<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">command</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;sh&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">args</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;-c&#34;</span>,<span style="color:#bbb"> </span><span style="color:#d14">&#34;echo test &gt; /volume/test &amp;&amp; sleep 3600&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span>- <span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;/volume&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-volume<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-volume<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">persistentVolumeClaim</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">claimName</span>:<span style="color:#bbb"> </span>slo-pvc<span style="color:#bbb">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kta ~/test/k8s/writer.yaml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>pod/slo-pod created
+</span></span></code></pre></div><p>Check that the pod is correctly bound</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktl describe pod slo-pod |gi slo-pv
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>    ClaimName:  slo-pvc
+</span></span><span style="display:flex;"><span>  Normal   SuccessfulAttachVolume  52s                attachdetach-controller  AttachVolume.Attach succeeded for volume &#34;slo-pv&#34;
+</span></span><span style="display:flex;"><span>Name:              slo-pv
+</span></span><span style="display:flex;"><span>Labels:            failure-domain.beta.kubernetes.io/region=europe-west1
+</span></span><span style="display:flex;"><span>                   failure-domain.beta.kubernetes.io/zone=europe-west1-d
+</span></span><span style="display:flex;"><span>Annotations:       pv.kubernetes.io/bound-by-controller: yes
+</span></span><span style="display:flex;"><span>Finalizers:        [kubernetes.io/pv-protection]
+</span></span><span style="display:flex;"><span>StorageClass:
+</span></span><span style="display:flex;"><span>Status:            Bound
+</span></span><span style="display:flex;"><span>Claim:             default/slo-pvc
+</span></span><span style="display:flex;"><span>Reclaim Policy:    Retain
+</span></span><span style="display:flex;"><span>Access Modes:      RWO
+</span></span><span style="display:flex;"><span>VolumeMode:        Filesystem
+</span></span><span style="display:flex;"><span>Capacity:          10Gi
+</span></span><span style="display:flex;"><span>Node Affinity:
+</span></span><span style="display:flex;"><span>  Required Terms:
+</span></span><span style="display:flex;"><span>    Term 0:        failure-domain.beta.kubernetes.io/zone in [europe-west1-d]
+</span></span><span style="display:flex;"><span>                   failure-domain.beta.kubernetes.io/region in [europe-west1]
+</span></span><span style="display:flex;"><span>Message:
+</span></span><span style="display:flex;"><span>Source:
+</span></span><span style="display:flex;"><span>    Type:       GCEPersistentDisk (a Persistent Disk resource in Google Compute Engine)
+</span></span><span style="display:flex;"><span>    PDName:     slo-test-disk
+</span></span><span style="display:flex;"><span>    FSType:     ext4
+</span></span><span style="display:flex;"><span>    Partition:  0
+</span></span><span style="display:flex;"><span>    ReadOnly:   false
+</span></span><span style="display:flex;"><span>Events:         &lt;none&gt;
+</span></span></code></pre></div><p>Is it running?</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktl get pod slo-pod
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NAME      READY   STATUS    RESTARTS   AGE
+</span></span><span style="display:flex;"><span>slo-pod   1/1     Running   0          68s
+</span></span></code></pre></div><p>Nice, let&rsquo;s take a look at the content of the volume.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktl <span style="color:#0086b3">exec</span> slo-pod ls /volume
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>lost+found
+</span></span><span style="display:flex;"><span>test
+</span></span></code></pre></div><p>Ok, now let&rsquo;s take a look at the gce disk content, just to make sure the content is there.</p>
+<p>Those are in this</p>
+<figure><img src="https://konubinix.eu/ipfs/bafkreihbsjqmd5irvxtqexr6kk2x6gss63yifhel4huuy33agbw6oq5ocy?filename=a.png">
+</figure>
+
+<p>Hmm, looks like I cannot see the content of <a href="/braindump/posts/gce_persistent_disk/">gce persistent disk</a> from here.</p>
+<p>At least, let&rsquo;s start another pod to read the content and see if we find out the wrote file.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-reader<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>busybox<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">command</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;sh&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">args</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;-c&#34;</span>,<span style="color:#bbb"> </span><span style="color:#d14">&#34;ls /volume/ &amp;&amp; sleep 3600&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span>- <span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;/volume&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-volume<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-volume<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">persistentVolumeClaim</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">claimName</span>:<span style="color:#bbb"> </span>slo-pvc<span style="color:#bbb">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kta ~/test/k8s/reader.yaml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>pod/slo-reader created
+</span></span></code></pre></div><p>Then, look at its output</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktl logs slo-reader
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>lost+found
+</span></span><span style="display:flex;"><span>test
+</span></span></code></pre></div><p>Great, the content is there.</p>
+<p>No, let&rsquo;s close the pods to see if the content actually persists.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktd ~/test/k8s/writer.yaml
+</span></span><span style="display:flex;"><span>ktd ~/test/k8s/reader.yaml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>pod &#34;slo-writer&#34; deleted
+</span></span><span style="display:flex;"><span>pod &#34;slo-reader&#34; deleted
+</span></span></code></pre></div><p>Now, let&rsquo;s spawn the reader another time</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kta ~/test/k8s/reader.yaml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>pod/slo-reader created
+</span></span></code></pre></div><p>Then, look at its output</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktl logs slo-reader
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>lost+found
+</span></span><span style="display:flex;"><span>test
+</span></span></code></pre></div><p>Ok, just like we expected.</p>
+<p>Just to be sure, let&rsquo;s write another thing before concluding.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000080">apiVersion</span>:<span style="color:#bbb"> </span>v1<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">kind</span>:<span style="color:#bbb"> </span>Pod<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">metadata</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-writer2<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb"></span><span style="color:#000080">spec</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">containers</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">image</span>:<span style="color:#bbb"> </span>busybox<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">command</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;sh&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">args</span>:<span style="color:#bbb"> </span>[<span style="color:#d14">&#34;-c&#34;</span>,<span style="color:#bbb"> </span><span style="color:#d14">&#34;echo test &gt; /volume/test2 &amp;&amp; sleep 3600&#34;</span>]<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">volumeMounts</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span>- <span style="color:#000080">mountPath</span>:<span style="color:#bbb"> </span><span style="color:#d14">&#34;/volume&#34;</span><span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-volume<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">  </span><span style="color:#000080">volumes</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">    </span>- <span style="color:#000080">name</span>:<span style="color:#bbb"> </span>slo-volume<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">      </span><span style="color:#000080">persistentVolumeClaim</span>:<span style="color:#bbb">
+</span></span></span><span style="display:flex;"><span><span style="color:#bbb">        </span><span style="color:#000080">claimName</span>:<span style="color:#bbb"> </span>slo-pvc<span style="color:#bbb">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kta ~/test/k8s/writer2.yaml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>pod/slo-writer2 created
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kta ~/test/k8s/reader.yaml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>pod/slo-reader created
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktl logs slo-reader
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>lost+found
+</span></span><span style="display:flex;"><span>test
+</span></span><span style="display:flex;"><span>test2
+</span></span></code></pre></div><p>Ok, now I feel like this is working,</p>
+<p>Lets clean a bit</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>ktd ~/test/k8s/ -R
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>gcloud compute disks delete --zone<span style="color:#000;font-weight:bold">=</span>europe-west1-d slo-test-disk
+</span></span></code></pre></div><h2 id="permalink"><a href="https://konubinix.eu/braindump/8f8cfaa3-f460-46dd-872a-bfe83b803016?title=playing_with_gce_persistent_disk_in_k8s">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 09 Aug 2021</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 14 Jan 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

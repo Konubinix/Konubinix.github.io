@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html><title>polymorphic command line interface (in clk)</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Polymorphic Command Line Interface (In Clk)</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p><a href="/braindump/posts/programmation_generique/#polymorphic">polymorphic</a> <a href="/braindump/posts/command_line_interface/">command line interface</a></p>
+<p>Creating command line interfaces is in several aspects similar to creating a
+traditional program. For example, you have to think about the input/output and
+try to respect the common programming idioms, like <a href="/braindump/posts/single_responsibility_principle/">SRP</a> or <a href="/braindump/posts/don_t_repeat_yourself/">DRY</a>.</p>
+<p>I want to highlight that polymorphism is also an idiom that can make sense in
+creating command line interfaces. To do so, I will use some of the common
+situations of my day to day life.</p>
+<p>Say you have several computers, in different locations, connected to different
+networks and with different connected hardware.</p>
+<p>I like manually starting a script in any of my interactive computers when it is
+turned on. For instance, in my desktop computer, it:</p>
+<ol>
+<li>finds one of the connected drives that may contains one my <a href="/braindump/posts/shamir_s_secret_sharing/">shamir&rsquo;s secret sharing</a> of my gpg key</li>
+<li>create the <a href="/braindump/posts/gnupg/">gpg</a> key</li>
+<li>start the gpg agent</li>
+<li>fetch my rss and mails, updating my notmuch database</li>
+<li>run <a href="/braindump/posts/supervisor/">supervisor</a></li>
+<li>fetch my calendars and export them into <a href="/braindump/posts/org_mode/">org-mode</a> files</li>
+</ol>
+<p>In my phone, the start script does :</p>
+<ol>
+<li>run <a href="/braindump/posts/tinc/">tinc</a>,</li>
+<li>start <a href="/braindump/posts/supervisor/">supervisor</a>,</li>
+</ol>
+<p>Even thought there share the same abstract logic, they both are very different.</p>
+<p>This is where I talk about polymorphism. Indeed, I run the same &ldquo;interface&rdquo; on
+all my computer (clk start), but, depending on the computer, the script does
+very different things. In other terms, &ldquo;clk start&rdquo; is the interface and each
+computer has an implementation.</p>
+<p>Another example is when you navigate from project to projects in the same company. All the project share a same logic</p>
+<ol>
+<li>setting up the dependencies</li>
+<li>bootstrapping a database</li>
+<li>building the project</li>
+<li>running the project</li>
+</ol>
+<p>In that is so, I can easily create dumb commands that impersonate the workflow, like</p>
+<ol>
+<li>clk setup-dependencies</li>
+<li>clk db bootstrap</li>
+<li>clk build</li>
+<li>clk run</li>
+</ol>
+<p>Then, I can easily connect them using a flow. I can even create a flow command
+with the purpose of connecting them.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk <span style="color:#0086b3">alias</span> --global <span style="color:#0086b3">set</span> work.flow <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Everything went well&#34;</span>
+</span></span><span style="display:flex;"><span>clk flowdep --global <span style="color:#0086b3">set</span> work.flow setup-dependencies db.bootstrap build run
+</span></span><span style="display:flex;"><span>clk parameter --global <span style="color:#0086b3">set</span> work.flow --flow
+</span></span></code></pre></div><p>And then, I simply have to run &ldquo;clk work flow&rdquo; to have all the command run. I
+can even run &ldquo;clk work flow &ndash;flow-after db.bootstrap&rdquo; to avoid running once
+again the bootstrap (it might be sensible sometimes).</p>
+<p>And finally, in each project, I can easily overwrite the commands to fit the
+internal project need.</p>
+<p>For instance, in one project, I might want to build using maven, then, I can run</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk <span style="color:#0086b3">alias</span> --global <span style="color:#0086b3">set</span> mvn <span style="color:#0086b3">exec</span> mvn  <span style="color:#998;font-style:italic"># I advise to always create a command to exec something to ease customizing later</span>
+</span></span><span style="display:flex;"><span>clk <span style="color:#0086b3">alias</span> --local <span style="color:#0086b3">set</span> build mvn
+</span></span></code></pre></div><p>In another project, I can use cargo</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk <span style="color:#0086b3">alias</span> --local <span style="color:#0086b3">set</span> build <span style="color:#0086b3">exec</span> cargo build
+</span></span></code></pre></div><p>That way, whatever the project I fall into, I know I simply have to call the
+command &ldquo;clk work flow&rdquo; (the interface) and the sensible commands (the
+implementation) will be called.</p>
+<p>I use this a lot in my personal and professional projects.</p>
+<p>Also, if for a short time I want to test something new, like I want to make maven skip
+the tests globally. I simply can run</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk paremeter --global <span style="color:#0086b3">set</span> mvn -Dmaven.test.skip<span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">true</span> -DskipTests
+</span></span></code></pre></div><p>If, for some reason I only want to skip the tests for a particular project, I can simply run the same thing locally.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk paremeter --local <span style="color:#0086b3">set</span> mvn -Dmaven.test.skip<span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">true</span> -DskipTests
+</span></span></code></pre></div><p>Also, combined with <a href="/braindump/posts/clk_extension/">clk extensions</a>, I can put such high level logic in a dedicated
+extension to enable/disable it at will.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk extension create mvn_skip_tests
+</span></span><span style="display:flex;"><span>clk paremeter --mvn-skip-tests <span style="color:#0086b3">set</span> mvn -Dmaven.test.skip<span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">true</span> -DskipTests
+</span></span></code></pre></div><p>Then, skipping the tests is simply a matter of running</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk extension <span style="color:#0086b3">enable</span> mvn_skip_tests
+</span></span></code></pre></div><p>And disabling them running</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk extension disable mvn_skip_tests
+</span></span></code></pre></div><p>I hope I illustrated how polymorphism, when applied to command line interfaces,
+helps creating your own powerful and versatile workflow. I hope I also showed
+how <a href="/braindump/posts/clk/">clk</a> helps you in the process of creating this workflow.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/43a077e7-b11f-4d77-93a2-7fe68e673996?title=polymorphic_command_line_interface_in_clk">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 06 Jan 2023</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 07 Jun 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

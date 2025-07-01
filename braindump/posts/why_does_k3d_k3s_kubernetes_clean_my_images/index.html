@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html><title>why does k3d/k3s/kubernetes clean my images?</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Why Does K3d/K3s/Kubernetes Clean My Images?</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>External reference: <a href="https://github.com/rancher/k3d/blob/main/docs/faq/faq.md">https://github.com/rancher/k3d/blob/main/docs/faq/faq.md</a></li>
+<li>External reference: <a href="https://github.com/k3s-io/k3s/blob/master/pkg/daemons/agent/agent.go#L67">https://github.com/k3s-io/k3s/blob/master/pkg/daemons/agent/agent.go#L67</a></li>
+<li>External reference: <a href="https://github.com/rancher/k3d/issues/216">https://github.com/rancher/k3d/issues/216</a></li>
+<li>External reference: <a href="https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/#user-configuration">https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/#user-configuration</a></li>
+<li>External reference: <a href="https://github.com/k3s-io/k3s/issues/813">https://github.com/k3s-io/k3s/issues/813</a></li>
+<li>External reference: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/">https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/</a></li>
+</ul>
+<blockquote>
+<p>Pods evicted due to <a href="/braindump/posts/kubernetes_disk_pressure/">lack of disk space</a></p>
+<p>Pods go to evicted state after doing X</p>
+<p>Related issues: #133 - Pods evicted due to NodeHasDiskPressure (collection of #119 and #130)</p>
+<p>Background: somehow docker runs out of space for the k3d node containers, which triggers a hard eviction in the kubelet</p>
+<p>Possible fix/workaround by @zer0def:</p>
+<p>use a docker storage driver which cleans up properly (e.g. overlay2)</p>
+<p>clean up or expand docker root filesystem</p>
+<p>change the kubelet&rsquo;s eviction thresholds upon cluster creation:</p>
+<p>k3d cluster create \
+&ndash;k3s-agent-arg &lsquo;&ndash;kubelet-arg=eviction-hard=imagefs.available&lt;1%,nodefs.available&lt;1%&rsquo; \
+&ndash;k3s-agent-arg &lsquo;&ndash;kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%&rsquo;</p>
+<p>&mdash; <a href="https://github.com/rancher/k3d/blob/main/docs/faq/faq.md">https://github.com/rancher/k3d/blob/main/docs/faq/faq.md</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>How the cluster (as in k3s/Kubernetes) acts is mostly rancher/k3s&rsquo; concern.
+What I suspect is:</p>
+<p>image garbage collection kicks in, because your node(s) is reaching filesystem capacity
+you&rsquo;re possibly running on Mac or Windows with Docker for Desktop, where the VM has limited disk space available</p>
+<p>&mdash; <a href="https://github.com/rancher/k3d/issues/216">https://github.com/rancher/k3d/issues/216</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Importing images works great - but seems that if the images are not used - they get deleted. How can we prevent this happening so soon?</p>
+<p>&mdash; <a href="https://github.com/rancher/k3d/issues/216">https://github.com/rancher/k3d/issues/216</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>You can adjust the following thresholds to tune image garbage collection with the following kubelet flags :</p>
+<ul>
+<li>image-gc-high-threshold, the percent of disk usage which triggers image garbage collection. Default is 85%.</li>
+<li>image-gc-low-threshold, the percent of disk usage to which image garbage collection attempts to free. Default is 80%.</li>
+</ul>
+<p>You can customize the garbage collection policy through the following kubelet flags:</p>
+<ul>
+<li>minimum-container-ttl-duration, minimum age for a finished container before it is garbage collected. Default is 0 minute, which means every finished container will be garbage collected.</li>
+<li>maximum-dead-containers-per-container, maximum number of old instances to be retained per container. Default is 1.</li>
+<li>maximum-dead-containers, maximum number of old instances of containers to retain globally. Default is -1, which means there is no global limit.</li>
+</ul>
+<p>Containers can potentially be garbage collected before their usefulness has
+expired. These containers can contain logs and other data that can be useful for
+troubleshooting. A sufficiently large value for
+maximum-dead-containers-per-container is highly recommended to allow at least 1
+dead container to be retained per expected container. A larger value for
+maximum-dead-containers is also recommended for a similar reason. See this issue
+for more details.</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/#user-configuration">https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/#user-configuration</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Yes, same with k8s, default 80%</p>
+<p>&mdash; <a href="https://github.com/k3s-io/k3s/issues/813">https://github.com/k3s-io/k3s/issues/813</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>&ndash;image-gc-high-threshold int32     Default: 85</p>
+<p>The percent of disk usage after which image garbage collection is always
+run. Values must be within the range [0, 100], To disable image garbage
+collection, set to 100. (DEPRECATED: This parameter should be set via the config
+file specified by the Kubelet&rsquo;s `&ndash;config` flag. See
+<a href="https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/">https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/</a> for
+more information.)</p>
+<p>&ndash;image-gc-low-threshold int32     Default: 80</p>
+<p>The percent of disk usage before which image garbage collection is never
+run. Lowest disk usage to garbage collect to. Values must be within the range
+[0, 100] and should not be larger than that of
+`&ndash;image-gc-high-threshold`. (DEPRECATED: This parameter should be set via the
+config file specified by the Kubelet&rsquo;s `&ndash;config` flag. See
+<a href="https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/">https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/</a> for
+more information.)</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/">https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Existing Flag	New Flag	Rationale</p>
+<ul>
+<li>&ndash;image-gc-high-threshold	&ndash;eviction-hard or &ndash;eviction-soft	existing eviction signals can trigger image garbage collection</li>
+<li>&ndash;image-gc-low-threshold	&ndash;eviction-minimum-reclaim	eviction reclaims achieve the same behavior</li>
+</ul>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/#user-configuration">https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/#user-configuration</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>&ldquo;eviction-minimum-reclaim&rdquo;: &ldquo;imagefs.available=10%,nodefs.available=10%&rdquo;</p>
+<p>&mdash; <a href="https://github.com/k3s-io/k3s/blob/master/pkg/daemons/agent/agent.go#L67">https://github.com/k3s-io/k3s/blob/master/pkg/daemons/agent/agent.go#L67</a></p>
+</blockquote>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/5b7d259a-c3b7-4284-971c-93b9d2bcecdf?title=why_does_k3d_k3s_kubernetes_clean_my_images">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 08 Sep 2021</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 21 Jun 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

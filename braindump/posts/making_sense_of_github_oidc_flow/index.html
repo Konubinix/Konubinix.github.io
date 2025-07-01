@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html><title>making sense of github OIDC flow</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Making Sense of Github OIDC Flow</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>making sense of <a href="/braindump/posts/github/">github</a> <a href="/braindump/posts/openid_connect/">OIDC</a> flow, used by <a href="/braindump/posts/pypi/">pypi</a> to harden security</p>
+<p><a href="https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect">https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect</a></p>
+<p>Reminder of OIDC : a <a href="/braindump/posts/relying_party/">relying party</a> (which is an <a href="/braindump/posts/oauth_2_0/#f86ccef1-e4b1-413f-b78c-8070f4dceafa">oauth 2.0 client</a>) needs a <a href="/braindump/posts/resource_owner/">resource owner</a> to <a href="/braindump/posts/authentication/">authenticate</a>
+against an <a href="/braindump/posts/openid_connect/#649456a8-989a-4e4c-808c-a38107d75e5b">OpenID Connect Provider</a> (which is an <a href="/braindump/posts/oauth_2_0/#ead7dfac-e39a-4262-8066-a9e594d1b8a3">authorization server</a>) and
+<a href="/braindump/posts/oauth_2_0/#1d0956e3-43f6-44fb-9f18-a19c69980b1e">consent</a> the relying party to access to some data from a <a href="/braindump/posts/oauth_2_0/#72564685-ad13-4af1-8a9a-8230b967a36b">resource server</a>. The
+relying party is provided with an <a href="/braindump/posts/oauth_2_0/#26052c2d-ac4a-4637-9122-704d51585dc8">access token</a>, proof of this consented
+<a href="/braindump/posts/authorization/">authorization</a>, that will be passed along requests to the resource server. The
+resource owner knows how to check how genuine the access token is and what
+resources are bound to it. The OIDC provider is also a resource server where the
+resource is the user identity<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>. It provides part of this information with
+an <a href="/braindump/posts/openid_connect/#6796313b-7141-4013-848f-bc08edd02472">Identity Token</a> along with the access token.</p>
+<p>Let&rsquo;s remember that the identity token IS a JWT, and the access token is only a
+<a href="/braindump/posts/oauth_2_0/#5d9fcc89-c31e-43ed-a53f-b548eb688999">bearer token</a>, while in practice, most implementation issue access tokens as
+JWT. Because <a href="/braindump/posts/oauth_2_0/#eec4cf73-015a-4574-beb5-f6c95445dfa7">self-encoded access token</a> is quite useful in plenty of use
+cases. When doing so, the <a href="/braindump/posts/audience_claim/">audience claim</a> SHOULD refer to the resource server<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</p>
+<p>Also, let&rsquo;s remember that the identity token is a proof of two things</p>
+<ol>
+<li>that some end user, mentioned in the token authenticated against the OIDC provider,</li>
+<li>the proof was meant for the relying party.</li>
+</ol>
+<p>Possessing this token only proves that. It DOES NOT prove that the entity
+possessing this token is granted anything on any resource server anywhere. It is
+public knowledge and should not be used as proof of authorization<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>.</p>
+<p>Now, let&rsquo;s see the flow in github:</p>
+<ol>
+<li>github generates a JWT,</li>
+<li>the <a href="/braindump/posts/github_action/#8791c69f-8d38-4f72-9535-4cf139dbc26a">workflow</a> provides this token to the cloud provider,</li>
+<li>the cloud provider returns an access token,</li>
+<li>the workflow connects to the cloud provider with the access token to do its
+job.</li>
+</ol>
+<p>Using OIDC concepts, this is how I interpret this.</p>
+<ul>
+<li>there are two overlapping flows</li>
+<li>first flow:
+<ul>
+<li>github is the <a href="/braindump/posts/oauth_2_0/#ead7dfac-e39a-4262-8066-a9e594d1b8a3">authorization server</a>,</li>
+<li>the workflow is the client,</li>
+<li>the cloud provider is the resource server,</li>
+<li>the resource is an access token,</li>
+<li>github, on behalf of the workflow &ldquo;asks&rdquo; itself for an access token to get access to the
+cloud provider access token. It &ldquo;grants&rdquo; itself the permission.
+<ul>
+<li>in this case the <a href="/braindump/posts/audience_claim/">audience claim</a> should be the cloud provider.</li>
+</ul>
+</li>
+<li>the workflow uses that token to get access to the cloud provider access
+token,</li>
+</ul>
+</li>
+<li>second flow:
+<ul>
+<li>the cloud provider is the authorization server AND the resource server</li>
+<li>the workflow is the client</li>
+<li>the resource is the cloud service</li>
+<li>the previous flow issues the access token</li>
+<li>in this case the <a href="/braindump/posts/audience_claim/">audience claim</a> should be the cloud provider as well,</li>
+</ul>
+</li>
+</ul>
+<p>The cloud provider is the resource server in both cases. Therefore, it SHOULD be
+the audience in both.</p>
+<p>It feels a bit like the flows similar to <a href="/braindump/posts/google_sign_in/">google sign-in</a><sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>.</p>
+<p>To me, it looks like <a href="/braindump/posts/name_dropping/">name dropping</a>. This flow makes total sense to me, but it
+seems to me <a href="/braindump/posts/intellectually_honest/">intellectually dishonest</a> to call them OIDC flow, only because it
+rely on some aspect of OIDC. It made it harder for me to understand what they
+were doing.</p>
+<p>Note: It may exist a definition of this flow at OIDC, but I don&rsquo;t think so. The
+<a href="/braindump/posts/charge_de_la_preuve/">burden of proof</a> lies on github for referring to it. The github documentation
+only refers to <a href="https://openid.net/specs/openid-connect-core-1_0.html">https://openid.net/specs/openid-connect-core-1_0.html</a> , that I
+used as base for my analysis.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/eddcf107-a386-4faf-bd4c-c70013330a5f?title=making_sense_of_github_oidc_flow">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p><a href="/braindump/posts/self_sovereign_identity_with_self_issued_openid_provider/#id-c177c189-8e25-4b44-abd0-e26e6847326d-openid-connect-is-a-user-identity-attribute-disclosure-protocol-rather-than-an-id-b9b19e49-a439-4343-ab4e-193840b788dd-authentication-protocol">openid connect is a user identity attribute disclosure protocol rather than an authentication protocol</a>&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2">
+<p>see <a href="/braindump/posts/jwt_access_tokens_profile_for_oauth_2_0/#e015eb2b-1ed5-4b4a-b403-b2d2f173899b">link with audience claim</a>&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:3">
+<p><a href="/braindump/posts/id_tokens_vs_access_tokens/">ID Tokens vs Access Tokens</a>&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:4">
+<p>see <a href="/braindump/posts/trying_authenticating_to_keycloak_using_google_as_identity_provider/">trying authenticating to keycloak using google as Identity Provider</a>&#160;<a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+      </div>
+	  <aside class="date"><time>Last updated: 19 Nov 2023</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 18 Nov 2023</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

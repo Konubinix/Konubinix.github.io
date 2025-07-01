@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html><title>make org-babel-sh-evaluate handle noop lines</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Make Org-Babel-Sh-Evaluate Handle Noop Lines</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>See <a href="/braindump/posts/how_org_babel_processes_the_output_in_shell_s_sessions/">how to org babel process the output in shell&rsquo;s sessions</a> for the
+analysis. Also I assume we have set an explicit prompt in
+<code>comint-prompt-regexp</code>, as explained <a href="/braindump/posts/make_org_babel_sh_evaluate_handle_no_newline_input_lines_correctly/">here</a>.</p>
+<p>As a reminder, the problem is that <a href="/braindump/posts/org_babel/">org-babel</a>, due to the fact it relies on
+<code>comint-prompt-regexp</code> in sh, expects all the prompts in the output to have a
+newline before them. In the case of noop line, only the prompt is output but no
+newline.</p>
+<p>In the following example:</p>
+<ul>
+<li>echo a</li>
+<li># noop</li>
+<li>echo b</li>
+</ul>
+<p>comint gives</p>
+<ul>
+<li>a\n:theprompt:</li>
+<li>:theprompt:</li>
+<li>b\n:theprompt:</li>
+<li>org_babel_sh_eoe\n:theprompt:</li>
+</ul>
+<p>Or, once concatenated:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span><span style="display:flex;"><span>:theprompt::theprompt:b
+</span></span><span style="display:flex;"><span>:theprompt:org_babel_sh_eoe
+</span></span><span style="display:flex;"><span>:theprompt:
+</span></span></code></pre></div><p>And, after split and trim</p>
+<ul>
+<li>
+<p>a</p>
+</li>
+<li></li>
+<li>
+<p>b</p>
+</li>
+<li>
+<p>org_babel_sh_eoe</p>
+</li>
+<li></li>
+</ul>
+<p>And thus in the end we should get</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>b
+</span></span></code></pre></div><p>Let&rsquo;s try it to make sure we got it right.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> a
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># noop</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> b
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>b
+</span></span></code></pre></div><p>Ok, it looks like we understand correctly what happens.</p>
+<p>Notice that, by setting the prompt exactly, like suggested in <a href="/braindump/posts/make_org_babel_sh_evaluate_handle_no_newline_input_lines_correctly/">here</a>, we already
+have sensible output. Without this fix, the output would be:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span><span style="display:flex;"><span>$b
+</span></span></code></pre></div><p>One solution could be to find out the output associated to the noop and remove
+the associated output prompt. If the case of the example, we would get</p>
+<ul>
+<li>a\n:theprompt:</li>
+<li>b\n:theprompt:</li>
+<li>org_babel_sh_eoe\n:theprompt:</li>
+</ul>
+<p>Or, once concatenated:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span><span style="display:flex;"><span>:theprompt:b
+</span></span><span style="display:flex;"><span>:theprompt:org_babel_sh_eoe
+</span></span><span style="display:flex;"><span>:theprompt:
+</span></span></code></pre></div><p>And finally we would get</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span><span style="display:flex;"><span>b
+</span></span></code></pre></div><p>To remove the noop commands, we could rewrite the
+<code>comint-output-filter-functions</code> part to add this behavior.</p>
+<p>Because I did not want to mess too much with the function, I created a patch
+that runs a custom function instead of the inline code.</p>
+<p>The patch is available on ipfs, at the location <a href="https://ipfs.iohttps//ipfs.konubinix.eu/ipfs/bafkreidhcwrcjycffb3z6wlso2ltuwvp43vo3dsxx7jbzmwglihy5sz37e?filename=ob-comint.el">https://ipfs.iohttps//ipfs.konubinix.eu/ipfs/bafkreidhcwrcjycffb3z6wlso2ltuwvp43vo3dsxx7jbzmwglihy5sz37e?filename=ob-comint.el</a></p>
+<p>Note that because I patched a macro, you need to reload it but also recompile
+all the files that used it.</p>
+<p>This patch makes <code>org-babel-comint-with-output</code> use the function
+<code>konix/org-babel-comint-with-output/comint-output-filter-function</code> to filter the
+comint output.</p>
+<p>We could have the exact same behavior as the current one by defining the following</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-elisp" data-lang="elisp"><span style="display:flex;"><span>(<span style="color:#0086b3">defun</span> <span style="color:#008080">konix/org-babel-comint-with-output/comint-output-filter-function</span> (<span style="color:#008080">string-buffer</span> <span style="color:#008080">text</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#900;font-weight:bold">concat</span> <span style="color:#008080">string-buffer</span> <span style="color:#008080">text</span>)
+</span></span><span style="display:flex;"><span>  )
+</span></span></code></pre></div><p>Now, let&rsquo;s try to erase the lines that match exactly the prompt. Thanks to our
+<a href="/braindump/posts/make_org_babel_sh_evaluate_handle_no_newline_input_lines_correctly/">previous work</a>, <code>comint-prompt-regexp</code> is no more a regexp and this is quite easy
+to write:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-elisp" data-lang="elisp"><span style="display:flex;"><span>(<span style="color:#0086b3">defun</span> <span style="color:#008080">konix/org-babel-comint-with-output/comint-output-filter-function</span> (<span style="color:#008080">string-buffer</span> <span style="color:#008080">text</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#0086b3">when</span> (<span style="color:#900;font-weight:bold">string-equal</span> <span style="color:#008080">comint-prompt-regexp</span> <span style="color:#008080">text</span>)
+</span></span><span style="display:flex;"><span>    (<span style="color:#0086b3">setq</span> <span style="color:#008080">text</span> <span style="color:#d14">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>  (<span style="color:#900;font-weight:bold">concat</span> <span style="color:#008080">string-buffer</span> <span style="color:#008080">text</span>)
+</span></span><span style="display:flex;"><span>  )
+</span></span></code></pre></div><p>Then we get</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> a
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># noop</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> b
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span><span style="display:flex;"><span>b
+</span></span></code></pre></div><p>Now, let&rsquo;s see if we to mix some commands not outputting a newline as well as
+noop to challenge this solution.</p>
+<ul>
+<li>echo -n a</li>
+<li># noop</li>
+<li>echo b</li>
+</ul>
+<p>would result in the output</p>
+<ul>
+<li>a:theprompt:</li>
+<li>:theprompt:</li>
+<li>b\n:theprompt:</li>
+<li>org_babel_sh_eoe\n:theprompt:</li>
+</ul>
+<p>The noop workaround would remove the second line, then</p>
+<ul>
+<li>a:theprompt:</li>
+<li>b\n:theprompt:</li>
+<li>org_babel_sh_eoe\n:theprompt:</li>
+</ul>
+<p>and after concatenation</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a:theprompt:b
+</span></span><span style="display:flex;"><span>:theprompt:org_babel_sh_eoe
+</span></span><span style="display:flex;"><span>:theprompt:
+</span></span></code></pre></div><p>and then, after splitting and stripping</p>
+<ul>
+<li>a</li>
+<li>b</li>
+</ul>
+<p>Let&rsquo;s try it for real</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> -n a
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># noop</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> b
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># noop</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> c
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> -n d
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span><span style="display:flex;"><span>b
+</span></span><span style="display:flex;"><span>c
+</span></span><span style="display:flex;"><span>d
+</span></span></code></pre></div><p>As you can see, the outputs are correctly shown now.</p>
+<p>Actually, there is one subtlety that needs to be taken care of: the prompt may
+come some time after the last output, giving the following pattern:</p>
+<ul>
+<li>some output</li>
+<li>:theprompt:</li>
+</ul>
+<p>For example, the following program don&rsquo;t return anything</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> a <span style="color:#000;font-weight:bold">&amp;&amp;</span> sleep <span style="color:#099">2</span>
+</span></span></code></pre></div><p>That case may be captured by simply remembering whether the last command was finished, meaning it ended by the prompt.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-elisp" data-lang="elisp"><span style="display:flex;"><span>(<span style="color:#0086b3">defvar</span> <span style="color:#008080">konix/org-babel-comint-with-output/comint-output-filter-function/not-finished-yet</span> <span style="color:#008080">nil</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(<span style="color:#0086b3">defun</span> <span style="color:#008080">konix/org-babel-comint-with-output/comint-output-filter-function</span> (<span style="color:#008080">string-buffer</span> <span style="color:#008080">text</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#998;font-style:italic">;; see /braindump/posts/25b52cc8-71f8-420f-9161-5c60030cede9/</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#998;font-style:italic">;; for an explanation</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#0086b3">when</span> (<span style="color:#0086b3">and</span>
+</span></span><span style="display:flex;"><span>         (<span style="color:#900;font-weight:bold">string-equal</span> <span style="color:#d14">&#34;:theprompt:&#34;</span> <span style="color:#008080">text</span>)
+</span></span><span style="display:flex;"><span>         (<span style="color:#008080">not</span> <span style="color:#008080">konix/org-babel-comint-with-output/comint-output-filter-function/not-finished-yet</span>)
+</span></span><span style="display:flex;"><span>         )
+</span></span><span style="display:flex;"><span>    (<span style="color:#0086b3">setq</span> <span style="color:#008080">text</span> <span style="color:#d14">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>  (<span style="color:#0086b3">setq</span> <span style="color:#008080">konix/org-babel-comint-with-output/comint-output-filter-function/not-finished-yet</span>
+</span></span><span style="display:flex;"><span>        (<span style="color:#008080">not</span> (<span style="color:#008080">string-suffix-p</span> <span style="color:#008080">text</span> <span style="color:#d14">&#34;:theprompt:&#34;</span>))
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>  (<span style="color:#900;font-weight:bold">concat</span> <span style="color:#008080">string-buffer</span> <span style="color:#008080">text</span>)
+</span></span><span style="display:flex;"><span>  )
+</span></span></code></pre></div><p>Now, the delay between the output and the prompt is not a problem anymore.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> a <span style="color:#000;font-weight:bold">&amp;&amp;</span> sleep <span style="color:#099">2</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a
+</span></span></code></pre></div><!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/org_babel_bash_with_noop_lines/">org babel bash with noop lines</a></li>
+</ul>
+<h2 id="permalink"><a href="/braindump/25b52cc8-71f8-420f-9161-5c60030cede9?title=make_org_babel_sh_evaluate_handle_noop_lines">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 06 Jan 2023</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 05 Jan 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

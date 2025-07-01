@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html><title>earthly</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Earthly</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <h2 id="33daf589-4430-4633-90e1-ac50b5dd9132">command failed: docker pull 127.0.0.1:41177/sess-mwpqe0vmziaytaa3w3j4nosne/pullping:img-3: exit status 1: Error response from daemon: Get &ldquo;<a href="http://127.0.0.1:41177/v2/sess-mwpqe0vmziaytaa3w3j4nosne/pullping/manifests/sha256:36be876ba6441e3d878cee7e3f816fc924d8c78d374a230ac57865672ce748c4">http://127.0.0.1:41177/v2/sess-mwpqe0vmziaytaa3w3j4nosne/pullping/manifests/sha256:36be876ba6441e3d878cee7e3f816fc924d8c78d374a230ac57865672ce748c4</a>&rdquo;: EOF: exit status 1</h2>
+<p>This kind of error happens several times when running earthly in a CI.</p>
+<p>Reading <a href="https://github.com/earthly/earthly/tree/main/docs-internals">this</a> documentation helps.</p>
+<blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>pullping</th>
+          <th>Once the build function returns (passing a set of LLB references back to buildkit), the BuildKit server will execute the commands, and call the earthlyoutputs exporter, which will call back to the client (Earthly), which will be received by the pullping handler. This will cause earthly to perform a docker pull against the embedded registry</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>dockertar</td>
+          <td>The legacy approach for exporting images from BuildKit to the host via a tar file; we try to use pullping instead, since it only pulls the needed layers</td>
+      </tr>
+  </tbody>
+</table>
+<p>&mdash; <a href="https://github.com/earthly/earthly/tree/main/docs-internals">https://github.com/earthly/earthly/tree/main/docs-internals</a></p>
+</blockquote>
+<p>When the earthly command finishes, it needs to pulls the built images from the
+buildkit server. Pulling images is a well known bottleneck in the container
+world and some projects like <a href="https://github.com/containerd/stargz-snapshotter">stargz</a> or <a href="https://github.com/GoogleContainerTools/kaniko">kaniko</a> were created. This is also why
+the <a href="/braindump/posts/tilt_live_update/">tilt live update</a> mechanism is so powerful.</p>
+<p>In earthly 8, a mechanism called pullping was implemented to download only the
+difference of layers. Prior to that a tar.gz was downloaded each time.</p>
+<p>To implement the pullping algorithm,</p>
+<ol>
+<li>buildkitd was forked to implement the client part of the algorithm</li>
+<li>a local registry is used in the earthly client</li>
+<li>in order to get the image inside the local docker storage, it runs &ldquo;docker pull localhost:4xxxx/sess-xxxxx/pullping:img-0&rdquo;</li>
+</ol>
+<p>We can see by running earthly &ndash;verbose on a target that saves an image.</p>
+<blockquote>
+<p>output   | [&mdash;&mdash;&mdash;-] 100% exporting outputs
+frontend | Running command: docker pull 127.0.0.1:34859/sess-c79nfu3a1205h7nop2odoz8qv/pullping:img-0
+frontend | Running command: docker image inspect 127.0.0.1:34859/sess-c79nfu3a1205h7nop2odoz8qv/pullping:img-0
+frontend | Running command: docker tag 127.0.0.1:34859/sess-c79nfu3a1205h7nop2odoz8qv/pullping:img-0 foobar
+frontend | Running command: docker image rm -f 127.0.0.1:34859/sess-c79nfu3a1205h7nop2odoz8qv/pullping:img-0
+output   | &ndash;&gt; exporting outputs</p>
+<p>&mdash; earthly &ndash;verbose +sometarget that saves the image into foobar</p>
+</blockquote>
+<p>It seems like when trying to pull the images from this local registry,
+sometimes it simply fails to answer.</p>
+<p>This local registry appears to be linked to a few issues, leading to using the
+feature flag <code>--no-use-registry-for-with-docker</code> or in our case the command
+line option <code>--disable-remote-registry-proxy</code>, that falls back into the
+docker tar mechanism.</p>
+<p>When I run a target that saves several images, I get all the <code>docker pull</code> at
+the beginning, therefore, the fact the error is about the img-3 (and not
+img-0) does not mean that img-0, img-1 and img-2 when processed before img-3.</p>
+<p>By following the <code>onPull</code> method into the call to docker pull in <code>commandContextOutput</code>, we can see that the log written</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">return</span> output, errors.<span style="color:#900;font-weight:bold">Wrapf</span>(err, <span style="color:#d14">&#34;command failed: %s %s: %s: %s&#34;</span>, sf.binaryName, strings.<span style="color:#900;font-weight:bold">Join</span>(args, <span style="color:#d14">&#34; &#34;</span>), err.<span style="color:#900;font-weight:bold">Error</span>(), output.<span style="color:#0086b3">string</span>())
+</span></span></code></pre></div><p>The &ldquo;Error response from daemon:&rdquo; part comes from the docker client, saying that the docker daemon complains about</p>
+<p><code>Get &quot;http://127.0.0.1:41177/v2/sess-mwpqe0vmziaytaa3w3j4nosne/pullping/manifests/sha256:36be876ba6441e3d878cee7e3f816fc924d8c78d374a230ac57865672ce748c4&quot;: EOF: exit status 1</code></p>
+<p>That means that the local registry most likely failed. Let&rsquo;s dive into the
+code to find out where this may happen.</p>
+<p>Getting into the code of <code>startRegistryProxy</code>, we can see that it creates an
+instance of regproxy.Controller that will eventually run the serving code. EOF
+seems to indicate that the server answered but closed the connection before
+giving more information.</p>
+<p>The serving code is the following.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>conn, err <span style="color:#000;font-weight:bold">:=</span> r.ln.<span style="color:#900;font-weight:bold">Accept</span>()
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">if</span> err <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> !r.done.<span style="color:#900;font-weight:bold">Load</span>() {
+</span></span><span style="display:flex;"><span>        r.errCh <span style="color:#000;font-weight:bold">&lt;-</span> errors.<span style="color:#900;font-weight:bold">Wrap</span>(err, <span style="color:#d14">&#34;failed to accept&#34;</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>wg.<span style="color:#900;font-weight:bold">Add</span>(<span style="color:#099">1</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">go</span> <span style="color:#000;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">defer</span> wg.<span style="color:#900;font-weight:bold">Done</span>()
+</span></span><span style="display:flex;"><span>    r.errCh <span style="color:#000;font-weight:bold">&lt;-</span> r.<span style="color:#900;font-weight:bold">handle</span>(ctx, conn)
+</span></span><span style="display:flex;"><span>}()
+</span></span></code></pre></div><p>If the code panicked, we would see it in the log of the earthly client, so it
+is most likely that nothing was done with the accepted connection. This may
+happen</p>
+<ol>
+<li>if the return part of that code is reached</li>
+<li>if the handle did nothing with the connection</li>
+</ol>
+<p>the handle part appear to deal with all the errors and simply redirect the
+requests to the gRPC. But when an error occurs, it is captured by the
+controller and shown only in verbose mode.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">go</span> <span style="color:#000;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">for</span> err <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">range</span> p.<span style="color:#900;font-weight:bold">err</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> err <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">&amp;&amp;</span> !errors.<span style="color:#900;font-weight:bold">Is</span>(err, context.Canceled) {
+</span></span><span style="display:flex;"><span>            c.cons.<span style="color:#900;font-weight:bold">VerbosePrintf</span>(<span style="color:#d14">&#34;Failed to serve registry proxy: %v&#34;</span>, err)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    doneCh <span style="color:#000;font-weight:bold">&lt;-</span> <span style="color:#000;font-weight:bold">struct</span>{}{}
+</span></span><span style="display:flex;"><span>}()
+</span></span></code></pre></div><p>I suppose that increasing this level with <code>Warnf</code> would help undertand what
+went wrong in the future.</p>
+<p>Building earthly can easily be done with <code>earthly +for-linux</code>.</p>
+<h3 id="422fe6fe-b161-4a7a-839a-34f2ee671b02">some more details to understand what <code>--disable-remote-registry-proxy</code> does</h3>
+<p>Using <code>--disable-remote-registry-proxy</code> makes <code>startRegistryProxy</code> return
+false and prevent <code>LocalRegistryAddr</code> from being populated. Then, inside
+<code>convertAndBuild</code>, the gatewaycrafter gets populated with export-image
+instead of export-image-local-registry and eventually in <code>newSolveOptMulti</code>,
+the <code>Output</code> entry will run <code>onImage</code> that runs the dockertar export. This is
+the solveropt that will be run by the buildkit client fork. At the same time,
+the <code>OutputPullCallback</code> will call <code>onPull</code> that will do nothing in case
+<code>LocalRegistryAddr</code> is empty, and will run the pullPing algorithm otherwise.</p>
+<h2 id="b997b33c-421a-41ed-aee9-3a8e3dd40a17">beware that save artifact is not robust at all</h2>
+<h3 id="1c1c22d9-bf41-4af9-bd6a-7ddc63231b06">behave like &ndash;if-exists sometimes</h3>
+<p>this won&rsquo;t fail</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">test:
+    FROM alpine
+    SAVE ARTIFACT nothing
+</code></pre><p>But it will correctly save the artifact if it exists</p>
+<h3 id="a6f5abc2-6be6-4b4b-a681-1b69892af315">does not undertand absolute path when using &ndash;if-exists, WORKDIR</h3>
+<p><a href="https://github.com/earthly/earthly/issues/2014">https://github.com/earthly/earthly/issues/2014</a></p>
+<p>When using &ndash;if-exists, save artifact interpret the path as relative, /a/b/c becomes ./a/b/c. This messes up with WORKDIR.</p>
+<p>This does not save the file</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">VERSION 0.8
+
+test:
+    FROM alpine
+    WORKDIR /app
+    RUN echo foo &gt; /app/something
+    SAVE ARTIFACT --if-exists /app/something AS LOCAL something
+</code></pre><p>While this does</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">VERSION 0.8
+
+test:
+    FROM alpine
+    RUN mkdir /app
+    RUN echo foo &gt; /app/something
+    SAVE ARTIFACT --if-exists /app/something AS LOCAL something
+</code></pre><p>And this as well</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">VERSION 0.8
+
+test:
+    FROM alpine
+    WORKDIR /app
+    RUN echo foo &gt; /app/something
+    SAVE ARTIFACT --if-exists /app/../something AS LOCAL something
+</code></pre><p>Use the pattern IF + SAVE ARTIFACT, to be sure.</p>
+<p>#+BEGIN_SRC earthfile
+VERSION 0.8</p>
+<p>test:
+FROM alpine
+WORKDIR /app
+RUN echo foo &gt; /app/something
+IF test -e &ldquo;/app/something&rdquo;
+SAVE ARTIFACT /app/something AS LOCAL something
+END
+#+END_ARC</p>
+<h2 id="0026d624-c4e2-4405-996e-d0280990fa5c">connecting to a docker registry from within</h2>
+<p>Not yet, but planned and discussed in <a href="https://github.com/earthly/earthly/issues/1722">https://github.com/earthly/earthly/issues/1722</a></p>
+<h2 id="2b5645aa-e49e-42d5-a88c-9781ee37109f">try finally save artifact does not work well</h2>
+<p>If we want to save a directory, it won&rsquo;t work -&gt; <a href="https://github.com/earthly/earthly/issues/2817">https://github.com/earthly/earthly/issues/2817</a></p>
+<p>We have to use a workaround like <a href="https://github.com/earthly/earthly/issues/2817#issuecomment-1536766279">https://github.com/earthly/earthly/issues/2817#issuecomment-1536766279</a> to actually save a file</p>
+<p>BUT&hellip;</p>
+<ol>
+<li>this is not to be copy pasted as-is for we also want to save the artifact in case of success,</li>
+<li>the file size is limited -&gt; <a href="https://github.com/earthly/earthly/issues/2452">https://github.com/earthly/earthly/issues/2452</a></li>
+</ol>
+<p>So far, the best I can think of is to</p>
+<ol>
+<li>allow the failing test to pass,</li>
+<li>save its exit code as an artifact,</li>
+<li>add a check in the command that runs earthly about the exit code,</li>
+</ol>
+<p>This is an example of this workaround.</p>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">mytest:
+  ...
+  RUN --no-cache mycommand ; echo $? &gt; res.txt
+  IF test &#34;$(cat res.txt)&#34; != &#34;0&#34;
+      # to undertand this better -&gt; /braindump/posts/56c711e5-6d29-4b9d-b630-f75c92800c61/?title=earthly_try_finally_save_artifact_does_not_work_well
+      RUN echo &#34;$(tput setaf 1)BEWARE THAT THE TEST FAILED! DON&#39;T BE FOOLED BY FACT EARTHLY WILL RETURN IN GREEN!&#34;
+  END
+  SAVE ARTIFACT --if-exists somewantedartifact AS LOCAL somewantedartifact
+  SAVE ARTIFACT res.txt AS LOCAL res.txt
+</code></pre><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>runtest<span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    earthly +mytest <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#000;font-weight:bold">return</span> <span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>cat res.txt<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>runtest
+</span></span></code></pre></div><h2 id="b0eefbb9-8de4-4ef2-9329-2fd7bd2fbf7f">caching</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://docs.earthly.dev/docs/caching/caching-in-earthfiles">https://docs.earthly.dev/docs/caching/caching-in-earthfiles</a></p>
+<blockquote>
+<p>disable layer caching is to use the RUN &ndash;push flag. This flag is useful when
+you want to perform an operation with external effects (e.g. deploying to
+production). By default Earthly does not run &ndash;push commands unless the &ndash;push
+flag is also specified when invoking Earthly itself (earthly &ndash;push
++my-target). RUN &ndash;push commands are never cached.</p>
+<p>&mdash; <a href="https://docs.earthly.dev/docs/caching/caching-in-earthfiles">https://docs.earthly.dev/docs/caching/caching-in-earthfiles</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="4d34c6a6-ce4e-4c19-b883-edb02e2b6efd">cache bust</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://docs.earthly.dev/docs/caching/caching-in-earthfiles#cache-size">https://docs.earthly.dev/docs/caching/caching-in-earthfiles#cache-size</a></p>
+<blockquote>
+<p>If the configured cache size is too small, then Earthly might garbage-collect
+cached layers more often than you might expect. This can manifest in builds
+randomly not using cache for certain layers. Usually it is the biggest layers
+that suffer from this (and oftentimes the biggest layers are the most
+expensive to recreate).</p>
+<p>&mdash; <a href="https://docs.earthly.dev/docs/caching/caching-in-earthfiles#cache-size">https://docs.earthly.dev/docs/caching/caching-in-earthfiles#cache-size</a></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="a5d7048e-e902-42c6-b387-1b1caeee0703">wait</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://docs.earthly.dev/docs/earthfile#wait">https://docs.earthly.dev/docs/earthfile#wait</a></p>
+<blockquote>
+<p>The WAIT clause executes the encapsulated commands and waits for them to
+complete. This includes pushing and outputting local artifacts &ndash; a feature
+which can be used to control the order of interactions with the outside world.</p>
+<p>&mdash; <a href="https://docs.earthly.dev/docs/earthfile#wait">https://docs.earthly.dev/docs/earthfile#wait</a></p>
+</blockquote>
+</li>
+</ul>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/blog/posts/a_python_runtime_on_android/?title=a_python_runtime_on_android#">a python runtime on android</a> (blog)</li>
+<li><a href="/braindump/posts/access_ecr_with_earthly_secrets_and_no_need_for_credential_helper_aws_cli_installed/">Access ECR with Earthly secrets (and no need for credential helper / aws CLI installed)</a></li>
+<li><a href="/blog/posts/clk_k8s_and_earthly_in_a_local_dev_env/?title=clk_k8s_and_earthly_in_a_local_dev_env#">clk k8s and earthly in a local dev env</a> (blog)</li>
+<li><a href="/braindump/posts/devops/">devops</a></li>
+<li><a href="/braindump/posts/docker_looses_the_dns_configuration/">docker looses the dns configuration</a></li>
+<li><a href="/braindump/posts/don_t_create_a_ci_that_is_hard_to_run_on_your_machine_anymore/">don&rsquo;t create a CI that is hard to run on your machine anymore</a></li>
+<li><a href="/braindump/posts/earthly_buildkit_docker_server_gave_http_response_to_https_client/">earthly buildkit docker server gave HTTP response to HTTPS client</a></li>
+<li><a href="/braindump/posts/earthly_buildkitd_won_t_work_if_started_in_network_host/">earthly buildkitd won&rsquo;t work if started in network=host</a></li>
+<li><a href="/blog/posts/how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s/?title=how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s#">how I debug MTU issues in k3d in docker in earthly in docker in k8s</a> (blog)</li>
+<li><a href="/braindump/posts/how_i_debug_my_k8s_tests_not_running/">how I debug my k8s tests not running</a></li>
+<li><a href="/braindump/posts/my_issues_with_literate_programming/">my issues with literate programming</a></li>
+<li><a href="/braindump/posts/setting_up_my_raspberry_pi_fleet/">setting up my raspberry pi fleet</a></li>
+<li><a href="/braindump/posts/several_flavors_of_testing_one_s_code/">several flavors of testing one&rsquo;s code</a></li>
+<li><a href="/braindump/posts/aws/#c3f7cb1a-2e0c-4615-b345-e699ea8f2ff3">with earthly</a></li>
+</ul>
+<h2 id="permalink"><a href="/braindump/0b36de4e-0a15-4f08-8514-2b5469aac24d?title=earthly">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 13 Jun 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Mar 2022</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

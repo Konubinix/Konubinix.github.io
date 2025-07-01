@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html><title>sonar try to have a nice activity line</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Sonar Try to Have a Nice Activity Line</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>In case you want to have a nice activity in sonar in a project, like <a href="/braindump/posts/clk/">clk</a>.</p>
+<h2 id="d2f4d076-5b40-4309-b4ec-1877e7a20975">sonar play analysis in the past</h2>
+<p>For instance guess that you want to run the scans of all the tags. <a href="/braindump/posts/sonarqube/#c20539c9-ccc4-4b6a-af6e-540ee4658d90">In case you
+follow the same definition of projectVersion as I do</a>, you might want to reach
+everycommit just before a tag and scan it. It will be the last analysis of the
+given version. You will also want to scan the commit of the tag, making it the
+first analysis of the version. I recommend using to ensure an appropriate analysis history.</p>
+<p>Unfortunately, because the projectDate only accepts dates and not hours, I
+cannot scan the commit prior to the tag and the commit under the tag, because
+they generally are the same day. The most valuable one, to me, is the last
+commit of each version, hence I drop the scan of the tag itself.</p>
+<p>You might also want to perform an empty analysis at the beginning of the history
+as a reference point, but that would likely just result in showing a pike (with
+all the technical debt) at the beginning of the history.</p>
+<p>You first have to reset your project and start a brand new one. Then export the appropriate environment variables.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#0086b3">export</span> <span style="color:#008080">SONAR_HOST_URL</span><span style="color:#000;font-weight:bold">=</span>https://sonarcloud.io ; <span style="color:#0086b3">export</span> <span style="color:#008080">SONAR_TOKEN</span><span style="color:#000;font-weight:bold">=</span>&lt;youtoken&gt;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>cp sonar-project.properties /tmp
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    cp /tmp/sonar-project.properties ./
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic"># in clk, just before the first commit, got with git log --format=%cs|sort | head -1</span>
+</span></span><span style="display:flex;"><span>    sonar-scanner -Dsonar.projectDate<span style="color:#000;font-weight:bold">=</span>2018-04-04
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>scanit <span style="color:#000;font-weight:bold">(</span> <span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">local</span> <span style="color:#008080">commitish</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#008080">$1</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    git checkout .
+</span></span><span style="display:flex;"><span>    git checkout <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">commitish</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    git clean -fd
+</span></span><span style="display:flex;"><span>    cp /tmp/sonar-project.properties ./
+</span></span><span style="display:flex;"><span>    sonar-scanner -Dsonar.projectVersion<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>git tag --sort<span style="color:#000;font-weight:bold">=</span>creatordate --merged|grep <span style="color:#d14">&#39;^v&#39;</span>|tail -1<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span> -Dsonar.projectDate<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>git log -1 --format<span style="color:#000;font-weight:bold">=</span>%cs<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>git tag | sort -V | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> tag
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    scanit <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">tag</span><span style="color:#d14">}</span><span style="color:#d14">~&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic"># scanit &#34;${tag}&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>scanit main
+</span></span></code></pre></div><h2 id="aaab19f1-fb83-488e-8669-f6fe19b1f7b6">delete some wrong analysis</h2>
+<p>Trials and errors may lead to create scans that you don&rsquo;t want to keep.</p>
+<p>For instance, in clk, I did a few attempts at tagging the version v0.38.2, due
+to the deploy setup needing some cleanup.</p>
+<p>Fortunately, we can play with the data using the api documented in
+<a href="https://sonarcloud.io/web_api/">https://sonarcloud.io/web_api/</a>, using a token that one can create from</p>
+<p><a href="https://sonarcloud.io/account/security">https://sonarcloud.io/account/security</a>.</p>
+<p>Let&rsquo;s find the broken analysis.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>http --session sonar https://sonarcloud.io/api/project_analyses/search?project<span style="color:#000;font-weight:bold">=</span>clk-project_clk | jq -r <span style="color:#d14">&#39;.analyses[]|select(.projectVersion == &#34;v0.38.2&#34;).key&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;AZbJU92cgVWxl7eY5kr3&#34;
+</span></span><span style="display:flex;"><span>&#34;AZbJIjCzk1ZnIU9qV-16&#34;
+</span></span></code></pre></div><p>I can delete them with.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>http --session sonar POST <span style="color:#d14">&#34;https://sonarcloud.io/api/project_analyses/delete?analysis=AZbJIjCzk1ZnIU9qV-16&#34;</span>
+</span></span></code></pre></div><h2 id="07727e08-e24d-4bcf-9874-5f84ecfce7b4">temporarily change the baseline</h2>
+<p>Because <a href="/braindump/posts/sonar_new_code_definition/#627bca71-2ebc-4822-944b-99008f011e8e">sonar new code definition is not adapted to the pragmatic git
+workflow</a>, when submitting a bug fix, the quality gate may be broken and I may
+need to hack it a bit.</p>
+<p>Find the basis I want to use.</p>
+<p><a id="code-snippet--v0.38.2"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>http --session sonar https://sonarcloud.io/api/project_analyses/search?project<span style="color:#000;font-weight:bold">=</span>clk-project_clk | jq -r <span style="color:#d14">&#39;[.analyses[]|select(.projectVersion == &#34;v0.38.2&#34;)][-1].key&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>AZbJU92cgVWxl7eY5kr3
+</span></span></code></pre></div><p><a id="code-snippet--set-baseline"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>http --session sonar POST <span style="color:#d14">&#34;https://sonarcloud.io/api/project_analyses/set_baseline?analysis=</span><span style="color:#d14">${</span><span style="color:#008080">analysis</span><span style="color:#d14">}</span><span style="color:#d14">&amp;project=clk-project_clk&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{}
+</span></span></code></pre></div><p>Revert this using</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>http --session sonar POST <span style="color:#d14">&#39;https://sonarcloud.io/api/project_analyses/unset_baseline?project=clk-project_clk&#39;</span>
+</span></span></code></pre></div><p>Actually, because of the fact that <a href="/braindump/posts/sonar_new_code_definition/#627bca71-2ebc-4822-944b-99008f011e8e">sonar new code definition is not adapted to
+the pragmatic git workflow</a>, future analysis will be to optimistic. In my case,
+submitting the bug fixes v0.38.1 and v0.38.2 of clk, I want to get back to
+consider the starting of the v0.38.0 as the new code baseline for the new v0.39.0.</p>
+<p>Therefore, unsetting the basis is not enough, I have to find the id of the
+last analysis that was made on the v0.38.0.</p>
+<p><a id="code-snippet--v0.38.0"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>http --session sonar https://sonarcloud.io/api/project_analyses/search?project<span style="color:#000;font-weight:bold">=</span>clk-project_clk | jq -r <span style="color:#d14">&#39;[.analyses[]|select(.projectVersion == &#34;v0.38.0&#34;)][0].key&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>AZTgj2p872H74-q0DAbe
+</span></span></code></pre></div><p>And put this as my new basis.</p>
+<p>I have then to put a reminder to unset the baseline whenever I push the
+v0.39.0.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/e4728ede-b6ca-4363-a2bc-121ba7cface5?title=sonar_try_to_have_a_nice_activity_line">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 19 May 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 13 May 2025</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

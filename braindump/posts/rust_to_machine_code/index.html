@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html><title>rust to machine code</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Rust to Machine Code</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>External reference: <a href="https://users.rust-lang.org/t/stack-memory-with-move-semantics/22946">https://users.rust-lang.org/t/stack-memory-with-move-semantics/22946</a></li>
+<li>External reference: <a href="https://www.reddit.com/r/rust/comments/2p7v6i/how_does_rust_language_eventually_become_machine/">https://www.reddit.com/r/rust/comments/2p7v6i/how_does_rust_language_eventually_become_machine/</a></li>
+</ul>
+<blockquote>
+<p><a href="/braindump/posts/rust/">Rust</a> currently allocates on to the stack at the beginning of a function call and
+deallocates stack memory at the end of a function call.</p>
+<p>&mdash; <a href="https://users.rust-lang.org/t/stack-memory-with-move-semantics/22946">https://users.rust-lang.org/t/stack-memory-with-move-semantics/22946</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>If you want to see the asm of your project, you can use this cargo command</p>
+<ul>
+<li>cargo rustc &ndash; &ndash;emit asm</li>
+<li>cargo rustc &ndash;release &ndash; &ndash;emit asm</li>
+</ul>
+<p>and the asm will be in these files (where crate_name is the name of your crate)
+target/debug/deps/crate_name.s
+target/release/deps/crate_name.s</p>
+<p>&mdash; <a href="https://users.rust-lang.org/t/stack-memory-with-move-semantics/22946">https://users.rust-lang.org/t/stack-memory-with-move-semantics/22946</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>You can take a small Rust program and trace its journey through the compiler.</p>
+<p>The first step is parsing.  We can ask rustc to stop after parsing and just pretty-print the code:</p>
+<p>$ rustc &ndash;pretty normal foo.rs
+fn main() { println!(&ldquo;Hello, world!&rdquo;); }</p>
+<p>The next step is expansion of macros and syntax extensions.  You can see the result with</p>
+<p>$ rustc &ndash;pretty expanded foo.rs</p>
+<p>This contains some libstd imports that were implicit in the source.  Also the println! macro has expanded to a dozen lines of code.  The result is 23 lines in total.</p>
+<p>Now the code is ready for typechecking.  rustc infers a type for every expression, then checks that they all make sense together.  You can see the inferred types with</p>
+<p>$ rustc &ndash;pretty typed foo.rs</p>
+<p>That&rsquo;s 38 lines.  Next we can look at the LLVM code produced by the compiler:</p>
+<p>$ rustc &ndash;emit ir foo.rs &amp;&amp; cat foo.ll</p>
+<p>107 lines.  As others pointed out, the &ldquo;VM&rdquo; name is misleading.  This is a SSA intermediate representation like you might find in any traditional compiler.  It looks a bit like assembly code for a hypothetical machine that has an infinite number of registers.  LLVM itself, the C++ library, is responsible for turning this into assembly for an actual machine.  You can see the result with</p>
+<p>$ rustc &ndash;emit asm foo.rs &amp;&amp; cat foo.s</p>
+<p>111 lines.  LLVM is an extremely impressive piece of software.  It contains about 2 million lines of code, developed by hundreds of people over a decade.  Rust performance utterly depends on LLVM&rsquo;s optimization passes, which can rip through the abstractions used in idiomatic Rust code and produce machine code equivalent to what you&rsquo;d get from C.  Compared to LLVM, Rust is a tiny project; it&rsquo;s really fantastic that we get to use all of this machinery developed by others.  If you run the above commands with &ndash;opt-level 3, you&rsquo;ll see that rustc itself doesn&rsquo;t perform much in the way of optimization; it&rsquo;s all LLVM.</p>
+<p>There are a ton of steps I left out of this description.  You can give the flag -Z time-passes to rustc and it will print a full list of what it&rsquo;s doing</p>
+<p>&mdash; <a href="https://www.reddit.com/r/rust/comments/2p7v6i/how_does_rust_language_eventually_become_machine/">https://www.reddit.com/r/rust/comments/2p7v6i/how_does_rust_language_eventually_become_machine/</a></p>
+</blockquote>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/c4916027-9ce6-4a0c-9e92-4dd65e30468e?title=rust_to_machine_code">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 10 Aug 2021</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 24 May 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

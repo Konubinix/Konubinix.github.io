@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html><title>more robust notifications in infinitime</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>More Robust Notifications in Infinitime</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>Currently, <a href="/braindump/posts/pinetime/#d7715a51-12e6-4fe5-a0f7-ee85e93c1460">InfiniTime</a> and the associated companion apps provide a classical
+pub/sub mecanism to get notification.</p>
+<p>This works well, and infinitime (at least version 1.13) does a great job at
+keeping the connection, but sometimes it temporarily fails, and the notification
+get lost. This is not enough for several kinds of events:</p>
+<ol>
+<li>calendar events. If the watch does not warn me at the appropriate time, I won&rsquo;t <a href="/braindump/posts/trusted_system/">trust</a> it.</li>
+<li>important but not necessarily timed event. If I received an important
+message, it is not a big deal if I am warned after a few minutes, but I need
+to be notified soon enough.</li>
+</ol>
+<p>For the former case, I don&rsquo;t even need my phone. I could send all the future
+events for the day ahead on the morning and let the watch warn me at the
+appropriate time.</p>
+<p>For the later case, I need three things:</p>
+<ol>
+<li>a way to be notified when the connection got lost for too long (like 5 minutes),</li>
+<li>an acknowledgment mechanism that makes the watch and the phone aware of what notification have actually been sent to the watch
+<ul>
+<li>for some kinds of events, I would even need to acknowledge that I saw the notification,</li>
+</ul>
+</li>
+<li>a replay mechanism that makes sure that when the connection is established,
+all the missing event got sent back to the watch,</li>
+</ol>
+<p>To me, those are the needed conditions for my watch to get from the state of
+funny gadget to the state of <a href="/braindump/posts/trusted_system/">trusted system</a>.</p>
+<h2 id="first-playing-with-the-code">first: playing with the code</h2>
+<p>This was much simpler than I thought</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>git clone https://github.com/InfiniTimeOrg/InfiniTime
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">cd</span> InfiniTime
+</span></span><span style="display:flex;"><span>docker run --rm -it -v <span style="color:#d14">${</span><span style="color:#008080">PWD</span><span style="color:#d14">}</span>:/sources --user <span style="color:#000;font-weight:bold">$(</span>id -u<span style="color:#000;font-weight:bold">)</span>:<span style="color:#000;font-weight:bold">$(</span>id -g<span style="color:#000;font-weight:bold">)</span> infinitime/infinitime-build /opt/build.sh
+</span></span><span style="display:flex;"><span>rsync build/output/pinetime-mcuboot-app-dfu-1.13.0.zip myphone:/sdcard/Download/
+</span></span></code></pre></div><p>Then, on the phone, using <a href="/braindump/posts/nrf_connect/">nrf connect</a>, or <a href="/braindump/posts/gadget_bridge/">gadget bridge</a>, I can easily send the
+file and the watch will be updated.</p>
+<p>Let&rsquo;s try to apply the following patch</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span><span style="color:#999">diff --git a/src/displayapp/screens/ApplicationList.h b/src/displayapp/screens/ApplicationList.h
+</span></span></span><span style="display:flex;"><span><span style="color:#999">index 371ee710..3e04bf80 100644
+</span></span></span><span style="display:flex;"><span><span style="color:#999"></span><span style="color:#000;background-color:#fdd">--- a/src/displayapp/screens/ApplicationList.h
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd"></span><span style="color:#000;background-color:#dfd">+++ b/src/displayapp/screens/ApplicationList.h
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#dfd"></span><span style="color:#aaa">@@ -46,14 +46,8 @@ namespace Pinetime {
+</span></span></span><span style="display:flex;"><span><span style="color:#aaa"></span>           {Symbols::stopWatch, Apps::StopWatch, true},
+</span></span><span style="display:flex;"><span>           {Symbols::clock, Apps::Alarm, true},
+</span></span><span style="display:flex;"><span>           {Symbols::hourGlass, Apps::Timer, true},
+</span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-          {Symbols::shoe, Apps::Steps, true},
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-          {Symbols::heartBeat, Apps::HeartRate, true},
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd"></span>           {Symbols::music, Apps::Music, true},
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-          {Symbols::paintbrush, Apps::Paint, true},
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-          {Symbols::paddle, Apps::Paddle, true},
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-          {&#34;2&#34;, Apps::Twos, true},
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">-          {Symbols::drum, Apps::Metronome, true},
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd"></span>           {Symbols::map, Apps::Navigation, Applications::Screens::Navigation::IsAvailable(filesystem)},
+</span></span><span style="display:flex;"><span>           {Symbols::none, Apps::None, false},
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd">--
+</span></span></span><span style="display:flex;"><span><span style="color:#000;background-color:#fdd"></span>2.40.1
+</span></span></code></pre></div><p>Then, building and updating, I could get rid of some annoying applications. So
+far so good.</p>
+<h2 id="deal-with-calendar-events">deal with calendar events</h2>
+<p>If I understand correctly, there are two ways to send data to the watch</p>
+<ol>
+<li>using the simple fs,</li>
+<li>using <a href="/braindump/posts/bluetooth_low_energy/#c19a4ac7-38cf-4314-b3a7-fa86ea784d81">characteristic</a>,</li>
+</ol>
+<p>I can start with the later for now. There are plenty of examples available in
+the repository.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/f27bef67-3631-414c-9338-eec99dc4e95b?title=more_robust_notifications_in_infinitime">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 20 Sep 2023</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 13 Sep 2023</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html><title>sonarqube</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Sonarqube</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#6f1fe82b-0d9f-427c-9af6-dbb990992603">sonar client/server architecture</a></li>
+<li><a href="#7cf61ff1-e28c-4251-b411-e2eea11561e0">how to use sonarqube?</a>
+<ul>
+<li><a href="#c20539c9-ccc4-4b6a-af6e-540ee4658d90">defining what &ldquo;projectVersion&rdquo; means</a></li>
+<li><a href="#de477e6d-559c-43b2-bf39-d1df74e443d7">bootstrapping sonar on a project</a></li>
+</ul>
+</li>
+<li><a href="#fb155b35-e1e3-43ca-84c4-bb8a977dbfaa">sonar projectVersion</a></li>
+<li><a href="#notes-linking-here">Notes linking here</a></li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<ul>
+<li>External reference: <a href="https://en.wikipedia.org/wiki/SonarQube">https://en.wikipedia.org/wiki/SonarQube</a></li>
+</ul>
+<p>SonarQube - Wikipedia</p>
+<blockquote>
+<p>SonarQube (formerly Sonar) is an <a href="/braindump/posts/open_source/">open-source</a> platform developed by SonarSource
+for continuous inspection of code quality to perform automatic reviews with
+static analysis of code to detect bugs, code smells, and security
+vulnerabilities on 20+ programming languages.</p>
+</blockquote>
+<h2 id="6f1fe82b-0d9f-427c-9af6-dbb990992603">sonar client/server architecture</h2>
+<p>This is what I guessed.</p>
+<ol>
+<li>on a <a href="/braindump/posts/continuous_integration/">CI</a> or the computer of a developer, <a href="/braindump/posts/sonar_scanner/">sonar-scanner</a> is run. It scans the
+code, gets the <a href="/braindump/posts/source_code_manager/">SCM</a> annotations of the code (among other things the date of
+the last commit that brought each line) and sends the analyses and annotated
+code to the server<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>, associated with a sonar.<a href="#fb155b35-e1e3-43ca-84c4-bb8a977dbfaa">projectVersion</a> value. Hereafter,
+we call this analysis the <strong>current version</strong>. Its date is either the date of
+scan or whatever you put in the <a href="/braindump/posts/sonar_projectdate/">projectDate</a> property.</li>
+<li>the server stores the  in a stack. The order of the sent analyses
+impacts how sonar will behave, so don&rsquo;t send a past analysis (with
+sonar.projectDate) and rather create a new project from scratch.</li>
+<li>the server finds a date after which it considers <a href="/braindump/posts/sonar_new_code_definition/">the code as being new</a>,
+<ul>
+<li>either using a number of days from the date of the current version,</li>
+<li>or using a fixed date</li>
+<li>or finding another analyses as base and using its date
+<ul>
+<li>if using the new code as being from the previous version, it checks the
+most upper analysis of the stack whose <a href="#fb155b35-e1e3-43ca-84c4-bb8a977dbfaa">projectVersion</a> is different from
+the current version <sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</li>
+<li>if using the new code as being from a fixed version, it find from the top
+of the stack the last analysis with that version.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>the server now has an interval of time (two dates) that define the temporal interval of new code,</li>
+<li>in the current version analyses, sonar finds all the lines whose annotation
+are in this interval -&gt; those become the new code.</li>
+</ol>
+<h2 id="7cf61ff1-e28c-4251-b411-e2eea11561e0">how to use sonarqube?</h2>
+<p>I feel like <a href="/braindump/posts/sonarqube/">sonarqube</a> is a great tool. But <a href="/braindump/posts/don_t_confuse_an_implementation_and_the_method/">simply using it without
+understanding the method</a> would be pointless. So here is what I understood.</p>
+<h3 id="c20539c9-ccc4-4b6a-af6e-540ee4658d90">defining what &ldquo;<a href="#fb155b35-e1e3-43ca-84c4-bb8a977dbfaa">projectVersion</a>&rdquo; means</h3>
+<p>It follows the idea of <a href="/braindump/posts/clean_as_you_code/">clean as you code</a>, meaning it strongly emphasizes the
+reporting on <a href="/braindump/posts/sonar_new_code_definition/">new code</a>.</p>
+<p>Hence you need to make sure you correctly configure the new code definition.</p>
+<p>In maven project, there are some rites, like mvn release:XXX that make the
+pom.xml contain some version number. sonar appears to be automatically
+compatible only with those rites. In other projects I have seen, there are other
+rites.</p>
+<p>I like using <a href="/braindump/posts/versioneer/">versioneer</a> in my python projects to not think much about the
+version number. I simply work on the project, letting the CI tell me how well
+the code base is. When I have something that has enough features and whose
+quality is good, I simply git tag the code base.</p>
+<p>Then main difference with the maven-ish workflow is that giving a release name
+(concreted by a git tag) is the last thing I do, even after the tests are run. I
+like this workflow, because it is very compatible with <a href="/braindump/posts/semantic_versioning_2_0_0/">semver</a> and does not need
+to plan as will be in the tag beforehand: I name the tag by looking at what as
+landed inside it. If I planned to release a minor version but in the mean time I
+realize I will definitely need an intermediate bugfix version, I don&rsquo;t need to
+change anything in my workflow.</p>
+<p>Sonar&rsquo;s new code definition may be based on</p>
+<ol>
+<li>some days ago</li>
+<li>some reference branch</li>
+<li>provided version changes</li>
+</ol>
+<p>I don&rsquo;t use 1. as I don&rsquo;t use regular releases. 2. would work for a big code
+base, with a main branch (see <a href="https://konubinix.eu/blog/posts/pragmatic_git_workflow/?title=pragmatic_git_workflow#">best practices to use gitflow</a>) but does not fit
+well most of my projects. Only the version based definition remains.</p>
+<p>Because git tag is my source of truth, I don&rsquo;t want to repeat the information in
+a sonar-project.properties file (<a href="/braindump/posts/don_t_repeat_yourself/">DRY</a>). I cannot use a file as the source of
+truth because of the arguments above.</p>
+<p>Hence, I setup my workflows to provide the version dynamically. It ends up like:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>sonar-scanner -Dsonar.projectVersion<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>git tag --sort<span style="color:#000;font-weight:bold">=</span>creatordate --merged|grep <span style="color:#d14">&#39;^v&#39;</span>|tail -1<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>This git command finds out the last tag available from the current branch that
+begins with the letter v. I use the prefix v to differentiate real releases and
+intermediate releases. I want sonar to scan only the former.</p>
+<p>At first, it looks like this works well. After each tag, the new version is
+acknowledged into sonar reports.</p>
+<p>But it actually has a drawback: the reports look like there is a delay between
+the version number and the tag.</p>
+<p>Imagine I create two commits: a and b. Then imagine that I want to tag the
+version T1, then I commit c and then d.</p>
+<p>The reports in sonar would be</p>
+<ul>
+<li>a: no version</li>
+<li>b: no version (I did not tag yet)</li>
+<li>c: T1</li>
+<li>d: T1</li>
+</ul>
+<p>I would rather like to have reports showing that a and b are part of T1 and c
+and d part of some next release. The ideal reports should look like:</p>
+<ul>
+<li>a: T1</li>
+<li>b: T1</li>
+<li>c: next</li>
+<li>d: next</li>
+</ul>
+<p>Imagine now that I commit e and f. Now, the reports look like this.</p>
+<ul>
+<li>a: no version</li>
+<li>b: no version</li>
+<li>c: T1</li>
+<li>d: T1</li>
+<li>e: T2</li>
+<li>f: T2</li>
+</ul>
+<p>To me, it looks like it shows that e and f are part of T2, while T2 was tagged
+on the commit d. d, in turn, looks like it belongs to T1.</p>
+<p>To me, this is counter intuitive, I would rather have something like.</p>
+<ul>
+<li>a: T1</li>
+<li>b: T1</li>
+<li>c: T2</li>
+<li>d: T2</li>
+<li>e: next</li>
+<li>f: next</li>
+</ul>
+<p>Note that apart from that counter-intuitive naming, the report actually make sense:</p>
+<ul>
+<li>when working on a and b, I can see a report about the whole code</li>
+<li>when working on c and d, I can see a report about the difference with b</li>
+<li>when working on e and f, I can see a report about the difference with d</li>
+</ul>
+<p>This is exactly what we want: to define new code as what differs from the
+tag. This is great.</p>
+<p>A way to mitigate this counter-intuitive naming would be to provide a post-XXX
+version.</p>
+<p>So I guess a more sonarish way of naming version should be.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>sonar-scanner -Dsonar.projectVersion<span style="color:#000;font-weight:bold">=</span>post-<span style="color:#000;font-weight:bold">$(</span>git tag --sort<span style="color:#000;font-weight:bold">=</span>creatordate --merged|grep <span style="color:#d14">&#39;^v&#39;</span>|tail -1<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>That way, the reports would look like:</p>
+<ul>
+<li>a: no version</li>
+<li>b: no version</li>
+<li>c: post-T1</li>
+<li>d: post-T1</li>
+<li>e: post-T2</li>
+<li>f: post-T2</li>
+</ul>
+<p>That would convey the meaning that c and d are after T1 and not part of T1.</p>
+<p>Another idea would be to retrospectively rename the versions so that they match
+the expected values.</p>
+<p>In the CI, I could have a fixed <code>projectVersion=next</code>, and each time I tag, I
+could use the sonar API to rename next into the tag value.</p>
+<p>That way the following reports,</p>
+<ul>
+<li>a: next</li>
+<li>b: next</li>
+</ul>
+<p>Would be renamed after tagging T1 into:</p>
+<ul>
+<li>a: T1</li>
+<li>b: T1</li>
+</ul>
+<p>Then,</p>
+<ul>
+<li>a: T1</li>
+<li>b: T1</li>
+<li>c: next</li>
+<li>d: next</li>
+</ul>
+<p>Would be renamed after tagging T2 into:</p>
+<ul>
+<li>a: T1</li>
+<li>b: T1</li>
+<li>c: T2</li>
+<li>d: T2</li>
+</ul>
+<p>And finally,</p>
+<ul>
+<li>a: T1</li>
+<li>b: T1</li>
+<li>c: T2</li>
+<li>d: T2</li>
+<li>e: next</li>
+<li>f: next</li>
+</ul>
+<p>Would become, after tagging T3 on f</p>
+<ul>
+<li>a: T1</li>
+<li>b: T1</li>
+<li>c: T2</li>
+<li>d: T2</li>
+<li>e: T3</li>
+<li>f: T3</li>
+</ul>
+<p>etc.</p>
+<p>This is what makes most sense to me as the version contains the commits that
+eventually belong to the tag.</p>
+<p>So far, I won&rsquo;t invest time in automatizing this, and I dislike having reports
+that look like post-XXX, so I guess I just need to put in a post-it somewhere
+that &ldquo;sonar report T1 == code in T2&rdquo;.</p>
+<h3 id="de477e6d-559c-43b2-bf39-d1df74e443d7">bootstrapping sonar on a project</h3>
+<p>If you are using <a href="/braindump/posts/sonarqube/">sonar</a> in an old project with already much technical debt, you
+won&rsquo;t want to face all that debt at once.</p>
+<p>In that case, you can simply setup sonar and let the tool show you technical
+debt piece by piece during the day to day work (see <a href="/braindump/posts/clean_as_you_code/">clean as you code</a>).</p>
+<p>In case your project is new, you might want to deal with this technical from the
+beginning.</p>
+<p>The thing is that sonar compares analyses. That means that the first analysis
+you submit to it will be your reference. In case you created a bunch of initial
+code before analysing it, its technical debt will be in the &ldquo;Overal code&rdquo;
+section but not in &ldquo;New code&rdquo;.</p>
+<p>Then, if you want to bootstrap a new project, I warmly suggest you run an
+initial sonar-scanner in an empty directory, so that sonar will now this is the
+reference.</p>
+<p>Beware that this might not be enough. In case you already have code written in
+the past (meaning git commits with committer date in the past), those won&rsquo;t be
+considered as new code (see <a href="/braindump/posts/sonar_new_code_definition/#d4c45a0f-fc0b-413f-b9f2-859423a958b0">ambiguity in computing the new code in sonarqube</a>).</p>
+<p>In that case, you have to make the first empty analysis be in the past as well,
+using long enough in the past.</p>
+<h2 id="fb155b35-e1e3-43ca-84c4-bb8a977dbfaa">sonar projectVersion</h2>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/sonar_new_code_definition/#d4c45a0f-fc0b-413f-b9f2-859423a958b0">ambiguity in computing the new code in sonarqube</a></li>
+<li><a href="/braindump/posts/clean_as_you_code/">clean as you code</a></li>
+<li><a href="/braindump/posts/is_it_ok_to_let_the_ci_fail_and_not_do_anything_about_it/">is it ok to let the CI fail and not do anything about it?</a></li>
+<li><a href="/braindump/posts/is_tdd_possible_in_companies/">is tdd possible in companies?</a></li>
+<li><a href="/braindump/posts/sonar_cloud/">sonar cloud</a></li>
+<li><a href="/braindump/posts/sonar_try_to_have_a_nice_activity_line/#d2f4d076-5b40-4309-b4ec-1877e7a20975">sonar play analysis in the past</a></li>
+<li><a href="/braindump/posts/sonar_projectdate/">sonar projectDate</a></li>
+<li><a href="/braindump/posts/sonar_quality_gate/">sonar quality gate</a></li>
+<li><a href="/braindump/posts/sonar_scanner/">sonar-scanner</a></li>
+<li><a href="/braindump/posts/sonarlint/">sonarlint</a></li>
+<li><a href="/braindump/posts/what_implies_80_of_coverage_in_sonar/">what implies 80% of coverage in sonar?</a></li>
+<li><a href="/braindump/posts/working_code_then_elegant_code/">working code, then elegant code</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/dc4758c3-3aa8-402d-97bb-eb379baef39d?title=sonarqube">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<blockquote>
+<p>SonarQube relies on &ldquo;blame&rdquo; data from your SCM repository to understand which code is &ldquo;new&rdquo;. If no SCM data is available, then no code can be marked new and thus no metrics &ldquo;on new code&rdquo; can be calculated. If you notice, you also have no duplications, technical debt, bugs or vulnerabilities &ldquo;on new code&rdquo;.</p>
+<p>&mdash; <a href="https://groups.google.com/g/sonarqube/c/VCV77hLwsNE?pli=1">https://groups.google.com/g/sonarqube/c/VCV77hLwsNE?pli=1</a></p>
+</blockquote>
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
+<blockquote>
+<p>Changing the version label does not mean that there is new code. SQ core is looking in the SCM LOG files if there is new/changed code:</p>
+<p>version 1=TRT-TMN_0.1.0.54 =&gt; date/time 1 in SCM LOG file
+version 2=TRT-TMN_0.1.0.62 =&gt; date/time 2 in SCM LOG file
+==&gt; new / changed items in SCM LOG file between these two points in time</p>
+<p>&mdash; <a href="https://github.com/SonarOpenCommunity/sonar-cxx/issues/1786">https://github.com/SonarOpenCommunity/sonar-cxx/issues/1786</a></p>
+</blockquote>
+<!--more-->
+&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+      </div>
+	  <aside class="date"><time>Last updated: 21 May 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 23 Dec 2020</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

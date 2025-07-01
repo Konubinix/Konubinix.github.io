@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html><title>test eddsa signature with deno and noble curves</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Test Eddsa Signature With Deno and Noble Curves</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>test eddsa signature with deno and noble curves</p>
+<p><a id="code-snippet--program"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> { ed25519 } from <span style="color:#d14">&#34;https://esm.sh/@noble/curves@1.0.0/ed25519.js&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic">// Function to convert hex to Uint8Array
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">function</span> hexToBytes(hex<span style="color:#000;font-weight:bold">:</span> string)<span style="color:#000;font-weight:bold">:</span> Uint8Array {
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">const</span> bytes <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">new</span> Uint8Array(hex.length <span style="color:#000;font-weight:bold">/</span> <span style="color:#099">2</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">for</span> (<span style="color:#000;font-weight:bold">let</span> i <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">0</span>; i <span style="color:#000;font-weight:bold">&lt;</span> bytes.length; i<span style="color:#000;font-weight:bold">++</span>) {
+</span></span><span style="display:flex;"><span>    bytes[i] <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">parseInt</span>(hex.substr(i <span style="color:#000;font-weight:bold">*</span> <span style="color:#099">2</span>, <span style="color:#099">2</span>), <span style="color:#099">16</span>);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">return</span> bytes;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic">// Function to verify the signature
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">function</span> verifySignature(publicKeyHex<span style="color:#000;font-weight:bold">:</span> string, messageHex<span style="color:#000;font-weight:bold">:</span> string, signatureHex<span style="color:#000;font-weight:bold">:</span> string)<span style="color:#000;font-weight:bold">:</span> <span style="color:#0086b3">Promise</span><span style="color:#000;font-weight:bold">&lt;</span><span style="color:#000;font-weight:bold">boolean</span><span style="color:#000;font-weight:bold">&gt;</span> {
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">try</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic">// Convert the hex representations to bytes
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>    <span style="color:#000;font-weight:bold">const</span> publicKeyBytes <span style="color:#000;font-weight:bold">=</span> hexToBytes(publicKeyHex);
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">const</span> signatureBytes <span style="color:#000;font-weight:bold">=</span> hexToBytes(signatureHex);
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">const</span> messageBytes <span style="color:#000;font-weight:bold">=</span> hexToBytes(messageHex);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic">// Verify the signature
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>    <span style="color:#000;font-weight:bold">const</span> isValid <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">await</span> ed25519.verify(signatureBytes, messageBytes, publicKeyBytes);
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> isValid;
+</span></span><span style="display:flex;"><span>  } <span style="color:#000;font-weight:bold">catch</span> (error) {
+</span></span><span style="display:flex;"><span>    console.error(<span style="color:#d14">&#34;An error occurred:&#34;</span>, error);
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> <span style="color:#000;font-weight:bold">false</span>;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic">// Example usage
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">const</span> publicKey <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;13c55e00f1c8a0727804f6304d0d1b417a0ef48cd6613db2b3309b0451d1fd53&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">const</span> message <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;something&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">const</span> signature <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;2779de318f83627945a1d13ae8da45c49dfcbb50a37692aafc3df1f3a33324ed0b7e63318bae7d3f72f855e8020517e8f76610a254bc575d68e7ed4de9f01c0f&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic">// Convert message to its hex representation
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">const</span> encoder <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">new</span> TextEncoder();
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">const</span> messageBytes <span style="color:#000;font-weight:bold">=</span> encoder.encode(message);
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">const</span> messageHex <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">Array</span>.from(messageBytes).map(<span style="color:#000;font-weight:bold">byte</span> =&gt; <span style="color:#000;font-weight:bold">byte</span>.toString(<span style="color:#099">16</span>).padStart(<span style="color:#099">2</span>, <span style="color:#d14">&#39;0&#39;</span>)).join(<span style="color:#d14">&#39;&#39;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>verifySignature(publicKey, messageHex, signature).then(isValid =&gt; {
+</span></span><span style="display:flex;"><span>  console.log(<span style="color:#d14">`Is the signature valid? </span><span style="color:#d14">${</span>isValid<span style="color:#d14">}</span><span style="color:#d14">`</span>);
+</span></span><span style="display:flex;"><span>});
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>cat&lt;&lt;<span style="color:#d14">&#34;EOF&#34;</span> &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">/index.ts&#34;</span>
+</span></span><span style="display:flex;"><span>import <span style="color:#000;font-weight:bold">{</span> ed25519 <span style="color:#000;font-weight:bold">}</span> from <span style="color:#d14">&#34;https://esm.sh/@noble/curves@1.0.0/ed25519.js&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>// Function to convert hex to Uint8Array
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">function</span> hexToBytes<span style="color:#000;font-weight:bold">(</span>hex: string<span style="color:#000;font-weight:bold">)</span>: Uint8Array <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>  const <span style="color:#008080">bytes</span> <span style="color:#000;font-weight:bold">=</span> new Uint8Array<span style="color:#000;font-weight:bold">(</span>hex.length / 2<span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">for</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#0086b3">let</span> <span style="color:#008080">i</span> <span style="color:#000;font-weight:bold">=</span> 0; i &lt; bytes.length; i++<span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    bytes<span style="color:#000;font-weight:bold">[</span>i<span style="color:#000;font-weight:bold">]</span> <span style="color:#000;font-weight:bold">=</span> parseInt<span style="color:#000;font-weight:bold">(</span>hex.substr<span style="color:#000;font-weight:bold">(</span>i * 2, 2<span style="color:#000;font-weight:bold">)</span>, 16<span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">return</span> bytes;
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>// Function to verify the signature
+</span></span><span style="display:flex;"><span>async <span style="color:#000;font-weight:bold">function</span> verifySignature<span style="color:#000;font-weight:bold">(</span>publicKeyHex: string, messageHex: string, signatureHex: string<span style="color:#000;font-weight:bold">)</span>: Promise&lt;boolean&gt; <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>  try <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    // Convert the hex representations to bytes
+</span></span><span style="display:flex;"><span>    const <span style="color:#008080">publicKeyBytes</span> <span style="color:#000;font-weight:bold">=</span> hexToBytes<span style="color:#000;font-weight:bold">(</span>publicKeyHex<span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>    const <span style="color:#008080">signatureBytes</span> <span style="color:#000;font-weight:bold">=</span> hexToBytes<span style="color:#000;font-weight:bold">(</span>signatureHex<span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>    const <span style="color:#008080">messageBytes</span> <span style="color:#000;font-weight:bold">=</span> hexToBytes<span style="color:#000;font-weight:bold">(</span>messageHex<span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    // Verify the signature
+</span></span><span style="display:flex;"><span>    const <span style="color:#008080">isValid</span> <span style="color:#000;font-weight:bold">=</span> await ed25519.verify<span style="color:#000;font-weight:bold">(</span>signatureBytes, messageBytes, publicKeyBytes<span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> isValid;
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">}</span> catch <span style="color:#000;font-weight:bold">(</span>error<span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    console.error<span style="color:#000;font-weight:bold">(</span><span style="color:#d14">&#34;An error occurred:&#34;</span>, error<span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> false;
+</span></span><span style="display:flex;"><span>  <span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>// Example usage
+</span></span><span style="display:flex;"><span>const <span style="color:#008080">publicKey</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;13c55e00f1c8a0727804f6304d0d1b417a0ef48cd6613db2b3309b0451d1fd53&#34;</span>;
+</span></span><span style="display:flex;"><span>const <span style="color:#008080">message</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;something&#34;</span>;
+</span></span><span style="display:flex;"><span>const <span style="color:#008080">signature</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;2779de318f83627945a1d13ae8da45c49dfcbb50a37692aafc3df1f3a33324ed0b7e63318bae7d3f72f855e8020517e8f76610a254bc575d68e7ed4de9f01c0f&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>// Convert message to its hex representation
+</span></span><span style="display:flex;"><span>const <span style="color:#008080">encoder</span> <span style="color:#000;font-weight:bold">=</span> new TextEncoder<span style="color:#000;font-weight:bold">()</span>;
+</span></span><span style="display:flex;"><span>const <span style="color:#008080">messageBytes</span> <span style="color:#000;font-weight:bold">=</span> encoder.encode<span style="color:#000;font-weight:bold">(</span>message<span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>const <span style="color:#008080">messageHex</span> <span style="color:#000;font-weight:bold">=</span> Array.from<span style="color:#000;font-weight:bold">(</span>messageBytes<span style="color:#000;font-weight:bold">)</span>.map<span style="color:#000;font-weight:bold">(</span><span style="color:#008080">byte</span> <span style="color:#000;font-weight:bold">=</span>&gt; byte.toString<span style="color:#000;font-weight:bold">(</span>16<span style="color:#000;font-weight:bold">)</span>.padStart<span style="color:#000;font-weight:bold">(</span>2, <span style="color:#d14">&#39;0&#39;</span><span style="color:#000;font-weight:bold">))</span>.join<span style="color:#000;font-weight:bold">(</span><span style="color:#d14">&#39;&#39;</span><span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>verifySignature<span style="color:#000;font-weight:bold">(</span>publicKey, messageHex, signature<span style="color:#000;font-weight:bold">)</span>.then<span style="color:#000;font-weight:bold">(</span><span style="color:#008080">isValid</span> <span style="color:#000;font-weight:bold">=</span>&gt; <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>  console.log<span style="color:#000;font-weight:bold">(</span><span style="color:#d14">`</span>Is the signature valid? <span style="color:#d14">${</span><span style="color:#008080">isValid</span><span style="color:#d14">}</span><span style="color:#d14">`</span><span style="color:#000;font-weight:bold">)</span>;
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">})</span>;
+</span></span><span style="display:flex;"><span>EOF
+</span></span><span style="display:flex;"><span>deno run <span style="color:#d14">&#34;file://</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">/index.ts&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Is the signature valid? false
+</span></span></code></pre></div><h2 id="permalink"><a href="https://konubinix.eu/braindump/c1fc9159-4b56-4fc7-9e39-f8e563222a72?title=test_eddsa_signature_with_deno_and_noble_curves">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 21 Jun 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 21 Jun 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html><title>trying to install nomad in my macos</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Trying to Install Nomad in My Macos</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p><a href="/braindump/posts/nomad/">nomad</a></p>
+<p>My stack is composed of several rpi connected using <a href="/braindump/posts/tinc/">tinc</a>.</p>
+<p>Something like this:</p>
+<pre tabindex="0"><code class="language-dot" data-lang="dot">digraph {
+    rpi1 -&gt; rpi2 [label=&#34;tinc&#34;]
+    rpi2 -&gt; rpi3 [label=&#34;tinc&#34;]
+    rpi3 -&gt; rpi4 [label=&#34;tinc&#34;]
+    rpi4 -&gt; rpi5 [label=&#34;tinc&#34;]
+    rpi5 -&gt; rpi1 [label=&#34;tinc&#34;]
+}
+</code></pre><figure><img src="https://konubinix.eu/ipfs/bafkreieom4aflz4owfnosf45cxvvtfejmpttspznt5uhnd5jquiutnn4dm?filename=a.png">
+</figure>
+
+<p>Each one of those rpi runs nomad, with a docker engine running the jobs.</p>
+<pre tabindex="0"><code class="language-dot" data-lang="dot">digraph G {
+    subgraph cluster_rpi1 {
+        label = &#34;rpi1&#34;
+        nomad1
+        docker1
+    }
+    subgraph cluster_rpi2 {
+        label = &#34;rpi2&#34;
+        nomad2
+        docker2
+    }
+    nomad1 -&gt; docker1 [label=&#34;provides address to listen to using network_interface&#34;]
+    nomad2 -&gt; docker2 [label=&#34;provides address to listen to using network_interface&#34;]
+    nomad1 -&gt; nomad2 [label=&#34;tinc&#34;, dir=&#34;both&#34;, style=&#34;dotted&#34;]
+    docker1 -&gt; docker2 [label=&#34;tinc&#34;, dir=&#34;both&#34;, style=&#34;dotted&#34;]
+}
+</code></pre><figure><img src="https://konubinix.eu/ipfs/bafkreieuqwlyeadwyd44oocpqmkla2u2x3htiys5rqszyef7zircg3uggy?filename=a.png">
+</figure>
+
+<p>Now, when I want to put the mac into all of this.</p>
+<pre tabindex="0"><code class="language-dot" data-lang="dot">digraph G {
+    subgraph cluster_mac {
+        label = &#34;docker, bound to 192.168.10.1&#34;
+        label = &#34;mac&#34;
+        nomad1
+        subgraph cluster_docker {
+            label = &#34;linux virtual machine, bound to 192.168.10.2, not able to bind to tinc&#34;
+            docker1 [label=&#34;docker1, unable to bind to 192.168.10.1&#34;, color=&#34;red&#34;]
+        }
+    }
+    subgraph cluster_rpi2 {
+        label = &#34;rpi2&#34;
+        nomad2
+        docker2
+    }
+    nomad1 -&gt; docker1 [label=&#34;provides address 192.168.10.1 to listen to using network_interface&#34;]
+    nomad2 -&gt; docker2 [label=&#34;provides address to listen to using network_interface&#34;]
+    nomad1 -&gt; nomad2 [label=&#34;tinc&#34;, dir=&#34;both&#34;, style=&#34;dotted&#34;]
+    docker1 -&gt; docker2 [label=&#34;unable to use tinc&#34;, dir=&#34;both&#34;, style=&#34;dotted&#34;, color=&#34;red&#34;]
+}
+</code></pre><figure><img src="https://konubinix.eu/ipfs/bafkreia6apw3zlr4yhtvv46oxsvsqcjfu6n2t6zhgo3hy5jpohcwz6jnju?filename=a.png">
+</figure>
+
+<p>I can try running nomad in the virtual machine.</p>
+<pre tabindex="0"><code class="language-dot" data-lang="dot">digraph G {
+    subgraph cluster_mac {
+        label = &#34;mac&#34;
+        subgraph cluster_docker {
+            label = &#34;linux virtual machine&#34;
+            nomad1
+            docker1
+        }
+    }
+    subgraph cluster_rpi2 {
+        label = &#34;rpi2&#34;
+        nomad2
+        docker2
+    }
+    nomad1 -&gt; docker1 [label=&#34;provides address 192.168.10.2 to listen to using network_interface&#34;]
+    nomad2 -&gt; docker2 [label=&#34;provides address to listen to using network_interface&#34;]
+    nomad1 -&gt; nomad2 [label=&#34;tinc&#34;, style=&#34;dotted&#34;]
+    nomad2 -&gt; nomad1 [label=&#34;unable to discuss via tinc&#34;, style=&#34;dotted&#34;, color=&#34;red&#34;]
+    docker1 -&gt; docker2 [label=&#34;tinc&#34;, style=&#34;dotted&#34;]
+    docker2 -&gt; docker1 [label=&#34;unable to use tinc&#34;, style=&#34;dotted&#34;, color=&#34;red&#34;]
+}
+</code></pre><figure><img src="https://konubinix.eu/ipfs/bafkreiasrz26nhwvfncueovk2twgm6s6cg56sft5suiirykk2nbix7altm?filename=a.png">
+</figure>
+
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/dc16b09a-e53d-451e-b655-255b09118b88?title=trying_to_install_nomad_in_my_macos">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 23 May 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 23 May 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

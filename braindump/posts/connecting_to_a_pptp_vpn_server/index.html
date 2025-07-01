@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html><title>Connecting to a PPTP VPN Server</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Connecting to a PPTP VPN Server</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <div class="ox-hugo-toc toc has-section-numbers">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><span class="section-num">1</span> <a href="#connection-to-pptp-vpn">Connection to pptp/vpn                                            :</a>
+<ul>
+<li><span class="section-num">1.1</span> <a href="#the-connection">The connection                                                   :</a></li>
+<li><span class="section-num">1.2</span> <a href="#add-routing-rules">Add routing rules                                                :</a></li>
+</ul>
+</li>
+<li><span class="section-num">2</span> <a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<ul>
+<li>See <br/>
+<ul>
+<li><a href="/braindump/posts/vpn/">vpn</a>. <br/></li>
+</ul>
+</li>
+</ul>
+<h2 id="connection-to-pptp-vpn"><span class="section-num">1</span> Connection to pptp/vpn                                            :</h2>
+<h3 id="the-connection"><span class="section-num">1.1</span> The connection                                                   :</h3>
+<p><a href="http://pptpclient.sourceforge.net/howto-debian.phtml#configure_by_hand">http://pptpclient.sourceforge.net/howto-debian.phtml#configure_by_hand</a> <br/></p>
+<p>aptitude install pptp-linux <br/></p>
+<p>obtain from your PPTP Server administrator: <br/></p>
+<p>the IP address or host name of the server ($SERVER), <br/>
+the name you wish to use to refer to the tunnel ($TUNNEL), <br/>
+the authentication domain name ($DOMAIN), <br/>
+the username you are to use ($USERNAME), <br/>
+the password you are to use ($PASSWORD), <br/>
+whether encryption is required. <br/></p>
+<p>In the steps below, substitute these values manually. For example, where we write $PASSWORD we expect you to replace this with your password. <br/></p>
+<p>create or edit the /etc/ppp/options.pptp file, which sets options common to all tunnels: <br/></p>
+<p>lock noauth nobsdcomp nodeflate <br/></p>
+<p>create or add lines to the /etc/ppp/chap-secrets file, which holds usernames and passwords: <br/></p>
+<p>$DOMAIN\\$USERNAME PPTP $PASSWORD * <br/></p>
+<p>Note: if you are using a PPTP Server that does not require an authentication domain name, omit the slashes as well as the domain name. <br/></p>
+<p>Note: if the passwords contain any special characters, quote them. See man pppd for more details. <br/></p>
+<p>create a /etc/ppp/peers/$TUNNEL file: <br/></p>
+<p>pty &ldquo;pptp $SERVER –nolaunchpppd&rdquo; <br/>
+name $DOMAIN\\$USERNAME # refers to the /etc/ppp/chap-secrets entry <br/>
+remotename PPTP # refers to the /etc/ppp/chap-secrets entry <br/>
+require-mppe-128 <br/>
+file /etc/ppp/options.pptp <br/>
+ipparam $TUNNEL <br/></p>
+<p>Note: if you do not need MPPE support, then remove the require-mppe-128 option from this file and /etc/ppp/options.pptp. <br/></p>
+<p>start the tunnel using the pon command: <br/></p>
+<p>pon $TUNNEL <br/></p>
+<p>to further diagnose a failure, add options to the command: <br/></p>
+<p>pon $TUNNEL debug dump logfd 2 nodetach <br/></p>
+<p>Note: we have further information on enabling debug mode, and on diagnosing problems. <br/></p>
+<p>stop the tunnel using the poff command: <br/></p>
+<p>poff $TUNNEL <br/></p>
+<h3 id="add-routing-rules"><span class="section-num">1.2</span> Add routing rules                                                :</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo route add -net <span style="color:#008080">$PPP_TUNNEL_ADDRESS_BROADCAST</span> netmask 255.255.255.0 dev <span style="color:#008080">$PPP_TUNNEL</span>
+</span></span></code></pre></div><p>Example : <br/></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>sudo route add -net 10.175.9.0 netmask 255.255.255.0 dev ppp0
+</span></span></code></pre></div><h2 id="permalink"><span class="section-num">2</span> <a href="https://konubinix.eu/braindump/45b219dd-8aaa-4682-a1a3-077f966517ce?title=connecting_to_a_pptp_vpn_server">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 09 Aug 2021</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Aug 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

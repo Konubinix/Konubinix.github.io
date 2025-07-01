@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html><title>docker looses the dns configuration</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Docker Looses the Dns Configuration</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p><a href="/braindump/posts/docker/">docker</a> looses the connection a</p>
+<p>Actually, the network stuff is still there, but the <a href="/braindump/posts/etc_resolv_conf/">/etc/resolv.conf</a> file is not.</p>
+<p>Say I am running an alpine container while my host is connected to my home
+router.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker run --rm -ti alpine
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cat /etc/resolv.conf
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>nameserver 192.168.1.1
+</span></span></code></pre></div><p>Which is exactly what I have on the host.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cat /etc/resolv.conf
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>nameserver 192.168.1.1
+</span></span></code></pre></div><p>Now, suppose I close this connection and switch to usb connection shared of my phone.</p>
+<p>Now, on the host</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cat /etc/resolv.conf
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>nameserver 192.168.42.129
+</span></span></code></pre></div><p>But on the docker container</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>cat /etc/resolv.conf
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>nameserver 192.168.1.1
+</span></span></code></pre></div><p>Changing the value of the resolv.conf file is enough to get back to a working
+network in the container.</p>
+<p>Now, this file is actually mounted in the container, as well as the hosts and
+the hostname file.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>mount|grep /etc/
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/dev/nvme0n1p2 on /etc/resolv.conf type ext4 (rw,relatime,errors=remount-ro)
+</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /etc/hostname type ext4 (rw,relatime,errors=remount-ro)
+</span></span><span style="display:flex;"><span>/dev/nvme0n1p2 on /etc/hosts type ext4 (rw,relatime,errors=remount-ro)
+</span></span></code></pre></div><p>But I can see no information about how those mount point could be made dynamic.</p>
+<p>I can find where those files are located using docker inspect.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>d inspect 5ef|gi resolv.conf
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;ResolvConfPath&#34;: &#34;/var/lib/docker/containers/5efa6cf6e44f7500a707592780cbbd2f2c872a0f6ecd120d9c0830a40ba99476/resolv.conf&#34;,
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo cat /var/lib/docker/containers/5efa6cf6e44f7500a707592780cbbd2f2c872a0f6ecd120d9c0830a40ba99476/resolv.conf
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>nameserver 192.168.1.1
+</span></span></code></pre></div><p>I can update this file from the host.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> foobar | sudo tee /var/lib/docker/containers/5efa6cf6e44f7500a707592780cbbd2f2c872a0f6ecd120d9c0830a40ba99476/resolv.conf &gt; /dev/null
+</span></span><span style="display:flex;"><span>docker <span style="color:#0086b3">exec</span> 5ef cat /etc/resolv.conf
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>foobar
+</span></span></code></pre></div><blockquote>
+<p>By default, containers inherit the DNS settings of the host, as defined in the
+/etc/resolv.conf configuration file. Containers that attach to the default
+bridge network receive a copy of this file</p>
+<p>&mdash; <a href="https://docs.docker.com/config/containers/container-networking/">https://docs.docker.com/config/containers/container-networking/</a></p>
+</blockquote>
+<p>Also, note that since the hosts is also generated, <a href="/braindump/posts/custom_hosts_are_not_propagated_in_the_docker_container/">custom hosts are not propagated in the docker container</a>.</p>
+<p>Also, when using <a href="/braindump/posts/systemd_resolved/">systemd-resolved</a>, docker automatically copies the resolved dns
+at the time of the creation of the container to put it into the container. That
+does not make the resolution dynamic either (see <a href="/braindump/posts/how_should_systemd_resolved_and_docker_interact/">how should systemd-resolved and
+docker interact?</a>).</p>
+<p>Docker provides an <a href="/braindump/posts/docker_embedded_dns/">embedded dns</a> that is used to deal with custom networks. It
+listens to <a href="/braindump/posts/adresse_de_la_machine_hote_dans_docker/">172.17.0.1</a>:53.</p>
+<p>There is <a href="https://github.com/flaktack/systemd-resolved-docker">a project</a> that aims as replacing this embedded dns to make it work with
+the host systemd-resolved. I don&rsquo;t plan to use systemd-resolved, so that won&rsquo;t
+work for me.</p>
+<blockquote>
+<p>Containers that attach to a custom network use Docker’s embedded DNS server. The
+embedded DNS server forwards external DNS lookups to the DNS servers configured
+on the host.</p>
+<p>&mdash; <a href="https://docs.docker.com/config/containers/container-networking/">https://docs.docker.com/config/containers/container-networking/</a></p>
+</blockquote>
+<p>The most obvious solution as of today appears to provide an external dns when
+creating docker containers.</p>
+<p>That is not ideal, as most application I use, like <a href="/braindump/posts/earthly/">earthly</a> or <a href="/braindump/posts/kubernetes/#73298ba5-9790-4959-b8a9-7453486ab5ab">k3d</a> start docker
+themselves, so I need to find a way to use the <code>--dns</code> flag in each of them (and
+for instance earthly does not provide one now).</p>
+<p>I can become quite hairy in some complicated scenarios. It happens that I need
+to run docker in kubertenes in docker. In that case, I would need to trick the
+outside and in the inside docker to make them resilient to connection changes.</p>
+<p>Also, it makes the container
+able to use the external addresses, but not my local network managed by my
+router when I am plugged at home.</p>
+<p>You can <a href="/braindump/posts/how_docker_container_dns_works/#setup-default-dns-servers-in-docker">setup default dns servers in docker</a> to mitigate this issue.</p>
+<p>I could also run a command to update ALL the resolv.conf when /etc/resolv.conf changes.</p>
+<p>Something like this</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>docker ps -q|<span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> <span style="color:#0086b3">hash</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>  docker cp /etc/resolv.conf 5efa6cf6e44f:/etc/resolv.conf
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><p>This won&rsquo;t work, but that gives the idea. I still don&rsquo;t like this idea.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/f65d6732-d341-476a-a742-99f5cc14f390?title=docker_looses_the_dns_configuration">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 12 May 2023</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 12 May 2023</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

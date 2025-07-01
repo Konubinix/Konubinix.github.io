@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html><title>Android</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Android</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>External reference: <a href="https://en.wikipedia.org/wiki/Android_10">https://en.wikipedia.org/wiki/Android_10</a></li>
+</ul>
+<h2 id="fb815c2f-ff41-4e31-96d3-485f01161b9e">storage access framework</h2>
+<p><a href="https://developer.android.com/training/data-storage/shared/documents-files">https://developer.android.com/training/data-storage/shared/documents-files</a></p>
+<p>Now that android cannot access the filesystem directly, one has to use Uri to
+to do, asking permissions and dealing with intent started and activity
+results.</p>
+<h2 id="ec15aeaf-5adf-4297-9ca7-01feca13ec5a">permissions</h2>
+<ul>
+<li>External reference: <a href="http://androidpermissions.com/">http://androidpermissions.com/</a></li>
+</ul>
+<h3 id="f6edfb5c-df3f-44c8-b4ab-aed1e8ff5648">/system/etc/permissions/platform.xml -&gt; association android <a href="http://androidpermissions.com/">permission</a> to group gid</h3>
+<p>for instance, in my <a href="/braindump/posts/zte/#f2f95d9a-0529-455c-ac79-bf22a5267a3c">zte blade s6</a>, I could find out that I needed the
+permission WRITE_MEDIA_STORAGE to get the media_rw group thanks to</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android -d zte adb shell cat /system/etc/permissions/platform.xml|grep -C1 media_rw
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&lt;permission name=&#34;android.permission.WRITE_MEDIA_STORAGE&#34; &gt;
+</span></span><span style="display:flex;"><span>    &lt;group gid=&#34;media_rw&#34; /&gt;
+</span></span><span style="display:flex;"><span>&lt;/permission&gt;
+</span></span></code></pre></div><h4 id="27202907-beea-42c6-b844-209b24e6a878">accessing the external sdcard in an old android</h4>
+<p>Unfortunately, in that case, this is a system permission (see <a href="#e6d5adfe-c15d-4b02-9571-b774e0b1b5fb">get available permissions</a>).</p>
+<p>Changing this file to add media_rw to some normal permission is enough.</p>
+<p>Like this</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&lt;permission name=&#34;android.permission.WRITE_EXTERNAL_STORAGE&#34; &gt;
+</span></span><span style="display:flex;"><span>    &lt;group gid=&#34;sdcard_r&#34; /&gt;
+</span></span><span style="display:flex;"><span>    &lt;group gid=&#34;sdcard_rw&#34; /&gt;
+</span></span><span style="display:flex;"><span>    &lt;group gid=&#34;media_rw&#34; /&gt;
+</span></span><span style="display:flex;"><span>&lt;/permission&gt;
+</span></span></code></pre></div><p>Then,</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>su
+</span></span><span style="display:flex;"><span>mount -o remount,rw /system
+</span></span><span style="display:flex;"><span>cp /sdcard/platform.xml /system/etc/permissions/platform.xml
+</span></span><span style="display:flex;"><span>chmod <span style="color:#099">644</span> /system/etc/permissions/platform.xml
+</span></span><span style="display:flex;"><span>reboot
+</span></span></code></pre></div><h3 id="e6d5adfe-c15d-4b02-9571-b774e0b1b5fb">get existing permissions</h3>
+<p>Some permission are reserved for system application. To find all the normal ones, use a command like this.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android -d zte adb shell dumpsys package permissions | grep <span style="color:#008080">prot</span><span style="color:#000;font-weight:bold">=</span>normal -B2
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>  Permission [android.permission.GET_PACKAGE_SIZE] (3c221de2):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.GET_ACCOUNTS] (30d84c30):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.READ_SYNC_SETTINGS] (390e32ea):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.gms.permission.AD_ID_NOTIFICATION] (3f997ca2):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gms
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.SUBSCRIBED_FEEDS_READ] (ddc6b87):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.launcher.permission.READ_SETTINGS] (8eba99b):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.googlequicksearchbox
+</span></span><span style="display:flex;"><span>    uid=10039 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.android.chrome.PRERENDER_URL] (1f0b1b98):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.android.chrome
+</span></span><span style="display:flex;"><span>    uid=10053 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.DOWNLOAD_WITHOUT_NOTIFICATION] (3ca2406a):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.android.providers.downloads
+</span></span><span style="display:flex;"><span>    uid=10008 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.googleapps.permission.GOOGLE_AUTH.goanna_mobile] (2fa6e3d4):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gsf
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=2 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.WRITE_SYNC_SETTINGS] (32de7a22):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.READ_INSTALL_SESSIONS] (e8e166e):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.SET_TIME_ZONE] (177f7d21):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.googleapps.permission.GOOGLE_AUTH.geowiki] (194e4307):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gsf
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=2 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.gms.permission.ACTIVITY_RECOGNITION] (334e14cf):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gms
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.ZDM_RECOVERY_REBOOT] (29c12eeb):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.zte.zdmdaemon
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.FLASHLIGHT] (dd21651):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.SET_WALLPAPER] (dc9059a):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.MODIFY_AUDIO_SETTINGS] (3d0ca88f):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.BODY_SENSORS] (530d823):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.providers.gsf.permission.READ_GSERVICES] (29513405):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gsf
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.REORDER_TASKS] (248a22d6):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.googleapps.permission.GOOGLE_AUTH.panoramio] (fdd9662):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gsf
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=2 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.zte.lqsoft.launcher.permission.WRITE_SETTINGS] (90cdfe3):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.zte.lqsoft.launcher
+</span></span><span style="display:flex;"><span>    uid=10021 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.gms.dck.permission.DIGITAL_KEY_WRITE] (159c9c40):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gms
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.googleapps.permission.GOOGLE_AUTH.reader] (796acbe):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gsf
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=2 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.PERSISTENT_ACTIVITY] (17cb3aa0):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.VIBRATE] (2d4cc9da):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.RESTART_PACKAGES] (31817dc7):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.googleapps.permission.GOOGLE_AUTH] (3619d8d5):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gsf
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.ACCESS_WIMAX_STATE] (fff66b7):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.c2dm.permission.RECEIVE] (3f886c66):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gsf
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.GET_TASKS] (5fabb16):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.SET_WALLPAPER_HINTS] (2b88778f):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.CHANGE_NETWORK_STATE] (1660ffa1):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.gms.permission.AD_ID] (14f5667c):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gms
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.TRANSMIT_IR] (1e1dd2dc):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.ACCESS_LOCATION_EXTRA_COMMANDS] (24c54f0e):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.gms.permission.REQUEST_SCREEN_LOCK_COMPLEXITY] (33ed4658):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gms
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.android.vending.BILLING] (19eaf588):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.android.vending
+</span></span><span style="display:flex;"><span>    uid=10027 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.WAKE_LOCK] (17c743cc):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.zte.lqsoft.launcher.permission.READ_SETTINGS] (1043c0c4):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.zte.lqsoft.launcher
+</span></span><span style="display:flex;"><span>    uid=10021 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.KILL_BACKGROUND_PROCESSES] (ff8645c):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.android.alarm.permission.SET_ALARM] (10e3fb90):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.android.vending.CHECK_LICENSE] (14b540bc):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.android.vending
+</span></span><span style="display:flex;"><span>    uid=10027 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.BROADCAST_STICKY] (2c078d3e):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.READ_EXTERNAL_STORAGE] (72a369):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[1028] type=1 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.apps.docs.permission.SYNC_STATUS] (2064bcab):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.apps.docs
+</span></span><span style="display:flex;"><span>    uid=10057 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.EXPAND_STATUS_BAR] (1cb07887):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.gms.dck.permission.DIGITAL_KEY_READ] (1ef9564d):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gms
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.READ_SYNC_STATS] (314d6203):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.ACCESS_WIFI_STATE] (1cfc8c6b):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.ACCESS_NETWORK_STATE] (17ffa809):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.WRITE_USER_DICTIONARY] (12352e3b):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.WRITE_SETTINGS] (2da88ed7):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [com.google.android.googleapps.permission.GOOGLE_AUTH.doraemon] (d05da65):
+</span></span><span style="display:flex;"><span>    sourcePackage=com.google.android.gsf
+</span></span><span style="display:flex;"><span>    uid=10015 gids=[] type=2 prot=normal
+</span></span><span style="display:flex;"><span>--
+</span></span><span style="display:flex;"><span>  Permission [android.permission.RECEIVE_BOOT_COMPLETED] (2d396d63):
+</span></span><span style="display:flex;"><span>    sourcePackage=android
+</span></span><span style="display:flex;"><span>    uid=1000 gids=[] type=0 prot=normal
+</span></span></code></pre></div><h3 id="cbfe0d76-9ce7-4b78-82d9-e56dac2f6cfe">list and grant permissions from an application</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb shell dumpsys package eu.konubinix.konixpoc | grep <span style="color:#008080">granted</span><span style="color:#000;font-weight:bold">=</span><span style="color:#0086b3">false</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>android.permission.ACCESS_FINE_LOCATION: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+</span></span><span style="display:flex;"><span>android.permission.RECEIVE_SMS: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED|RESTRICTION_INSTALLER_EXEMPT]
+</span></span><span style="display:flex;"><span>android.permission.ACCESS_COARSE_LOCATION: granted=false, flags=[ REVOKE_WHEN_REQUESTED|USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+</span></span><span style="display:flex;"><span>android.permission.READ_PHONE_STATE: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+</span></span><span style="display:flex;"><span>android.permission.SEND_SMS: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED|RESTRICTION_INSTALLER_EXEMPT]
+</span></span><span style="display:flex;"><span>android.permission.WRITE_CONTACTS: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+</span></span><span style="display:flex;"><span>android.permission.CAMERA: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+</span></span><span style="display:flex;"><span>android.permission.RECORD_AUDIO: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+</span></span><span style="display:flex;"><span>android.permission.READ_CONTACTS: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
+</span></span></code></pre></div><p>And to grant some</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb shell pm grant eu.konubinix.konixpoc android.permission.READ_SMS
+</span></span></code></pre></div><p>Automate with</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb shell dumpsys package eu.konubinix.konixpoc | grep <span style="color:#008080">granted</span><span style="color:#000;font-weight:bold">=</span>false|cut -f1 -d:|xargs -n1 clk android adb shell pm grant eu.konubinix.konixpoc
+</span></span></code></pre></div><h2 id="4e4976fc-701e-41c9-9825-6f355ffe220e">tools</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://developer.android.com/studio/run/emulator-acceleration?hl=fr">https://developer.android.com/studio/run/emulator-acceleration?hl=fr</a></p>
+<p>Using the tooling installed by <a href="/braindump/posts/buildozer/">buildozer</a>, otherwise:</p>
+</li>
+</ul>
+<h3 id="938aecf2-9d98-4f2c-aeaf-395b0c5775ae">adb screenrecord</h3>
+<h3 id="d280b97a-f3fa-41ca-8dc5-d9e79c12ce22">to play with apk: aapt</h3>
+<h3 id="7d93a28e-ce6b-498b-9625-2f0a12b3a409">install the sdk</h3>
+<p>It can be downloaded from <a href="https://developer.android.com/studio">https://developer.android.com/studio</a> (go to the bottom of the page)</p>
+<p><a href="https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip">https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip</a></p>
+<p>I prefer using nixos and a custom flake to download what I need automatically.</p>
+<h3 id="19b65851-3454-4af9-b1e8-d15642a36a11">missing the avd folder</h3>
+<p>the <a href="#a3081221-2684-40d6-bb02-c17e22285ae1">avdmanager</a> respects the XDG_CONFIG HOME but the <a href="#6283595b-4eb0-4fbe-93c9-ed3deec5e34f">emulator</a> does not. This
+leads to avdmanager create putting avds in some path and emulator not finding
+it.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"></code></pre></div><h3 id="137d6e6f-046a-4f5b-afdf-323dec938a01">test graphical interfaces</h3>
+<h4 id="4d9438c8-bda4-494d-a684-e5ae9f31e3d5">Permission Denial</h4>
+<blockquote>
+<p>java.lang.SecurityException: Permission Denial: starting Intent
+The full error description usually looks like &lsquo;java.lang.SecurityException: Permission Denial: starting Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.mypackage/.myactivity.MainActivity launchParam=MultiScreenLaunchParams { mDisplayId=0 mBaseDisplayId=0 mFlags=0 } } from null (pid=11366, uid=2000) not exported from uid 10191. Such error might be the indication of the fact that the combination of application package and activity name, which has been passed to Appium as appPackage/appActivity (or auto detected implicitly), is not the correct one to start the application under test</p>
+<p>&mdash; <a href="https://github.com/appium/appium/blob/1.x/docs/en/writing-running-appium/android/activity-startup.md">https://github.com/appium/appium/blob/1.x/docs/en/writing-running-appium/android/activity-startup.md</a></p>
+</blockquote>
+<h4 id="713aa2a1-6c21-4c91-986d-bfe7a9bf950f">appium</h4>
+<ul>
+<li>External reference: <a href="http://appium.io/docs/en/2.4/quickstart/uiauto2-driver">http://appium.io/docs/en/2.4/quickstart/uiauto2-driver</a></li>
+<li>External reference: <a href="http://appium.io/docs/en/2.4/quickstart/install/">http://appium.io/docs/en/2.4/quickstart/install/</a></li>
+</ul>
+<blockquote>
+<p>appium driver install <a href="#07041546-3a0d-4019-b2d0-57d2abfe2033">uiautomator2</a></p>
+<p>&mdash; <a href="http://appium.io/docs/en/2.4/quickstart/uiauto2-driver/#prepare-the-device">http://appium.io/docs/en/2.4/quickstart/uiauto2-driver/#prepare-the-device</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>npm i -g appium</p>
+<p>&mdash; <a href="http://appium.io/docs/en/2.4/quickstart/install/">http://appium.io/docs/en/2.4/quickstart/install/</a></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">ANDROID_SERIAL</span><span style="color:#000;font-weight:bold">=</span>emulator-5554 appium
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pip install Appium-Python-Client
+</span></span></code></pre></div><h5 id="3cd1a76e-fddd-4371-803a-1e493523250d">speed up the starting</h5>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>additional_options <span style="color:#000;font-weight:bold">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;skipDeviceInitialization&#34;</span>: <span style="color:#000;font-weight:bold">not</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>first_time,
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;skipServerInstallation&#34;</span>: <span style="color:#000;font-weight:bold">not</span> <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>first_time,
+</span></span><span style="display:flex;"><span>    <span style="color:#d14">&#34;disableWindowAnimation&#34;</span>: <span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>first_time,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>It still takes some time to kill the previous run of the <a href="#07041546-3a0d-4019-b2d0-57d2abfe2033">uiautomator2</a>
+server and start it again.</p>
+<p>start session calls this.cleanupAutomationLeftovers</p>
+<p><a href="https://github.com/appium/appium-uiautomator2-driver/blob/25eeea068a1928dec32af5ac7744a967b385bf3a/lib/uiautomator2.js#L225">https://github.com/appium/appium-uiautomator2-driver/blob/25eeea068a1928dec32af5ac7744a967b385bf3a/lib/uiautomator2.js#L225</a></p>
+<p>that in turn stops the server <a href="https://github.com/appium/appium-uiautomator2-driver/blob/25eeea068a1928dec32af5ac7744a967b385bf3a/lib/uiautomator2.js#L376">https://github.com/appium/appium-uiautomator2-driver/blob/25eeea068a1928dec32af5ac7744a967b385bf3a/lib/uiautomator2.js#L376</a></p>
+<p>before starting it again <a href="https://github.com/appium/appium-uiautomator2-driver/blob/25eeea068a1928dec32af5ac7744a967b385bf3a/lib/uiautomator2.js#L241">https://github.com/appium/appium-uiautomator2-driver/blob/25eeea068a1928dec32af5ac7744a967b385bf3a/lib/uiautomator2.js#L241</a></p>
+<h5 id="e5aa95bc-0c68-4c2a-885f-adbe79b845da">socket hang up error</h5>
+<ul>
+<li>
+<p>External reference: <a href="https://stackoverflow.com/questions/60275181/getting-socket-hang-up-error-while-running-appium-scripts-using-windows-os">https://stackoverflow.com/questions/60275181/getting-socket-hang-up-error-while-running-appium-scripts-using-windows-os</a></p>
+<blockquote>
+<p>Rebooting the device helped me, not just closing it and opening again, but selecting &ldquo;Cold boot Now&rdquo; option in Vertual Device Manager for Android studio</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/60275181/getting-socket-hang-up-error-while-running-appium-scripts-using-windows-os">https://stackoverflow.com/questions/60275181/getting-socket-hang-up-error-while-running-appium-scripts-using-windows-os</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Change the systemPort desired capability of the appium. (ex. change from 8200 to 8210)</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/60275181/getting-socket-hang-up-error-while-running-appium-scripts-using-windows-os">https://stackoverflow.com/questions/60275181/getting-socket-hang-up-error-while-running-appium-scripts-using-windows-os</a></p>
+</blockquote>
+</li>
+</ul>
+<h4 id="07041546-3a0d-4019-b2d0-57d2abfe2033">uiautomator2</h4>
+<p>Needs at least <a href="#6481f597-7c2c-4245-8495-73411bad27b4">android 5</a></p>
+<p>A lot of sites say that some <a href="#78eba46e-f366-421f-a419-b974a13805ab">uiautomatorviewer</a> tool exist. But so far, I
+could not find any proof of its existence, even downloading the sdk and
+android studio for linux and windows.</p>
+<h5 id="78eba46e-f366-421f-a419-b974a13805ab">uiautomatorviewer</h5>
+<p>uiautomatorviewer</p>
+<h5 id="b5ce4d09-5a88-4c31-af30-594b302590c3">Developer Assistant APK</h5>
+<ul>
+<li>External reference: <a href="https://apkcombo.com/developer-assistant/com.appsisle.developerassistant/download/apk">https://apkcombo.com/developer-assistant/com.appsisle.developerassistant/download/apk</a></li>
+</ul>
+<p><a href="https://ipfs.konubinix.eu/ipfs/bafybeialb27i7yjaqdh2g4hswv4vqc5o7cl4gr5ubk7vkpelc275lqhs7u?filename=developer_assistant_1_2_2_apkcombo_com.apk">Developer Assistant_1.2.2_apkcombo.com.apk</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>    ipfs get -o <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">/assistant.apk&#34;</span> https://ipfs.konubinix.eu/ipfs/bafybeialb27i7yjaqdh2g4hswv4vqc5o7cl4gr5ubk7vkpelc275lqhs7u
+</span></span><span style="display:flex;"><span>    adb -s emulator-5554 install <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">/assistant.apk&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><h3 id="9fe282bc-d514-45b5-9078-5ea5826bd834">sdkmanager</h3>
+<p>The sdkmanager is quite touchy. It needs to be called in a specific directory and specifying the root.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">cd</span> ~/.buildozer/android/platform/android-sdk/tools
+</span></span><span style="display:flex;"><span>./bin/sdkmanager --list --sdk_root<span style="color:#000;font-weight:bold">=</span>..
+</span></span></code></pre></div><h3 id="a3081221-2684-40d6-bb02-c17e22285ae1">avdmanager</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>avdmanager list
+</span></span></code></pre></div><p>To find the possible package to give to avd create</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sdkmanager --list | gi system-images
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[...]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  system-images;android-34;google_apis;x86_64                                              | 12            | Google APIs Intel x86_64 Atom System Image
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[...]
+</span></span></code></pre></div><p>Then</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sdkmanager --install <span style="color:#a61717;background-color:#e3d2d2">&#39;</span>system-images;android-34;google_apis;x86_64
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>avdmanager create avd --device <span style="color:#099">9</span> --name <span style="color:#0086b3">test</span> --package <span style="color:#d14">&#34;system-images;android-34;google_apis;x86_64&#34;</span>
+</span></span></code></pre></div><blockquote>
+<p>L&rsquo;émulateur opère de manière optimale s&rsquo;il peut utiliser le matériel de votre
+ordinateur, tel que le processeur, le GPU et le modem, au lieu de fonctionner
+comme un logiciel pur</p>
+<p>&mdash; <a href="https://developer.android.com/studio/run/emulator-acceleration?hl=fr">https://developer.android.com/studio/run/emulator-acceleration?hl=fr</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>appareils Android ont recours à OpenGL for Embedded Systems (OpenGL ES ou
+GLES) pour le rendu des graphismes 2D et 3D à l&rsquo;écran.</p>
+<p>&mdash; <a href="https://developer.android.com/studio/run/emulator-acceleration?hl=fr">https://developer.android.com/studio/run/emulator-acceleration?hl=fr</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>L&rsquo;accélération matérielle, qui est généralement plus rapide, est
+recommandée. Toutefois, vous devrez peut-être recourir à l&rsquo;accélération
+logicielle si votre ordinateur utilise des pilotes graphiques non compatibles
+avec l&rsquo;émulateur.</p>
+<p>&mdash; <a href="https://developer.android.com/studio/run/emulator-acceleration?hl=fr">https://developer.android.com/studio/run/emulator-acceleration?hl=fr</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Si vous démarrez l&rsquo;émulateur à partir de la ligne de commande, vous pouvez
+forcer le paramètre d&rsquo;accélération graphique de l&rsquo;AVD correspondant à cette
+instance d&rsquo;appareil virtuel</p>
+<p>&mdash; <a href="https://developer.android.com/studio/run/emulator-acceleration?hl=fr">https://developer.android.com/studio/run/emulator-acceleration?hl=fr</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Pour spécifier un type d&rsquo;accélération graphique lorsque vous exécutez un AVD
+à partir de la ligne de commande, incluez l&rsquo;option -gpu, comme illustré dans
+l&rsquo;exemple suivant :</p>
+<p>emulator -avd avd_name -gpu mode [{-option [value]} &hellip; ]</p>
+<p>La valeur de</p>
+<p>&mdash; <a href="https://developer.android.com/studio/run/emulator-acceleration?hl=fr">https://developer.android.com/studio/run/emulator-acceleration?hl=fr</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Lorsque vous utilisez des images pour le niveau d&rsquo;API 27 ou supérieur,
+l&rsquo;émulateur peut afficher l&rsquo;UI Android avec Skia. Skia aide l&rsquo;émulateur à
+afficher les graphiques de manière plus fluide et plus efficace.</p>
+<p>Pour activer le rendu Skia, utilisez les commandes suivantes dans le shell adb :
+su
+setprop debug.hwui.renderer skiagl
+stop
+start</p>
+<p>&mdash; <a href="https://developer.android.com/studio/run/emulator-acceleration?hl=fr">https://developer.android.com/studio/run/emulator-acceleration?hl=fr</a></p>
+</blockquote>
+<h3 id="6283595b-4eb0-4fbe-93c9-ed3deec5e34f">emulator</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sdkmanager --install emulator
+</span></span></code></pre></div><p>May need to sudo apt install libx11-dev to get libx11.so</p>
+<p>Using the name of the avd installed with <a href="#a3081221-2684-40d6-bb02-c17e22285ae1">avdmanager</a> (see above).</p>
+<p>avdmanager uses xdg, but emulator does not. Therefore, to be coherent, you can add this symlink</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>rm -f <span style="color:#d14">${</span><span style="color:#008080">HOME</span><span style="color:#d14">}</span>/.android/avd
+</span></span><span style="display:flex;"><span>ln -sv <span style="color:#000;font-weight:bold">{</span><span style="color:#d14">${</span><span style="color:#008080">XDG_CONFIG_HOME</span><span style="color:#d14">}</span>,<span style="color:#d14">${</span><span style="color:#008080">HOME</span><span style="color:#d14">}</span><span style="color:#000;font-weight:bold">}</span>/.android/avd | sed -e <span style="color:#d14">&#34;s|</span><span style="color:#d14">${</span><span style="color:#008080">XDG_CONFIG_HOME</span><span style="color:#d14">}</span><span style="color:#d14">|&lt;config-home&gt;|&#34;</span> -e  <span style="color:#d14">&#34;s|</span><span style="color:#d14">${</span><span style="color:#008080">HOME</span><span style="color:#d14">}</span><span style="color:#d14">|&lt;home&gt;|&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>emulator -avd <span style="color:#0086b3">test</span> -qemu -enable-kvm -gpu host
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>INFO    | Android emulator version 33.1.24.0 (build_id 11237101) (CL:N/A)
+</span></span><span style="display:flex;"><span>INFO    | AVD test has path /home/sam/.android/avd/../avd/test.avd
+</span></span><span style="display:flex;"><span>INFO    | trying to check whether /home/sam/.buildozer/android/platform/android-sdk is a valid sdk root
+</span></span><span style="display:flex;"><span>WARNING | /home/sam/.buildozer/android/platform/android-sdk/android-sdk/system-images/android-34/google_apis/x86_64/ is not a valid directory.
+</span></span><span style="display:flex;"><span>WARNING | emulator has searched the above paths but found no valid sdk root directory.
+</span></span><span style="display:flex;"><span>PANIC: Broken AVD system path. Check your ANDROID_SDK_ROOT value [/home/sam/.buildozer/android/platform/android-sdk]!
+</span></span></code></pre></div><p>Strange. Hopefully, this can be easily circumvented</p>
+<p><a id="code-snippet--"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ln -s ~/.buildozer/android/platform/android-sdk ~/.buildozer/android/platform/android-sdk/android-sdk
+</span></span></code></pre></div><p>Also, to enable keyboard in the avd</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sed -i <span style="color:#d14">&#39;s/hw.keyboard = no/hw.keyboard = yes/&#39;</span> ~/.android/avd/test.avd/config.ini
+</span></span></code></pre></div><p>If the emulator restarted</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>adb disconnect emulator-5554
+</span></span></code></pre></div><h4 id="34fd8808-8d39-403f-a5b6-39ed1d165030">run in <a href="/braindump/posts/x11vnc/">x11vnc</a></h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>x11vnc -create -nopw -gone <span style="color:#d14">&#39;pkill -f &#34;qemu-system-x86_64 -avd test&#34; -SIGTERM&#39;</span> -env <span style="color:#008080">X11VNC_FINDDISPLAY_ALWAYS_FAILS</span><span style="color:#000;font-weight:bold">=</span><span style="color:#099">1</span> -env <span style="color:#008080">FD_PROG</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;emulator -avd test&#34;</span>
+</span></span></code></pre></div><p>Then, on the remote side</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>xtightvncviewer localhost:5900
+</span></span></code></pre></div><p>This uses <a href="/braindump/posts/xvfb/">xvfb</a> under the hood</p>
+<p>The good thing here is that the application starts only when connecting to
+the vnc server, not before.</p>
+<p>This is not enough, as closing the window won&rsquo;t send SIGTERM to the running emulator.</p>
+<h4 id="258f3fc1-c654-45bc-845e-f01c4a62b0d2">run in <a href="/braindump/posts/xvfb/">xvfb</a></h4>
+<h3 id="9dd8e2c8-183f-4b0d-b413-cb9acaa79d7e">apktool to play with the content of an apk</h3>
+<p>Extract some apk with</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>apktool d my.apk
+</span></span></code></pre></div><p>It creates the folder <code>my</code></p>
+<p>Then, make some changes, then</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>apktool b my
+</span></span></code></pre></div><p>The new apk is in the <code>my/dist/</code> folder</p>
+<h2 id="f55ac557-3e03-436d-afd0-365b12d13bac">Connect Android to PC using debian and udev                       :</h2>
+<ul>
+<li>Get the code of the constructor
+<ul>
+<li>either get the code from <a href="http://developer.android.com/tools/device.html">http://developer.android.com/tools/device.html</a></li>
+<li>or find the line [.] usb .: New USB device found, idVendor=04e8, . in the output of dmesg when you plug the phone. (for the example, my samsung phone indicates the vendor 04e8)</li>
+</ul>
+</li>
+<li>create an udev rule for the android phone when it plugs in
+<ul>
+<li>edit the new file /etc/udev/rules.d/50-android.rules and put into it
+SUBSYSTEM==&ldquo;usb&rdquo;, ATTR{idVendor}==&ldquo;04e8&rdquo;, MODE=&ldquo;0666&rdquo;, GROUP=&ldquo;plugdev&rdquo;</li>
+<li>restart udev with
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>service udev restart
+</span></span></code></pre></div></li>
+</ul>
+</li>
+<li>re plug the phone</li>
+</ul>
+<h2 id="5b03657d-6889-4f22-aecd-17a1d4d06498">4</h2>
+<ul>
+<li>Seems too old to have a decent alarmclock</li>
+<li>hard to run <a href="/blog/posts/a_python_runtime_on_android/?title=a_python_runtime_on_android#">a python runtime on android</a>,</li>
+</ul>
+<h2 id="6481f597-7c2c-4245-8495-73411bad27b4">5</h2>
+<h2 id="0b8d5f1b-180a-4c61-b5f0-d33a3f6ee5b2">7</h2>
+<h2 id="c0b4ef4c-6c9d-40d8-8c15-039d11c8f8d0">8.1</h2>
+<p><a href="/braindump/posts/mindthegapps/#8-dot-1">mindthegapps &gt; 8.1</a></p>
+<h2 id="eac31e30-20eb-48ed-982c-cfe82f15d086">10</h2>
+<blockquote>
+<p>Android 10 (codenamed Android Q during development)</p>
+<p>&mdash; <a href="https://en.wikipedia.org/wiki/Android_10">https://en.wikipedia.org/wiki/Android_10</a></p>
+</blockquote>
+<h2 id="240d3421-af91-4836-8226-49ef5b46646e">11</h2>
+<h2 id="f3aa535e-dd40-40f1-9dfe-920efacc384c">13</h2>
+<h2 id="533823b3-c9fa-4a74-a79d-2e6b0bee5491">automation (with adb)</h2>
+<p>adb exec-out screencap -p &gt; screen.png
+adb shell input keyevent keycode # voir les keycodes ici <a href="https://developer.android.com/reference/android/view/KeyEvent">https://developer.android.com/reference/android/view/KeyEvent</a>
+adb shell input tap x y
+adb shell input text letexte
+adb shell getevent -l # pour récup une macro
+adb shell sendevent &lt;periph de getevent&gt;
+adb shell input swipe 224 548 $((0x000001dd)) $((0x00000206)) # some times you have to reverse x and y</p>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/Du__JfXqsAs" allowfullscreen title="YouTube Video"></iframe></div>
+<p>scrcpy</p>
+<p>use the developer option to see the interraction on the screen
+then try and error with several swipes adb shell input swipe 200 200 200 300</p>
+<p>adb shell input keyevent KEYCODE_POWER
+adb shell input keyevent KEYCODE_BACK</p>
+<p><a href="https://stackoverflow.com/questions/17259809/can-anyone-explain-this-command-fully-adb-shell-sendevent-device-type-code">https://stackoverflow.com/questions/17259809/can-anyone-explain-this-command-fully-adb-shell-sendevent-device-type-code</a></p>
+<p>A method to get what I want</p>
+<p><a href="https://stackoverflow.com/questions/25363526/fire-a-pinch-in-out-command-to-android-phone-using-adb">https://stackoverflow.com/questions/25363526/fire-a-pinch-in-out-command-to-android-phone-using-adb</a></p>
+<h3 id="c83fdd36-f98f-4158-b122-20bb07ec7fed">kill an active application</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://stackoverflow.com/questions/31079853/how-do-i-kill-all-active-tasks-apps-using-adb">https://stackoverflow.com/questions/31079853/how-do-i-kill-all-active-tasks-apps-using-adb</a></p>
+<blockquote>
+<p>adb shell am force-stop &lt;PACKAGE&gt;</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/31079853/how-do-i-kill-all-active-tasks-apps-using-adb">https://stackoverflow.com/questions/31079853/how-do-i-kill-all-active-tasks-apps-using-adb</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="f9506997-dbf8-4399-9b50-d14813ec7925">launch activity</h3>
+<blockquote>
+<p>am start -n yourpackagename/.activityname</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/13380590/is-it-possible-to-start-activity-through-adb-shell">https://stackoverflow.com/questions/13380590/is-it-possible-to-start-activity-through-adb-shell</a></p>
+</blockquote>
+<h4 id="daab288f-81c7-4c21-b352-1b045832713a">find available activities</h4>
+<blockquote>
+<p>adb shell dumpsys package | grep -i &ldquo;package.name&rdquo; | grep Activity</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/33441138/how-to-find-out-activity-names-in-a-package-android-adb-shell">https://stackoverflow.com/questions/33441138/how-to-find-out-activity-names-in-a-package-android-adb-shell</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-04-17 Thu]</span></span>)</p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>adb shell pm list packages -f
+Then you can use adb pull:</p>
+<p>adb pull &lt;APK path from previous command&gt;
+and then aapt to get the information you want:</p>
+<p><a href="#d280b97a-f3fa-41ca-8dc5-d9e79c12ce22">aapt</a> dump badging &lt;pulledfile.apk&gt;</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/12698814/get-launchable-activity-name-of-package-from-adb">https://stackoverflow.com/questions/12698814/get-launchable-activity-name-of-package-from-adb</a></p>
+</blockquote>
+<h4 id="ea568e5f-6e91-41d0-a9b5-59138f850b19">example with slightbackup</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb shell pm list packages -f|gi slightba
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>package:/data/app/de.shandschuh.slightbackup-AtJUMUgaD889KHasQ8QaKg==/base.apk=de.shandschuh.slightbackup
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">cd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>clk android adb pull /data/app/de.shandschuh.slightbackup-AtJUMUgaD889KHasQ8QaKg<span style="color:#000;font-weight:bold">==</span>/base.apk
+</span></span><span style="display:flex;"><span>aapt dump badging base.apk | gi launchable-activity
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/data/app/de.shandschuh.slightbackup-AtJUMUgaD889KHasQ8QaKg==/base.apk: 1 file pulled, 0 skipped. 1.9 MB/s (78433 bytes in 0.040s)
+</span></span><span style="display:flex;"><span>launchable-activity: name=&#39;de.shandschuh.slightbackup.BackupActivity&#39;  label=&#39;Slight backup&#39; icon=
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb shell am start -n <span style="color:#a61717;background-color:#e3d2d2">&#39;</span>de.shandschuh.slightbackup/.BackupActivity
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Starting: Intent { cmp=de.shandschuh.slightbackup/.BackupActivity }
+</span></span></code></pre></div><h3 id="d30a23b6-e346-4974-a9a3-33f19202cb8e">keep my screen unlocked during USB debugging?</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://stackoverflow.com/questions/8840954/how-do-i-keep-my-screen-unlocked-during-usb-debugging">https://stackoverflow.com/questions/8840954/how-do-i-keep-my-screen-unlocked-during-usb-debugging</a></p>
+<blockquote>
+<p>svc power stayon usb</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/8840954/how-do-i-keep-my-screen-unlocked-during-usb-debugging">https://stackoverflow.com/questions/8840954/how-do-i-keep-my-screen-unlocked-during-usb-debugging</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="b6650f39-af80-42c7-a551-b9f402fe04c5">change display brightness using adb</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://lynxbee.com/how-to-change-android-display-brightness-using-adb-command/">https://lynxbee.com/how-to-change-android-display-brightness-using-adb-command/</a></p>
+<blockquote>
+<p>settings get system screen_brightness</p>
+<p>&mdash; <a href="https://lynxbee.com/how-to-change-android-display-brightness-using-adb-command/">https://lynxbee.com/how-to-change-android-display-brightness-using-adb-command/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>settings put system screen_brightness 200</p>
+<p>&mdash; <a href="https://lynxbee.com/how-to-change-android-display-brightness-using-adb-command/">https://lynxbee.com/how-to-change-android-display-brightness-using-adb-command/</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="5eafc563-2fc9-4b2c-b4d6-ed161468f787">get the Android device screen size from the adb command line?</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://stackoverflow.com/questions/7527459/how-to-get-the-android-device-screen-size-from-the-adb-command-line">https://stackoverflow.com/questions/7527459/how-to-get-the-android-device-screen-size-from-the-adb-command-line</a></p>
+<blockquote>
+<p>adb shell wm size</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/7527459/how-to-get-the-android-device-screen-size-from-the-adb-command-line">https://stackoverflow.com/questions/7527459/how-to-get-the-android-device-screen-size-from-the-adb-command-line</a></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="e683ae5b-91a3-4ddc-ba2f-6a00891b5eb1">hacks</h2>
+<h3 id="314d97bf-ea1c-41b1-82c0-ae11a32ccec8">provide permissions (like camera or sdcard)</h3>
+<p>clk android -d klipad adb shell pm grant eu.konubinix.konixpoc android.permission.CAMERA
+clk android -d klipad adb shell pm grant eu.konubinix.konixpoc android.permission.WRITE_EXTERNAL_STORAGE</p>
+<p>note that with <a href="/braindump/posts/android_11_scoped_storage/">android 11 scoped storage</a>, sdcard storage is granted using</p>
+<p>clk android adb shell appops set &ndash;uid eu.konubinix.konixpoc MANAGE_EXTERNAL_STORAGE allow</p>
+<h3 id="8ae7a0d0-1650-45a6-a096-74436f997f6b">change fullscreen settings</h3>
+<p>see <a href="/braindump/posts/interval_timer/#887c6b43-0363-429d-9bc7-6b1492cc262e">doing again, with old python2 kivy, to reuse my wiko cink peax</a>
+apktool d app.apk
+change in ./app/AndroidManifest.xml the android theme to be android:theme=&quot;@android:style/Theme.NoTitleBar.Fullscreen&quot;
+apktool b app
+keytool -genkeypair -keystore your-keystore.jks -storepass 000000 -keypass 000000 -alias your-alias -dname &ldquo;CN=Your Name, OU=Your Unit, O=Your Organization, L=Your City, ST=Your State, C=Your Country&rdquo; -keyalg RSA -keysize 2048 -validity 10000
+apksigner sign &ndash;ks your-keystore.jks &ndash;ks-key-alias your-alias &ndash;ks-pass pass:000000 ./app/dist/app.apk
+now, ./app/dist/app.apk is ready</p>
+<p>Alternatively, from the code</p>
+<p><a id="code-snippet--fullscreen"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.runnable</span> <span style="color:#000;font-weight:bold">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>View <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.View&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>option <span style="color:#000;font-weight:bold">=</span> View<span style="color:#000;font-weight:bold">.</span>SYSTEM_UI_FLAG_FULLSCREEN
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">fs</span>():
+</span></span><span style="display:flex;"><span>    mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()<span style="color:#000;font-weight:bold">.</span>getDecorView()<span style="color:#000;font-weight:bold">.</span>setSystemUiVisibility(option)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>fs()
+</span></span></code></pre></div><p>Quit it using the SYSTEM_UI_FLAG_VISIBLE option</p>
+<h3 id="ee2d8bf7-e3b4-4872-8416-38c88735f4f0">permanent adb over wifi by adding &ldquo;service.adb.tcp.port=5555&rdquo; into &ldquo;/system/build.prop&rdquo;</h3>
+<h3 id="ba5e4739-bca5-40e2-a76f-f98a55253375">enable <a href="/braindump/posts/android_wakelock/">wakelock</a></h3>
+<p>see <a href="/blog/posts/a_python_runtime_on_android/?title=a_legacy_from_another_lifetime#a-legacy-from-another-lifetime">a legacy from another lifetime</a>. If the following does not work, consider using <a href="/braindump/posts/caffeine/">caffeine</a>
+&lt;meta-data android:name=&ldquo;wakelock&rdquo; android:value=&ldquo;1&rdquo;/&gt;</p>
+<p><a id="code-snippet--enable-wakelock"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># in a service, use instead of mActivity</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># PythonService = autoclass(&#39;org.kivy.android.PythonService&#39;)</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># PythonService.mService</span>
+</span></span><span style="display:flex;"><span>PowerManager <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.os.PowerManager&#39;</span>)
+</span></span><span style="display:flex;"><span>Context <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.content.Context&#39;</span>)
+</span></span><span style="display:flex;"><span>WindowManager <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.WindowManager&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pm <span style="color:#000;font-weight:bold">=</span> mActivity<span style="color:#000;font-weight:bold">.</span>getSystemService(Context<span style="color:#000;font-weight:bold">.</span>POWER_SERVICE)
+</span></span><span style="display:flex;"><span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>wl <span style="color:#000;font-weight:bold">=</span> pm<span style="color:#000;font-weight:bold">.</span>newWakeLock(PowerManager<span style="color:#000;font-weight:bold">.</span>SCREEN_BRIGHT_WAKE_LOCK, <span style="color:#d14">&#39;simplecamera:screen-awake&#39;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#999">self</span><span style="color:#000;font-weight:bold">.</span>wl<span style="color:#000;font-weight:bold">.</span>acquire()
+</span></span></code></pre></div><p>And later, self.wl.release()</p>
+<p>SCREEN_DIM_WAKE_LOCK (and supposedly deprecated for FLAG_ALLOW_LOCK_WHILE_SCREEN_ON) to simply dim, worked well on <a href="#5b03657d-6889-4f22-aecd-17a1d4d06498">android 4</a></p>
+<p><a id="code-snippet--enable-wakelock-ex"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-org" data-lang="org"><span style="display:flex;"><span>&lt;&lt;<span style="color:#008080">enable-wakelock</span>&gt;&gt;
+</span></span></code></pre></div><h3 id="8290db14-5f5c-444d-98f6-00b46709696c">record audio</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">record</span>(<span style="color:#999">self</span>):
+</span></span><span style="display:flex;"><span>    plyer<span style="color:#000;font-weight:bold">.</span>audio<span style="color:#000;font-weight:bold">.</span>file_path <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;/sdcard/truc.3gp&#34;</span>
+</span></span><span style="display:flex;"><span>    plyer<span style="color:#000;font-weight:bold">.</span>audio<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span>    Clock<span style="color:#000;font-weight:bold">.</span>schedule_once(<span style="color:#000;font-weight:bold">lambda</span> a: plyer<span style="color:#000;font-weight:bold">.</span>audio<span style="color:#000;font-weight:bold">.</span>stop(), <span style="color:#099">5</span>)
+</span></span></code></pre></div><h3 id="4d021bc0-8af7-4e44-a605-b5a8ad40c3bf">keep screen on</h3>
+<p>All wakelock that keep the screen on have been deprecated a long time ago, in favor of this way of doing.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.runnable</span> <span style="color:#000;font-weight:bold">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span>LayoutParams <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.WindowManager$LayoutParams&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">do</span>():
+</span></span><span style="display:flex;"><span>    mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()<span style="color:#000;font-weight:bold">.</span>addFlags(LayoutParams<span style="color:#000;font-weight:bold">.</span>FLAG_KEEP_SCREEN_ON)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>do()
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># clear with</span>
+</span></span><span style="display:flex;"><span>mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()<span style="color:#000;font-weight:bold">.</span>clearFlags(LayoutParams<span style="color:#000;font-weight:bold">.</span>FLAG_KEEP_SCREEN_ON)
+</span></span></code></pre></div><h3 id="362a6c18-acd8-465c-ad60-11655d3426e8">wake up the screen from a service</h3>
+<p>A service cannot access the window, hence cannot use <a href="#4d021bc0-8af7-4e44-a605-b5a8ad40c3bf">keep screen on</a></p>
+<p>But it can make use of SCREEN_BRIGHT_WAKE_LOCK and ACQUIRE_CAUSES_WAKEUP</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PythonService <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;org.kivy.android.PythonService&#39;</span>)
+</span></span><span style="display:flex;"><span>PowerManager <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.os.PowerManager&#39;</span>)
+</span></span><span style="display:flex;"><span>Context <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.content.Context&#39;</span>)
+</span></span><span style="display:flex;"><span>WindowManager <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.WindowManager&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pm <span style="color:#000;font-weight:bold">=</span> PythonService<span style="color:#000;font-weight:bold">.</span>mService<span style="color:#000;font-weight:bold">.</span>getSystemService(Context<span style="color:#000;font-weight:bold">.</span>POWER_SERVICE)
+</span></span><span style="display:flex;"><span>wl <span style="color:#000;font-weight:bold">=</span> pm<span style="color:#000;font-weight:bold">.</span>newWakeLock(PowerManager<span style="color:#000;font-weight:bold">.</span>SCREEN_BRIGHT_WAKE_LOCK <span style="color:#000;font-weight:bold">|</span> PowerManager<span style="color:#000;font-weight:bold">.</span>ACQUIRE_CAUSES_WAKEUP, <span style="color:#d14">&#39;simple awakening&#39;</span>)
+</span></span><span style="display:flex;"><span>wl<span style="color:#000;font-weight:bold">.</span>acquire()
+</span></span><span style="display:flex;"><span>wl<span style="color:#000;font-weight:bold">.</span>release() <span style="color:#998;font-style:italic"># I can release it as soon as it was acquired, because it was only to wake the phone</span>
+</span></span></code></pre></div><p>That way, anything that needs the UI to be refreshed can still work.</p>
+<h3 id="0596455f-cb66-4e06-97aa-7fe8b7a6a980">keep doing something even when the screen is off</h3>
+<p>Tested on <a href="#5b03657d-6889-4f22-aecd-17a1d4d06498">android 4</a>. Even with a PARTIAL_WAKE_LOCK, the front application will
+stop its processing when the screen goes off.</p>
+<p>It apparently does not impact stuff that already run when the screen goes of, for instance</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">while</span> <span style="color:#000;font-weight:bold">True</span>:
+</span></span><span style="display:flex;"><span>        time<span style="color:#000;font-weight:bold">.</span>sleep(<span style="color:#099">2</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;a&#34;</span>)
+</span></span></code></pre></div><p>Will continue working, same if ran in threading.Thread(target=myfunction).start</p>
+<p>But the Clock.schedule_interval and anything related to the UI will stop
+working, until the screen gets back on.</p>
+<p>Also, I don&rsquo;t know if I need to enable a wake lock here, but doing it in the service would look like this</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PowerManager <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.os.PowerManager&#39;</span>)
+</span></span><span style="display:flex;"><span>Context <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.content.Context&#39;</span>)
+</span></span><span style="display:flex;"><span>PythonService <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;org.kivy.android.PythonService&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pm <span style="color:#000;font-weight:bold">=</span> PythonService<span style="color:#000;font-weight:bold">.</span>mService<span style="color:#000;font-weight:bold">.</span>getSystemService(Context<span style="color:#000;font-weight:bold">.</span>POWER_SERVICE)
+</span></span><span style="display:flex;"><span>wl <span style="color:#000;font-weight:bold">=</span> pm<span style="color:#000;font-weight:bold">.</span>newWakeLock(PowerManager<span style="color:#000;font-weight:bold">.</span>PARTIAL_WAKE_LOCK, <span style="color:#d14">&#39;do something&#39;</span>)
+</span></span><span style="display:flex;"><span>wl<span style="color:#000;font-weight:bold">.</span>acquire()
+</span></span></code></pre></div><h3 id="ffcfabbc-9e1f-4755-8d22-b53cebad8555">access the camera to record a video</h3>
+<p>using <a href="/braindump/posts/mediarecorder/">MediaRecorder</a> and <a href="/braindump/posts/camcorderprofile/">CamcorderProfile</a></p>
+<p><a id="code-snippet--get-video"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span>MediaRecorder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder&#39;</span>)
+</span></span><span style="display:flex;"><span>Camera <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#34;android.hardware.Camera&#34;</span>)
+</span></span><span style="display:flex;"><span>AudioSource <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$AudioSource&#39;</span>)
+</span></span><span style="display:flex;"><span>VideoSource <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$VideoSource&#39;</span>)
+</span></span><span style="display:flex;"><span>OutputFormat <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$OutputFormat&#39;</span>)
+</span></span><span style="display:flex;"><span>AudioEncoder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$AudioEncoder&#39;</span>)
+</span></span><span style="display:flex;"><span>VideoEncoder <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.MediaRecorder$VideoEncoder&#39;</span>)
+</span></span><span style="display:flex;"><span>CamcorderProfile <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.media.CamcorderProfile&#39;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># see https://developer.android.com/reference/android/media/CamcorderProfile</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">kivy.core.camera</span> <span style="color:#000;font-weight:bold">import</span> Camera
+</span></span><span style="display:flex;"><span>camera <span style="color:#000;font-weight:bold">=</span> Camera(
+</span></span><span style="display:flex;"><span>    resolution<span style="color:#000;font-weight:bold">=</span>(<span style="color:#099">640</span>, <span style="color:#099">480</span>),
+</span></span><span style="display:flex;"><span>    index<span style="color:#000;font-weight:bold">=</span><span style="color:#099">0</span>, <span style="color:#998;font-style:italic"># index=1 for front camera (in general)</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>recorder <span style="color:#000;font-weight:bold">=</span> MediaRecorder()
+</span></span><span style="display:flex;"><span>camera<span style="color:#000;font-weight:bold">.</span>_android_camera<span style="color:#000;font-weight:bold">.</span>unlock()
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>setCamera(camera<span style="color:#000;font-weight:bold">.</span>_android_camera)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>setAudioSource(AudioSource<span style="color:#000;font-weight:bold">.</span>MIC)
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>setVideoSource(VideoSource<span style="color:#000;font-weight:bold">.</span>CAMERA)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>profile <span style="color:#000;font-weight:bold">=</span> CamcorderProfile<span style="color:#000;font-weight:bold">.</span>get(CamcorderProfile<span style="color:#000;font-weight:bold">.</span>QUALITY_VGA)
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>setProfile(profile)
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># or</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic">#recorder.setOutputFormat(OutputFormat.DEFAULT)</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic">#recorder.setAudioEncoder(AudioEncoder.DEFAULT)</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic">#recorder.setVideoEncoder(VideoEncoder.DEFAULT)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>setOutputFile(<span style="color:#d14">&#34;/sdcard/v.mp4&#34;</span>)
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>prepare()
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;started&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">time</span>
+</span></span><span style="display:flex;"><span>time<span style="color:#000;font-weight:bold">.</span>sleep(<span style="color:#099">5</span>)
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;done&#34;</span>)
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>stop()
+</span></span><span style="display:flex;"><span>recorder<span style="color:#000;font-weight:bold">.</span>release()
+</span></span></code></pre></div><h3 id="5bd09a34-1adb-4d2f-acca-aea97800ff1e">access the camera to take pictures</h3>
+<p>see <a href="/blog/posts/use_the_camera_with_kivy_on_android/?title=digging_a_bit_the_old_phone_idea_create_a_timelapse#digging-a-bit-the-old-phone-idea-create-a-timelapse">digging a bit the old phone idea: create a timelapse</a></p>
+<p>tested on <a href="#5b03657d-6889-4f22-aecd-17a1d4d06498">android 4</a> : it cannot be done in a service and needs the screen to
+be on, even <a href="#5cb87978-5201-4f5d-9c9c-51f3d95e463d">very dimmed</a></p>
+<p>also on android 4, the camera returns bad images when the screen is off, even
+if using PARTIAL_WAKE_LOCK and a thread to get the images.</p>
+<p>A compromise to take photos continuously, but save battery by keeping the screen off most of the time can be to</p>
+<ol>
+<li>create a wakelock of type PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP</li>
+<li>run the routine in a thread that
+<ol>
+<li>acquire the wakelock</li>
+<li>grab the frame</li>
+<li>release the wakelock</li>
+</ol>
+</li>
+</ol>
+<p>see <a href="/blog/posts/use_the_camera_with_kivy_on_android/?title=digging_a_bit_the_old_phone_idea_create_a_timelapse#digging-a-bit-the-old-phone-idea-create-a-timelapse">digging a bit the old phone idea: create a timelapse</a> to see an example of this.</p>
+<h3 id="5cb87978-5201-4f5d-9c9c-51f3d95e463d">keep the the screen on, but very dimmed</h3>
+<p>If for some reason you need to keep the screen on, but at the lowest brightness</p>
+<p>Supposedly you should be able to <a href="#4d021bc0-8af7-4e44-a605-b5a8ad40c3bf">keep screen on</a> with FLAG_ALLOW_LOCK_WHILE_SCREEN_ON to simply dim, but did not work on <a href="#5b03657d-6889-4f22-aecd-17a1d4d06498">android 4</a></p>
+<p>Combine the SCREEN_DIM_WAKE_LOCK <a href="#ba5e4739-bca5-40e2-a76f-f98a55253375">wakelock</a> and set the brightness</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">jnius</span> <span style="color:#000;font-weight:bold">import</span> autoclass
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android</span> <span style="color:#000;font-weight:bold">import</span> mActivity
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">android.runnable</span> <span style="color:#000;font-weight:bold">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span>WindowManagerLayoutParams <span style="color:#000;font-weight:bold">=</span> autoclass(<span style="color:#d14">&#39;android.view.WindowManager$LayoutParams&#39;</span>)
+</span></span><span style="display:flex;"><span>window <span style="color:#000;font-weight:bold">=</span> mActivity<span style="color:#000;font-weight:bold">.</span>getWindow()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># Adjust the brightness level (0.0 to 1.0, where 0.0 is the minimum)</span>
+</span></span><span style="display:flex;"><span>layout_params <span style="color:#000;font-weight:bold">=</span> window<span style="color:#000;font-weight:bold">.</span>getAttributes()
+</span></span><span style="display:flex;"><span>layout_params<span style="color:#000;font-weight:bold">.</span>screenBrightness <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">0.01</span>  <span style="color:#998;font-style:italic"># Minimum brightness</span>
+</span></span><span style="display:flex;"><span><span style="color:#3c5d5d;font-weight:bold">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">do</span>():
+</span></span><span style="display:flex;"><span>    window<span style="color:#000;font-weight:bold">.</span>setAttributes(layout_params)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>do()
+</span></span></code></pre></div><p>Tested only on <a href="#5b03657d-6889-4f22-aecd-17a1d4d06498">android 4</a>, where brightness == 0 actually put the application to sleep</p>
+<p>Also, you can try plyer.brightness.set_level(1) that works from <a href="#6481f597-7c2c-4245-8495-73411bad27b4">android 5</a></p>
+<h3 id="f2b3d4dc-0526-431d-abe9-e76695811ff7">change the orientation</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">plyer</span> <span style="color:#000;font-weight:bold">import</span> orientation
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>orientation<span style="color:#000;font-weight:bold">.</span>set_landscape()
+</span></span></code></pre></div><p>Put this at the root boxlayout of you application</p>
+<p>With <a href="/blog/posts/a_python_runtime_on_android/?title=a_legacy_from_another_lifetime#a-legacy-from-another-lifetime">a legacy from another lifetime</a>, it tends to often freeze the application. Prefer editing the manifest</p>
+<p><code>android:screenOrientation=&quot;portrait&quot;</code> and repackage the application (see <a href="/braindump/posts/from_the_python_android_runtime_to_a_custom_app/">from the python android runtime to a custom app</a>)</p>
+<h2 id="78e90a4b-8ffd-4e38-a9f2-785e79e43083">useful apks</h2>
+<h3 id="fa1353c9-7a17-4883-bf95-727cdd503c36">termux</h3>
+<ul>
+<li>see,
+<ul>
+<li><a href="/braindump/posts/android/">Android</a>,</li>
+</ul>
+</li>
+</ul>
+<h3 id="4e88fa24-966e-4768-ac43-beb51f160b77">connectbot</h3>
+<h3 id="18bf212a-cb76-4eee-a48f-bd1b51396ce3">simplesshd</h3>
+<p><a href="https://www.galexander.org/software/simplesshd/">https://www.galexander.org/software/simplesshd/</a> (<a href="https://f-droid.org/en/packages/org.galexander.sshd/">https://f-droid.org/en/packages/org.galexander.sshd/</a>)</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>gpg --export-ssh-key konubinix &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">/authorized_keys&#34;</span>
+</span></span><span style="display:flex;"><span>scp -P <span style="color:#099">2222</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">/authorized_keys&#34;</span> 192.168.1.192:
+</span></span></code></pre></div><h3 id="1e2aef79-04de-41a8-89d4-f65b748cc83d">sshdroid</h3>
+<p><a href="https://apkpure.com/sshdroid/berserker.android.apps.sshdroid/downloading">https://apkpure.com/sshdroid/berserker.android.apps.sshdroid/downloading</a> (/ipfs/bafybeigwd4nxu7xwd34la5ce3jzu43ezbie7fp7p3cw3q22zaqjukucul4?filename=SSHDroid_2.1.2_APKPure.apk)
+in case <a href="#18bf212a-cb76-4eee-a48f-bd1b51396ce3">simplesshd</a> is not possible (<a href="#5b03657d-6889-4f22-aecd-17a1d4d06498">android 4</a>)</p>
+<p>ssh -o HostKeyAlgorithms=+ssh-rsa -o KexAlgorithms=+diffie-hellman-group14-sha1 <a href="mailto:root@192.168.1.36">root@192.168.1.36</a>
+does not deal with authorized_keys, but works with &ldquo;sshpass -p admin ssh cinkpeax&rdquo;</p>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/lineageos/#15-android-id-0d45e577-bf96-4bc0-b0c3-947324d387a8-8-dot-1">15 : android 8.1</a></li>
+<li><a href="/blog/posts/a_python_runtime_on_android/?title=a_legacy_from_another_lifetime#a-legacy-from-another-lifetime">a legacy from another lifetime</a> (blog)</li>
+<li><a href="/blog/posts/a_python_runtime_on_android/?title=a_python_runtime_on_android#">a python runtime on android</a> (blog)</li>
+<li><a href="/braindump/posts/accessing_localhost_port_from_android_emulator/">accessing localhost:port from Android emulator</a></li>
+<li><a href="/braindump/posts/adb_save_shortcuts/">adb save shortcuts</a></li>
+<li><a href="/braindump/posts/aiortc_to_create_a_remote_web_camera_with_an_android_phone/">aiortc to create a remote web camera with an android phone</a></li>
+<li><a href="/braindump/posts/allow_installed_pwas_to_add_widgets_to_android_homescreen/">allow installed PWAs to add widgets to Android homescreen</a></li>
+<li><a href="/braindump/posts/android_11_key_character_map_vs_keylayout_vs_whyred_to_use_bepo/">android 11 key character map vs keylayout vs whyred to use bépo</a></li>
+<li><a href="/braindump/posts/android_find_the_am_start_command_to_run_the_application_in_focus_with_the_correct_intent/">android find the am start command to run the application in focus with the correct intent</a></li>
+<li><a href="/braindump/posts/api_levels_android_versions_sdk_api_levels_version_codes_codenames_and_cumulative_usage/">API Levels | Android versions, SDK/API levels, version codes, codenames, and cumulative usage</a></li>
+<li><a href="/braindump/posts/applications_where_android_apps_store_data/">applications - Where Android apps store data?</a></li>
+<li><a href="/braindump/posts/proscenic_850p/#fd6de456-64e5-42f6-bdea-1406184aa382">attempt to control it</a></li>
+<li><a href="/braindump/posts/samsung_galaxy_s3/#8913fc03-5a45-4c8c-9d43-91ef802e4d07">back to stock</a></li>
+<li><a href="/braindump/posts/batch_downloader_in_termux_in_android/">batch downloader in termux in android</a></li>
+<li><a href="/braindump/posts/bluetooth_in_android/">bluetooth in Android</a></li>
+<li><a href="/braindump/posts/bubblewrap/">bubblewrap</a></li>
+<li><a href="/braindump/posts/budtmo_docker_android/">budtmo/docker-android</a></li>
+<li><a href="/braindump/posts/bepo_android/">bépo-android</a></li>
+<li><a href="/braindump/posts/camcorderprofile/">CamcorderProfile</a></li>
+<li><a href="/braindump/posts/chromium/">chromium</a></li>
+<li><a href="/braindump/posts/clk_android_backup/">clk android backup</a></li>
+<li><a href="/braindump/posts/connect_android_and_a_board_with_a_single_microcontroller/">connect android and a board with a single microcontroller</a></li>
+<li><a href="/braindump/posts/connect_to_a_wiimote/">connect to a wiimote</a></li>
+<li><a href="/braindump/posts/pinetime/#f6324b6e-637b-4cd5-ba60-322c6014f634">connecting to the pinetime</a></li>
+<li><a href="/braindump/posts/debug_web_on_android_using_adb/">debug web on android using adb</a></li>
+<li><a href="/braindump/posts/develop_an_android_application_using_keycloak_and_localhost_redirection/">develop an android application using keycloak and localhost redirection</a></li>
+<li><a href="/blog/posts/use_the_camera_with_kivy_on_android/?title=digging_a_bit_the_old_phone_idea_create_a_timelapse#digging-a-bit-the-old-phone-idea-create-a-timelapse">digging a bit the old phone idea: create a timelapse</a> (blog)</li>
+<li><a href="/braindump/posts/interval_timer/#887c6b43-0363-429d-9bc7-6b1492cc262e">doing again, with old python2 kivy, to reuse my wiko cink peax</a></li>
+<li><a href="/braindump/posts/flutter/">flutter</a></li>
+<li><a href="/braindump/posts/chromium/#ee6e10ae-1886-4685-b0e1-23c12586ea40">for android 5</a></li>
+<li><a href="/braindump/posts/chromium/#0ed21da1-6a36-4dc6-9d39-0e2a06e3e887">for android 7</a></li>
+<li><a href="/braindump/posts/go2rtc_to_use_an_android_device_as_webcam/">go2rtc to use an android device as webcam</a></li>
+<li><a href="/braindump/posts/afterlife_for_my_phones/#c3dc5fe0-493f-48f1-a7bd-90a27f7f37c5">how to access the external sdcard</a></li>
+<li><a href="/braindump/posts/how_to_control_my_old_android_devices/">how to control my old android devices</a></li>
+<li><a href="/braindump/posts/samsung_galaxy_s3/#85a763c5-cd88-4ab4-afd1-6e0bc1b1ddad">lineage os 14</a></li>
+<li><a href="/braindump/posts/samsung_galaxy_s3/#8178251d-453e-4e42-a39d-bba7a88831cc">lineage os 20</a></li>
+<li><a href="/braindump/posts/neo_backup/">neo-backup</a></li>
+<li><a href="/braindump/posts/obb_in_android/">OBB in android</a></li>
+<li><a href="/braindump/posts/pairwiimote_android/">PairWiimote android</a></li>
+<li><a href="/braindump/posts/parrot_sumo/">parrot sumo</a></li>
+<li><a href="/braindump/posts/powermanager_android_developers/">PowerManager  |  Android Developers</a></li>
+<li><a href="/braindump/posts/samsung_galaxy_a7_sm_t500/">samsung galaxy a7 sm-t500</a></li>
+<li><a href="/braindump/posts/some_adb_commands_to_change_setting_for_battery_optimisation_start_service_stop_service_grant_permission_revoke_permission_and_etc/">Some adb commands to change setting for battery optimisation, start service, stop service, grant permission, revoke permission and etc.</a></li>
+<li><a href="/braindump/posts/stopmotion_android_apps/">stopmotion android apps</a></li>
+<li><a href="/braindump/posts/timelapse/">timelapse</a></li>
+<li><a href="/blog/posts/use_the_camera_with_kivy_on_android/?title=use_the_camera_with_kivy_on_android#">use the camera with kivy on android</a> (blog)</li>
+<li><a href="/braindump/posts/using_a_pwa_in_your_android_app/">using a PWA in your Android app</a></li>
+<li><a href="/braindump/posts/afterlife_for_my_phones/#02cd4fce-c616-4231-86f3-fee6b2ca1fc3">wiko cink peax 2</a></li>
+<li><a href="/braindump/posts/afterlife_for_my_phones/#dfa2a79b-90dd-462f-95ae-853c131755cb">zte blade s6 (p839f30)</a></li>
+</ul>
+<h2 id="permalink"><a href="/braindump/462eaecd-a7af-4eb7-ae6c-b54571f6a0b9?title=android">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 19 Jun 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Nov 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

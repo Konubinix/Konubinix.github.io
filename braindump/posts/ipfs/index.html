@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html><title>ipfs</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Ipfs</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>A <a href="/braindump/posts/peer_to_peer/">peer-to-peer</a> file system where each node stores its own data and the network
+maintains a <a href="/braindump/posts/distributed_hash_table/">DHT</a> to be able to ask the correct node when wanting the get the
+data.</p>
+<p>Thus, wherever you are, you can get the data and ipfs will ask the dht about the
+node that possesses the data so as to get it for you.</p>
+<p>It is that incredible that I eventually decide to <a href="/braindump/posts/how_i_organize_my_static_files_with_ipfs_and_org_roam/">organize all my static files
+with it</a>, using <a href="/braindump/posts/org_roam/">org-roam</a>.</p>
+<h2 id="c2e59a94-4bc6-4347-b2f6-a806d80c79da">check if cid available in the node offline</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ipfs refs --offline <span style="color:#000;font-weight:bold">{</span>cid<span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>Or, more manually, follow the part <a href="#b7a56f12-f30b-4367-90ea-a7095e235cb8">from ipfs cid to block storage</a> and
+check that all the block are there.</p>
+<h2 id="b7a56f12-f30b-4367-90ea-a7095e235cb8">from ipfs cid to block storage</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cat ~/.ipfs/blocks/_README
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>This is a repository of IPLD objects. Each IPLD object is in a single file,
+</span></span><span style="display:flex;"><span>named &lt;base32 encoding of cid&gt;.data. Where &lt;base32 encoding of cid&gt; is the
+</span></span><span style="display:flex;"><span>&#34;base32&#34; encoding of the CID (as specified in
+</span></span><span style="display:flex;"><span>https://github.com/multiformats/multibase) without the &#39;B&#39; prefix.
+</span></span><span style="display:flex;"><span>All the object files are placed in a tree of directories, based on a
+</span></span><span style="display:flex;"><span>function of the CID. This is a form of sharding similar to
+</span></span><span style="display:flex;"><span>the objects directory in git repositories. Previously, we used
+</span></span><span style="display:flex;"><span>prefixes, we now use the next-to-last two characters.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    func NextToLast(base32cid string) {
+</span></span><span style="display:flex;"><span>      nextToLastLen := 2
+</span></span><span style="display:flex;"><span>      offset := len(base32cid) - nextToLastLen - 1
+</span></span><span style="display:flex;"><span>      return str[offset : offset+nextToLastLen]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>For example, an object with a base58 CIDv1 of
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    zb2rhYSxw4ZjuzgCnWSt19Q94ERaeFhu9uSqRgjSdx9bsgM6f
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>has a base32 CIDv1 of
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    BAFKREIA22FLID5AJ2KU7URG47MDLROZIH6YF2KALU2PWEFPVI37YLKRSCA
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>and will be placed at
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    SC/AFKREIA22FLID5AJ2KU7URG47MDLROZIH6YF2KALU2PWEFPVI37YLKRSCA.data
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>with &#39;SC&#39; being the last-to-next two characters and the &#39;B&#39; at the
+</span></span><span style="display:flex;"><span>beginning of the CIDv1 string is the multibase prefix that is not
+</span></span><span style="display:flex;"><span>stored in the filename.
+</span></span></code></pre></div><p>I can add a block in the datastore that way.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">content</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span><span style="color:#008080">d</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>date -Ins<span style="color:#000;font-weight:bold">)</span>;<span style="color:#000;font-weight:bold">for</span> i in <span style="color:#000;font-weight:bold">{</span>1..10000<span style="color:#000;font-weight:bold">}</span>; <span style="color:#000;font-weight:bold">do</span> <span style="color:#0086b3">echo</span> <span style="color:#008080">$d</span>;<span style="color:#000;font-weight:bold">done)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>find ~/.ipfs/blocks -type f &gt; /tmp/before
+</span></span><span style="display:flex;"><span><span style="color:#008080">cid</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span><span style="color:#0086b3">echo</span> -n <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">content</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>| ipfs block put<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span>
+</span></span><span style="display:flex;"><span>find ~/.ipfs/blocks -type f &gt; /tmp/after
+</span></span><span style="display:flex;"><span><span style="color:#008080">new_line</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>konix_diff_new_lines.sh /tmp/before /tmp/after<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# Lines added in the data store&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">new_line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">test</span> <span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>cat <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">new_line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">content</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;This file contains the content&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# What ipfs cid format shows&#34;</span>
+</span></span><span style="display:flex;"><span>ipfs cid format -b base32upper -f <span style="color:#d14">&#34;\
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  multibase name                                                      %b
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  multibase code                                                      %B
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  version string                                                      %v
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  version number                                                      %V
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  codec name                                                          %c
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  codec code                                                          %C
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  multihash name                                                      %h
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  multihash code                                                      %H
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  hash digest length                                                  %L
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  multihash encoded in base %%b (with multibase prefix)                %m
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  multihash encoded in base %%b without multibase prefix               %M
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  hash digest encoded in base %%b (with multibase prefix)              %d
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  hash digest encoded in base %%b without multibase prefix             %D
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  cid string encoded in base %%b (1)                                   %s
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">  cid string encoded in base %%b without multibase prefix              %S
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>bafkreicidn56flusss4rpp2inmom2a7lzc3j3puec5sp5fpohh5wmkeeby
+</span></span><span style="display:flex;"><span># Lines added in the data store
+</span></span><span style="display:flex;"><span>/home/sam/.ipfs/blocks/ID/CIQEQG334KXJFFFZC67UQ2Y4ZUB6XSFWTW7IIF3E72K64OP3MYUIIDQ.data
+</span></span><span style="display:flex;"><span>This file contains the content
+</span></span><span style="display:flex;"><span># What ipfs cid format shows
+</span></span><span style="display:flex;"><span>  multibase name                                                      base32upper
+</span></span><span style="display:flex;"><span>  multibase code                                                      B
+</span></span><span style="display:flex;"><span>  version string                                                      cidv1
+</span></span><span style="display:flex;"><span>  version number                                                      1
+</span></span><span style="display:flex;"><span>  codec name                                                          raw
+</span></span><span style="display:flex;"><span>  codec code                                                          85
+</span></span><span style="display:flex;"><span>  multihash name                                                      sha2-256
+</span></span><span style="display:flex;"><span>  multihash code                                                      18
+</span></span><span style="display:flex;"><span>  hash digest length                                                  32
+</span></span><span style="display:flex;"><span>  multihash encoded in base %b (with multibase prefix)                BCIQEQG334KXJFFFZC67UQ2Y4ZUB6XSFWTW7IIF3E72K64OP3MYUIIDQ
+</span></span><span style="display:flex;"><span>  multihash encoded in base %b without multibase prefix               CIQEQG334KXJFFFZC67UQ2Y4ZUB6XSFWTW7IIF3E72K64OP3MYUIIDQ
+</span></span><span style="display:flex;"><span>  hash digest encoded in base %b (with multibase prefix)              BJANXXYVOSKKLSF57JBVRZTID5PELNHN6QQLWJ7UV5Y47WZRIQQHA
+</span></span><span style="display:flex;"><span>  hash digest encoded in base %b without multibase prefix             JANXXYVOSKKLSF57JBVRZTID5PELNHN6QQLWJ7UV5Y47WZRIQQHA
+</span></span><span style="display:flex;"><span>  cid string encoded in base %b (1)                                   BAFKREICIDN56FLUSSS4RPP2INMOM2A7LZC3J3PUEC5SP5FPOHH5WMKEEBY
+</span></span><span style="display:flex;"><span>  cid string encoded in base %b without multibase prefix              AFKREICIDN56FLUSSS4RPP2INMOM2A7LZC3J3PUEC5SP5FPOHH5WMKEEBY
+</span></span></code></pre></div><p>If I try to create a content bigger than 1MiB, ipfs complains and suggests using <a href="/braindump/posts/unixfs/">unixfs</a> to chunk the data instead.</p>
+<p>I can see that using the &lsquo;%M&rsquo; formatted, I can find the associated multihash
+that is used to find the path in the filesystem.</p>
+<p>Now, I can add a big file using ipfs add and see how the chunks are put into blocks.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">content</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span><span style="color:#008080">d</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>date -Ins<span style="color:#000;font-weight:bold">)</span>;<span style="color:#000;font-weight:bold">for</span> i in <span style="color:#000;font-weight:bold">{</span>1..10000<span style="color:#000;font-weight:bold">}</span>; <span style="color:#000;font-weight:bold">do</span> <span style="color:#0086b3">echo</span> <span style="color:#008080">$d</span>;<span style="color:#000;font-weight:bold">done)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>find ~/.ipfs/blocks -type f &gt; /tmp/before
+</span></span><span style="display:flex;"><span><span style="color:#008080">cid</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span><span style="color:#0086b3">echo</span> -n <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">content</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>|ipfa<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">cid</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span>#/ipfs/*<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Cid of my content: </span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>find ~/.ipfs/blocks -type f &gt; /tmp/after
+</span></span><span style="display:flex;"><span><span style="color:#008080">files</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>konix_diff_new_lines.sh /tmp/before /tmp/after<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;# files added by the ipfs add command&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">files</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ipfs dag get <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">echo</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">cids</span><span style="color:#000;font-weight:bold">=(</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">$(</span>ipfs refs -r <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">extra_files</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">files</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">for</span> part in <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cids</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">hash</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>ipfs cid format -b base32upper -f <span style="color:#d14">&#34;%M&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">part</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14"> stored in block of hash </span><span style="color:#d14">${</span><span style="color:#008080">hash</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">extra_files</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">extra_files</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>|grep -v <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">hash</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">extra_files</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>rm <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">extra_files</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">test</span> <span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>ipfs cat <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">content</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">&amp;&amp;</span> <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Remove the extra file and can still retrieve the content&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Cid of my content: bafybeididvnmde2xczrwhyhauimbfsfucledmmsnakt7wrb7ecfxpoxfl4
+</span></span><span style="display:flex;"><span># files added by the command
+</span></span><span style="display:flex;"><span>/home/sam/.ipfs/blocks/KX/CIQGQHK2YGJVOFTDMPQOBIQYCLELIEWIGYZE2AVH7NCD6IELO65OKXY.data
+</span></span><span style="display:flex;"><span>/home/sam/.ipfs/blocks/AV/CIQMUE2AVU6BT2ZHX4SQPCVVZ3B4VYOAIHSBGRRIWFDQ6SXWBTALAVQ.data
+</span></span><span style="display:flex;"><span>/home/sam/.ipfs/blocks/7L/CIQGYU63VU2EQEQLZBYQ5ZVWJZ3YX6NDL5MCZU6MKZ4VNKEWG37V7LA.data
+</span></span><span style="display:flex;"><span>/home/sam/.ipfs/blocks/FJ/CIQJOCYSQPYBPJZ6OVDVMV427YVYZOL37V3XDZSZ4XOZSXB3F62ZFJQ.data
+</span></span><span style="display:flex;"><span>{&#34;Data&#34;:{&#34;/&#34;:{&#34;bytes&#34;:&#34;CAIYv/wVIICAECC//AU&#34;}},&#34;Links&#34;:[{&#34;Hash&#34;:{&#34;/&#34;:&#34;bafkreigkcnak2paz5mt36jihrk245q6k4haedzatiyulcrypjl3azqfqky&#34;},&#34;Name&#34;:&#34;&#34;,&#34;Tsize&#34;:262144},{&#34;Hash&#34;:{&#34;/&#34;:&#34;bafkreiexbmjih4axu47hkr2wk6np4k4mxf57253r4zm6lxmzlq5s7nmsuy&#34;},&#34;Name&#34;:&#34;&#34;,&#34;Tsize&#34;:97855}]}
+</span></span><span style="display:flex;"><span>bafybeididvnmde2xczrwhyhauimbfsfucledmmsnakt7wrb7ecfxpoxfl4 stored in block of hash CIQGQHK2YGJVOFTDMPQOBIQYCLELIEWIGYZE2AVH7NCD6IELO65OKXY
+</span></span><span style="display:flex;"><span>bafybeididvnmde2xczrwhyhauimbfsfucledmmsnakt7wrb7ecfxpoxfl4 stored in block of hash CIQMUE2AVU6BT2ZHX4SQPCVVZ3B4VYOAIHSBGRRIWFDQ6SXWBTALAVQ
+</span></span><span style="display:flex;"><span>bafybeididvnmde2xczrwhyhauimbfsfucledmmsnakt7wrb7ecfxpoxfl4 stored in block of hash CIQJOCYSQPYBPJZ6OVDVMV427YVYZOL37V3XDZSZ4XOZSXB3F62ZFJQ
+</span></span><span style="display:flex;"><span>/home/sam/.ipfs/blocks/7L/CIQGYU63VU2EQEQLZBYQ5ZVWJZ3YX6NDL5MCZU6MKZ4VNKEWG37V7LA.data
+</span></span><span style="display:flex;"><span>Remove the extra file and can still retrieve the content
+</span></span></code></pre></div><p>We can see that the command created a main cid and two children one. Yet it
+created 4 files instead of 3 as I expected. By computing the hash of the 3
+expected files, I can remove the extra one and find out that ipfs still
+behaves as intended. I suppose this is a side effect of the ipfs add command.</p>
+<p>Therefore, I suppose I can find the relevant blocks using the following script.</p>
+<p><a id="code-snippet--script"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">cids</span><span style="color:#000;font-weight:bold">=(</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">$(</span>ipfs refs -r <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cid</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">extra_files</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">files</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">for</span> part in <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">cids</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">hash</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>ipfs cid format -b base32upper -f <span style="color:#d14">&#34;%M&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">part</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">IPFS_PATH</span>-<span style="color:#d14">${</span><span style="color:#008080">HOME</span><span style="color:#d14">}</span>/.ipfs<span style="color:#d14">}</span><span style="color:#d14">/blocks/</span><span style="color:#d14">${</span><span style="color:#008080">hash</span>: -3:<span style="color:#008080">2</span><span style="color:#d14">}</span><span style="color:#d14">/</span><span style="color:#d14">${</span><span style="color:#008080">hash</span><span style="color:#d14">}</span><span style="color:#d14">.data&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/home/sam/.ipfs/blocks/KX/CIQGQHK2YGJVOFTDMPQOBIQYCLELIEWIGYZE2AVH7NCD6IELO65OKXY.data
+</span></span><span style="display:flex;"><span>/home/sam/.ipfs/blocks/AV/CIQMUE2AVU6BT2ZHX4SQPCVVZ3B4VYOAIHSBGRRIWFDQ6SXWBTALAVQ.data
+</span></span><span style="display:flex;"><span>/home/sam/.ipfs/blocks/FJ/CIQJOCYSQPYBPJZ6OVDVMV427YVYZOL37V3XDZSZ4XOZSXB3F62ZFJQ.data
+</span></span></code></pre></div><h2 id="f4fad505-7585-4e56-883a-8a0f1c1dc005">ipfs how to know the block number of a cid</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ipfs dag stat CID
+</span></span></code></pre></div><h2 id="9fab20ff-0099-480d-8ba3-7e6ef698ff4b">Mutable File System</h2>
+<blockquote>
+<p>MFS acts as a single, dynamic filesystem mount. MFS has a root CID that is
+transparently updated when a change happens (and can be checked with &ldquo;ipfs files
+stat /&rdquo;).</p>
+<p>ipfs files &ndash;help</p>
+</blockquote>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/boxo/">boxo</a></li>
+<li><a href="/braindump/posts/clk_alias/">clk alias</a></li>
+<li><a href="/braindump/posts/comment_je_reference_mes_fichiers/">comment je référence mes fichiers</a></li>
+<li><a href="/braindump/posts/edit_the_content_of_a_folder_in_ipfs/">edit the content of a folder in ipfs</a></li>
+<li><a href="/braindump/posts/filecoin/">filecoin</a></li>
+<li><a href="/braindump/posts/gateway_ipfs/">gateway ipfs</a></li>
+<li><a href="/braindump/posts/git_annex/">git-annex</a></li>
+<li><a href="/braindump/posts/high_availability_peer_to_peer_system_from_the_point_of_view_of_the_public_network/">high availability peer-to-peer system from the point of view of the public network</a></li>
+<li><a href="https://konubinix.eu/blog/posts/how_do_i_store_my_files/?title=how_do_i_store_my_files#">how do I store my files?</a> (blog)</li>
+<li><a href="/braindump/posts/how_i_organize_my_static_files_with_ipfs_and_org_roam/">how I organize my static files with IPFS and org-roam</a></li>
+<li><a href="https://konubinix.eu/blog/posts/how_to_make_mime_recognize_mail_files/?title=how_to_make_mime_recognize_mail_files#">how to make mime recognize mail files?</a> (blog)</li>
+<li><a href="/braindump/posts/how_to_use_awesome_fonts_with_ipfs/">how to use awesome fonts with ipfs</a></li>
+<li><a href="/braindump/posts/ideal_file_system/">ideal file system</a></li>
+<li><a href="/braindump/posts/inverse_la_dependance_aux_fichiers/">inverse la dépendance aux fichiers</a></li>
+<li><a href="/braindump/posts/ipfs_101/">IPFS 101</a></li>
+<li><a href="/braindump/posts/ipfs_cluster/">ipfs cluster</a></li>
+<li><a href="/braindump/posts/ipfs_dag_get_and_ipfs_dag_put/">ipfs dag get and ipfs dag put?</a></li>
+<li><a href="/braindump/posts/ipfs_fallacy/">ipfs fallacy</a></li>
+<li><a href="/braindump/posts/ipfs_fuse_mount_0_12_2_does_not_work_for_several_files/">ipfs fuse mount &gt; 0.12.2 does not work for several files</a></li>
+<li><a href="/braindump/posts/ipfs_garbage_collection_sucks/">ipfs garbage collection sucks</a></li>
+<li><a href="/braindump/posts/ipfs_mfs_use_cid_version_1/">ipfs mfs use cid version 1</a></li>
+<li><a href="/braindump/posts/ipfs_object/">ipfs object</a></li>
+<li><a href="/braindump/posts/ipfs_pinning_sucks/">ipfs pinning sucks</a></li>
+<li><a href="/braindump/posts/ipld/">ipld</a></li>
+<li><a href="/braindump/posts/ipns/">ipns</a></li>
+<li><a href="/braindump/posts/literate_data_storage/">literate data storage</a></li>
+<li><a href="/braindump/posts/my_stack/">my stack</a></li>
+<li><a href="https://konubinix.eu/blog/posts/the_blog_of_konubinix/?title=my_tools#my-tools">My tools</a> (blog)</li>
+<li><a href="https://konubinix.eu/blog/posts/recherche_reproductible_d_un_prenom/?title=recherche_reproductible_d_un_prenom#">Recherche reproductible d&rsquo;un prénom</a> (blog)</li>
+<li><a href="/braindump/posts/solidity_blockchain_and_smart_contract_course_beginner_to_expert_python_tutorial/">solidity, blockchain, and smart contract course – beginner to expert python tutorial</a></li>
+<li><a href="/braindump/posts/tools_and_technology_that_changed_my_life/">tools and technology that changed my life</a></li>
+<li><a href="/braindump/posts/unixfs/">unixfs</a></li>
+<li><a href="/braindump/posts/use_https_on_old_android_phones/">use https on old android phones</a></li>
+<li><a href="/braindump/posts/edit_the_content_of_a_folder_in_ipfs/#using-the-id-4671cf09-1d7f-4830-9600-4ab17b396522-mfs">using the MFS</a></li>
+<li><a href="/braindump/posts/web3/">web3</a></li>
+<li><a href="https://konubinix.eu/blog/posts/why_do_the_same_git_commits_not_have_the_same_hash/?title=why_do_the_same_git_commits_not_have_the_same_hash#">why do the same git commits not have the same hash?</a> (blog)</li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/51a48d04-955a-4226-b429-fc72947f33de?title=ipfs">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 14 May 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 05 Jun 2020</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

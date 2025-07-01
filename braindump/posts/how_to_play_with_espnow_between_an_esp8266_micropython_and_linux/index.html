@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html><title>how to play with espnow between an esp8266/micropython and linux</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>How to Play With Espnow Between an Esp8266/Micropython and Linux</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>how to play with <a href="/braindump/posts/espnow/">espnow</a> in a <a href="/braindump/posts/microcontroller/#57965d54-a7ad-4764-b82a-a4836f447715">esp8266</a> with <a href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a></p>
+<h2 id="b409f52f-e0b3-480f-aec1-8fc339e5b223">on the server</h2>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">VERSION 0.8
+
+IMPORT github.com/Konubinix/Earthfile AS e
+
+espnow-src:
+    FROM alpine
+    WORKDIR /app
+    GIT CLONE https://github.com/ChuckMash/ESPythoNOW /app
+    SAVE ARTIFACT /app
+
+espnow-build:
+    FROM e+alpine --extra_packages=&#34;ipython wireless-tools libpcap&#34;
+    WORKDIR /app
+    COPY +espnow-src/app /app
+    DO e+PYTHON_VENV --base /app --packages &#34;scapy==2.5.0&#34;
+
+espnow:
+    FROM +espnow-build
+    SAVE IMAGE espnow
+</code></pre><p><code>earthly +espnow</code></p>
+<p>Start with <code>docker run --privileged --network=host espnow</code></p>
+<p>First, run <code>./prep.sh &lt;interface&gt; &lt;channel&gt;</code> to put make the interface listen to
+the proper channel. I used <code>./prep.sh wlp2s0 4</code> in my setup.</p>
+<p>then, run <code>scapy</code> and try</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">sys</span>
+</span></span><span style="display:flex;"><span>sys<span style="color:#000;font-weight:bold">.</span>path<span style="color:#000;font-weight:bold">.</span>append(<span style="color:#d14">&#34;.&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">from</span> <span style="color:#555">ESPythoNOW</span> <span style="color:#000;font-weight:bold">import</span> <span style="color:#000;font-weight:bold">*</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">callback</span>(from_mac, to_mac, msg):
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;ESP-NOW message from </span><span style="color:#d14">%s</span><span style="color:#d14"> to </span><span style="color:#d14">%s</span><span style="color:#d14">: </span><span style="color:#d14">%s</span><span style="color:#d14">&#34;</span> <span style="color:#000;font-weight:bold">%</span> (from_mac, to_mac, msg))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>espnow <span style="color:#000;font-weight:bold">=</span> ESPythoNow(interface<span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;wlp2s0&#34;</span>, callback<span style="color:#000;font-weight:bold">=</span>callback)
+</span></span><span style="display:flex;"><span>espnow<span style="color:#000;font-weight:bold">.</span>start()
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">bytes</span><span style="color:#000;font-weight:bold">.</span>fromhex(espnow<span style="color:#000;font-weight:bold">.</span>local_hw_mac<span style="color:#000;font-weight:bold">.</span>replace(<span style="color:#d14">&#39;:&#39;</span>, <span style="color:#d14">&#39;&#39;</span>))
+</span></span></code></pre></div><p>This will output the mac address to give to the board. Mine was <code>b'|\\\xf8\xb3\xe0R'</code>.</p>
+<h2 id="f21c173d-af1b-43bb-aad4-6fc40717fe63">on the board</h2>
+<p><code>mpremote</code>, then</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">espnow</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">network</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ap <span style="color:#000;font-weight:bold">=</span> network<span style="color:#000;font-weight:bold">.</span>WLAN(network<span style="color:#000;font-weight:bold">.</span>WLAN<span style="color:#000;font-weight:bold">.</span>IF_AP)
+</span></span><span style="display:flex;"><span>ap<span style="color:#000;font-weight:bold">.</span>active(<span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>ap<span style="color:#000;font-weight:bold">.</span>config(channel<span style="color:#000;font-weight:bold">=</span><span style="color:#099">4</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>e <span style="color:#000;font-weight:bold">=</span> espnow<span style="color:#000;font-weight:bold">.</span>ESPNow()
+</span></span><span style="display:flex;"><span>e<span style="color:#000;font-weight:bold">.</span>active(<span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>peer <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">b</span><span style="color:#d14">&#39;|</span><span style="color:#d14">\\\xf8\xb3\xe0</span><span style="color:#d14">R&#39;</span>
+</span></span><span style="display:flex;"><span>e<span style="color:#000;font-weight:bold">.</span>add_peer(peer)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ap<span style="color:#000;font-weight:bold">.</span>config(<span style="color:#d14">&#34;mac&#34;</span>)
+</span></span></code></pre></div><p>It will connect to the computer and output the mac address of the board, mine was <code>b'^\xcf\x7f\x0e\xe1\x19'</code></p>
+<h2 id="0650f2d7-c30e-43ef-8533-f73c6ec99bd6">from the computer to the board</h2>
+<p>To receive data from the board, simply run</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>e<span style="color:#000;font-weight:bold">.</span>recv()
+</span></span></code></pre></div><p>And from the scapy session in the computer</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>espnow<span style="color:#000;font-weight:bold">.</span>send(<span style="color:#d14">&#39;:&#39;</span><span style="color:#000;font-weight:bold">.</span>join(<span style="color:#0086b3">format</span>(x, <span style="color:#d14">&#39;02x&#39;</span>) <span style="color:#000;font-weight:bold">for</span> x <span style="color:#000;font-weight:bold">in</span> <span style="color:#d14">b</span><span style="color:#d14">&#39;</span><span style="color:#d14">\\\xcf\x7f\x0e\xe1\x19</span><span style="color:#d14">&#39;</span>), <span style="color:#d14">b</span><span style="color:#d14">&#34;Hello from the computer&#34;</span>)
+</span></span></code></pre></div><p>You should see it in the board.</p>
+<h2 id="e2087352-4212-4562-b1a2-70e12d3fe137">from the board to the computer</h2>
+<p>The computer already listens to messages, using the callback in the code above.</p>
+<p>In the board, run</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>e<span style="color:#000;font-weight:bold">.</span>send(<span style="color:#d14">b</span><span style="color:#d14">&#39;|</span><span style="color:#d14">\\\xf8\xb3\xe0</span><span style="color:#d14">R&#39;</span>, <span style="color:#d14">b</span><span style="color:#d14">&#39;Hello from the board&#39;</span>)
+</span></span></code></pre></div><p>You should see it appear in the computer.</p>
+<h2 id="708c84be-89ab-4cdb-a995-7cb700d78582">using aioespnow</h2>
+<p>mpremote mip install aioespnow</p>
+<p>Adapting the example given in <a href="https://github.com/micropython/micropython-lib/tree/master/micropython/aioespnow">https://github.com/micropython/micropython-lib/tree/master/micropython/aioespnow</a></p>
+<p>Also, using aiorepl (mpremote mip install aioespnow)</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">network</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">aioespnow</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">asyncio</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">import</span> <span style="color:#555">aiorepl</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sta <span style="color:#000;font-weight:bold">=</span> network<span style="color:#000;font-weight:bold">.</span>WLAN(network<span style="color:#000;font-weight:bold">.</span>WLAN<span style="color:#000;font-weight:bold">.</span>IF_STA)
+</span></span><span style="display:flex;"><span>sta<span style="color:#000;font-weight:bold">.</span>active(<span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># ap = network.WLAN(network.WLAN.IF_AP)</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># ap.active(True)</span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># ap.config(channel=4)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>e <span style="color:#000;font-weight:bold">=</span> aioespnow<span style="color:#000;font-weight:bold">.</span>AIOESPNow()
+</span></span><span style="display:flex;"><span>e<span style="color:#000;font-weight:bold">.</span>active(<span style="color:#000;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>peer <span style="color:#000;font-weight:bold">=</span> <span style="color:#d14">b</span><span style="color:#d14">&#39;|</span><span style="color:#d14">\\\xf8\xb3\xe0</span><span style="color:#d14">R&#39;</span>
+</span></span><span style="display:flex;"><span>e<span style="color:#000;font-weight:bold">.</span>add_peer(peer)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># Send a periodic ping to a peer</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">heartbeat</span>(e, peer, period<span style="color:#000;font-weight:bold">=</span><span style="color:#099">30</span>):
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">while</span> <span style="color:#000;font-weight:bold">True</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> <span style="color:#000;font-weight:bold">await</span> e<span style="color:#000;font-weight:bold">.</span>asend(peer, <span style="color:#d14">b</span><span style="color:#d14">&#39;ping&#39;</span>):
+</span></span><span style="display:flex;"><span>            <span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;Heartbeat: peer not responding:&#34;</span>, peer)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;Heartbeat: ping&#34;</span>, peer)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">await</span> asyncio<span style="color:#000;font-weight:bold">.</span>sleep(period)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"># Echo any received messages back to the sender</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">echo_server</span>(e):
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">for</span> mac, msg <span style="color:#000;font-weight:bold">in</span> e:
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">print</span>(<span style="color:#d14">&#34;Echo:&#34;</span>, msg)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">await</span> e<span style="color:#000;font-weight:bold">.</span>asend(mac, msg)
+</span></span><span style="display:flex;"><span>        <span style="color:#000;font-weight:bold">except</span> <span style="color:#900;font-weight:bold">OSError</span> <span style="color:#000;font-weight:bold">as</span> err:
+</span></span><span style="display:flex;"><span>            <span style="color:#000;font-weight:bold">if</span> <span style="color:#0086b3">len</span>(err<span style="color:#000;font-weight:bold">.</span>args) <span style="color:#000;font-weight:bold">&gt;</span> <span style="color:#099">1</span> <span style="color:#000;font-weight:bold">and</span> err<span style="color:#000;font-weight:bold">.</span>args[<span style="color:#099">1</span>] <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#39;ESP_ERR_ESPNOW_NOT_FOUND&#39;</span>:
+</span></span><span style="display:flex;"><span>                e<span style="color:#000;font-weight:bold">.</span>add_peer(mac)
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">await</span> e<span style="color:#000;font-weight:bold">.</span>asend(mac, msg)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">async</span> <span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">main</span>(e, peer, timeout, period):
+</span></span><span style="display:flex;"><span>    asyncio<span style="color:#000;font-weight:bold">.</span>create_task(heartbeat(e, peer, period))
+</span></span><span style="display:flex;"><span>    asyncio<span style="color:#000;font-weight:bold">.</span>create_task(echo_server(e))
+</span></span><span style="display:flex;"><span>    asyncio<span style="color:#000;font-weight:bold">.</span>create_task(aiorepl<span style="color:#000;font-weight:bold">.</span>task())
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">await</span> asyncio<span style="color:#000;font-weight:bold">.</span>sleep(timeout)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>asyncio<span style="color:#000;font-weight:bold">.</span>run(main(e, peer, <span style="color:#099">120</span>, <span style="color:#099">10</span>))
+</span></span></code></pre></div><h2 id="permalink"><a href="https://konubinix.eu/braindump/0bf20cf9-6456-4c73-baec-090545f37355?title=how_to_play_with_espnow_between_an_esp8266_micropython_and_linux">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 06 May 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 May 2025</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

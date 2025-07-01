@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html><title>how to debug a typescript program running on k8s using dap in emacs?</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>How to Debug a Typescript Program Running on K8s Using Dap in Emacs?</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>see,
+<ul>
+<li><a href="/braindump/posts/debug_node_typescript_dap_emacs/">debug node typescript dap emacs</a>,</li>
+<li><a href="/braindump/posts/debug_cucumber_tests_in_emacs/">debug cucumber tests in emacs</a>,</li>
+</ul>
+</li>
+</ul>
+<p>how to debug a <a href="/braindump/posts/typescript/">typescript</a> program running on <a href="/braindump/posts/kubernetes/">k8s</a>, using <a href="/braindump/posts/ms_vscode_js_debug/">ms-vscode.js-debug</a> and <a href="/braindump/posts/dap_mode/">dap-mode</a>?</p>
+<p>Build the code with support for sourcemaps. Run the container with a debug image
+that runs <code>node --inspect-brk</code></p>
+<h2 id="7af7b747-0745-476d-9c24-69ab080bb545">port forwarding</h2>
+<p>Create <a href="/braindump/posts/port_forward/">port forward</a> on 9229 to be able to communicate with the remote node over
+the node debugging protocol.</p>
+<p>Sometime, this error <code>Error: Could not connect to debug target at http://localhost:9229: Could not find any debuggable target</code> indicates that the communication has been broken.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>http http://127.0.0.1:9229/json/version 2&gt;&amp;<span style="color:#099">1</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>http: error: ConnectionError: (&#39;Connection aborted.&#39;, RemoteDisconnected(&#39;Remote end closed connection without response&#39;)) while doing a POST request to URL: http://127.0.0.1:9229/json/version
+</span></span></code></pre></div><p>You should try to fix it before going further until you get the following:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl http://127.0.0.1:9229/json/version
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;Browser&#34;: &#34;node.js/v18.15.0&#34;,
+</span></span><span style="display:flex;"><span>  &#34;Protocol-Version&#34;: &#34;1.1&#34;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Sometimes, you simply need to restart the pod. Refreshing the code while a
+debugger is running may cause this issue.</p>
+<p>Also, in my experience, <a href="/braindump/posts/nestjs/">nestjs</a> often fails to keep the debugger open and I see
+a bunch of &ldquo;Starting inspector on 127.0.0.1:9229 failed: address already in
+use&rdquo;.</p>
+<h2 id="19f35469-8cc5-47be-820e-904f98d4f742">use the appropriate code to use dap on emacs</h2>
+<p>Use the branch vscode-js-debug-feature of this <a href="https://github.com/Konubinix/dap-mode">fork</a> of this <a href="https://github.com/jeff-phil/dap-mode-PR">fork</a> of
+<a href="/braindump/posts/dap_mode/">dap-mode</a><sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</p>
+<p><a href="/braindump/posts/debug_cucumber_tests_in_emacs/#f9272092-3072-48cc-b638-1a45590fb392">running with default dap-node (spoiler, it won&rsquo;t work)</a></p>
+<h2 id="b04c6502-5ad4-4ff7-a426-b310b237f738">setup the configuration</h2>
+<p>Ensure the launch.json contains a suitable entry to connect to it.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic">// Use IntelliSense to learn about possible attributes.
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>    <span style="color:#998;font-style:italic">// Hover to view descriptions of existing attributes.
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>    <span style="color:#998;font-style:italic">// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+</span></span></span><span style="display:flex;"><span><span style="color:#998;font-style:italic"></span>    <span style="color:#000080">&#34;version&#34;</span>: <span style="color:#d14">&#34;0.2.0&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#000080">&#34;configurations&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;name&#34;</span>: <span style="color:#d14">&#34;Attach to app&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;address&#34;</span>: <span style="color:#d14">&#34;localhost&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;localRoot&#34;</span>: <span style="color:#d14">&#34;${workspaceFolder}/app&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;remoteRoot&#34;</span>: <span style="color:#d14">&#34;/app&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;port&#34;</span>: <span style="color:#099">9229</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;sourceMaps&#34;</span>: <span style="color:#000;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;trace&#34;</span>: <span style="color:#000;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;request&#34;</span>: <span style="color:#d14">&#34;attach&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;skipFiles&#34;</span>: [
+</span></span><span style="display:flex;"><span>                <span style="color:#d14">&#34;&lt;node_internals&gt;/**&#34;</span>
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            <span style="color:#000080">&#34;type&#34;</span>: <span style="color:#d14">&#34;pwa-node&#34;</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span><span style="color:#a61717;background-color:#e3d2d2">}</span>
+</span></span></code></pre></div><p>Note that the type is &ldquo;<a href="/braindump/posts/pwa_node_vs_node_type/">pwa-node</a>&rdquo; here. This is a legacy code and dap-mode must
+eventually use &ldquo;node&rdquo;, but so far, &ldquo;node&rdquo; is already reserved by the
+implementation of the legacy <a href="/braindump/posts/ms_vscode_node_debug2/">ms-vscode.node-debug2</a>. When the fork will
+(hopefully) be merged upstream, we most likely will be able to use &ldquo;node&rdquo;.</p>
+<h2 id="269bad14-2e70-4fb0-b823-7c3d448bd1da">get the source and source map support</h2>
+<p>Get the remote source AND associated source map to get the code AND the <a href="/braindump/posts/source_mapping/">source mapping</a> support.</p>
+<p>You want at least the sources, the source map files and the node_modules (to
+step into the dependencies).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#0086b3">exec</span> myapp -- tar -C /app -cf - . | tar -C . -xf -
+</span></span></code></pre></div><p>You cannot simply pass <code>kubectl cp myapp:/app app</code> because it does not deal
+with symbolic links and at least the <code>node_modules</code> is full of them.</p>
+<h2 id="fddcac8a-9958-4a3f-819d-53558653b5e9">killing the debugger</h2>
+<p>Note that you may have to kill the debugger for a fresh start from time to time</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pkill -f ms-vscode
+</span></span></code></pre></div><h2 id="79737ecc-e907-42a3-af56-bfcb659f14ee">breakpoints not matched, what went wrong?</h2>
+<p>Also, sometimes the breakpoints are not matched remotely. You may have to run the
+debugger again.</p>
+<p>You can try running this</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-elisp" data-lang="elisp"><span style="display:flex;"><span>(<span style="color:#0086b3">setq</span> <span style="color:#008080">dap-print-io</span> <span style="color:#008080">t</span>)
+</span></span><span style="display:flex;"><span>(<span style="color:#0086b3">setq</span> <span style="color:#008080">dap-inhibit-io</span> <span style="color:#008080">nil</span>)
+</span></span><span style="display:flex;"><span>(<span style="color:#008080">shell-command</span> <span style="color:#d14">&#34;pkill -f ms-vscode&#34;</span>)
+</span></span><span style="display:flex;"><span>(<span style="color:#0086b3">with-current-buffer</span> <span style="color:#d14">&#34;*Messages*&#34;</span>
+</span></span><span style="display:flex;"><span>  (<span style="color:#008080">read-only-mode</span> <span style="color:#099">-1</span>)
+</span></span><span style="display:flex;"><span>  (<span style="color:#900;font-weight:bold">erase-buffer</span>))
+</span></span><span style="display:flex;"><span>(<span style="color:#0086b3">when</span> (<span style="color:#008080">dap--session-running</span> (<span style="color:#008080">dap--cur-session</span>))
+</span></span><span style="display:flex;"><span>  (<span style="color:#008080">dap-disconnect</span> (<span style="color:#008080">dap--cur-session-or-die</span>)))
+</span></span><span style="display:flex;"><span>(<span style="color:#008080">konix/dap-delete-all-sessions</span>)
+</span></span></code></pre></div><p>Then running dap-debug again and see if there is a match for <code>&quot;verified&quot;: true,</code>. That means that one breakpoint was matched remotely. All <code>&quot;verified&quot;: null,</code> is a good hint that either your config is buggy, or that you need to run
+it again.</p>
+<p>Also, you can Add <code>trace: true</code> into the launch.json entry. Then in
+<code>${TMPDIR-/tmp}</code>, you should find a file named
+<code>vscode-debugadapter-xxxx.json.gz</code> that gives a lot of data telling what was
+send and received between the local dap bridge and the remote node.</p>
+<p>You should see logs like</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;tag&#34;: &#34;cdp.receive&#34;,
+</span></span><span style="display:flex;"><span>  &#34;timestamp&#34;: 1704726925553,
+</span></span><span style="display:flex;"><span>  &#34;metadata&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;connectionId&#34;: 0,
+</span></span><span style="display:flex;"><span>    &#34;message&#34;: {
+</span></span><span style="display:flex;"><span>      &#34;method&#34;: &#34;Debugger.scriptParsed&#34;,
+</span></span><span style="display:flex;"><span>      &#34;params&#34;: {
+</span></span><span style="display:flex;"><span>        &#34;scriptId&#34;: &#34;3825&#34;,
+</span></span><span style="display:flex;"><span>        &#34;url&#34;: &#34;file://&lt;remote-path&gt;.js&#34;,
+</span></span><span style="display:flex;"><span>        &#34;startLine&#34;: 0,
+</span></span><span style="display:flex;"><span>        &#34;startColumn&#34;: 0,
+</span></span><span style="display:flex;"><span>        &#34;endLine&#34;: 140,
+</span></span><span style="display:flex;"><span>        &#34;endColumn&#34;: 42,
+</span></span><span style="display:flex;"><span>        &#34;executionContextId&#34;: 1,
+</span></span><span style="display:flex;"><span>        &#34;hash&#34;: &#34;132c43512fb1cf792ed7af674bf2c2df2dcc962d&#34;,
+</span></span><span style="display:flex;"><span>        &#34;executionContextAuxData&#34;: {
+</span></span><span style="display:flex;"><span>          &#34;isDefault&#34;: true
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        &#34;isLiveEdit&#34;: false,
+</span></span><span style="display:flex;"><span>        &#34;sourceMapURL&#34;: &#34;&lt;name&gt;.map&#34;,
+</span></span><span style="display:flex;"><span>        &#34;hasSourceURL&#34;: false,
+</span></span><span style="display:flex;"><span>        &#34;isModule&#34;: false,
+</span></span><span style="display:flex;"><span>        &#34;length&#34;: 6466,
+</span></span><span style="display:flex;"><span>        &#34;scriptLanguage&#34;: &#34;JavaScript&#34;,
+</span></span><span style="display:flex;"><span>        &#34;embedderName&#34;: &#34;file://&lt;remote-path&gt;.js&#34;
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;level&#34;: 0
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[...]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;tag&#34;: &#34;runtime.sourcemap&#34;,
+</span></span><span style="display:flex;"><span>  &#34;timestamp&#34;: 1704726926476,
+</span></span><span style="display:flex;"><span>  &#34;message&#34;: &#34;Mapped remoteToLocal: &lt;remote-path&gt;.js-&gt; &lt;local-path&gt;.js&#34;,
+</span></span><span style="display:flex;"><span>  &#34;level&#34;: 0
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[...]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;tag&#34;: &#34;runtime.sourcecreate&#34;,
+</span></span><span style="display:flex;"><span>  &#34;timestamp&#34;: 1704726926891,
+</span></span><span style="display:flex;"><span>  &#34;message&#34;: &#34;Creating source from url&#34;,
+</span></span><span style="display:flex;"><span>  &#34;metadata&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;inputUrl&#34;: &#34;file:///&lt;remote-path&gt;.js&#34;,
+</span></span><span style="display:flex;"><span>    &#34;absolutePath&#34;: &#34;/&lt;local-path&gt;.js&#34;
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;level&#34;: 0
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[...]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;tag&#34;: &#34;dap.send&#34;,
+</span></span><span style="display:flex;"><span>  &#34;timestamp&#34;: 1704726927149,
+</span></span><span style="display:flex;"><span>  &#34;metadata&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;connectionId&#34;: 1,
+</span></span><span style="display:flex;"><span>    &#34;message&#34;: {
+</span></span><span style="display:flex;"><span>      &#34;seq&#34;: 4239,
+</span></span><span style="display:flex;"><span>      &#34;type&#34;: &#34;event&#34;,
+</span></span><span style="display:flex;"><span>      &#34;event&#34;: &#34;loadedSource&#34;,
+</span></span><span style="display:flex;"><span>      &#34;body&#34;: {
+</span></span><span style="display:flex;"><span>        &#34;reason&#34;: &#34;new&#34;,
+</span></span><span style="display:flex;"><span>        &#34;source&#34;: {
+</span></span><span style="display:flex;"><span>          &#34;name&#34;: &#34;&lt;remote-path&gt;.js&#34;,
+</span></span><span style="display:flex;"><span>          &#34;path&#34;: &#34;&lt;remote-path&gt;.js&#34;,
+</span></span><span style="display:flex;"><span>          &#34;sourceReference&#34;: 1411237085
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;level&#34;: 0
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[...]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;tag&#34;: &#34;sourcemap.parsing&#34;,
+</span></span><span style="display:flex;"><span>  &#34;timestamp&#34;: 1704726927198,
+</span></span><span style="display:flex;"><span>  &#34;message&#34;: &#34;Creating sources from source map&#34;,
+</span></span><span style="display:flex;"><span>  &#34;metadata&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;sourceMapId&#34;: 48,
+</span></span><span style="display:flex;"><span>    &#34;metadata&#34;: {
+</span></span><span style="display:flex;"><span>      &#34;sourceMapUrl&#34;: &#34;file:///&lt;remote-path&gt;.map&#34;,
+</span></span><span style="display:flex;"><span>      &#34;compiledPath&#34;: &#34;/&lt;local-path&gt;.js&#34;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;level&#34;: 0
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="e95ebd42-b3e1-459d-aaf5-f6f9ab64f0cc">beware the location of node_modules</h3>
+<p>Make sure you looked closely at the local path. It might be out of the
+<code>localRoot</code> folder. It has happened to me when working in a
+<a href="/braindump/posts/yarn/#aae451c7-b482-46f5-a609-775ccab4f1a8">yarn workspace</a>. In that case,
+using my local build, most of the dependencies node_modules where installed
+in the root workspace while they were installed in the app in the
+remote. Therefore my local build pointed towards <code>./root/node_modules/dep</code>
+while they were in <code>./root/app/node_modules/dep</code> remotely.</p>
+<p>Actually, this would not have happened if I had followed my own advice and
+copied the <a href="#269bad14-2e70-4fb0-b823-7c3d448bd1da">whole /app folder</a>.</p>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/ms_vscode_js_debug/">ms-vscode.js-debug</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/734c3172-2901-4add-9314-78c8c9569f6b?title=how_to_debug_a_typescript_program_running_on_k8s_using_dap_in_emacs">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>Yeah&hellip; This is all still work in progress</p>
+<!--more-->
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+      </div>
+	  <aside class="date"><time>Last updated: 23 Jan 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Jan 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html><title>git show of a merge commit</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Git Show of a Merge Commit</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>External reference: <a href="https://stackoverflow.com/questions/40986518/git-show-of-a-merge-commit">https://stackoverflow.com/questions/40986518/git-show-of-a-merge-commit</a></li>
+</ul>
+<p><a href="/braindump/posts/git/">git</a> show of a <a href="/braindump/posts/merge_commit/">merge commit</a></p>
+<blockquote>
+<p>TL;DR: use git show -m c05f017 or git show &ndash;first-parent c05f017, or perhaps git diff c05f017^ c05f017.</p>
+<p>There&rsquo;s a fundamental error in your question: commits are not diffs; commits are snapshots. This might seem like a distinction without a difference—and for some commits, it is. But for merge commits, it&rsquo;s not.</p>
+<p>When git show (or git log -p) shows a commit as a diff, it&rsquo;s doing so by comparing the commit&rsquo;s snapshot to something else. The git diff command does the same thing: it compares one commit to another commit. (Or it can compare a commit to the work-tree, or to the contents of the index, or a few other combinations as well.)</p>
+<p>For ordinary commits, it&rsquo;s trivially obvious what to compare: compare this commit&rsquo;s snapshot to the previous (i.e., parent) commit&rsquo;s snapshot. So that is what git show does (and git log -p too): it runs a git diff from the parent commit, to this commit.</p>
+<p>Merge commits don&rsquo;t have just one parent commit, though. They have two parents.1 This is what makes them &ldquo;merge commits&rdquo; in the first place: the definition of a merge commit is a commit with at least two parents.</p>
+<p>1A merge commit can have three or more parents. These are called &ldquo;octopus
+merges&rdquo;. They don&rsquo;t do anything special, though, and are mainly for showing
+off. :-) You can ignore them here.</p>
+<p>When there are two parents, which one(s) should git show compare against?</p>
+<p>What git log -p chooses to do by default is not to compare at all. You can make
+it show something by adding various flags (see below).</p>
+<p>What git show chooses to do by default is more complicated. Since there are two parents, git show first compares against the &ldquo;first parent&rdquo;,2 then compares against the second parent. Then—this part is quite crucial—it combines the two diffs, producing a so-called &ldquo;combined diff&rdquo;.</p>
+<p>For the next section, let me note a tricky, but very useful, bit of Git syntax. If you have a commit ID like c05f017, you can add a caret or &ldquo;hat&rdquo; character ^ after that, to name a parent commit. You can optionally add another number to select which parent. For regular (non-merge) commits there&rsquo;s only one, so c05f017^ is the parent. For merge commits, c05f017^ and c05f017^1 both mean the first parent, while c05f017^2 means the second parent.</p>
+<p>2I put this in quotes because the first parent idea is especially important in Git, as we will see in a moment. In other words, Git cares most about which parent is first, while the rest are just &ldquo;the rest&rdquo;.</p>
+<p>Combined diffs
+The combined diff format is described in the documentation, but a key bit is first described here, so as to make it especially obscure:3</p>
+<p>Note that combined diff lists only files which were modified from all parents.</p>
+<p>That is, suppose M is a merge commit, and diffing M^1 vs M says file mainline.txt and common.txt were both changed. Suppose further that diffing M^2 and M says that file sidebranch.txt and common.txt were both changed. The combined diff will show only common.txt, skipping both mainline.txt and sidebranch.txt because those two files were only modified from one parent (each). (Even then Git may show only some of the diffs for common.txt.)</p>
+<p>3It took me a long time to find this in the documentation, as I kept looking at the other section.</p>
+<p>Splitting the diffs
+The -m option—m probably stands for merge here—tells Git to, in effect, &ldquo;split&rdquo; the merge. That is, instead of trying to combine the diffs against each parent into one big combined diff, just show the diff against each parent, one diff at a time.</p>
+<p>This is sometimes what you want. When it&rsquo;s not what you want, you can run your own explicit git diff to just diff against one of the two parents (or see below).</p>
+<p>Which parent should you diff against?
+Usually, the correct answer is &ldquo;the first parent&rdquo;.</p>
+<p>The key to the &ldquo;first parent&rdquo; notion is that when Git makes a merge commit, it always records the branch you&rsquo;re on at the time, as the first parent. The other branch becomes the second parent.</p>
+<p>That is, if you&rsquo;re on develop and you merge topic:</p>
+<p>$ git checkout develop
+$ git merge topic
+Git will make a new commit—a merge commit, with two parents—on your current branch, develop. The first parent of the merge commit will be the commit that was the tip of develop just a moment ago. The second parent will be the commit that is (still) the tip of topic.</p>
+<p>Since you&rsquo;re usually concerned with what the merge brought in, comparing against the first parent will give you that. So usually that&rsquo;s what you want. For this reason, git show allows you to run git show &ndash;first-parent. That &ldquo;splits&rdquo; the commit and then git show only diffs against the first parent. (This is a bit different than git show -m, which splits the commit twice: the first split compares against the first parent, and the second split compares against the second parent.)</p>
+<p>Similarly, you can run git log -p &ndash;first-parent &hellip; but you must still add -m to see the change as a patch, because by default git log just skips showing the diffs entirely for a merge. (Internally, the skipping-because-merge operation overrides the way the split makes it act like not-a-merge.) Here, the &ndash;first-parent flag has an even more important effect: the log operation does not look at any of the side branch&rsquo;s commits at all, only those on the main (first-parent) line.</p>
+</blockquote>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/ab6a4ab0-f85d-4c8b-91c4-5e33fd314ff6?title=git_show_of_a_merge_commit">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 07 Mar 2022</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 20 Jan 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

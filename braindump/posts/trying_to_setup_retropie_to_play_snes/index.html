@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html><title>trying to setup retropie to play snes</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Trying to Setup Retropie to Play Snes</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>I already have a bunch of <a href="/braindump/posts/raspberry_pi/">raspberry pi</a> in <a href="/braindump/posts/my_stack/">my nomad cluster</a>, so why not use one
+connected to a screen to play <a href="/braindump/posts/retro_gaming/#snes">snes</a> ?</p>
+<p>I don&rsquo;t want to dual boot my cluster images and retropie, so here are my options
+to try.</p>
+<h2 id="use-an-old-rpi-1-that-don-t-fit-in-my-cluster"><span class="org-todo todo TODO">TODO</span> use an old rpi 1 that don&rsquo;t fit in my cluster</h2>
+<h2 id="put-retropie-in-a-docker-image-to-run-in-via-nomad"><span class="org-todo todo TODO">TODO</span> put retropie in a docker image to run in via nomad</h2>
+<h3 id="build-it-from-scratch"><span class="org-todo todo TODO">TODO</span> build it from scratch</h3>
+<pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">MP32:
+    COMMAND
+    ARG --required ref
+    ARG target
+    BUILD --platform=linux/arm/v7 $target --ref=${ref}
+
+retropie-docker-src:
+    FROM alpine
+    RUN apk add git
+    GIT CLONE https://github.com/nwildner/retropie-docker app
+    SAVE ARTIFACT app
+
+retropie-build:
+    FROM DOCKERFILE -f +retropie-docker-src/app/Dockerfile +retropie-docker-src/app/*
+    ARG --required ref
+    DO ./helpers+PUBLISH --image=retropie --ref=$ref
+
+retropie:
+    ARG ref=&#34;0.1.0&#34;
+    DO +MP32 --target=+retropie-build --ref=$ref
+</code></pre><p>It took 4 hours, and eventually failed without any log.</p>
+<p>The fact that all 4 hours are spent in a complicated bash script that runs
+thousands of commands makes it difficult to take advantage of the docker
+cache to debug the issue.</p>
+<h3 id="put-the-dot-img-file-in-a-new-docker-image"><span class="org-todo todo TODO">TODO</span> put the .img file in a new docker image</h3>
+<h3 id="run-the-docker-image-with-support-for-the-hardware"><span class="org-todo todo TODO">TODO</span> run the docker image with support for the hardware</h3>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/460f603a-ef99-4326-aed3-0f6d5f2800c3?title=trying_to_setup_retropie_to_play_snes">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 25 Aug 2023</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Aug 2023</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html><title>setting up my raspberry pi fleet</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Setting Up My Raspberry Pi Fleet</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>setting up my raspberry pi fleet</p>
+<h2 id="using-hypriot--hypriot-dot-md">using <a href="/braindump/posts/hypriot/">hypriot</a></h2>
+<p>It works well.</p>
+<p>I would have stick with it, but</p>
+<ol>
+<li>it is not updated anymore, so at some point it will likely fail (the operating system being too old to even apt update correctly)</li>
+<li>it does not support arm64, and more and more project don&rsquo;t support armv&lt;8 anymore (like distroless)</li>
+<li>it does not allow preparing the rootfs (using chroot and qemu) like
+installing stuff ahead of time. I need to put stuff in cloud-init, them
+plug the card and wait 30 minutes that the system updates and them run the
+init script. I would prefer a img that simply works when started.</li>
+</ol>
+<h2 id="building-hypriot-myself">building hypriot myself</h2>
+<p>It seemed to me that it was complicated</p>
+<h2 id="alpine-on-raspberrypi">alpine on raspberrypi</h2>
+<p>also quite complicated. I have to setup the img layout myself. Seems like a
+good way to end up <a href="/braindump/posts/yak_shaving/">yak shaving</a>.</p>
+<p>I&rsquo;d rather find a project that already does the whole work and simply adjust
+to fit my needs.</p>
+<h2 id="debian-image-spec">debian image-spec</h2>
+<p>Seemed ideal. It uses vmdb2, so the steps are quite transparent. It may be run
+in docker. I only need to append the *.yaml file with my custom commands so
+that I get my custom image.</p>
+<p>Thanks to its unpack-rootfs feature, I can create edit my config and avoid
+running the whole flow every time.</p>
+<p>Also, because it can be run in docker, I can take advantage of docker cache to
+cache the partial rootfs.</p>
+<p>It was so great that I started putting it into all my machines. After a few
+days, I realized that my nomad job did not work as well as they were used
+to. My docker images took a very long time to be pulled and sometimes failed
+without obvious reason.</p>
+<p>To me, this looked like failing SD cards, so I changed them. But the issue
+persisted. After realizing that ALL my sdcard were &ldquo;faulty&rdquo;, I decided to try
+getting back to hypriot, and things were back to normal.</p>
+<p>I assume that the kernel shipped in debian is &ldquo;working&rdquo;, but that the one from
+raspberry is optimised. So I decided to try raspberry pi based solutions.</p>
+<h2 id="pi-gen">pi-gen</h2>
+<p>It looks nice. It is composed of a bunch of scripts that are run in order. It
+provides out of the box the configuration of ssh (with the installation of the
+public key and disabling of password authentication), the keyboard and wifi
+connection.</p>
+<p>By copy pasting the current stages, it is quite easy to get something working.</p>
+<p>I created my own stage 2.5, that contained the phase 03-install-packages with
+a file named 00-packages that contains the additional packages I needed.</p>
+<p>Then, I created the phase 04-setup that contains the file 02-run.sh with the
+final commands to run.</p>
+<p>Then, i run it with the environment <code>variable STAGE_LIST=&quot;stage0 stage1 stage2 stage2.5&quot;</code>, then moved stage2/EXPORT* into stage2.5.</p>
+<p>To build for the arm64, I simply need to <code>git co arm64</code>.</p>
+<p>It also provides a build-docker.sh script that I can use to avoid installing
+the dependencies in my machine.</p>
+<p>The only drawback is that it does not provide, like vmdb2, a way to store a
+partial chroot, so I cannot (easily?) cache intermediary steps in <a href="/braindump/posts/earthly/">earthly</a>.</p>
+<p>Also, since earthly doe not support bind mounting, it cannot mount /dev and
+therefore fails when accessing /dev/loop0p*.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/16d9a484-a513-4768-b360-eeed096e126a?title=setting_up_my_raspberry_pi_fleet">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 13 Jun 2023</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 08 Jun 2023</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

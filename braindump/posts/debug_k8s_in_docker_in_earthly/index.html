@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html><title>debug k8s in docker in earthly</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Debug K8s in Docker in Earthly</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>see,
+<ul>
+<li><a href="https://konubinix.eu/blog/posts/how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s/?title=how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s#">how I debug MTU issues in k3d in docker in earthly in docker in k8s</a>,</li>
+</ul>
+</li>
+</ul>
+<p>The following is the answer I posted to help someone do this, I keep this in
+here because I think it might be helpful for my future self as well.</p>
+<hr>
+<p>Hi.</p>
+<p>I understand that you are doing k8s in docker, right?</p>
+<p>I maintain a tool called &ldquo;clk k8s&rdquo; that is meant to bootstrap a k8s cluster in
+docker, with all the stuff I generally need, like the ingress controller,
+certificat manager, reloader etc.</p>
+<p>When I need to investigate an issue with the cluster run in docker in earthly,
+this is what I do. I hope it will help you.</p>
+<p>First, find the id of the runc container running in earthly.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ docker exec ${earthly_cont_name} buildkit-runc list
+</span></span></code></pre></div><p>earthly will run a different runc container per RUN, so wait until you got into
+the WITH DOCKER before doing that.</p>
+<p>In case you have only one earthly job running, you can use the following shortcut</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ runc_cont_id=$(docker exec ${earthly_cont_name} buildkit-runc list -q)
+</span></span></code></pre></div><p>Then, enter that runc container with</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ docker exec -ti ${earthly_cont_name} buildkit-runc exec -t ${runc_cont_id} bash
+</span></span></code></pre></div><p>This entered the container that ran k8s in docker, so from here you can run
+kubectl to connect to your cluster.</p>
+<p>Of course, this can be aliased</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ alias runner=&#34;docker exec -ti ${earthly_cont_name} buildkit-runc exec -t ${runc_cont_id}&#34;
+</span></span></code></pre></div><p>So that you can call</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ runner kubectl get pods
+</span></span></code></pre></div><p>Or even better</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ alias iktl=&#34;docker exec ${earthly_cont_name} buildkit-runc exec ${runc_cont_id} kubectl&#34;
+</span></span></code></pre></div><p>So that you can call</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ iktl get pods
+</span></span></code></pre></div><p>The good thing with the iktl is that you can use kubectl bash completions with it</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ source &lt;(kubectl completion bash) ; complete -o default -F __start_kubectl iktl
+</span></span><span style="display:flex;"><span>$ iktl get pod [TAB]
+</span></span></code></pre></div><p>An you get the completion on pods.</p>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/55b499ab-83e5-4a93-9500-72696fda40fc?title=debug_k8s_in_docker_in_earthly">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 30 Oct 2024</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 30 Oct 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

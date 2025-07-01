@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html><title>use kind and k3d with tilt and clk k8s</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Use Kind and K3d With Tilt and Clk K8s</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>use <a href="/braindump/posts/kubernetes/#ff392e82-3e10-4ce0-b6a9-41f5f450be6d">kind</a> and <a href="/braindump/posts/kubernetes/#73298ba5-9790-4959-b8a9-7453486ab5ab">k3d</a> with <a href="/braindump/posts/tilt/">tilt</a> and <a href="/braindump/posts/clk_k8s/">clk k8s</a></p>
+<p>k3d is great, and support a <a href="/braindump/posts/local_docker_registry/">local registry</a> out of the box. But the time to push
+at every change still takes some time. Unfortunately, it <a href="/braindump/posts/kubernetes/#339b4751-1809-4b00-a4cd-f26aab53b2a9">does not support</a>
+<a href="/braindump/posts/kubectl_build/">kubectl build</a>.</p>
+<p>kind <a href="https://github.com/kubernetes-sigs/kind/issues/1213">does not support easily a local docker registry</a>, but it has a way to
+directly push images. Unfortunately, this is very slow. We can use <a href="/braindump/posts/kubectl_build/">kubectl build</a>
+to mitigate this issue.</p>
+<p>When you want to play with tilt. You first configure a docker_build call. To have a fast <a href="/braindump/posts/code_update_repeat/">code, update, repeat</a> loop, you can:</p>
+<ol>
+<li>run a local registry, then after each change a new image will be built, pushed and then pulled from the cluster,</li>
+<li>replace docker_build by image_build (from the kubectl build extension). That
+way, the image will be built directly into the cluster and won&rsquo;t need to go
+through the push and pull phases.</li>
+<li>use live update, to avoid restarting a container</li>
+</ol>
+<p>2 is a little bit faster than 1, because it prevents the push and pull
+phases. 3, by design is the fastest. I cannot imagine a way faster than 3, as it
+allow you to change only the pieces of information that changed.</p>
+<p>While 3 is very tempting, it eventually <a href="/braindump/posts/by_default_don_t_use_tilt_live_update/">makes things harder to maintain</a>, so I
+recommend avoiding using it as far as possible and falling back in it only if 1 or 2 are not satisfying.</p>
+<p>It might be tempting to make 2 the default choice then, but it has some drawbacks.</p>
+<p>First, it is not <a href="/braindump/posts/kubernetes/#339b4751-1809-4b00-a4cd-f26aab53b2a9">supported in k3d</a>.</p>
+<table>
+  <thead>
+      <tr>
+          <th></th>
+          <th>k3d</th>
+          <th>kind</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>local docker registry</td>
+          <td>✓</td>
+          <td>doable</td>
+      </tr>
+      <tr>
+          <td>kubectl build</td>
+          <td>❌</td>
+          <td>✓</td>
+      </tr>
+  </tbody>
+</table>
+<p>Also, when you want to use an <a href="https://docs.tilt.dev/dependent_images.html">images as basis of another</a> (using <a href="/braindump/posts/multi_stage_build/">multi stage
+build</a>), you cannot make use of custom builds (hence kubectl build). This is
+because tilt cannot make any assumption about what the custom build will do, not
+even that the custom builder will use dockerfile at all.</p>
+<p>I personally don&rsquo;t want the tiltfile to be tainted by the underlying cluster
+technology. But I don&rsquo;t see how to prevent this. The least I can do is making it
+versatile enough.</p>
+<p>I setup my clusters using the awesome <code>clk k8s</code> tool. Not only does it provides
+out of the box clusters, but is also gives extra information about their
+features.</p>
+<p>To enable the kubectl build feature when available, I can simply provide the
+following code in my tiltfile.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>load(<span style="color:#d14">&#39;ext://kubectl_build&#39;</span>, <span style="color:#d14">&#39;image_build&#39;</span>, <span style="color:#d14">&#39;kubectl_build_enable&#39;</span>)
+</span></span><span style="display:flex;"><span>kubectl_build_enable(
+</span></span><span style="display:flex;"><span>    local(<span style="color:#d14">&#39;clk k8s features --field value --format plain kubectl_build&#39;</span>,
+</span></span><span style="display:flex;"><span>          quiet<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>))
+</span></span></code></pre></div><p>Enable kubectl_build is global. If not enabled, <code>image_build</code> will simply fall
+back on <code>docker_build</code>.</p>
+<p>If I write my docker builds with the simple <code>docker_build</code> instruction, I cannot
+make use of kubectl build. I could replace <code>docker_build</code> by <code>image_build</code>, but
+that would enable it even when I want to use dependent images.</p>
+<p>Thus, images that have no base images built in the project can use
+<code>image_build</code>, while the other must use <code>docker_build</code>.</p>
+<p>In some of my projects, building the base image is conditional. In that case, my code looks like this.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">def</span> <span style="color:#900;font-weight:bold">has_local_registry</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">return</span> <span style="color:#0086b3">str</span>(
+</span></span><span style="display:flex;"><span>        local(<span style="color:#d14">&#39;clk k8s features --field value --format plain local_registry&#39;</span>,
+</span></span><span style="display:flex;"><span>              quiet<span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">True</span>))<span style="color:#000;font-weight:bold">.</span>strip() <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;True&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">if</span> use_dependent_images_p():
+</span></span><span style="display:flex;"><span>    builder <span style="color:#000;font-weight:bold">=</span> docker_build
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">not</span> has_local_registry():
+</span></span><span style="display:flex;"><span>        warn(<span style="color:#d14">&#34;You plan to work on dependent images, then I need to use docker_build.</span><span style="color:#d14">\
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span><span style="color:#d14">But you don&#39;t have a local registry. It will be veryyyy sloooow.&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>    builder <span style="color:#000;font-weight:bold">=</span> image_build
+</span></span></code></pre></div><h2 id="permalink"><a href="https://konubinix.eu/braindump/b5d2f77c-3cd7-49aa-8289-fb54e16fc1a4?title=use_kind_and_k3d_with_tilt_and_clk_k8s">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 28 Mar 2022</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 11 Oct 2021</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html><title>kubernetes</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Kubernetes</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>External reference: <a href="https://kubernetes.io/docs/concepts/services-networking/ingress/">https://kubernetes.io/docs/concepts/services-networking/ingress/</a></li>
+</ul>
+<h2 id="c41e92b2-b837-41e5-b015-76a7a1e1bd85">invalid: metadata.resourceVersion: Invalid value: 0x0: must be specified for an update</h2>
+<ul>
+<li>External reference: <a href="https://gist.github.com/udhos/447a72e462737c423edc89636ba6addb">https://gist.github.com/udhos/447a72e462737c423edc89636ba6addb</a>
+Happen when you:
+<ul>
+<li>apply a resource</li>
+<li>edit the resource -&gt; k8s will add a resourceVersion value in the kubectl.kubernetes.io/last-applied-configuration annotation</li>
+<li>apply the resource again. It will try to patch it, setting the value of resourceVersion to null</li>
+</ul>
+</li>
+</ul>
+<p>Quick correction
+Remove the annotation</p>
+<p>apply with &ndash;force (it will delete the resource and them recreate it)</p>
+<p>Correction
+only modify by applying the file</p>
+<h2 id="b929c5a4-239b-4f29-bd9b-c36cabf21624">finalizers</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/">https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/</a></p>
+<blockquote>
+<p>When you tell Kubernetes to delete an object that has finalizers specified for
+it, the Kubernetes API marks the object for deletion by populating
+.metadata.deletionTimestamp, and returns a 202 status code (HTTP
+&ldquo;Accepted&rdquo;). The target object remains in a terminating state while the control
+plane, or other components, take the actions defined by the finalizers. After
+these actions are complete, the controller removes the relevant finalizers from
+the target object. When the metadata.finalizers field is empty, Kubernetes
+considers the deletion complete and deletes the object.</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/">https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-06-11 Wed]</span></span>)</p>
+</blockquote>
+<p>therefore, forcing a deleting can be done with:</p>
+<blockquote>
+<p>kubectl patch some-resource/some-name \
+&ndash;type json \
+&ndash;patch=&rsquo;[ { &ldquo;op&rdquo;: &ldquo;remove&rdquo;, &ldquo;path&rdquo;: &ldquo;/metadata/finalizers&rdquo; } ]'</p>
+<p>&mdash; <a href="https://martinheinz.dev/blog/74">https://martinheinz.dev/blog/74</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-06-11 Wed]</span></span>)</p>
+</blockquote>
+</li>
+</ul>
+<h3 id="88e8c01b-7fee-45e2-906f-ebaa9253a6ce">Stop Messing with Kubernetes Finalizers, how to stop a resources cleaning</h3>
+<ul>
+<li>External reference: <a href="https://martinheinz.dev/blog/74">https://martinheinz.dev/blog/74</a></li>
+</ul>
+<h2 id="53d6419d-3187-4649-8773-17abb8eb2dbc">namespace</h2>
+<h2 id="663150d3-a0d4-4302-b020-d10dcce3d7ef">controller</h2>
+<ul>
+<li>
+<p>External reference: <a href="https://kubernetes.io/docs/concepts/architecture/controller/">https://kubernetes.io/docs/concepts/architecture/controller/</a></p>
+<blockquote>
+<p>A controller tracks at least one Kubernetes resource type. These objects have a
+spec field that represents the desired state. The controller(s) for that
+resource are responsible for making the current state come closer to that
+desired state.</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/architecture/controller/">https://kubernetes.io/docs/concepts/architecture/controller/</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="894d8ef6-cdff-47de-b43d-7a7fd3b99c9f">operator</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://kubernetes.io/docs/concepts/extend-kubernetes/operator/">https://kubernetes.io/docs/concepts/extend-kubernetes/operator/</a></p>
+<p><a href="/braindump/posts/kubernetes/">kubernetes</a> operator are specific <a href="#663150d3-a0d4-4302-b020-d10dcce3d7ef">kubernetes controller</a> that deal with
+<a href="/braindump/posts/custom_resource/">custom resources</a> to do things that are not possible with bare kubernetes.</p>
+<blockquote>
+<p>most common way to deploy an operator is to add the Custom Resource Definition
+and its associated <a href="#663150d3-a0d4-4302-b020-d10dcce3d7ef">Controller</a> to your cluster</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/extend-kubernetes/operator/">https://kubernetes.io/docs/concepts/extend-kubernetes/operator/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Operators are clients of the Kubernetes API that act as <a href="#663150d3-a0d4-4302-b020-d10dcce3d7ef">controllers</a> for a <a href="/braindump/posts/custom_resource/">Custom
+Resource</a></p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/extend-kubernetes/operator/">https://kubernetes.io/docs/concepts/extend-kubernetes/operator/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>operator pattern aims to capture the key aim of a human operator</p>
+<p>[&hellip;]</p>
+<p>deep knowledge of how the system ought to behave</p>
+<p>[&hellip;]</p>
+<p>automation to take care of repeatable tasks</p>
+<p>[&hellip;]</p>
+<p>automate a task beyond what Kubernetes itself provides</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/extend-kubernetes/operator/">https://kubernetes.io/docs/concepts/extend-kubernetes/operator/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Some of the things that you can use an operator to automate include:</p>
+<ul>
+<li>deploying an application on demand</li>
+<li>taking and restoring backups of that application&rsquo;s state</li>
+<li>handling upgrades of the application code alongside related changes such as database schemas or extra configuration settings</li>
+<li>publishing a Service to applications that don&rsquo;t support Kubernetes APIs to discover them</li>
+<li>simulating failure in all or part of your cluster to test its resilience</li>
+<li>choosing a leader for a distributed application without an internal member election process</li>
+</ul>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/extend-kubernetes/operator/">https://kubernetes.io/docs/concepts/extend-kubernetes/operator/</a></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="3d300c12-2ba8-4c59-8e1a-364a97893c2e">run locally (for development purpose)</h2>
+<h3 id="bfd5e153-81fd-44fd-a96a-aa65d6c39c36">k0s</h3>
+<h3 id="73298ba5-9790-4959-b8a9-7453486ab5ab">k3d</h3>
+<p>Tool to ease playing with <a href="/braindump/posts/k3s/">k3s</a> inside <a href="/braindump/posts/docker/">docker</a>, done by <a href="/braindump/posts/rancher/">rancher</a>.</p>
+<p>It uses <a href="/braindump/posts/flannel/">flannel</a> to deal with networking. Flannel does not handle <a href="/braindump/posts/networkpolicy/">networkpolicy</a>.</p>
+<blockquote>
+<p>Flannel doesn’t control how containers are networked to the host, only how the
+traffic is transported between hosts and doesn’t implement network policy
+controller. For <a href="/braindump/posts/networkpolicy/">network policy</a>, other projects such as Calico can be used.</p>
+<p>&mdash; <a href="https://banzaicloud.com/docs/pipeline/security/network-policy/network-plugins/">https://banzaicloud.com/docs/pipeline/security/network-policy/network-plugins/</a></p>
+</blockquote>
+<p>It seems like there is a minimal implementation of <a href="/braindump/posts/networkpolicy/">networkpolicy</a> inside
+<a href="/braindump/posts/k3s/">k3s</a>, but it does not appear to deal with even basic use cases.</p>
+<h4 id="c40c674c-6396-4862-8e1e-4731ee7dc5b4">running <a href="/braindump/posts/cilium/">Cilium</a> in <a href="#73298ba5-9790-4959-b8a9-7453486ab5ab">K3D</a></h4>
+<ul>
+<li>
+<p>External reference: <a href="https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html">https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html</a></p>
+<blockquote>
+<p>important k3s arguments here are <code>--disable-network-policy</code> and <code>--flannel-backend=none</code>.</p>
+<p>&mdash; <a href="https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html">https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html</a></p>
+</blockquote>
+</li>
+</ul>
+<blockquote>
+<p>cannot use a cilium init-container in the k3d/k3s combo, because it tries to run
+a script in the context of the above containers using the /bin/bash interpreter
+(but the k3s images are based on busybox, and only have a /bin/sh interpreter
+available).</p>
+<p>&mdash; <a href="https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html">https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>docker exec -it k3d-foo-agent-0 mount bpffs /sys/fs/bpf -t bpf
+docker exec -it k3d-foo-agent-0 mount &ndash;make-shared /sys/fs/bpf</p>
+<p>docker exec -it k3d-foo-server-0 mount bpffs /sys/fs/bpf -t bpf
+docker exec -it k3d-foo-server-0 mount &ndash;make-shared /sys/fs/bpf</p>
+<p>&mdash; <a href="https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html">https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>helm repo add cilium <a href="https://helm.cilium.io/">https://helm.cilium.io/</a></p>
+<p>helm install cilium cilium/cilium &ndash;version 1.9.1 \
+&ndash;namespace kube-system \
+&ndash;set kubeProxyReplacement=partial \
+&ndash;set hostServices.enabled=false \
+&ndash;set externalIPs.enabled=true \
+&ndash;set nodePort.enabled=true \
+&ndash;set hostPort.enabled=true \
+&ndash;set bpf.masquerade=false \
+&ndash;set image.pullPolicy=IfNotPresent \
+&ndash;set ipam.mode=kubernetes</p>
+<p>helm upgrade cilium cilium/cilium &ndash;version 1.9.1 \
+&ndash;namespace kube-system \
+&ndash;reuse-values \
+&ndash;set hubble.listenAddress=&quot;:4244&quot; \
+&ndash;set hubble.relay.enabled=true \
+&ndash;set hubble.ui.enabled=true</p>
+<p>&mdash; <a href="https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html">https://sandstorm.de/de/blog/post/running-cilium-in-k3s-and-k3d-lightweight-kubernetes-on-mac-os-for-development.html</a></p>
+</blockquote>
+<h4 id="0b57f7ed-d4aa-41ab-94e8-491397615089"><a href="#73298ba5-9790-4959-b8a9-7453486ab5ab">k3d</a> with <a href="/braindump/posts/cgroups/">cgroup</a> v2</h4>
+<ul>
+<li>
+<p>External reference: <a href="https://github.com/rancher/k3d/issues/493">https://github.com/rancher/k3d/issues/493</a></p>
+<blockquote>
+<p>I think I&rsquo;m seeing the same or similar issue. When I rollback to
+rancher/k3s:v1.19.7-k3s1, the cluster starts fine.</p>
+<p>&mdash; <a href="https://github.com/rancher/k3d/issues/493">https://github.com/rancher/k3d/issues/493</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>k3d cluster create &ndash;verbose &ndash;trace &ndash;image rancher/k3s:v1.19.8-k3s1 wsop
+Doesn&rsquo;t work on Fedora 33 as there is different error</p>
+<p>&gt; docker logs &ndash;follow k3d-wsop-server-0 2&gt;&amp;1
+&hellip;
+time=&ldquo;2021-03-03T11:52:51.432307543Z&rdquo; level=fatal</p>
+<p>&mdash; <a href="https://github.com/rancher/k3d/issues/493">https://github.com/rancher/k3d/issues/493</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Hi @fr33ky , thanks for your input.
+I guess when you run docker info, you see that Cgroup Version is 2?
+I&rsquo;m on the same docker version on Ubuntu, but using cgroup v1&hellip; no problems here</p>
+<p>&mdash; <a href="https://github.com/rancher/k3d/issues/493">https://github.com/rancher/k3d/issues/493</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Using Debian Sid, in the meantime, I personally switched back to <a href="/braindump/posts/cgroups/">cgroup</a> v1.  I
+added systemd.unified_cgroup_hierarchy=0 to my GRUB_CMDLINE_LINUX_DEFAULT
+(/etc/default/grub) and then ran update-grub</p>
+<p>&mdash; <a href="https://github.com/rancher/k3d/issues/493">https://github.com/rancher/k3d/issues/493</a></p>
+</blockquote>
+</li>
+</ul>
+<h4 id="339b4751-1809-4b00-a4cd-f26aab53b2a9"><a href="#73298ba5-9790-4959-b8a9-7453486ab5ab">k3d</a>: unable to start built container</h4>
+<ul>
+<li>
+<p>External reference: <a href="https://github.com/vmware-tanzu/buildkit-cli-for-kubectl/issues/46">https://github.com/vmware-tanzu/buildkit-cli-for-kubectl/issues/46</a></p>
+<blockquote>
+<p>Basically it seems like <a href="#73298ba5-9790-4959-b8a9-7453486ab5ab">k3d</a> is not a good environment for <a href="/braindump/posts/kubectl_buildkit/">kubectl-buildkit</a>, and
+the only option for it is if you are using a registry, as described by @pdevine,
+although that eliminates one of the use cases (not transferring bytes up and
+down from the registry, and needing a registry)</p>
+<p>&mdash; <a href="https://github.com/vmware-tanzu/buildkit-cli-for-kubectl/issues/46#:~:text=Basically%20it%20seems,clarified%20the%20environment">https://github.com/vmware-tanzu/buildkit-cli-for-kubectl/issues/46#:~:text=Basically%20it%20seems,clarified%20the%20environment</a></p>
+</blockquote>
+</li>
+</ul>
+<h4 id="2624c7d3-509c-4d05-95b5-696d43520b3a">install a custom cni with k3d</h4>
+<ul>
+<li>
+<p>External reference: <a href="https://rancher.com/docs/k3s/latest/en/installation/network-options/">https://rancher.com/docs/k3s/latest/en/installation/network-options/</a></p>
+<blockquote>
+<p>Custom CNI</p>
+<p>Run K3s with &ndash;flannel-backend=none and install your CNI of choice</p>
+<p>&mdash; <a href="https://rancher.com/docs/k3s/latest/en/installation/network-options/">https://rancher.com/docs/k3s/latest/en/installation/network-options/</a></p>
+</blockquote>
+</li>
+</ul>
+<h5 id="9d3f85be-e8c7-4918-b3df-4a9627da3732">install calico alongside flannel</h5>
+<ul>
+<li>External reference: <a href="https://projectcalico.docs.tigera.io/getting-started/kubernetes/flannel/flannel">https://projectcalico.docs.tigera.io/getting-started/kubernetes/flannel/flannel</a></li>
+</ul>
+<blockquote>
+<p>Installing Calico for policy and flannel (aka Canal) for networking</p>
+<p>&mdash; <a href="https://projectcalico.docs.tigera.io/getting-started/kubernetes/flannel/flannel">https://projectcalico.docs.tigera.io/getting-started/kubernetes/flannel/flannel</a></p>
+</blockquote>
+<h3 id="ff392e82-3e10-4ce0-b6a9-41f5f450be6d">kind</h3>
+<p>kind, a <a href="#3d300c12-2ba8-4c59-8e1a-364a97893c2e">local k8s</a></p>
+<h4 id="bc1d3a52-91fa-4509-803e-64d8e0f5382f">known issues</h4>
+<h5 id="98b17ee5-7fb5-401f-b432-a2f9bead7d25">too many open files</h5>
+<blockquote>
+<ul>
+<li>
+<p>External reference: <a href="https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files">https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files</a>
+Pod errors due to “too many open files”</p>
+<p>This may be caused by running out of inotify resources. Resource limits are
+defined by fs.inotify.max_user_watches and fs.inotify.max_user_instances system
+variables. For example, in Ubuntu these default to 8192 and 128 respectively,
+which is not enough to create a cluster with many nodes.</p>
+<p>To increase these limits temporarily run the following commands on the host:</p>
+</li>
+</ul>
+<p>$ sudo sysctl fs.inotify.max_user_watches=524288
+$ sudo sysctl fs.inotify.max_user_instances=512</p>
+<p>To make the changes persistent, edit the file /etc/sysctl.conf and add these lines:</p>
+<p>fs.inotify.max_user_watches = 524288
+fs.inotify.max_user_instances = 512</p>
+<p>&mdash; <a href="https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files">https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files</a></p>
+</blockquote>
+<h2 id="5cebe683-1fbc-49cd-9596-dc34944386d8">ingress</h2>
+<ul>
+<li>External reference: <a href="https://kubernetes.io/docs/concepts/services-networking/ingress/">https://kubernetes.io/docs/concepts/services-networking/ingress/</a>
+Point d&rsquo;entrée http(s) de <a href="/braindump/posts/kubernetes/">kubernetes</a></li>
+</ul>
+<h3 id="74912c92-cbc7-49f4-9299-ca6673d7888b">ingress class</h3>
+<h4 id="8f423792-6ba7-409e-9acb-f1f3cb262db5">default</h4>
+<blockquote>
+<p>You can mark a particular IngressClass as default for your cluster. Setting the
+ingressclass.kubernetes.io/is-default-class annotation to true on an
+IngressClass resource will ensure that new Ingresses without an
+ingressClassName field specified will be assigned this default IngressClass.</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/services-networking/ingress/">https://kubernetes.io/docs/concepts/services-networking/ingress/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>some ingress controllers, that work without the definition of a
+default IngressClass. For example, the Ingress-NGINX controller can be
+configured with a flag
+&ndash;watch-ingress-without-class. It is recommended though, to specify the
+default IngressClass:</p>
+<p>&mdash; <a href="https://kubernetes.io/docs/concepts/services-networking/ingress/">https://kubernetes.io/docs/concepts/services-networking/ingress/</a></p>
+</blockquote>
+<h2 id="43bcdeed-ba73-4599-b478-a269afb7728f">cronjob</h2>
+<h3 id="351819ef-9782-476e-9520-a9a30dc10e14">trigger manually</h3>
+<blockquote>
+<p>kubectl create job &ndash;from=cronjob/pgdump pgdump-manual-001</p>
+<p>&mdash; <a href="https://www.craftypenguins.net/blog/how-to-trigger-a-kubernetes-cronjob-manually/">https://www.craftypenguins.net/blog/how-to-trigger-a-kubernetes-cronjob-manually/</a></p>
+</blockquote>
+<h2 id="51f9da43-a338-4e8a-a7e9-fbe52ef47327">taint</h2>
+<h3 id="9ee7a75c-cc35-4058-8da6-e88403028b82">remove</h3>
+<ul>
+<li>External reference: <a href="https://pet2cattle.com/2021/09/k8s-node-untaint">https://pet2cattle.com/2021/09/k8s-node-untaint</a></li>
+</ul>
+<blockquote>
+<p>if we want to taint a node we use kubectl taint as follows</p>
+<p>&mdash; <a href="https://pet2cattle.com/2021/09/k8s-node-untaint">https://pet2cattle.com/2021/09/k8s-node-untaint</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>We can use kubectl taint but adding an hyphen at the end to remove the taint (untaint the node)</p>
+<p>&mdash; <a href="https://pet2cattle.com/2021/09/k8s-node-untaint">https://pet2cattle.com/2021/09/k8s-node-untaint</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>$ kubectl taint nodes minikube application=example:NoSchedule-
+node/minikubee untainted</p>
+<p>&mdash; <a href="https://pet2cattle.com/2021/09/k8s-node-untaint">https://pet2cattle.com/2021/09/k8s-node-untaint</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>If we don&rsquo;t know the command used to taint the node we can use kubectl describe node to get the exact taint we&rsquo;ll need to use to untaint the node</p>
+<p>&mdash; <a href="https://pet2cattle.com/2021/09/k8s-node-untaint">https://pet2cattle.com/2021/09/k8s-node-untaint</a></p>
+</blockquote>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/0_2_nodes_are_available_2_too_many_pods_preemption_0_2_nodes_are/">0/2 nodes are available: 2 Too many pods. preemption: 0/2 nodes are</a></li>
+<li><a href="/braindump/posts/k8s_nginx_ingress_controller/#2cea0238-accc-4023-9941-e9ca4c10ee58">503 in Kubernetes NGINX Ingress</a></li>
+<li><a href="/braindump/posts/actions_runner_controller/">actions-runner-controller</a></li>
+<li><a href="/braindump/posts/admission_controllers/">admission controllers</a></li>
+<li><a href="/braindump/posts/alexellis_arkade_open_source_kubernetes_marketplace/">alexellis/arkade: Open Source Kubernetes Marketplace</a></li>
+<li><a href="/braindump/posts/attach_handlers_to_container_lifecycle_events/">attach handlers to container lifecycle events</a></li>
+<li><a href="/braindump/posts/avionix/">avionix</a></li>
+<li><a href="/braindump/posts/avitaltamir_cyphernetes_a_kubernetes_query_language/">AvitalTamir/cyphernetes: A Kubernetes Query Language</a></li>
+<li><a href="/braindump/posts/aws/">AWS</a></li>
+<li><a href="/braindump/posts/beware_the_resolver_of_nginx/">beware the resolver of nginx</a></li>
+<li><a href="/braindump/posts/bitnami/">bitnami</a></li>
+<li><a href="/braindump/posts/postgresql/#79c99355-2a0d-4782-8238-dbc4552c0447">bitnami ne se configure pas bien</a></li>
+<li><a href="/braindump/posts/calico/">calico</a></li>
+<li><a href="/braindump/posts/clk_k8s/">clk k8s</a></li>
+<li><a href="https://konubinix.eu/blog/posts/clk_k8s_and_earthly_in_a_local_dev_env/?title=clk_k8s_and_earthly_in_a_local_dev_env#">clk k8s and earthly in a local dev env</a> (blog)</li>
+<li><a href="https://konubinix.eu/blog/posts/clk_k8s_accessing_the_host_from_the_pod_on_linux_and_mac/?title=clk_k8s_accessing_the_host_from_the_pod_on_linux_and_mac#">clk k8s: accessing the host from the pod on linux and mac</a> (blog)</li>
+<li><a href="/braindump/posts/clk_parameters/">clk parameters</a></li>
+<li><a href="/braindump/posts/clk_provides_a_bunch_of_everyday_usage_lib/">clk provides a bunch of everyday usage lib</a></li>
+<li><a href="/braindump/posts/cloud_controller_manager/">Cloud Controller Manager</a></li>
+<li><a href="/braindump/posts/gitops/#2bdcf3fe-15d4-4db8-914a-72faefde4500">Cloud Native Live: Crossplane - GitOps-based Infrastructure as Code through Kubernetes API - YouTube</a></li>
+<li><a href="/braindump/posts/cognitive_resistance_to_devops_mindset/">cognitive resistance to devops mindset</a></li>
+<li><a href="/braindump/posts/comment_lister_les_images_installes_dans_k3d/">Comment lister les images installés dans k3d</a></li>
+<li><a href="/braindump/posts/configure_liveness_readiness_and_startup_probes/">configure Liveness, Readiness and Startup Probes</a></li>
+<li><a href="/braindump/posts/container_network_interface/">container network interface</a></li>
+<li><a href="/braindump/posts/container_storage_interface/">Container Storage Interface</a></li>
+<li><a href="/braindump/posts/custom_resource/">custom resource</a></li>
+<li><a href="/braindump/posts/debug_containers/">debug containers</a></li>
+<li><a href="/braindump/posts/des_silos_au_platform_engineering_en_passant_par_le_devops_adopter_gitops_et_aller_au_d_youtube/">Des silos au Platform Engineering en passant par le DevOps : adopter GitOps et aller au-d&hellip; - YouTube</a></li>
+<li><a href="/braindump/posts/develop_an_android_application_using_keycloak_and_localhost_redirection/">develop an android application using keycloak and localhost redirection</a></li>
+<li><a href="/braindump/posts/devops/">devops</a></li>
+<li><a href="/braindump/posts/docker_entrypoint_vs_kubernetes_command/">docker entrypoint vs kubernetes command</a></li>
+<li><a href="/braindump/posts/docker_looses_the_dns_configuration/">docker looses the dns configuration</a></li>
+<li><a href="/braindump/posts/dynamic_provisioning_and_storage_classes_in_kubernetes/">dynamic provisioning and storage classes in kubernetes</a></li>
+<li><a href="/braindump/posts/electro_monkeys/">Electro Monkeys</a></li>
+<li><a href="/braindump/posts/etcd/">etcd</a></li>
+<li><a href="/braindump/posts/externalip/">ExternalIP</a></li>
+<li><a href="/braindump/posts/helm/">helm</a></li>
+<li><a href="/braindump/posts/high_availability_peer_to_peer_system_from_the_point_of_view_of_the_public_network/">high availability peer-to-peer system from the point of view of the public network</a></li>
+<li><a href="/braindump/posts/hoot_about_proxies_ingress_and_api_gateways/">hoot about proxies, ingress and API gateways</a></li>
+<li><a href="https://konubinix.eu/blog/posts/how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s/?title=how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s#">how I debug MTU issues in k3d in docker in earthly in docker in k8s</a> (blog)</li>
+<li><a href="/braindump/posts/how_i_debug_my_k8s_tests_not_running/">how I debug my k8s tests not running</a></li>
+<li><a href="/braindump/posts/how_to_debug_a_connection_issue_in_k8s/">how to debug a connection issue in k8s?</a></li>
+<li><a href="/braindump/posts/how_to_debug_a_typescript_program_running_on_k8s_using_dap_in_emacs/">how to debug a typescript program running on k8s using dap in emacs?</a></li>
+<li><a href="/braindump/posts/how_to_organise_the_inter_subchart_networkpolicies/">how to organise the inter subchart networkpolicies?</a></li>
+<li><a href="https://konubinix.eu/blog/posts/how_to_share_data_using_a_local_kubernetes_cluster/?title=how_to_share_data_using_a_local_kubernetes_cluster#">how to share data using a local kubernetes cluster</a> (blog)</li>
+<li><a href="/braindump/posts/implementing_kubernetes_operators_with_python/">Implementing Kubernetes Operators with Python</a></li>
+<li><a href="/braindump/posts/hoot_about_proxies_ingress_and_api_gateways/#id-aa69c780-9fed-438e-9355-125005259dbe-ingress-vs-id-41135a68-01ee-460f-84c0-67edfcdd0ac9-api-gateway">ingress vs api gateway</a></li>
+<li><a href="/braindump/posts/internalip/">InternalIP</a></li>
+<li><a href="/braindump/posts/investigate_too_many_open_files/">investigate too many open files</a></li>
+<li><a href="/braindump/posts/istio/">istio</a></li>
+<li><a href="/braindump/posts/k3s/">k3s</a></li>
+<li><a href="/braindump/posts/k8s_en_est_a_l_age_de_pierre_de_l_ihm/">k8s en est à l&rsquo;âge de pierre de l&rsquo;ihm</a></li>
+<li><a href="/braindump/posts/k8s_job/">k8s job</a></li>
+<li><a href="/braindump/posts/k8s_nginx_ingress_controller/">k8s nginx ingress controller</a></li>
+<li><a href="/braindump/posts/k8s_templating_solutions/">k8s templating solutions</a></li>
+<li><a href="/braindump/posts/kind_configure_local_registry_with_kube_public_local_registry_hosting/">kind configure local registry with kube-public local-registry-hosting</a></li>
+<li><a href="/braindump/posts/kubectl/">kubectl</a></li>
+<li><a href="/braindump/posts/kubectl_build/">kubectl build</a></li>
+<li><a href="/braindump/posts/kubectl_buildkit/">kubectl-buildkit</a></li>
+<li><a href="/braindump/posts/kubernetes_what_k8s_app_label_represent/">kubernetes - what k8s-app label represent?</a></li>
+<li><a href="/braindump/posts/kubernetes_good_practices/">kubernetes best practices</a></li>
+<li><a href="/braindump/posts/kubernetes_cheatsheet/">kubernetes cheatsheet</a></li>
+<li><a href="/braindump/posts/kubernetes_in_dev_mode_the_microservice_architecture_is_on_26_by_mahdi_chihaoui_faun_medium/">Kubernetes in Dev Mode. The microservice architecture is on 26 | by Mahdi Chihaoui | FAUN | Medium</a></li>
+<li><a href="/braindump/posts/kubernetes_resources_examples/">kubernetes resources examples</a></li>
+<li><a href="/braindump/posts/kubernetes_metrics/">kubernetes/metrics</a></li>
+<li><a href="/braindump/posts/kubernetes_debug_running_pods/">kubernetes: debug running pods</a></li>
+<li><a href="/braindump/posts/kubeval/">kubeval</a></li>
+<li><a href="/braindump/posts/kustomize/">kustomize</a></li>
+<li><a href="/braindump/posts/lens/">lens</a></li>
+<li><a href="/braindump/posts/lifecycle_of_persistent_volumes/">lifecycle of persistent volumes</a></li>
+<li><a href="/braindump/posts/loadbalancer/">loadbalancer</a></li>
+<li><a href="/braindump/posts/local_docker_registry/">local docker registry</a></li>
+<li><a href="https://konubinix.eu/blog/posts/making_k3d_work_again_in_debian_testing/?title=making_k3d_work_again_in_debian_testing#">making k3d work again in debian testing</a> (blog)</li>
+<li><a href="/braindump/posts/networkpolicy/">networkpolicy</a></li>
+<li><a href="/braindump/posts/persistent_local_volumes_with_k3d_kubernetes/">persistent local volumes with k3d kubernetes</a></li>
+<li><a href="/braindump/posts/persistent_volume/">persistent volume</a></li>
+<li><a href="/braindump/posts/persistent_volume_claim/">persistent volume claim</a></li>
+<li><a href="/braindump/posts/playing_with_gce_persistent_disk_in_k8s/">playing with gce persistent disk in k8s</a></li>
+<li><a href="/braindump/posts/pod/">pod</a></li>
+<li><a href="/braindump/posts/ports_and_protocols_kubernetes/#port-10250-in-id-963f90ee-c92c-4c51-bf17-cbd8b7af0408-kubernetes-self">port 10250 in kubernetes == self</a></li>
+<li><a href="/braindump/posts/ports_and_protocols_kubernetes/">Ports and Protocols | Kubernetes</a></li>
+<li><a href="/braindump/posts/poststart_handler/">postStart handler</a></li>
+<li><a href="/braindump/posts/prestop_handler/">preStop handler</a></li>
+<li><a href="/braindump/posts/recommended_labels/">recommended Labels</a></li>
+<li><a href="/braindump/posts/service_accounts_list_of_kubernetes_rbac_rule_verbs/">service accounts - List of Kubernetes RBAC rule verbs</a></li>
+<li><a href="/braindump/posts/service_accounts_for_pod/">service accounts for pod</a></li>
+<li><a href="/braindump/posts/several_flavors_of_testing_one_s_code/">several flavors of testing one&rsquo;s code</a></li>
+<li><a href="/braindump/posts/statefulsets/">statefulsets</a></li>
+<li><a href="/braindump/posts/storage_class/">storage class</a></li>
+<li><a href="/braindump/posts/telepresence/">telepresence</a></li>
+<li><a href="/braindump/posts/tilt/">tilt</a></li>
+<li><a href="/braindump/posts/toolchains_behind_successful_kubernetes_development_workflows/">toolchains behind successful kubernetes development workflows</a></li>
+<li><a href="/braindump/posts/traefik/">traefik</a></li>
+<li><a href="/braindump/posts/traefik_et_maesh_de_l_ingress_au_service_mesh_avec_michael_matur/">traefik et maesh : de l ingress au service mesh avec Michael Matur</a></li>
+<li><a href="/braindump/posts/unable_to_retrieve_the_complete_list_of_server_apis_metrics_k8s_io_v1beta1/">Unable to retrieve the complete list of server APIs: metrics.k8s.io/v1beta1</a></li>
+<li><a href="/braindump/posts/devops/#id-884674aa-b64d-492a-8806-4c6b59be0cf0-usage-ordinaire-du-mot-id-7a03b945-1c21-4552-9ae5-763d4644531f-devops">usage ordinaire du mot devops</a></li>
+<li><a href="/braindump/posts/use_dockerhub_from_inside_kubernetes/">use dockerhub from inside kubernetes</a></li>
+<li><a href="/braindump/posts/use_kind_and_k3d_with_tilt_and_clk_k8s/">use kind and k3d with tilt and clk k8s</a></li>
+<li><a href="https://konubinix.eu/blog/posts/how_to_run_an_initialisation_mechanism_everytime_a_container_restarts_in_a_pod/?title=using_an_operator#using-an-operator">using an operator</a> (blog)</li>
+<li><a href="/braindump/posts/using_helm_and_kustomize_to_build_more_declarative_kubernetes_workloads/">using helm and kustomize to build more declarative kubernetes workloads</a></li>
+<li><a href="/braindump/posts/visual_guide_on_troubleshooting_kubernetes_deployments/">visual guide on troubleshooting Kubernetes deployments</a></li>
+<li><a href="/braindump/posts/volumes_in_kubernetes/">volumes in kubernetes</a></li>
+<li><a href="/braindump/posts/what_is_v1beta1_metrics_k8s_io_and_what_does_false_missingendpoints_means/">what is v1beta1.metrics.k8s.io and what does False (MissingEndpoints) means</a></li>
+<li><a href="/braindump/posts/where_to_store_acme_json_when_using_traefik/">where to store acme.json when using traefik</a></li>
+<li><a href="https://konubinix.eu/blog/posts/clk_k8s_accessing_the_host_from_the_pod_on_linux_and_mac/?title=with_docker_desktop#with-docker-desktop">with docker desktop</a> (blog)</li>
+<li><a href="/braindump/posts/gitops/#448cc97e-535d-4bea-a2f9-561ed5497dbe">with kubernetes</a></li>
+<li><a href="/braindump/posts/world_s_simplest_kubernetes_dashboard_k1s/">world’s simplest Kubernetes dashboard: k1s</a></li>
+<li><a href="/braindump/posts/evolution_des_ihm/">évolution des ihm</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/963f90ee-c92c-4c51-bf17-cbd8b7af0408?title=kubernetes">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 11 Jun 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 17 Apr 2020</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

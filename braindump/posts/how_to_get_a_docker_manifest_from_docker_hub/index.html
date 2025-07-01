@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html><title>how to get a docker manifest from docker-hub</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>How to Get a Docker Manifest From Docker-Hub</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>find what is done when <a href="/braindump/posts/docker/">docker</a> pulling with <a href="/braindump/posts/mitmproxy/">mitmproxy</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>sudo tcpdump |gi docker
+</span></span></code></pre></div><p>#+RESULT</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>09:37:44.220334 ... AAAA? registry-1.docker.io. (38)
+</span></span><span style="display:flex;"><span>09:37:44.220337 ... A? registry-1.docker.io. (38)
+</span></span><span style="display:flex;"><span>09:37:44.862738 ... AAAA? auth.docker.io. (32)
+</span></span><span style="display:flex;"><span>09:37:44.862741 ... A? auth.docker.io. (32)
+</span></span><span style="display:flex;"><span>09:37:45.272476 ... AAAA? registry-1.docker.io. (38)
+</span></span><span style="display:flex;"><span>09:37:45.272478 ... A? registry-1.docker.io. (38)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>docker run --name mitmproxy --rm -it -p 443:8080 mitmproxy/mitmproxy mitmdump --show-flow <span style="color:#099">2</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>mkdir -p <span style="color:#d14">&#34;</span><span style="color:#008080">$KONIX_PERSO_DIR</span><span style="color:#d14">/ca-certificates/mitmproxy&#34;</span>
+</span></span><span style="display:flex;"><span>dk <span style="color:#0086b3">exec</span> mitmproxy cat /home/mitmproxy/.mitmproxy/mitmproxy-ca-cert.pem &gt; <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">KONIX_PERSO_DIR</span><span style="color:#d14">}</span><span style="color:#d14">/ca-certificates/mitmproxy/mitmproxy.crt&#34;</span>
+</span></span><span style="display:flex;"><span>konix_update-ca-certificates.sh
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cat<span style="color:#d14">&lt;&lt;EOF &gt;&gt; /etc/hosts
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">127.0.0.1  registry-1.docker.io
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">127.0.0.1  auth.docker.io
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>dk manifest inspect --insecure ubuntu
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[08:44:51.803] HTTP(S) proxy listening at *:8080.
+</span></span><span style="display:flex;"><span>[08:44:56.687][172.17.0.1:51218] client connect
+</span></span><span style="display:flex;"><span>[08:44:56.888][172.17.0.1:51218] server connect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51218: GET https://registry-1.docker.io/v2/
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 401 Unauthorized 87b
+</span></span><span style="display:flex;"><span>    content-type: application/json
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    www-authenticate: Bearer realm=&#34;https://auth.docker.io/token&#34;,service=&#34;registry.docker.io&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:44:57 GMT
+</span></span><span style="display:flex;"><span>    content-length: 87
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:44:57.173][172.17.0.1:51218] server disconnect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>[08:44:57.174][172.17.0.1:51218] client disconnect
+</span></span><span style="display:flex;"><span>[08:44:57.175][172.17.0.1:51232] client connect
+</span></span><span style="display:flex;"><span>[08:44:57.338][172.17.0.1:51232] server connect auth.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51232: GET https://auth.docker.io/token?account=eniblock&amp;scope=repository%3Alibrary%2Fubuntu%3Apush%2Cpull&amp;service=registry.docker.io
+</span></span><span style="display:flex;"><span>    Host: auth.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Authorization: Basic XXXXX
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 4.2k
+</span></span><span style="display:flex;"><span>    content-type: application/json; charset=utf-8
+</span></span><span style="display:flex;"><span>    x-trace-id: c5ea01dd3361cd9ca0a132cba86d6598
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:44:57 GMT
+</span></span><span style="display:flex;"><span>    transfer-encoding: chunked
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:44:57.634][172.17.0.1:51232] server disconnect auth.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>[08:44:57.635][172.17.0.1:51232] client disconnect
+</span></span><span style="display:flex;"><span>[08:44:57.635][172.17.0.1:51240] client connect
+</span></span><span style="display:flex;"><span>[08:44:57.761][172.17.0.1:51240] server connect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51240: GET https://registry-1.docker.io/v2/library/ubuntu/manifests/latest
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.oci.image.index.v1+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 1.4k
+</span></span><span style="display:flex;"><span>    content-length: 1416
+</span></span><span style="display:flex;"><span>    content-type: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    docker-content-digest: sha256:4b1d0c4a2d2aaf63b37111f34eb9fa89fa1bf53dd6e4ca954d47caebca4005c2
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    etag: &#34;sha256:4b1d0c4a2d2aaf63b37111f34eb9fa89fa1bf53dd6e4ca954d47caebca4005c2&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:44:57 GMT
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    docker-ratelimit-source: b3280dd9-2fc9-4f2f-bcca-24216f88d596
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:44:58.034][172.17.0.1:51240] server disconnect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>[08:44:58.035][172.17.0.1:51240] client disconnect
+</span></span><span style="display:flex;"><span>[08:44:58.042][172.17.0.1:51254] client connect
+</span></span><span style="display:flex;"><span>[08:44:58.169][172.17.0.1:51254] server connect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51254: GET https://registry-1.docker.io/v2/
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 401 Unauthorized 87b
+</span></span><span style="display:flex;"><span>    content-type: application/json
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    www-authenticate: Bearer realm=&#34;https://auth.docker.io/token&#34;,service=&#34;registry.docker.io&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:44:58 GMT
+</span></span><span style="display:flex;"><span>    content-length: 87
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:44:58.410][172.17.0.1:51254] server disconnect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>[08:44:58.410][172.17.0.1:51254] client disconnect
+</span></span><span style="display:flex;"><span>[08:44:58.411][172.17.0.1:51262] client connect
+</span></span><span style="display:flex;"><span>[08:44:58.534][172.17.0.1:51262] server connect auth.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51262: GET https://auth.docker.io/token?account=eniblock&amp;scope=repository%3Alibrary%2Fubuntu%3Apush%2Cpull&amp;service=registry.docker.io
+</span></span><span style="display:flex;"><span>    Host: auth.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Authorization: Basic XXXXX
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 4.2k
+</span></span><span style="display:flex;"><span>    content-type: application/json; charset=utf-8
+</span></span><span style="display:flex;"><span>    x-trace-id: 19be5761fcfd711a985d8d92322660fc
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:44:58 GMT
+</span></span><span style="display:flex;"><span>    transfer-encoding: chunked
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:44:58.806][172.17.0.1:51262] server disconnect auth.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>[08:44:58.807][172.17.0.1:51262] client disconnect
+</span></span><span style="display:flex;"><span>[08:44:58.807][172.17.0.1:51272] client connect
+</span></span><span style="display:flex;"><span>[08:44:58.956][172.17.0.1:51272] server connect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51272: GET https://registry-1.docker.io/v2/library/ubuntu/manifests/latest
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.oci.image.index.v1+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 1.4k
+</span></span><span style="display:flex;"><span>    content-length: 1416
+</span></span><span style="display:flex;"><span>    content-type: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    docker-content-digest: sha256:4b1d0c4a2d2aaf63b37111f34eb9fa89fa1bf53dd6e4ca954d47caebca4005c2
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    etag: &#34;sha256:4b1d0c4a2d2aaf63b37111f34eb9fa89fa1bf53dd6e4ca954d47caebca4005c2&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:44:59 GMT
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    docker-ratelimit-source: b3280dd9-2fc9-4f2f-bcca-24216f88d596
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:44:59.294][172.17.0.1:51272] server disconnect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>[08:44:59.295][172.17.0.1:51272] client disconnect
+</span></span><span style="display:flex;"><span>[08:44:59.295][172.17.0.1:51282] client connect
+</span></span><span style="display:flex;"><span>[08:44:59.423][172.17.0.1:51282] server connect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51282: GET https://registry-1.docker.io/v2/library/ubuntu/manifests/sha256:817cfe4672284dcbfee885b1a66094fd907630d610cab329114d036716be49ba
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.oci.image.index.v1+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 529b
+</span></span><span style="display:flex;"><span>    content-length: 529
+</span></span><span style="display:flex;"><span>    content-type: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    docker-content-digest: sha256:817cfe4672284dcbfee885b1a66094fd907630d610cab329114d036716be49ba
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    etag: &#34;sha256:817cfe4672284dcbfee885b1a66094fd907630d610cab329114d036716be49ba&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:44:59 GMT
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    docker-ratelimit-source: b3280dd9-2fc9-4f2f-bcca-24216f88d596
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:44:59.681][172.17.0.1:51282] server disconnect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>[08:44:59.682][172.17.0.1:51282] client disconnect
+</span></span><span style="display:flex;"><span>[08:44:59.682][172.17.0.1:51286] client connect
+</span></span><span style="display:flex;"><span>[08:44:59.810][172.17.0.1:51286] server connect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51286: GET https://registry-1.docker.io/v2/library/ubuntu/blobs/sha256:a8780b506fa4eeb1d0779a3c92c8d5d3e6a656c758135f62826768da458b5235
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept-Encoding: identity
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 307 Temporary Redirect 0b
+</span></span><span style="display:flex;"><span>    content-type: application/octet-stream
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    location: https://production.cloudflare.docker.com/registry-v2/docker/registry/v2/blobs/sha256/a8/a8780b506fa4eeb1d0779a3c92c8d5d3e6a656c758135f62826768da458b5235/data?verify=1668764100-ITDL2ka2Ktdu6pduWowfCi1%2B5zo%3D
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:00 GMT
+</span></span><span style="display:flex;"><span>    content-length: 0
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:00.070][172.17.0.1:51286] server disconnect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>[08:45:00.070][172.17.0.1:51286] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:00.154][172.17.0.1:51296] client connect
+</span></span><span style="display:flex;"><span>[08:45:00.280][172.17.0.1:51296] server connect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51296: GET https://registry-1.docker.io/v2/library/ubuntu/manifests/sha256:51979e68b0c8108cc912d80604e1cfbeb1baebba4c7c5af969a27ef8e17e41ea
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.oci.image.index.v1+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 529b
+</span></span><span style="display:flex;"><span>    content-length: 529
+</span></span><span style="display:flex;"><span>    content-type: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    docker-content-digest: sha256:51979e68b0c8108cc912d80604e1cfbeb1baebba4c7c5af969a27ef8e17e41ea
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    etag: &#34;sha256:51979e68b0c8108cc912d80604e1cfbeb1baebba4c7c5af969a27ef8e17e41ea&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:00 GMT
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    docker-ratelimit-source: b3280dd9-2fc9-4f2f-bcca-24216f88d596
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:00.543][172.17.0.1:51296] server disconnect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>[08:45:00.543][172.17.0.1:51296] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:00.544][172.17.0.1:51310] client connect
+</span></span><span style="display:flex;"><span>[08:45:00.698][172.17.0.1:51310] server connect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51310: GET https://registry-1.docker.io/v2/library/ubuntu/blobs/sha256:c10b89de5688fa66237339e001fedfb77df79fa0d8e852ebccbbf370fa563250
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept-Encoding: identity
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 307 Temporary Redirect 0b
+</span></span><span style="display:flex;"><span>    content-type: application/octet-stream
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    location: https://production.cloudflare.docker.com/registry-v2/docker/registry/v2/blobs/sha256/c1/c10b89de5688fa66237339e001fedfb77df79fa0d8e852ebccbbf370fa563250/data?verify=1668764100-YDvkesBZkS8jwTi6%2FdIYQXFSbVo%3D
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:00 GMT
+</span></span><span style="display:flex;"><span>    content-length: 0
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:00.996][172.17.0.1:51310] server disconnect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>[08:45:00.997][172.17.0.1:51310] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:01.113][172.17.0.1:51322] client connect
+</span></span><span style="display:flex;"><span>[08:45:01.248][172.17.0.1:51322] server connect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51322: GET https://registry-1.docker.io/v2/library/ubuntu/manifests/sha256:41130130e6846dabaa4cb2a0571b8ee7b55c22d15a843c4ac03fde6cb96bfe45
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.oci.image.index.v1+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 529b
+</span></span><span style="display:flex;"><span>    content-length: 529
+</span></span><span style="display:flex;"><span>    content-type: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    docker-content-digest: sha256:41130130e6846dabaa4cb2a0571b8ee7b55c22d15a843c4ac03fde6cb96bfe45
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    etag: &#34;sha256:41130130e6846dabaa4cb2a0571b8ee7b55c22d15a843c4ac03fde6cb96bfe45&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:01 GMT
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    docker-ratelimit-source: b3280dd9-2fc9-4f2f-bcca-24216f88d596
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:01.504][172.17.0.1:51322] server disconnect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>[08:45:01.505][172.17.0.1:51322] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:01.505][172.17.0.1:51336] client connect
+</span></span><span style="display:flex;"><span>[08:45:01.636][172.17.0.1:51336] server connect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51336: GET https://registry-1.docker.io/v2/library/ubuntu/blobs/sha256:3c2df5585507842f5cab185f8ad3e26dc1d8c4f6d09e30117af844dfa953f676
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept-Encoding: identity
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 307 Temporary Redirect 0b
+</span></span><span style="display:flex;"><span>    content-type: application/octet-stream
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    location: https://production.cloudflare.docker.com/registry-v2/docker/registry/v2/blobs/sha256/3c/3c2df5585507842f5cab185f8ad3e26dc1d8c4f6d09e30117af844dfa953f676/data?verify=1668764101-qG05%2FBt24TIy0tj3uKMsuvomX2k%3D
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:01 GMT
+</span></span><span style="display:flex;"><span>    content-length: 0
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:01.879][172.17.0.1:51336] server disconnect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>[08:45:01.879][172.17.0.1:51336] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:01.974][172.17.0.1:51338] client connect
+</span></span><span style="display:flex;"><span>[08:45:02.095][172.17.0.1:51338] server connect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51338: GET https://registry-1.docker.io/v2/library/ubuntu/manifests/sha256:c73605a7d7b153330a75da5b6e05d365958c1cf968dda622b5537601f5e120d0
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.oci.image.index.v1+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 529b
+</span></span><span style="display:flex;"><span>    content-length: 529
+</span></span><span style="display:flex;"><span>    content-type: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    docker-content-digest: sha256:c73605a7d7b153330a75da5b6e05d365958c1cf968dda622b5537601f5e120d0
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    etag: &#34;sha256:c73605a7d7b153330a75da5b6e05d365958c1cf968dda622b5537601f5e120d0&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:02 GMT
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    docker-ratelimit-source: b3280dd9-2fc9-4f2f-bcca-24216f88d596
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:02.464][172.17.0.1:51338] server disconnect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>[08:45:02.465][172.17.0.1:51338] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:02.465][172.17.0.1:51352] client connect
+</span></span><span style="display:flex;"><span>[08:45:02.592][172.17.0.1:51352] server connect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51352: GET https://registry-1.docker.io/v2/library/ubuntu/blobs/sha256:362d4582516b102141b0708769fc3023c4387c5e317fd6bbc8b84953253ed59b
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept-Encoding: identity
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 307 Temporary Redirect 0b
+</span></span><span style="display:flex;"><span>    content-type: application/octet-stream
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    location: https://production.cloudflare.docker.com/registry-v2/docker/registry/v2/blobs/sha256/36/362d4582516b102141b0708769fc3023c4387c5e317fd6bbc8b84953253ed59b/data?verify=1668764102-AbRj80TzGuz3ZgXBZwStN4Yf31U%3D
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:02 GMT
+</span></span><span style="display:flex;"><span>    content-length: 0
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:02.837][172.17.0.1:51352] server disconnect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>[08:45:02.838][172.17.0.1:51352] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:02.932][172.17.0.1:51356] client connect
+</span></span><span style="display:flex;"><span>[08:45:03.062][172.17.0.1:51356] server connect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51356: GET https://registry-1.docker.io/v2/library/ubuntu/manifests/sha256:fbc099c0093ffef69280c96a753ecb9834086e76b577f18ece2851b430a53e29
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.oci.image.index.v1+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 529b
+</span></span><span style="display:flex;"><span>    content-length: 529
+</span></span><span style="display:flex;"><span>    content-type: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    docker-content-digest: sha256:fbc099c0093ffef69280c96a753ecb9834086e76b577f18ece2851b430a53e29
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    etag: &#34;sha256:fbc099c0093ffef69280c96a753ecb9834086e76b577f18ece2851b430a53e29&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:03 GMT
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    docker-ratelimit-source: b3280dd9-2fc9-4f2f-bcca-24216f88d596
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:03.486][172.17.0.1:51356] server disconnect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>[08:45:03.486][172.17.0.1:51356] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:03.487][172.17.0.1:51362] client connect
+</span></span><span style="display:flex;"><span>[08:45:03.616][172.17.0.1:51362] server connect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51362: GET https://registry-1.docker.io/v2/library/ubuntu/blobs/sha256:d3922b002368878a3dff62bf2d448dd120e4ea02fccd6832eef96c1264267d3f
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept-Encoding: identity
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 307 Temporary Redirect 0b
+</span></span><span style="display:flex;"><span>    content-type: application/octet-stream
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    location: https://production.cloudflare.docker.com/registry-v2/docker/registry/v2/blobs/sha256/d3/d3922b002368878a3dff62bf2d448dd120e4ea02fccd6832eef96c1264267d3f/data?verify=1668764103-0cnPssB6mb88zH9xXaoNWtfm5Q4%3D
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:03 GMT
+</span></span><span style="display:flex;"><span>    content-length: 0
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:03.855][172.17.0.1:51362] server disconnect registry-1.docker.io:443 (44.205.64.79:443)
+</span></span><span style="display:flex;"><span>[08:45:03.856][172.17.0.1:51362] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:04.043][172.17.0.1:51376] client connect
+</span></span><span style="display:flex;"><span>[08:45:04.205][172.17.0.1:51376] server connect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51376: GET https://registry-1.docker.io/v2/library/ubuntu/manifests/sha256:75f39282185d9d952d5d19491a0c98ed9f798b0251c6d9a026e5b71cc2bf4de3
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.list.v2+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.oci.image.index.v1+json
+</span></span><span style="display:flex;"><span>    Accept: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Accept-Encoding: gzip
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 200 OK 529b
+</span></span><span style="display:flex;"><span>    content-length: 529
+</span></span><span style="display:flex;"><span>    content-type: application/vnd.docker.distribution.manifest.v2+json
+</span></span><span style="display:flex;"><span>    docker-content-digest: sha256:75f39282185d9d952d5d19491a0c98ed9f798b0251c6d9a026e5b71cc2bf4de3
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    etag: &#34;sha256:75f39282185d9d952d5d19491a0c98ed9f798b0251c6d9a026e5b71cc2bf4de3&#34;
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:04 GMT
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    docker-ratelimit-source: b3280dd9-2fc9-4f2f-bcca-24216f88d596
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:04.545][172.17.0.1:51376] server disconnect registry-1.docker.io:443 (3.216.34.172:443)
+</span></span><span style="display:flex;"><span>[08:45:04.545][172.17.0.1:51376] client disconnect
+</span></span><span style="display:flex;"><span>[08:45:04.546][172.17.0.1:51386] client connect
+</span></span><span style="display:flex;"><span>[08:45:04.676][172.17.0.1:51386] server connect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>172.17.0.1:51386: GET https://registry-1.docker.io/v2/library/ubuntu/blobs/sha256:a2cfa9df7e0f7e755a2d0e3d649d22b21013c6a6d28f9cdcce72837135a943d8
+</span></span><span style="display:flex;"><span>    Host: registry-1.docker.io
+</span></span><span style="display:flex;"><span>    User-Agent: Docker-Client/20.10.20 (linux)
+</span></span><span style="display:flex;"><span>    Accept-Encoding: identity
+</span></span><span style="display:flex;"><span>    Authorization: Bearer YYYYY
+</span></span><span style="display:flex;"><span>    Connection: close
+</span></span><span style="display:flex;"><span> &lt;&lt; 307 Temporary Redirect 0b
+</span></span><span style="display:flex;"><span>    content-type: application/octet-stream
+</span></span><span style="display:flex;"><span>    docker-distribution-api-version: registry/2.0
+</span></span><span style="display:flex;"><span>    location: https://production.cloudflare.docker.com/registry-v2/docker/registry/v2/blobs/sha256/a2/a2cfa9df7e0f7e755a2d0e3d649d22b21013c6a6d28f9cdcce72837135a943d8/data?verify=1668764104-7uBJj1EWlNLxSmf%2BaGXgJEc7CCU%3D
+</span></span><span style="display:flex;"><span>    date: Fri, 18 Nov 2022 08:45:04 GMT
+</span></span><span style="display:flex;"><span>    content-length: 0
+</span></span><span style="display:flex;"><span>    strict-transport-security: max-age=31536000
+</span></span><span style="display:flex;"><span>    connection: close
+</span></span><span style="display:flex;"><span>[08:45:04.932][172.17.0.1:51386] server disconnect registry-1.docker.io:443 (34.205.13.154:443)
+</span></span><span style="display:flex;"><span>[08:45:04.932][172.17.0.1:51386] client disconnect
+</span></span></code></pre></div><p>What do I learn by looking at this?</p>
+<ol>
+<li>ubuntu -&gt; library/ubuntu</li>
+<li>I need to authenticate to have a token, even if it is a dumb authentication.</li>
+</ol>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/mitmproxy/">mitmproxy</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/703d382c-596c-4d84-99ab-e9828c9b488f?title=how_to_get_a_docker_manifest_from_docker_hub">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 18 Nov 2022</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 18 Nov 2022</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

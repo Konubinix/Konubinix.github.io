@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html><title>efficient shell bash writing</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Efficient Shell Bash Writing</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#c0489400-57a8-4181-a0d4-e1c830310522">test if in a terminal</a></li>
+<li><a href="#3cec7dfa-fd97-4c4e-8c6f-5006ca7d7fe2">use &lt; /dev/tty for ALL interactive inputs</a></li>
+<li><a href="#5123508e-50ea-42a3-89cd-68a03ae879bf">beware pipes that will make the command pass</a></li>
+<li><a href="#a6d32468-899c-4cc1-bdbf-2f646844b33e">beware of command substitutions that won&rsquo;t make the program stop &rsquo;echo &ldquo;$(false)&rdquo;&rsquo;</a></li>
+<li><a href="#30b6d722-d472-4c3d-b1c0-90b1d51b30ce">Kill child jobs on script exit : A Weird Imagination</a></li>
+<li><a href="#624d22d7-61b8-43f3-be05-e995443a68ae">values unpacking</a></li>
+<li><a href="#c3d80b55-c907-431d-808b-29f5bf2d5df6">strings</a>
+<ul>
+<li><a href="#2326df71-2b0e-46e5-94e5-9e454f25287a">get a substring</a></li>
+</ul>
+</li>
+<li><a href="#1affe4f0-2e62-40d3-853a-0f863aff906c">understanding file descriptor duplication</a>
+<ul>
+<li><a href="#43642aa5-6094-4df4-b239-128cca40b0b0">File descriptors and files</a></li>
+<li><a href="#91560908-5327-44fd-a78d-2ac66d3fa9fc">Interpretation of the bash commands</a>
+<ul>
+<li><a href="#d08ec260-6589-4e81-94cf-a65f82b5edee">command &gt; file 2&gt;&amp;1</a></li>
+<li><a href="#cce21eb7-c045-41a4-be6e-1e87e5ccde20">command 2&gt;&amp;1 &gt; file</a></li>
+</ul>
+</li>
+<li><a href="#85b9af15-c21d-445e-b5f1-608e4eb6a579">Diagram</a></li>
+</ul>
+</li>
+<li><a href="#18d99930-11f3-422c-85d4-87c3314d9173">use subshell with traps</a></li>
+<li><a href="#68a40a64-1037-4979-a0c4-c6a7598cf0d1">bash redirect output to the same file as taken as input by piping into a sponge</a></li>
+<li><a href="#eb0cbb62-6b8b-4536-b758-496e8362363f">bash manipulate substrings</a>
+<ul>
+<li><a href="#5fdb5de0-c918-4cf3-b10e-85102dbfe5e3">take substring</a></li>
+<li><a href="#1f8f7a41-a68e-41e0-a734-14209aac995d">remove suffix (like an extension)</a></li>
+<li><a href="#c90d9b17-9230-4a73-96a7-aee3b69ff0e9">remove prefix</a></li>
+<li><a href="#381c3d6a-e6b2-4ee6-acb1-445f4cb4bf01">keep prefix</a></li>
+<li><a href="#f5d1283d-5b36-43c2-ab1a-d2ba7c1db0f4">keep suffix</a></li>
+</ul>
+</li>
+<li><a href="#f5e7cd71-e66a-4d92-9948-7134b0a16837">craft a custom bash completion out of another one, like an alias</a></li>
+<li><a href="#af873e06-d930-4474-bacb-1e63040a1f6f">bkt to cache commands</a></li>
+<li><a href="#967c0ab0-d594-4d4c-b629-6b4d13bfd317">manipulate arrays in bash</a>
+<ul>
+<li><a href="#5772b6ec-302b-4e29-b895-b0d20fe1eaac">bash split string on delimiter, assign segments to array (like PATH and semicolon)</a></li>
+<li><a href="#1fe9dc5a-b382-4d24-8c1a-8ecf500390cf">slice an Array in Bash</a></li>
+<li><a href="#e8eba856-4387-4896-9f73-511e68e993d0">create arrays</a></li>
+<li><a href="#5629eec8-1073-4003-bf71-ef0dd6d2d4f4">add values to array</a></li>
+<li><a href="#d063e184-066a-4cfe-b80e-e24be9850e15">dereference array, without messing up with spaces</a></li>
+<li><a href="#75426a14-8901-4b97-9c8b-b931472c329c">append/concatenate arrays in bash, without messing up with spaces</a></li>
+<li><a href="#cbd66b36-1641-4c7e-9303-13d5fa99b3a1">size of an array</a></li>
+<li><a href="#79a29244-455f-4785-9d49-3a5eebb1238a">building args before calling a function</a></li>
+</ul>
+</li>
+<li><a href="#c4446531-e07f-40ca-9a66-aad0b4622599">Defensive programming with bash</a>
+<ul>
+<li><a href="#fa677122-fae5-4bed-9d79-aa4fb6b4549c">Fail Fast Bash Scripting</a></li>
+</ul>
+</li>
+<li><a href="#notes-linking-here">Notes linking here</a></li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>efficient <a href="/braindump/posts/bash/">bash</a> writing</p>
+<h2 id="c0489400-57a8-4181-a0d4-e1c830310522">test if in a terminal</h2>
+<p>test -t 1</p>
+<h2 id="3cec7dfa-fd97-4c4e-8c6f-5006ca7d7fe2">use &lt; /dev/tty for ALL interactive inputs</h2>
+<p>The following command comes naturally when processing several pieces of information and asking for user input in the process.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mycommand | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> line; <span style="color:#000;font-weight:bold">do</span> <span style="color:#0086b3">echo</span> -n <span style="color:#d14">&#34;</span><span style="color:#008080">$line</span><span style="color:#d14">&#34;</span> ; <span style="color:#0086b3">read</span> -p <span style="color:#d14">&#34;Is that line relevant to you&#34;</span> ; <span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><p>But, the inner read while also read the output of mycommand.</p>
+<p>This can be even trickier when the code is split.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ask_for_user_input <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">read</span> -p <span style="color:#d14">&#34;Is that line relevant to you&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>mycommand | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> line; <span style="color:#000;font-weight:bold">do</span> <span style="color:#0086b3">echo</span> -n <span style="color:#d14">&#34;</span><span style="color:#008080">$line</span><span style="color:#d14">&#34;</span> ; ask_for_user_input ; <span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><p>Instead, tell explicitly to your command that it should read from the user
+input.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ask_for_user_input <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">read</span> -p <span style="color:#d14">&#34;Is that line relevant to you&#34;</span> &lt; /dev/tty
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>mycommand | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> line; <span style="color:#000;font-weight:bold">do</span> <span style="color:#0086b3">echo</span> -n <span style="color:#d14">&#34;</span><span style="color:#008080">$line</span><span style="color:#d14">&#34;</span> ; ask_for_user_input ; <span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><h2 id="5123508e-50ea-42a3-89cd-68a03ae879bf">beware pipes that will make the command pass</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">false</span> &gt; /tmp/log.txt
+</span></span></code></pre></div><p>exits with code 1</p>
+<p>While</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">false</span> | tee /tmp/logs.txt
+</span></span></code></pre></div><p>Passes</p>
+<p>Either explicitly ask bash to fail in that case</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">set</span> -o pipefail
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">false</span> | tee /tmp/logs.txt
+</span></span></code></pre></div><p>Or deal with the PIPESTATUS</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">false</span> | tee /tmp/logs.txt
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">exit</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">PIPESTATUS</span>[0]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><h2 id="a6d32468-899c-4cc1-bdbf-2f646844b33e">beware of command substitutions that won&rsquo;t make the program stop &rsquo;echo &ldquo;$(false)&rdquo;'</h2>
+<p>Whenever you use the pattern <code>$()</code> in a string, even with <code>set -e</code> and <code>shopt -s inherit_errexit</code>, bash will not stop.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">set</span> -e
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">shopt</span> -s inherit_errexit
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Using a command that fails </span><span style="color:#000;font-weight:bold">$(</span><span style="color:#0086b3">false</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;This should not be printed&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Using a command that fails
+</span></span><span style="display:flex;"><span>This should not be printed
+</span></span></code></pre></div><p>Instead, put those in temporary variables. This command fails like we want to.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">set</span> -e
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">shopt</span> -s inherit_errexit
+</span></span><span style="display:flex;"><span><span style="color:#008080">tempresult_</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;Using a command that fails </span><span style="color:#000;font-weight:bold">$(</span><span style="color:#0086b3">false</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">tempresult_</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;This should not be printed&#34;</span>
+</span></span></code></pre></div><p>or</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">set</span> -e
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">shopt</span> -s inherit_errexit
+</span></span><span style="display:flex;"><span><span style="color:#008080">tempresult_</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span><span style="color:#0086b3">false</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Using a command that fails </span><span style="color:#d14">${</span><span style="color:#008080">tempresult_</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;This should not be printed&#34;</span>
+</span></span></code></pre></div><h2 id="30b6d722-d472-4c3d-b1c0-90b1d51b30ce">Kill child jobs on script exit : A Weird Imagination</h2>
+<ul>
+<li>External reference: <a href="https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/">https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/</a></li>
+</ul>
+<p>Kill child jobs on script exit : A Weird Imagination</p>
+<blockquote>
+<p>At the start of the script, add
+cleanup() {</p>
+<pre><code>pkill -P $$
+</code></pre>
+<p>}</p>
+<p>for sig in INT QUIT HUP TERM; do
+trap &quot;
+cleanup
+trap - $sig EXIT
+kill -s $sig &ldquo;&rsquo;&quot;$$&rdquo;&rsquo; &ldquo;$sig&rdquo;
+done
+trap cleanup EXIT</p>
+<p>&mdash; <a href="https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/">https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>example code to run a
+cleanup function on exit, even if exiting due to being killed by a
+signal that would normally halt the script immediately (obviously except
+for SIGKILL):
+for sig in INT QUIT HUP TERM ALRM USR1; do
+trap &quot;
+cleanup
+trap - $sig EXIT
+kill -s $sig &ldquo;&rsquo;&quot;$$&rdquo;&rsquo; &ldquo;$sig&rdquo;
+done
+trap cleanup EXIT</p>
+<p>&mdash; <a href="https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/">https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>kills all immediate child
+processes of the script by killing all processes whose parent is the
+script:
+pkill -P $$</p>
+<p>&mdash; <a href="https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/">https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Another option is killing all descendants using
+rkill:
+rkill $$</p>
+<p>&mdash; <a href="https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/">https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>another possible interpretation of killing all child jobs:
+it&rsquo;s possible that what we want is to kill all jobs which have not been
+disowned. Unfortunately, this quickly runs into differences between
+shells.</p>
+<p>&mdash; <a href="https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/">https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>Another alternative that almost works is
+kill $(jobs -p)</p>
+<p>It works in bash, but dash has a bug that
+requires the workaround of writing the output of jobs -p
+to a file and reading that file back. Then it works in every shell I
+tested except zsh where the jobs builtin does not have a
+-p option</p>
+<p>&mdash; <a href="https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/">https://aweirdimagination.net/2020/06/28/kill-child-jobs-on-script-exit/</a></p>
+</blockquote>
+<h2 id="624d22d7-61b8-43f3-be05-e995443a68ae">values unpacking</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">read</span> var1 var2 var3 &lt; &lt;<span style="color:#000;font-weight:bold">(</span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;a b c&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">var1</span><span style="color:#d14">}</span><span style="color:#d14">, </span><span style="color:#d14">${</span><span style="color:#008080">var2</span><span style="color:#d14">}</span><span style="color:#d14">, </span><span style="color:#d14">${</span><span style="color:#008080">var3</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a, b, c
+</span></span></code></pre></div><h2 id="c3d80b55-c907-431d-808b-29f5bf2d5df6">strings</h2>
+<h3 id="2326df71-2b0e-46e5-94e5-9e454f25287a">get a substring</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;some string&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>:<span style="color:#008080">0</span>:<span style="color:#008080">3</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>:<span style="color:#008080">3</span>:<span style="color:#008080">6</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>som
+</span></span><span style="display:flex;"><span>e stri
+</span></span></code></pre></div><h2 id="1affe4f0-2e62-40d3-853a-0f863aff906c">understanding file descriptor duplication</h2>
+<h3 id="43642aa5-6094-4df4-b239-128cca40b0b0">File descriptors and files</h3>
+<p>Programs don&rsquo;t see files, they only see integers referring to files (remember a file may be a lot of things in linux).
+When a program opens a file for reading for instance, linux adds an entry into a file descriptor table that, well&hellip; describes the file. The program is then given the index in the table pointing to the file.</p>
+<p>When a program is launched, three files descriptors are opened by default:</p>
+<ol>
+<li>the entry number 0 is generally called stdin and points to a read only file associated to the keyboard, bash refers to this file using &amp;0</li>
+<li>the entry number 1 is generally called stdout and points to a write only file association to the current terminal, bash refers to this file using &amp;1</li>
+<li>the entry number 2 is generally called stderr and points to a write only file association to the current terminal, bash refers to this file using &amp;2</li>
+</ol>
+<p>Stdout and stderr are not associated to the same file, but both file are by default associated to the current terminal. I will call them tty1 and tty2 but it is probably a misuse of the words tty. I don&rsquo;t know how it works.</p>
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafkreifgaw5nkeldpdalqtxefrg7yszzktav77776bxwcotqqpf2s3ywym?filename=program_start.png">
+</figure>
+
+<p>If I open a file, the file descriptor 3 will be used to communicate with this file and bash will allow to refer it as &amp;3.</p>
+<h3 id="91560908-5327-44fd-a78d-2ac66d3fa9fc">Interpretation of the bash commands</h3>
+<p>The commands file descriptor manipulation are executed from left to right.
+(note: &gt; file is equivalent to 1&gt; file)</p>
+<h4 id="d08ec260-6589-4e81-94cf-a65f82b5edee">command &gt; file 2&gt;&amp;1</h4>
+<p>This means:</p>
+<ol>
+<li>redirect the content going to file descriptor 1 to the file. The old file is no more pointed to by file descriptor 1</li>
+</ol>
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafkreidf5n2q2oncuwe4qx4ov4nwvnuvjdnavkcarod3owskda6xvzpsxm?filename=first_use_case_1.png">
+</figure>
+
+<ol>
+<li>then, redirect the content going to the file descriptor 2 to the file pointed by the file descriptor 1</li>
+</ol>
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafkreigspzkjl76nowlsraz2jw62dl6zoswao7gldgh4xyoxthrhed3ua4?filename=first_use_case_2.png">
+</figure>
+
+<p>Then this commands concatenates the stdout and the stderr contents and put them into file.</p>
+<h4 id="cce21eb7-c045-41a4-be6e-1e87e5ccde20">command 2&gt;&amp;1 &gt; file</h4>
+<p>This means:</p>
+<ol>
+<li>redirect the content going to the file descriptor 2 to the file pointed by the file descriptor 1</li>
+</ol>
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafkreievlwowjavxcnyvrrmuod6l3dj55ks7zrexceidkql4tokqwexipq?filename=second_use_case_1.png">
+</figure>
+
+<ol>
+<li>then, redirect the content going to file descriptor 1 to the file. The old file is no more pointed to by file descriptor 1</li>
+</ol>
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafkreibbfkkajfbeshp5uduc6famli6dchkjbbzinhywfb4r7rc2yubadu?filename=second_use_case_2.png">
+</figure>
+
+<p>Therefore, this command writes the stderr on the file initially associated to stdout and writes stdout in the file.</p>
+<h3 id="85b9af15-c21d-445e-b5f1-608e4eb6a579">Diagram</h3>
+<p>The source of the diagrams is here:</p>
+<p><a href="https://ipfs.konubinix.eu/ipfs/bafkreifeaerz3daocidwsavi2ao5dixictlif6ccrkisfzx7lfci24i6lu?filename=file_descriptor.dia">file_descriptor.dia</a></p>
+<h2 id="18d99930-11f3-422c-85d4-87c3314d9173">use subshell with traps</h2>
+<p>As a quick rule of thumb, try to always have the trap instruction be the first
+stuff after the start of the shell or a subshell.</p>
+<p>In case you need some temporary stuff to be cleaned at the end of a function,
+a trap is quite useful. Remember though that some other part of the code might have
+put a trap to.</p>
+<p>This is an example of a function that does not use a subshell.</p>
+<p><a id="code-snippet--bad"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>f <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo cleaning </span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14"> ; rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Doing something with temporary directory </span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>In the program, you might also put a trap.</p>
+<p><a id="code-snippet--main"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo cleaning some main things&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>f
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Doing something with temporary directory /home/sam/tmp/tmp.dX4LQJFtDL
+</span></span><span style="display:flex;"><span>cleaning /home/sam/tmp/tmp.dX4LQJFtDL
+</span></span></code></pre></div><p>Here, we can see that the main things were not cleaned.</p>
+<p>Using a subshell in f. The difference is that we use <code>(</code> instead of <code>{</code> in the
+body of the function.</p>
+<p><a id="code-snippet--good"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>f <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo cleaning </span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14"> ; rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Doing something with temporary directory </span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>Then, the main code results in</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Doing something with temporary directory /home/sam/tmp/tmp.OJPDLaRTdH
+</span></span><span style="display:flex;"><span>cleaning /home/sam/tmp/tmp.OJPDLaRTdH
+</span></span><span style="display:flex;"><span>cleaning some main things
+</span></span></code></pre></div><p>You can use subshell only for a piece of code in the function. For instance if
+you need the function to change a global state.</p>
+<p><a id="code-snippet--good2"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>f <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">somevariable</span><span style="color:#000;font-weight:bold">=</span><span style="color:#099">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo cleaning </span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14"> ; rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Doing something with temporary directory </span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p><a id="code-snippet--mainwithvariable"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo cleaning some main things&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">somevariable</span><span style="color:#000;font-weight:bold">=</span><span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;before being changed by f, somevariable=</span><span style="color:#d14">${</span><span style="color:#008080">somevariable</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>f
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;after being changed by f, somevariable=</span><span style="color:#d14">${</span><span style="color:#008080">somevariable</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>before being changed by f, somevariable=0
+</span></span><span style="display:flex;"><span>Doing something with temporary directory /home/sam/tmp/tmp.0jpHirUWWk
+</span></span><span style="display:flex;"><span>cleaning /home/sam/tmp/tmp.0jpHirUWWk
+</span></span><span style="display:flex;"><span>after being changed by f, somevariable=1
+</span></span><span style="display:flex;"><span>cleaning some main things
+</span></span></code></pre></div><p>Traps also work when nested.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo outer&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo inner&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>inner
+</span></span><span style="display:flex;"><span>outer
+</span></span></code></pre></div><p>Also, beware that exec will substitute the bash process with the run one, then
+the trap won&rsquo;t be run.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo end&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> ok
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>ok
+</span></span><span style="display:flex;"><span>end
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;echo end&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">exec</span> bash -c <span style="color:#d14">&#34;echo ok&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>ok
+</span></span></code></pre></div><h2 id="68a40a64-1037-4979-a0c4-c6a7598cf0d1">bash redirect output to the same file as taken as input by piping into a sponge</h2>
+<p><a href="/braindump/posts/bash/">bash</a> redirect output to the same file as taken as input</p>
+<p>Bash will start opening the output file, making it empty for reading.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">TMP</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>mktemp -d<span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">trap</span> <span style="color:#d14">&#34;rm -rf &#39;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#39;&#34;</span> <span style="color:#099">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">cd</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">TMP</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><p><a id="code-snippet--init"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#0086b3">echo</span> something &gt; f
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> something <span style="color:#000;font-weight:bold">else</span> &gt;&gt; f
+</span></span></code></pre></div><p><a id="code-snippet--show"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cat f
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>something
+</span></span><span style="display:flex;"><span>something else
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cat f | grep <span style="color:#000;font-weight:bold">else</span> &gt; f
+</span></span></code></pre></div><p>Then, showing again, the file is empty</p>
+<p>While using sponge</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cat f | grep <span style="color:#000;font-weight:bold">else</span> | sponge f
+</span></span></code></pre></div><p>Now, the file contains only the else line, as expected.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>something else
+</span></span></code></pre></div><h2 id="eb0cbb62-6b8b-4536-b758-496e8362363f">bash manipulate substrings</h2>
+<p><a href="/braindump/posts/bash/">bash</a> remove suffix/prefix</p>
+<h3 id="5fdb5de0-c918-4cf3-b10e-85102dbfe5e3">take substring</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz.txt
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>:<span style="color:#008080">3</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/bar/baz.txt
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz.txt
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>::<span style="color:#008080">3</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>foo
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz.txt
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>:<span style="color:#008080">3</span>:<span style="color:#008080">7</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/bar/ba
+</span></span></code></pre></div><h3 id="1f8f7a41-a68e-41e0-a734-14209aac995d">remove suffix (like an extension)</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz.txt
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>%*.txt<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>foo/bar/baz
+</span></span></code></pre></div><p>This also works with partial content</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz.txt
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>%*/bar*<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>foo
+</span></span></code></pre></div><h3 id="c90d9b17-9230-4a73-96a7-aee3b69ff0e9">remove prefix</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz.txt
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>#foo/*<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>bar/baz.txt
+</span></span></code></pre></div><p>This also works with partial content</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz.txt
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>#*bar/*<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>baz.txt
+</span></span></code></pre></div><h3 id="381c3d6a-e6b2-4ee6-acb1-445f4cb4bf01">keep prefix</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>%/*<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>foo/bar
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>%%/*<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>foo
+</span></span></code></pre></div><h3 id="f5d1283d-5b36-43c2-ab1a-d2ba7c1db0f4">keep suffix</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>#*/<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>bar/baz
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=</span>foo/bar/baz
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">a</span>##*/<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>baz
+</span></span></code></pre></div><h2 id="f5e7cd71-e66a-4d92-9948-7134b0a16837">craft a custom bash completion out of another one, like an alias</h2>
+<p>craft a custom <a href="/braindump/posts/bash_completion/">bash completion</a> out of another one</p>
+<p>Say I want to</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic">#!/bin/bash
+</span></span></span><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic"></span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">ME</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">$(</span>basename <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">BASH_SOURCE</span>[0]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">source</span> /usr/share/bash-completion/completions/apt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_sai <span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic"># take the words without the initial sai and substitute it with &#34;sudo apt install&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">COMP_WORDS</span><span style="color:#000;font-weight:bold">=(</span>sudo apt install <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">COMP_WORDS</span>[@]:<span style="color:#008080">1</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic"># then, add 2 to cword because I added two words (actually removed 1 and</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic"># added 3, but who cares?)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">COMP_CWORD</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$((</span>COMP_CWORD <span style="color:#000;font-weight:bold">+</span> <span style="color:#099">2</span><span style="color:#000;font-weight:bold">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#998;font-style:italic"># then, update the line and the point,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">COMP_LINE</span><span style="color:#000;font-weight:bold">=</span><span style="color:#d14">${</span><span style="color:#008080">COMP_LINE</span>/sai/sudo apt install<span style="color:#d14">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#008080">COMP_POINT</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$((</span>COMP_POINT <span style="color:#000;font-weight:bold">+</span> <span style="color:#099">13</span><span style="color:#000;font-weight:bold">))</span> <span style="color:#998;font-style:italic"># sudo apt install contains 13 characters more than sai</span>
+</span></span><span style="display:flex;"><span>    _apt
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">complete</span> -F _sai <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">ME</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><h2 id="af873e06-d930-4474-bacb-1e63040a1f6f">bkt to cache commands</h2>
+<p>caching <a href="/braindump/posts/bash/">bash</a> commands</p>
+<h2 id="967c0ab0-d594-4d4c-b629-6b4d13bfd317">manipulate arrays in bash</h2>
+<h3 id="5772b6ec-302b-4e29-b895-b0d20fe1eaac">bash split string on delimiter, assign segments to array (like PATH and semicolon)</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://stackoverflow.com/questions/15777996/bash-split-string-on-delimiter-assign-segments-to-array">https://stackoverflow.com/questions/15777996/bash-split-string-on-delimiter-assign-segments-to-array</a></p>
+<blockquote>
+<p>IFS=: read -a arr &lt;&lt;&lt; &ldquo;$foo&rdquo;</p>
+<p>&mdash; <a href="https://stackoverflow.com/questions/15777996/bash-split-string-on-delimiter-assign-segments-to-array">https://stackoverflow.com/questions/15777996/bash-split-string-on-delimiter-assign-segments-to-array</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="1fe9dc5a-b382-4d24-8c1a-8ecf500390cf">slice an Array in Bash</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://www.tutorialkart.com/bash-shell-scripting/bash-array-slice/">https://www.tutorialkart.com/bash-shell-scripting/bash-array-slice/</a>
+<a href="/braindump/posts/bash/">bash</a></p>
+<blockquote>
+<p>${arrayname[@]:start:end}</p>
+<p>&mdash; <a href="https://www.tutorialkart.com/bash-shell-scripting/bash-array-slice/">https://www.tutorialkart.com/bash-shell-scripting/bash-array-slice/</a></p>
+</blockquote>
+</li>
+</ul>
+<h3 id="e8eba856-4387-4896-9f73-511e68e993d0">create arrays</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">emptyarray</span><span style="color:#000;font-weight:bold">=()</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">somearray</span><span style="color:#000;font-weight:bold">=(</span>value1 value2<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><h3 id="5629eec8-1073-4003-bf71-ef0dd6d2d4f4">add values to array</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">somearray</span><span style="color:#000;font-weight:bold">+=(</span><span style="color:#d14">&#34;value3 with space&#34;</span> value4<span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><h3 id="d063e184-066a-4cfe-b80e-e24be9850e15">dereference array, without messing up with spaces</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">for</span> value in <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">somearray</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">${</span><span style="color:#008080">value</span><span style="color:#d14">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>value1
+</span></span><span style="display:flex;"><span>value2
+</span></span><span style="display:flex;"><span>value3 with space
+</span></span><span style="display:flex;"><span>value4
+</span></span></code></pre></div><p>See how the &ldquo;value with space&rdquo; is correctly dealt with?</p>
+<h3 id="75426a14-8901-4b97-9c8b-b931472c329c">append/concatenate arrays in <a href="/braindump/posts/bash/">bash</a>, without messing up with spaces</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">someotherarray</span><span style="color:#000;font-weight:bold">=(</span><span style="color:#d14">&#34;some other value&#34;</span> <span style="color:#d14">&#34;some more&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">somearray</span><span style="color:#000;font-weight:bold">+=(</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">someotherarray</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">for</span> value in <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">somearray</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">${</span><span style="color:#008080">value</span><span style="color:#d14">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>value1
+</span></span><span style="display:flex;"><span>value2
+</span></span><span style="display:flex;"><span>value3 with space
+</span></span><span style="display:flex;"><span>value4
+</span></span><span style="display:flex;"><span>some other value
+</span></span><span style="display:flex;"><span>some more
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">somenewarray</span><span style="color:#000;font-weight:bold">=(</span><span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">someotherarray</span>[@]:<span style="color:#008080">1</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">somearray</span>[@]:<span style="color:#008080">0</span>:<span style="color:#008080">3</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">for</span> value in <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">somenewarray</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">${</span><span style="color:#008080">value</span><span style="color:#d14">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>some more
+</span></span><span style="display:flex;"><span>value1
+</span></span><span style="display:flex;"><span>value2
+</span></span><span style="display:flex;"><span>value3 with space
+</span></span></code></pre></div><h3 id="cbd66b36-1641-4c7e-9303-13d5fa99b3a1">size of an array</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=(</span>a b c<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${#</span><span style="color:#008080">a</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">a</span><span style="color:#000;font-weight:bold">=()</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${#</span><span style="color:#008080">a</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>3
+</span></span><span style="display:flex;"><span>0
+</span></span></code></pre></div><h3 id="79a29244-455f-4785-9d49-3a5eebb1238a">building args before calling a function</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#008080">args</span><span style="color:#000;font-weight:bold">=(</span>-c <span style="color:#d14">&#34;print(&#39;something&#39;)&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">args</span><span style="color:#000;font-weight:bold">+=(</span>-s -v<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#008080">args</span><span style="color:#000;font-weight:bold">+=(</span>-b<span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>python3 <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">args</span>[@]<span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>something
+</span></span></code></pre></div><h2 id="c4446531-e07f-40ca-9a66-aad0b4622599">Defensive programming with bash</h2>
+<p>Defensive programming with <a href="/braindump/posts/bash/">bash</a></p>
+<p>According to <a href="https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/">https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/</a>, use <code>src_sh[:exports code]{set -Eeuo pipefail}</code></p>
+<blockquote>
+<dl>
+<dt>set -e</dt>
+<dd>The -e option will cause a bash script to exit immediately when a command fails.</dd>
+<dt>set -o pipefail</dt>
+<dd>Sets the exit code of a pipeline to that of the rightmost
+command to exit with a non-zero status, or to zero if all commands of the
+pipeline exit successfully.</dd>
+<dt>set -u</dt>
+<dd>This option causes the bash shell to treat unset variables as an
+error and exit immediately.</dd>
+<dt>set -E</dt>
+<dd>using -e without -E will cause an ERR trap to not fire in certain scenarios</dd>
+</dl>
+<p>&mdash; <a href="https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/">https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail/</a></p>
+</blockquote>
+<p>The author also recommends to use <code>-x</code>, but I think it is way too verbose to be
+useful in the general use case.</p>
+<p>According to <a href="https://dougrichardson.us/2018/08/03/fail-fast-bash-scripting.html">https://dougrichardson.us/2018/08/03/fail-fast-bash-scripting.html</a>, use</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#0086b3">set</span> -euo pipefail
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">shopt</span> -s inherit_errexit
+</span></span></code></pre></div><p>I like being explicit, and I like my code to fail fast, thus I suggest:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#0086b3">set</span> -o errexit <span style="color:#998;font-style:italic"># -e</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">set</span> -o errtrace <span style="color:#998;font-style:italic"># -E</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">set</span> -o nounset <span style="color:#998;font-style:italic"># -u</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">set</span> -o pipefail
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">shopt</span> -s inherit_errexit
+</span></span></code></pre></div><h3 id="fa677122-fae5-4bed-9d79-aa4fb6b4549c">Fail Fast Bash Scripting</h3>
+<ul>
+<li>
+<p>External reference: <a href="https://dougrichardson.us/2018/08/03/fail-fast-bash-scripting.html">https://dougrichardson.us/2018/08/03/fail-fast-bash-scripting.html</a>
+Fail Fast Bash Scripting</p>
+<blockquote>
+<p>Summary
+Put this at the top of your fail-fast Bash scripts:</p>
+<p>#!/bin/bash
+set -euo pipefail
+shopt -s inherit_errexit</p>
+</blockquote>
+</li>
+</ul>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/bash/">bash</a></li>
+<li><a href="/braindump/posts/bash_capture_output_of_command_run_in_background/">bash: capture output of command run in background</a></li>
+</ul>
+<h2 id="permalink"><a href="/braindump/ea4f37d5-485f-4d64-b1fd-0bc87fd30d92?title=efficient_shell_bash_writing">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 18 Jun 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 31 May 2023</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

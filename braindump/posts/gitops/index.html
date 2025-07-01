@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html><title>gitops</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Gitops</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>External reference: <a href="https://www.redhat.com/fr/topics/devops/what-is-gitops">https://www.redhat.com/fr/topics/devops/what-is-gitops</a></li>
+<li>External reference: <a href="https://about.gitlab.com/topics/gitops/">https://about.gitlab.com/topics/gitops/</a></li>
+<li>External reference: <a href="https://www.atlassian.com/fr/git/tutorials/gitops">https://www.atlassian.com/fr/git/tutorials/gitops</a></li>
+<li>External reference: <a href="https://www.harness.io/blog/gitops">https://www.harness.io/blog/gitops</a></li>
+</ul>
+<p>Use a <a href="/braindump/posts/git/">git</a> repository and only this repository to store the state of the
+infrastructure<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup><sup>, </sup><sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup><sup>, </sup><sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>. Very close to <a href="/braindump/posts/infrastructure_as_code/">IaC</a>, but not necessarily used together. Because
+you already know git, you don&rsquo;t need another tool to:</p>
+<ul>
+<li>view diffs and logs on the state of the infrastructure,</li>
+<li>create workflow, like pull request to ensure proper validation before getting
+into production,</li>
+</ul>
+<p>gitops tools check the diff between the git state and the live state at regular
+interval, making sure to solve the &ldquo;<a href="#1bd07e71-6cb7-4c62-a83f-353c00170589">configuration drifts</a>&rdquo; and adjusting the live
+state to make it reflect the git state.</p>
+<p>You have a code repository within which the dev can do whatever they want. Then,
+you have the infrastructure repository with much more control. There can be
+automated PR<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup> from the CI of the dev repository to the ops repository, but manual
+control is often preferred.</p>
+<p>It is one implementation of <a href="/braindump/posts/devops/">devops</a>, where a <a href="/braindump/posts/source_code_manager/">SCM</a> is the sole interface between
+dev and ops<sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup> (see the misconception of <a href="/braindump/posts/misconceptions_about_devops/#af664b6c-c383-459e-aa54-f7f3fde1f248">making the dev and ops know all the things of DEV + OPS</a>). The ops setup the gitops tooling and the infra repository and the
+dev commit stuff in it.</p>
+<p>It is more a way of thinking rather than a product or a tool<sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>. Chances are
+you will have to create your own worflow depending on what your needs are.</p>
+<p>Using a single repository to store the code and the infrastructure state, as it
+is often suggested in the 101<sup id="fnref:7"><a href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup> is to me a bad idea. With infrastructure
+state commits, the git history will quickly become messy. Also, both the code
+and the infrastructure have very different responsibilities and it seems counter
+intuitive to think of mixing them. In my mind, gitops started to make sense only
+when I discovered that it was about having (at least) two separate git
+repository: one for the code, the other for storing the state. This revelation
+happened quite late.</p>
+<p>I really got interested in gitops when my company started investigating
+<a href="/braindump/posts/discovering_deployment_strategies/">deployment strategies</a>, we quickly realized that we would need much more control
+and auditing than simply running <code>helm upgrade</code> in the continuous automation. In
+particular, blue/green and canary need a clear understanding of what was/is and
+will be put in the clusters. Rollback will be easier as well.</p>
+<p>Therefore, in testing, <code>helm upgrade</code> becomes <code>git clone ; copy ; git commit ; git push</code> and putting in production basically is the same thing.</p>
+<p>There are several tools implementing gitops. I was led to focus on spinnaker,
+argocd and flux. spinnaker is likely to be useful for very big industrial
+projects, but several hints nudged me to avoid it.</p>
+<p>I first tried flux, that was a very good way to be introduced to gitops. I less
+than 5 minutes, I could have a working setup. It also by default suggests to use
+flux to manage flux. This is a <a href="/braindump/posts/eating_your_own_dog_food/">dogfooding</a> quality I appreciate.I played a lot
+with it and eventually dropped it for two reasons (written on <span class="timestamp-wrapper"><span class="timestamp">[2025-05-16 Fri]</span></span>):</p>
+<p>The first is the lack of interface to easily understand what is happening.  The
+power of gitops lies into its controller doing the job well, and your resources
+being appropriate. A lot can go wrong in between the git push and the change
+taking place. I could quite easily make flux hang for seemingly no reasons, and
+I had to spend more time than I expected debugging flux itself. I tried
+capacitor, but it was not much more than an web view of stuff I could already
+comfortably consult with the flux cli.</p>
+<p>The second and the real no-go is the lack of orphan detection. I was very
+disappointed to find out that I could add pods in the namespace of my
+application without flux noticing. There are a few discussions on the
+matter<sup id="fnref:8"><a href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup>, but that&rsquo;s all.</p>
+<p>Trying things with &ldquo;flux create&rdquo; before committing is a good thing (in my mind),
+for it provides a small feedback loop and avoids polluting the git history with
+&ldquo;wip: trying this&rdquo;, &ldquo;oups, forgot that&rdquo;<sup id="fnref:9"><a href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup>. Because of the lack of orphan
+detection, it is more than easy to forget about a &ldquo;flux create&rdquo; and having a
+testing cluster that works great for bad reasons.</p>
+<p>Then, I tried argocd. It comes with too much bells and whistles to my taste, but
+at least it provided something to deal with both points. Its interface is very
+good.  I often could see at a glance what went wrong thanks to it. On the other
+hand, its documentation focuses a lot on the interface. I definitely prefer the
+documentation of flux that helps better understanding gitops (to my mind).</p>
+<p>Its support for orphaned detection is not ideal<sup id="fnref:10"><a href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>, bit at least there is
+something that I can work with.</p>
+<p>Like flux, it eases creating argo resources (with the UI), even though the
+<a href="/braindump/posts/custom_resource/">custom resource</a>s themselves are easy to work with anyway.</p>
+<p>Both flux and argocd come with side projects (respectively flagger and argo
+rollout) to deal with dynamic deployments, like canary. I did not test them yet.</p>
+<p>Retrospectively, I would advice to follow the same path I took: Start with flux,
+with a very nice and simple documentation, so that you can better understand the
+feeling of gitops. Even struggle a bit, trying to install broken helm
+charts. And when things get more serious, move to argocd, to get orphaned
+resources detection and the nice UI, despite the denser and a bit less intuitive
+documentation. If I was more fluent in gitops, I would have rather contributed
+to flux than look for an alternative.</p>
+<h2 id="1bd07e71-6cb7-4c62-a83f-353c00170589">configuration drifts</h2>
+<h2 id="1791e496-cd1b-4835-8cd2-8222c0311bf6">remove the configuration drift</h2>
+<h2 id="250a55e2-93b2-4b89-a94a-f615e0e411c6">push based or pull based?</h2>
+<p>In ALL the videos I have watched about gitops, they indicated that the main
+source of <a href="#1791e496-cd1b-4835-8cd2-8222c0311bf6">configuration drift</a> is when someone gets into the system and makes
+some changes manually.</p>
+<p>They indicate that this explains the need to have a pull based model, that
+will restore the system automatically without waiting for the next CI trigger
+to run.</p>
+<p>Yet, I think that if the ops can easily reproducibly run the push based
+command, they would be <a href="/braindump/posts/nudge/">nudge</a>d into using it rather than going and fixing stuff
+live.</p>
+<p>To me, the incentive to modify the env in live is a symptom of the <a href="/braindump/posts/ci_automation_drift/">ci
+automation drift</a> and should be addressed instead of adding a tool to hide
+it.</p>
+<p>Doing so, the person running the command should still think about pushing
+per change. Right? So that makes the pull model more secure?</p>
+<p>I don&rsquo;t think so. If someone went to the prod to fix something manually, I
+think that this person would not accept that the fix would be reverted
+automatically after 3 minutes and therefore the fix reverted as well. In that
+case, it seems sensible to bet that this person will also disable the pull
+based automation. Thus, <a href="/braindump/posts/intellectually_honest/">to be honest</a> we should consider that this person has
+the same probabilities of forgetting to enable the pull based flow that the
+one that forgot to push per changes in the previous example.</p>
+<p>In that case, forgetting to push the fix won&rsquo;t disable the automatic flow,
+while in the pull based flow, someone would need to explicitly check and
+realize that it was disabled.</p>
+<p>Also, in the push based flow scenario, the person doing the fix would be more
+likely to see the dirty git status and push per change in the future, whereas
+in the pull based scenario no trace of this change would remain.</p>
+<p>In conclusion, I think that we tend to overestimate the value in the pull
+based model and underestimate the one of the push based one. Both are great
+and have great advantages and the awesome aspects of the pull based flow
+should not shadow the great aspects of the push based one.</p>
+<h2 id="ccd287bd-a162-4a9c-bba9-d25dbbb78ea6">dealing with secrets</h2>
+<p>We don&rsquo;t want the secrets to lie around indefinitely in some git history, that
+may well get into the wrong hands in some distant future.</p>
+<p>I could find a lot of documentation explaining how sealed secrets and sops
+work, but very few descriptions of use cases showing how practical it is.</p>
+<p>argocd provide a very high level description of some pros and cons of general
+methods<sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup>, flux goes a bit more into the details<sup id="fnref:12"><a href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup>.</p>
+<p>First, I think one might think about what is the source of truth for the
+secrets.</p>
+<p>Let&rsquo;s first assume the it is the git repository.</p>
+<p>In that case, some team member puts a secret in the repository, encrypting it
+using the public key. Then, only the cluster may be able to get the secret in
+plain text. If one team member needs the secret for a side workflow (like
+accessing the database), that person should get access to the secret in the
+cluster.</p>
+<p>Because this is the source of truth, its secrets need some extra care not to
+be lost.</p>
+<p>In case the cluster needs to be destroyed, one would need to back the
+<code>sealed-secret</code> secret up and restore it in the new cluster. As a matter of
+fact, all the secret, including the cluster one, would be backed-up if you
+already have a backup solution in place, like <a href="/braindump/posts/velero/">velero</a>, so that might not
+be that problematic. It asks the question thought, of whether those backup
+might be encrypted as well, like using a <a href="/braindump/posts/shamir_s_secret_sharing/">ssss</a> secret share by the team or
+something.</p>
+<p>Then, when moving from cluster to cluster (like testing, then staging, then
+prod), we have to duplicate those, needing several operations, like extracting
+the secrets from a cluster to put in the other one. For shared secrets, one
+must think of updating them in all the configurations. I don&rsquo;t see any issue
+in automating this, but so far, I did not find any tool already available to
+do it.</p>
+<p>Now, in case one already uses a secret manager, like aws secret manager,
+<a href="/braindump/posts/hashicorp_vault/">hashicorp vault</a> or <a href="/braindump/posts/password_manager/#924f0754-7efe-486e-9418-03c06c835c9e">bitwarden</a>, they should be put in the cluster via some automation
+mechanism.</p>
+<p>Using the <a href="https://github.com/external-secrets/external-secrets">external secrets operator</a> would be tempting, as one would only need
+to configure the secret access. But it feels like a threat to provide access
+from an hot system to a secret store. A lot of things could go wrong. One
+might prefer that the entity accessing the secret store does it out of the
+part dealing with the ingress and possible attacks.</p>
+<p>On the other hand, some automation could setup the sealed secret and
+sops. This collides with one hypothesis of cryptography: the generation of an
+encrypted data should not be deterministic, to avoid guessing attacks. For
+that reason, if the automation simply generates all the encrypted data, then
+every time git would show some difference. One might accept having some way to
+tell whether a secret has changed or not, ideally using a hmac to avoid the
+guessing attacks. There is a <a href="https://github.com/bitnami-labs/sealed-secrets/issues/376">discussion in sealed-secret</a> about that suggestion
+but nothing tangible got out of it. It is unclear to me, though, when this
+automation would take place. It&rsquo;s place is obvious in the testing cluster,
+because it reflects the state of automatic git commit after the build of the
+new images. This automatic git commit can also automatically commit the new
+versions of the secrets. For the production cluster though, where a manual
+commit is needed to acknowledge the deployment, it might be easy to have a
+drift between what is in the secret store and what is in the repository. One
+might end up being puzzled to see some behavior in the cluster not coherent
+with what one sees in the secret store, forgetting that the source of truth of
+the cluster is in fact the repository.</p>
+<p>Finally, one might simply want to install the secret automatically, without
+using git at all. In that case, we loose a bit of the auditing promise of
+gitops, as something might go wrong because of a change of secret that would
+not be traced.</p>
+<p>In the end, it appears to me that there is definitely no silver bullet.</p>
+<p>My personal preference would be to use git as the single source of truth with
+some tooling to ease migrating secrets from cluster to cluster.</p>
+<p>But, because I currently work in an organisation using a central secret store,
+I would go to the solution suggested in the sealed secret discussion, store
+them in git automatically, with a way to identify the changes.</p>
+<h3 id="66a9eccf-035c-4fad-a7f2-7e03a21f9bf1">when already having a source of truth</h3>
+<p><a href="https://github.com/bitnami-labs/sealed-secrets/issues/376">https://github.com/bitnami-labs/sealed-secrets/issues/376</a></p>
+<h3 id="e6018f0c-90aa-44ff-8c64-94472c37b7b8">with <a href="/braindump/posts/sealed_secrets/">sealed secrets</a></h3>
+<p>generates a (private key/public key) in the production cluster. You have to
+export the public key to encrypt the secrets in the git repository.</p>
+<h2 id="2bdcf3fe-15d4-4db8-914a-72faefde4500">Cloud Native Live: Crossplane - GitOps-based Infrastructure as Code through Kubernetes API - YouTube</h2>
+<ul>
+<li>
+<p>External reference: <div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/LyN50Ul2KOM" allowfullscreen title="YouTube Video"></iframe></div>
+talks about the fact that <a href="/braindump/posts/gitops/">gitops</a> is mostly about using git and only git as single interface (and source of truth) for all ops related stuff.</p>
+<p>He uses <a href="/braindump/posts/crossplane/">crossplane</a> to specify the whole infrastructure in <a href="/braindump/posts/kubernetes/">kubernetes</a>
+manifest. The stuff we could write in terraform and run manually can be declared
+as <a href="/braindump/posts/custom_resource/">CRD</a> in kubernetes, automatically synced using <a href="/braindump/posts/argo/#31c9ae7c-cb78-4245-a7bd-a0cc77283bab">argo CD</a> from a git
+repository and automatically applied using <a href="/braindump/posts/crossplane/">crossplane</a>.</p>
+</li>
+</ul>
+<h2 id="448cc97e-535d-4bea-a2f9-561ed5497dbe">with <a href="/braindump/posts/kubernetes/">kubernetes</a></h2>
+<ul>
+<li>
+<p>External reference: <a href="https://codefresh.io/learn/gitops/gitops-with-kubernetes-why-its-different-and-how-to-adopt-it/">https://codefresh.io/learn/gitops/gitops-with-kubernetes-why-its-different-and-how-to-adopt-it/</a></p>
+<blockquote>
+<p>With Kubernetes, teams often modify clusters with ad-hoc edits outside the CI/CD system.</p>
+<p>&mdash; <a href="https://codefresh.io/learn/gitops/gitops-with-kubernetes-why-its-different-and-how-to-adopt-it/">https://codefresh.io/learn/gitops/gitops-with-kubernetes-why-its-different-and-how-to-adopt-it/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>One way to address this issue is to use a tool like <a href="/braindump/posts/argo/#31c9ae7c-cb78-4245-a7bd-a0cc77283bab">Argo CD</a>, which establishes a single source of truth (in this case, Git) for all deployments</p>
+<p>&mdash; <a href="https://codefresh.io/learn/gitops/gitops-with-kubernetes-why-its-different-and-how-to-adopt-it/">https://codefresh.io/learn/gitops/gitops-with-kubernetes-why-its-different-and-how-to-adopt-it/</a></p>
+</blockquote>
+<!--quoteend-->
+<blockquote>
+<p>When it detects differences between the state in the Git manifest and the live cluster, Argo CD marks the deployment as OutOfSync, preventing configuration drift from the start.</p>
+<p>&mdash; <a href="https://codefresh.io/learn/gitops/gitops-with-kubernetes-why-its-different-and-how-to-adopt-it/">https://codefresh.io/learn/gitops/gitops-with-kubernetes-why-its-different-and-how-to-adopt-it/</a></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="c6d2d508-a5e0-4a88-ae3e-8ceb6525debd">storing manifests in git is not enough to claim doing gitopsh</h2>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/r3k2qI2NDsA?t=184" allowfullscreen title="YouTube Video"></iframe></div>
+<h2 id="b5d1453c-8a82-43ec-8e61-a1162a5cbfb4">one repo for deploy and dev</h2>
+<p>Demonstrations show gitops with <a href="/braindump/posts/argo/#31c9ae7c-cb78-4245-a7bd-a0cc77283bab">argo CD</a> in a way that supposedly show its advantages.</p>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/N8eJW0bTtzc?t=1731" allowfullscreen title="YouTube Video"></iframe></div>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/u16LBmER-P4?t=1539" allowfullscreen title="YouTube Video"></iframe></div>
+<p>But what I see is a new automatic commit for every push in the main branch,
+which is less than ideal.</p>
+<p>To me, this makes sense when they the main branch contains only the commits to
+deploy, or if this repository is not dedicated to dev. Otherwise, the dev
+commits will be drawn in the noise of automatic commits.</p>
+<h2 id="12a11402-6d76-4f77-9a11-3bb8367c6efa">difference between dev repo and deploy repo</h2>
+<p>Some resources make clearer that there are two kinds of repos with different commit habits and merge rules</p>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/A_410F2zjwA" allowfullscreen title="YouTube Video"></iframe></div>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/0O1rcBhDI_I" allowfullscreen title="YouTube Video"></iframe></div>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/smjV-Gd8p6M" allowfullscreen title="YouTube Video"></iframe></div>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/QNAiIJRIVWA?t=284" allowfullscreen title="YouTube Video"></iframe></div>
+<p>By listening to those, I understand that that gitops is about having one git
+repository as database for storing the desired state of the ops, because git
+has the characteristics that we like : auditability, fine control,
+immutability, easy to rollback.</p>
+<p>gitops tools are focused on looking at this git repository and applying this
+desired state. It is like real time <a href="/braindump/posts/infrastructure_as_code/">infrastructure as code</a>.</p>
+<p>To do so, we need a separate deploy repository, because security rules, the
+use of the commit history (a lot of automatic commits in the deploy repo) will
+not be the same at all.</p>
+<p>Using the same repository for both will most likely pollute the dev repository
+with a lot of automatic commit and make it barely readable.</p>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/braindump/posts/clickops/">clickops</a></li>
+<li><a href="/braindump/posts/deploy_helm_chart_on_upload/">deploy helm chart on upload</a></li>
+<li><a href="/braindump/posts/des_silos_au_platform_engineering_en_passant_par_le_devops_adopter_gitops_et_aller_au_d_youtube/">Des silos au Platform Engineering en passant par le DevOps : adopter GitOps et aller au-d&hellip; - YouTube</a></li>
+<li><a href="/braindump/posts/gitops_broke_ci_cd_here_s_how_to_fix_it_with_argo_events_youtube/">GitOps Broke CI/CD! Here&rsquo;s How to Fix It With Argo Events - YouTube</a></li>
+<li><a href="/braindump/posts/gitops_en_2022_avec_argo_pablo_lopez_youtube/">GitOps en 2022 avec Argo (Pablo Lopez) - YouTube</a></li>
+<li><a href="/braindump/posts/une_architecture_gitops_from_scratch_gitlab_ansible_terraform_kub_et_aws_l_ortola_a_moreau/">Une Architecture GitOps from scratch : Gitlab, Ansible, Terraform, Kub et AWS (L.Ortola A.Moreau)</a></li>
+</ul>
+<h2 id="permalink"><a href="https://konubinix.eu/braindump/1b2e6690-e3d9-4c4c-99f3-79a14703df86?title=gitops">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<blockquote>
+<p>using Git as the single source of truth for system state</p>
+<p>&mdash; <a href="https://www.harness.io/blog/gitops">https://www.harness.io/blog/gitops</a></p>
+</blockquote>
+<!--more-->
+&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
+<blockquote>
+<p>d&rsquo;une bonne pratique DevOps qui s&rsquo;appuie sur Git en tant que source de référence
+unique et que mécanisme de contrôle pour créer, mettre à jour et supprimer
+l&rsquo;architecture du système</p>
+<p>&mdash; <a href="https://www.atlassian.com/fr/git/tutorials/gitops">https://www.atlassian.com/fr/git/tutorials/gitops</a></p>
+</blockquote>
+&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:3">
+<blockquote>
+<p>GitOps repose sur l&rsquo;utilisation de référentiels Git comme unique source de vérité pour distribuer l&rsquo;infrastructure en tant que code</p>
+<p>&mdash; <a href="https://www.redhat.com/fr/topics/devops/what-is-gitops">https://www.redhat.com/fr/topics/devops/what-is-gitops</a></p>
+</blockquote>
+&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:4">
+<blockquote>
+<p>pratique consistant à utiliser les pull requests Git pour vérifier et déployer
+automatiquement les modifications de l&rsquo;infrastructure système</p>
+<p>&mdash; <a href="https://www.atlassian.com/fr/git/tutorials/gitops">https://www.atlassian.com/fr/git/tutorials/gitops</a></p>
+</blockquote>
+&#160;<a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:5">
+<blockquote>
+<p>takes DevOps best practices used for application development such as version
+control, collaboration, compliance, and CI/CD, and applies them to
+infrastructure automation</p>
+<p>&mdash; <a href="https://about.gitlab.com/topics/gitops/">https://about.gitlab.com/topics/gitops/</a></p>
+</blockquote>
+&#160;<a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:6">
+<blockquote>
+<p>GitOps is not a single product, plugin, or platform. There is no
+one-size-fits-all answer to this question, as the best way for teams to put
+GitOps into practice will vary depending on the specific needs and goals of the
+team</p>
+<p>&mdash; <a href="https://about.gitlab.com/topics/gitops/">https://about.gitlab.com/topics/gitops/</a></p>
+</blockquote>
+&#160;<a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:7">
+<blockquote>
+<p>using a dedicated GitOps repository for all team members to share configurations and code</p>
+<p>&mdash; <a href="https://about.gitlab.com/topics/gitops/">https://about.gitlab.com/topics/gitops/</a></p>
+</blockquote>
+&#160;<a href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:8">
+<p><a href="https://github.com/fluxcd/flux2/discussions/4084">https://github.com/fluxcd/flux2/discussions/4084</a>&#160;<a href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:9">
+<p><a href="https://xkcd.com/1296/">https://xkcd.com/1296/</a>&#160;<a href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:10">
+<p><a href="https://github.com/argoproj/argo-cd/issues/7418">https://github.com/argoproj/argo-cd/issues/7418</a>&#160;<a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:11">
+<p><a href="https://argo-cd.readthedocs.io/en/stable/operator-manual/secret-management/">https://argo-cd.readthedocs.io/en/stable/operator-manual/secret-management/</a>&#160;<a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:12">
+<p><a href="https://fluxcd.io/flux/guides/sealed-secrets/#gitops-workflow">https://fluxcd.io/flux/guides/sealed-secrets/#gitops-workflow</a> and <a href="https://fluxcd.io/flux/guides/mozilla-sops/#gitops-workflow">https://fluxcd.io/flux/guides/mozilla-sops/#gitops-workflow</a>&#160;<a href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+      </div>
+	  <aside class="date"><time>Last updated: 21 May 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 31 Jul 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html><title>from the python android runtime to a custom app</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.56b43bcbc759a196f9dd525bee62bdec45a29ba95902bbab74a4f7ad2ea3e8cb.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="/ipfs/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="/ipfs/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/graph.html"><i class="icon fas fa-project-diagram"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>From the Python Android Runtime to a Custom App</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>Following <a href="/blog/posts/a_python_runtime_on_android/?title=a_python_runtime_on_android#">a python runtime on android</a>, I find it not very practical to have to
+keep the android SDK (and several tens of GB in my hard drive) to change a bit
+of python code to get another application.</p>
+<p>I would like to</p>
+<ol>
+<li>open the poc apk</li>
+<li>change the code</li>
+<li>close it</li>
+<li>install it</li>
+</ol>
+<p>My first use case is with my <a href="/braindump/posts/afterlife_for_my_phones/#02cd4fce-c616-4231-86f3-fee6b2ca1fc3">wiko cink peax</a>, where I cannot even build any
+application anymore, due to the age of the installed android.</p>
+<p>So to continuing getting use of it, I can install several python applications
+that do exactly what I want them to do.</p>
+<p>So, let&rsquo;s use the <a href="/blog/posts/a_python_runtime_on_android/?title=a_legacy_from_another_lifetime#a-legacy-from-another-lifetime">legacy from another lifetime</a> as a basis.</p>
+<p>Let&rsquo;s first get it and extract the content.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk ipfs get <span style="color:#000;font-weight:bold">[[</span>https://ipfs.konubinix.eu/ipfs/bafybeihx4r7xni2bpapmkypovc23qwzro6i3ncxnr6likited6pf77geni?filename<span style="color:#000;font-weight:bold">=</span>poc.apk<span style="color:#000;font-weight:bold">][</span>poc.apk<span style="color:#000;font-weight:bold">]]</span>
+</span></span><span style="display:flex;"><span>apktool d poc.apk
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Saving file(s) to poc.apk
+</span></span></code></pre></div><h2 id="e1279642-97d6-46f6-af25-36dc7f2186ab">changing the python script</h2>
+<p>Now, let&rsquo;s untar the private.mp3 file, that is in fact a tar.gz archive.</p>
+<p>(note, the code of the service is <a href="/blog/posts/a_python_runtime_on_android/?title=to_debug_services#to-debug-services">to debug services</a>)</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;poc/assets/&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    tar -x --gzip -f private.mp3
+</span></span><span style="display:flex;"><span>    chmod <span style="color:#099">777</span> -R .
+</span></span><span style="display:flex;"><span>    ls
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>include
+</span></span><span style="display:flex;"><span>lib
+</span></span><span style="display:flex;"><span>main.py
+</span></span><span style="display:flex;"><span>private.mp3
+</span></span><span style="display:flex;"><span>service
+</span></span><span style="display:flex;"><span>sitecustomize.pyo
+</span></span></code></pre></div><p>The files are in optimized form, but it is fairly simple to read the initial code (because it is in python2.7).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;poc/assets/&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    uncompyle6 main.pyo
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span># uncompyle6 version 3.9.2
+</span></span><span style="display:flex;"><span># Python bytecode version base 2.7 (62211)
+</span></span><span style="display:flex;"><span># Decompiled from: Python 3.12.6 (main, Sep  7 2024, 14:20:15) [GCC 14.2.0]
+</span></span><span style="display:flex;"><span># Embedded file name: /home/test/project/.buildozer/android/app/main.py
+</span></span><span style="display:flex;"><span># Compiled at: 2018-04-03 17:48:53
+</span></span><span style="display:flex;"><span>__version__ = &#39;0.1
+</span></span><span style="display:flex;"><span>import sys
+</span></span><span style="display:flex;"><span>sys.path.insert(0, &#39;/sdcard/poc/&#39;)
+</span></span><span style="display:flex;"><span>import main
+</span></span><span style="display:flex;"><span>main.run()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># okay decompiling main.pyo
+</span></span></code></pre></div><p>Let&rsquo;s change this main and simply print a message.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;poc/assets/&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    rm main.pyo
+</span></span><span style="display:flex;"><span>    cat<span style="color:#d14">&lt;&lt;EOF &gt; main.py
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">print(&#34;HEEEEEEELLLLLOOOOOO!!!!!!&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><p>I need to recreate the private.mp3 file now.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;poc/assets/&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    tar -c --gzip -f /tmp/private.mp3 . <span style="color:#000;font-weight:bold">&amp;&amp;</span> rm -rf * <span style="color:#000;font-weight:bold">&amp;&amp;</span> mv /tmp/private.mp3 ./
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><h2 id="a48db0f3-fc1b-4350-910b-c437060cc9e4">package it again.</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>apktool b poc
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>I: Using Apktool 2.10.0 with 4 thread(s).
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Checking whether resources has changed...
+</span></span><span style="display:flex;"><span>I: Building resources...
+</span></span><span style="display:flex;"><span>I: Building apk file...
+</span></span><span style="display:flex;"><span>I: Copying unknown files/dir...
+</span></span><span style="display:flex;"><span>I: Built apk into: poc/dist/poc.apk
+</span></span></code></pre></div><p>Now, we have to sign it, so let&rsquo;s create a dumb keystore for this.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>keytool -genkeypair -keystore your-keystore.jks -storepass <span style="color:#099">000000</span> -keypass <span style="color:#099">000000</span> -alias your-alias -dname <span style="color:#d14">&#34;CN=Your Name, OU=Your Unit, O=Your Organization, L=Your City, ST=Your State, C=Your Country&#34;</span> -keyalg RSA -keysize <span style="color:#099">2048</span> -validity <span style="color:#099">10000</span>
+</span></span></code></pre></div><p>And sign the apk with it</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>apksigner sign --ks your-keystore.jks --ks-key-alias your-alias --ks-pass pass:000000 ./poc/dist/poc.apk
+</span></span></code></pre></div><p>Now, we should be able to install it and see the printed message.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb uninstall eu.konubinix.konixpoc
+</span></span><span style="display:flex;"><span>clk android adb install ./poc/dist/poc.apk
+</span></span><span style="display:flex;"><span>clk android poc re
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android -d cinkpeax adb shell logcat -d |gi <span style="color:#d14">&#34;i/\(python\|poc\)&#34;</span>|tail
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>I/python  ( 6510): Setting up python from ANDROID_PRIVATE
+</span></span><span style="display:flex;"><span>I/python  ( 6510): (&#39;Android path&#39;, [&#39;/data/data/org.poc.poc/files/app/lib/python27.zip&#39;, &#39;/data/data/org.poc.poc/files/app/lib/python2.7/&#39;, &#39;/data/data/org.poc.poc/files/app/lib/python2.7/lib-dynload/&#39;, &#39;/data/data/org.poc.poc/files/app/lib/python2.7/site-packages/&#39;, &#39;/data/data/org.poc.poc/files/app&#39;])
+</span></span><span style="display:flex;"><span>I/python  ( 6510): (&#39;os.environ is&#39;, {&#39;ANDROID_APP_PATH&#39;: &#39;/data/data/org.poc.poc/files/app&#39;, &#39;EXTERNAL_STORAGE&#39;: &#39;/storage/sdcard0&#39;, &#39;LOOP_MOUNTPOINT&#39;: &#39;/mnt/obb&#39;, &#39;ANDROID_SOCKET_zygote&#39;: &#39;9&#39;, &#39;BOOTCLASSPATH&#39;: &#39;/system/framework/core.jar:/system/framework/core-junit.jar:/system/framework/bouncycastle.jar:/system/framework/ext.jar:/system/framework/framework.jar:/system/framework/android.policy.jar:/system/framework/services.jar:/system/framework/apache-xml.jar:/system/framework/mediatek-common.jar:/system/framework/mediatek-framework.jar:/system/framework/mediatek-op.jar:/system/framework/secondary-framework.jar:/system/framework/CustomProperties.jar&#39;, &#39;ANDROID_PROPERTY_WORKSPACE&#39;: &#39;8,49574&#39;, &#39;PATH&#39;: &#39;/sbin:/vendor/bin:/system/sbin:/system/bin:/system/xbin&#39;, &#39;ANDROID_BOOTLOGO&#39;: &#39;1&#39;, &#39;ANDROID_ASSETS&#39;: &#39;/system/app&#39;, &#39;LD_LIBRARY_PATH&#39;: &#39;/vendor/lib:/system/lib&#39;, &#39;PYTHONOPTIMIZE&#39;: &#39;2&#39;, &#39;ANDROID_PRIVATE&#39;: &#39;/data/data/org.poc.poc/files&#39;, &#39;ANDROID_ENTRYPOINT&#39;: &#39;main.pyo&#39;, &#39;SECONDARY_STORAGE&#39;: &#39;/storage/sdcard1&#39;, &#39;PYTHONPATH&#39;: &#39;/data/data/org.poc.poc/files/app:/data/data/org.poc.poc/files/app/lib&#39;, &#39;ANDROID_DATA&#39;: &#39;/data&#39;, &#39;PYTHON_NAME&#39;: &#39;python&#39;, &#39;ANDROID_ROOT&#39;: &#39;/system&#39;, &#39;PYTHONHOME&#39;: &#39;/data/data/org.poc.poc/files/app&#39;, &#39;ASEC_MOUNTPOINT&#39;: &#39;/mnt/asec&#39;, &#39;ANDROID_UNPACK&#39;: &#39;/data/data/org.poc.poc/files/app&#39;, &#39;ANDROID_ARGUMENT&#39;: &#39;/data/data/org.poc.poc/files/app&#39;})
+</span></span><span style="display:flex;"><span>I/python  ( 6510): (&#39;Android kivy bootstrap done. __name__ is&#39;, &#39;__main__&#39;)
+</span></span><span style="display:flex;"><span>I/python  ( 6510): [&#39;/data/data/org.poc.poc/files/app/lib/python2.7/site-packages&#39;, &#39;/data/data/org.poc.poc/files/app/lib/site-python&#39;]
+</span></span><span style="display:flex;"><span>I/python  ( 6510): AND: Ran string
+</span></span><span style="display:flex;"><span>I/python  ( 6510): Run user program, change dir and execute entrypoint
+</span></span><span style="display:flex;"><span>I/python  ( 6510): main.py
+</span></span><span style="display:flex;"><span>I/python  ( 6510): HEEEEEEELLLLLOOOOOO!!!!!!
+</span></span><span style="display:flex;"><span>I/python  ( 6510): Python for android ended.
+</span></span></code></pre></div><h2 id="14a2c3df-37aa-4cc2-92f6-749ea8b10b59">installing with another name</h2>
+<p>Now, let&rsquo;s try to install it with another name.</p>
+<p>Let&rsquo;s reinstall the poc in it initial form.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android -d cinkpeax adb uninstall org.poc.poc
+</span></span><span style="display:flex;"><span>clk android -d cinkpeax adb install ./poc.apk
+</span></span></code></pre></div><p>Now, I would like to install the same one again. In the future, it would
+contain some other scripts, of course.</p>
+<p>Let&rsquo;s call the new package org.poc.cop.</p>
+<p>IIUC, it is enough to rename all the org.poc.poc and org/poc/poc in the files
+before creating the new apk.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>grep -rl <span style="color:#d14">&#39;org.poc.poc&#39;</span> | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> line
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Editing </span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    sed -i -r <span style="color:#d14">&#39;s/org(.)poc(.)poc/eu\1konubinix\2konixpoc/&#39;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Editing poc/smali/org/poc/poc/R$attr.smali
+</span></span><span style="display:flex;"><span>Editing poc/smali/org/poc/poc/R.smali
+</span></span><span style="display:flex;"><span>Editing poc/smali/org/poc/poc/R$string.smali
+</span></span><span style="display:flex;"><span>Editing poc/smali/org/poc/poc/R$drawable.smali
+</span></span><span style="display:flex;"><span>Editing poc/smali/org/poc/poc/R$id.smali
+</span></span><span style="display:flex;"><span>Editing poc/smali/org/poc/poc/R$layout.smali
+</span></span><span style="display:flex;"><span>Editing poc/smali/org/poc/poc/ServicePoc.smali
+</span></span><span style="display:flex;"><span>Editing poc/smali/org/poc/poc/BuildConfig.smali
+</span></span><span style="display:flex;"><span>Editing poc/AndroidManifest.xml
+</span></span></code></pre></div><p>I also need to rename the files org/poc/poc into org/poc/cop.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>find -path <span style="color:#d14">&#34;*org/poc/poc&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>./poc/smali/org/poc/poc
+</span></span></code></pre></div><p>This, I also did manually</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mv ./poc/smali/org/poc/poc ./poc/smali/org/poc/cop
+</span></span></code></pre></div><p>I can also change the name of the application.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>grep -rl <span style="color:#d14">&#39;ProofOfConcept&#39;</span> | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> line
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Editing </span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    sed -i -r <span style="color:#d14">&#39;s/ProofOfConcept/MyWonderfullApp/&#39;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><h2 id="af07221d-f854-442d-b71f-0a1c0332f51c">provide an alternative image for the application icon</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>magick https://ipfs.konubinix.eu/ipfs/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi -resize 128x128 -background white -gravity center -extent 128x128 ./poc/res/drawable/icon.png
+</span></span></code></pre></div><p>And a different splash screen</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ipfs get https://ipfs.konubinix.eu/ipfs/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi -o ./poc/res/drawable/presplash.jpg
+</span></span></code></pre></div><p>Then, let package, sign, upload it again.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>apktool b poc <span style="color:#000;font-weight:bold">&amp;&amp;</span> apksigner sign --ks your-keystore.jks --ks-key-alias your-alias --ks-pass pass:000000 ./poc/dist/poc.apk
+</span></span><span style="display:flex;"><span>clk android -d cinkpeax adb install ./poc/dist/poc.apk
+</span></span><span style="display:flex;"><span>clk android -d cinkpeax adb shell am start -n org.poc.cop/org.kivy.android.PythonActivity
+</span></span></code></pre></div><p>And voilà !!</p>
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafkreid2wl3nngozefhpjywkwvo43rzizencqqkdshmbmx63hswnk6jd4e?filename=a.png">
+</figure>
+
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafkreidcgtymv4wj3ijhslekp4ztxl6jaq7h67usjskto3eh7eecffp2vi?filename=a.png">
+</figure>
+
+<h2 id="ec8a8143-d7f7-4fcd-bc40-6c2590e4a83c">with a more recent apk</h2>
+<p>TL;DR: The same manipulations worked without visible issues.</p>
+<p>Let&rsquo;s now use the last apk I built</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk ipfs get <span style="color:#000;font-weight:bold">[[</span>https://ipfs.konubinix.eu/ipfs/bafybeibafr56emdc2kjpozzjh3wz3s7zkfxjf5sady2r6ouvjnr7b7qwdi?filename<span style="color:#000;font-weight:bold">=</span>app.apk<span style="color:#000;font-weight:bold">][</span>app.apk<span style="color:#000;font-weight:bold">]]</span>
+</span></span><span style="display:flex;"><span>apktool d --force app.apk
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Saving file(s) to app.apk
+</span></span><span style="display:flex;"><span>I: Using Apktool 2.10.0 on app.apk with 4 thread(s).
+</span></span><span style="display:flex;"><span>I: Baksmaling classes.dex...
+</span></span><span style="display:flex;"><span>I: Baksmaling classes2.dex...
+</span></span><span style="display:flex;"><span>I: Baksmaling classes3.dex...
+</span></span><span style="display:flex;"><span>I: Baksmaling classes4.dex...
+</span></span><span style="display:flex;"><span>I: Loading resource table...
+</span></span><span style="display:flex;"><span>I: Decoding file-resources...
+</span></span><span style="display:flex;"><span>I: Loading resource table from file: /home/sam/perso/perso/konix/share/apktool/framework/1.apk
+</span></span><span style="display:flex;"><span>I: Baksmaling classes5.dex...
+</span></span><span style="display:flex;"><span>I: Baksmaling classes6.dex...
+</span></span><span style="display:flex;"><span>I: Decoding values */* XMLs...
+</span></span><span style="display:flex;"><span>I: Decoding AndroidManifest.xml with resources...
+</span></span><span style="display:flex;"><span>I: Regular manifest package...
+</span></span><span style="display:flex;"><span>I: Copying assets and libs...
+</span></span><span style="display:flex;"><span>I: Copying unknown files...
+</span></span><span style="display:flex;"><span>I: Copying original files...
+</span></span></code></pre></div><p>#+end_example</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;app/assets/&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    tar xvf private.tar
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><p>I cannot decompily the main.pyc, so that&rsquo;s a good thing that I documented
+everything in its creation.</p>
+<p>Let&rsquo;s try substituting it with another main.py</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">pushd</span> <span style="color:#d14">&#34;app/assets/&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    cat<span style="color:#d14">&lt;&lt;EOF &gt; main.py
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">print(&#34;HEEEEELLLLLOOO !!!&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span><span style="display:flex;"><span>    rm main.pyc
+</span></span><span style="display:flex;"><span>    rm private.tar
+</span></span><span style="display:flex;"><span>    tar -c --gzip -f private.tar .
+</span></span><span style="display:flex;"><span>    mv private.tar /tmp/private.tar <span style="color:#000;font-weight:bold">&amp;&amp;</span> rm * <span style="color:#000;font-weight:bold">&amp;&amp;</span> mv /tmp/private.tar ./
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0086b3">popd</span> &gt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>tar: .: file changed as we read it
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>apktool b app <span style="color:#000;font-weight:bold">&amp;&amp;</span> apksigner sign --ks your-keystore.jks --ks-key-alias your-alias --ks-pass pass:000000 ./app/dist/app.apk
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>I: Using Apktool 2.10.0 with 4 thread(s).
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Smaling smali folder into classes.dex...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Smaling smali_classes2 folder into classes2.dex...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Smaling smali_classes3 folder into classes3.dex...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Smaling smali_classes4 folder into classes4.dex...
+</span></span><span style="display:flex;"><span>I: Checking whether resources has changed...
+</span></span><span style="display:flex;"><span>I: Building resources...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Smaling smali_classes5 folder into classes5.dex...
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Smaling smali_classes6 folder into classes6.dex...
+</span></span><span style="display:flex;"><span>I: Copying libs... (/lib)
+</span></span><span style="display:flex;"><span>I: Checking whether sources has changed...
+</span></span><span style="display:flex;"><span>I: Smaling smali_classes7 folder into classes7.dex...
+</span></span><span style="display:flex;"><span>I: Building apk file...
+</span></span><span style="display:flex;"><span>I: Copying unknown files/dir...
+</span></span><span style="display:flex;"><span>I: Built apk into: app/dist/app.apk
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb uninstall eu.konix.poc
+</span></span><span style="display:flex;"><span>clk android adb install ./app/dist/app.apk
+</span></span><span style="display:flex;"><span>clk android poc start
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb logcat -d|gi <span style="color:#d14">&#34;i \(python\|poc\)&#34;</span>|tail|uncolor
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>11-08 13:43:00.692 11349 11381 I python  : Initialized python
+</span></span><span style="display:flex;"><span>11-08 13:43:00.693 11349 11381 I python  : AND: Init threads
+</span></span><span style="display:flex;"><span>11-08 13:43:00.693 11349 11381 I python  : testing python print redirection
+</span></span><span style="display:flex;"><span>11-08 13:43:00.696 11349 11381 I python  : Android path [&#39;.&#39;, &#39;/data/user/0/eu.konix.poc/files/app/_python_bundle/stdlib.zip&#39;, &#39;/data/user/0/eu.konix.poc/files/app/_python_bundle/modules&#39;, &#39;/data/user/0/eu.konix.poc/files/app/_python_bundle/site-packages&#39;]
+</span></span><span style="display:flex;"><span>11-08 13:43:00.696 11349 11381 I python  : os.environ is environ({&#39;PATH&#39;: &#39;/product/bin:/apex/com.android.runtime/bin:/apex/com.android.art/bin:/system_ext/bin:/system/bin:/system/xbin:/odm/bin:/vendor/bin:/vendor/xbin&#39;, &#39;ANDROID_BOOTLOGO&#39;: &#39;1&#39;, &#39;ANDROID_ROOT&#39;: &#39;/system&#39;, &#39;ANDROID_ASSETS&#39;: &#39;/system/app&#39;, &#39;ANDROID_DATA&#39;: &#39;/data&#39;, &#39;ANDROID_STORAGE&#39;: &#39;/storage&#39;, &#39;ANDROID_ART_ROOT&#39;: &#39;/apex/com.android.art&#39;, &#39;ANDROID_I18N_ROOT&#39;: &#39;/apex/com.android.i18n&#39;, &#39;ANDROID_TZDATA_ROOT&#39;: &#39;/apex/com.android.tzdata&#39;, &#39;EXTERNAL_STORAGE&#39;: &#39;/sdcard&#39;, &#39;ASEC_MOUNTPOINT&#39;: &#39;/mnt/asec&#39;, &#39;BOOTCLASSPATH&#39;: &#39;/apex/com.android.art/javalib/core-oj.jar:/apex/com.android.art/javalib/core-libart.jar:/apex/com.android.art/javalib/core-icu4j.jar:/apex/com.android.art/javalib/okhttp.jar:/apex/com.android.art/javalib/bouncycastle.jar:/apex/com.android.art/javalib/apache-xml.jar:/system/framework/framework.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-atb-backward-compatibility.jar:/system/framework/org.ifaa.android.manager.jar:/system/framework/telephony-ext.jar:/apex/com.android.conscrypt/javalib/conscrypt.jar:/apex/com.android.media/javalib/updatable-media.jar:/apex/com.android.mediaprovider/javalib/framework-mediaprovider.jar:/apex/com.android.os.statsd/javalib/framework-statsd.jar:/apex/com.android.permission/javalib/framework-permission.jar:/apex/com.android.sdkext/javalib/framework-sdkextensions.jar:/apex/com.android.wifi/javalib/framework-wifi.jar:/apex/com.android.tethering/javalib/framework-tethering.jar&#39;, &#39;DEX2OATBOOTCLASSPATH&#39;: &#39;/apex/com.android.art/javalib/core-oj.jar:/apex/com.android.art/javalib/core-libart.jar:/apex/com.android.art/javalib/core-icu4j.jar:/apex/com.android.art/javalib/okhttp.jar:/apex/com.android.art/javalib/bouncycastle.jar:/apex/com.android.art/javalib/apache-xml.jar:/system/framework/framework.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-atb-backward-compatibility.jar:/system/framework/org.ifaa.android.manager.jar:/system/framework/telephony-ext.jar&#39;, &#39;SYSTEMSERVERCLASSPATH&#39;: &#39;/system/framework/org.lineageos.platform.jar:/system/framework/com.android.location.provider.jar:/system/framework/services.jar:/system/framework/ethernet-service.jar:/apex/com.android.permission/javalib/service-permission.jar:/apex/com.android.ipsec/javalib/android.net.ipsec.ike.jar&#39;, &#39;DOWNLOAD_CACHE&#39;: &#39;/data/cache&#39;, &#39;TERMINFO&#39;: &#39;/system/etc/terminfo&#39;, &#39;ANDROID_SOCKET_zygote&#39;: &#39;21&#39;, &#39;ANDROID_SOCKET_usap_pool_primary&#39;: &#39;23&#39;, &#39;ANDROID_ENTRYPOINT&#39;: &#39;main.py&#39;, &#39;ANDROID_ARGUMENT&#39;: &#39;/data/user/0/eu.konix.poc/files/app&#39;, &#39;ANDROID_APP_PATH&#39;: &#39;/data/user/0/eu.konix.poc/files/app&#39;, &#39;ANDROID_PRIVATE&#39;: &#39;/data/user/0/eu.konix.poc/files&#39;, &#39;ANDROID_UNPACK&#39;: &#39;/data/user/0/eu.konix.poc/files/app&#39;, &#39;PYTHONHOME&#39;: &#39;/data/user/0/eu.konix.poc/files/app&#39;, &#39;PYTHONPATH&#39;: &#39;/data/user/0/eu.konix.poc/files/app:/data/user/0/eu.konix.poc/files/app/lib&#39;, &#39;PYTHONOPTIMIZE&#39;: &#39;2&#39;, &#39;P4A_BOOTSTRAP&#39;: &#39;SDL2&#39;, &#39;PYTHON_NAME&#39;: &#39;python&#39;, &#39;P4A_IS_WINDOWED&#39;: &#39;True&#39;, &#39;KIVY_ORIENTATION&#39;: &#39;Portrait&#39;, &#39;P4A_NUMERIC_VERSION&#39;: &#39;None&#39;, &#39;P4A_MINSDK&#39;: &#39;21&#39;, &#39;LC_CTYPE&#39;: &#39;C.UTF-8&#39;})
+</span></span><span style="display:flex;"><span>11-08 13:43:00.696 11349 11381 I python  : Android kivy bootstrap done. __name__ is __main__
+</span></span><span style="display:flex;"><span>11-08 13:43:00.696 11349 11381 I python  : AND: Ran string
+</span></span><span style="display:flex;"><span>11-08 13:43:00.696 11349 11381 I python  : Run user program, change dir and execute entrypoint
+</span></span><span style="display:flex;"><span>11-08 13:43:00.697 11349 11381 I python  : HEEEEELLLLLOOO !!!
+</span></span><span style="display:flex;"><span>11-08 13:43:00.697 11349 11381 I python  : Python for android ended.
+</span></span></code></pre></div><p>Now, changing the name.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>grep -rl <span style="color:#d14">&#39;eu.konix.poc&#39;</span> | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> line
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Editing </span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    sed -i -r <span style="color:#d14">&#39;s/eu(.)konix(.)poc/eu\1konix\2cop/&#39;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Editing app/smali_classes3/eu/konix/poc/ServicePoc.smali
+</span></span><span style="display:flex;"><span>Editing app/smali/eu/konix/poc/R.smali
+</span></span><span style="display:flex;"><span>Editing app/smali/eu/konix/poc/R$string.smali
+</span></span><span style="display:flex;"><span>Editing app/smali/eu/konix/poc/R$drawable.smali
+</span></span><span style="display:flex;"><span>Editing app/smali/eu/konix/poc/R$id.smali
+</span></span><span style="display:flex;"><span>Editing app/smali/eu/konix/poc/R$layout.smali
+</span></span><span style="display:flex;"><span>Editing app/smali/eu/konix/poc/R$mipmap.smali
+</span></span><span style="display:flex;"><span>Editing app/AndroidManifest.xml
+</span></span><span style="display:flex;"><span>Editing app/build/apk/classes3.dex
+</span></span><span style="display:flex;"><span>Editing app/build/apk/classes.dex
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>find -path <span style="color:#d14">&#34;*eu/konix/poc&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>./app/smali_classes3/eu/konix/poc
+</span></span><span style="display:flex;"><span>./app/smali/eu/konix/poc
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mv ./app/smali_classes3/eu/konix/<span style="color:#000;font-weight:bold">{</span>poc,cop<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>mv ./app/smali/eu/konix/<span style="color:#000;font-weight:bold">{</span>poc,cop<span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>apktool b app <span style="color:#000;font-weight:bold">&amp;&amp;</span> apksigner sign --ks your-keystore.jks --ks-key-alias your-alias --ks-pass pass:000000 ./app/dist/app.apk
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb install ./app/dist/app.apk
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb shell am start -n eu.konix.cop/org.kivy.android.PythonActivity
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb logcat -d|gi <span style="color:#d14">&#34;i \(python\|cop\)&#34;</span>|tail|uncolor
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>11-08 13:49:30.716 11550 11587 I python  : Initialized python
+</span></span><span style="display:flex;"><span>11-08 13:49:30.716 11550 11587 I python  : AND: Init threads
+</span></span><span style="display:flex;"><span>11-08 13:49:30.717 11550 11587 I python  : testing python print redirection
+</span></span><span style="display:flex;"><span>11-08 13:49:30.718 11550 11587 I python  : Android path [&#39;.&#39;, &#39;/data/user/0/eu.konix.cop/files/app/_python_bundle/stdlib.zip&#39;, &#39;/data/user/0/eu.konix.cop/files/app/_python_bundle/modules&#39;, &#39;/data/user/0/eu.konix.cop/files/app/_python_bundle/site-packages&#39;]
+</span></span><span style="display:flex;"><span>11-08 13:49:30.719 11550 11587 I python  : os.environ is environ({&#39;PATH&#39;: &#39;/product/bin:/apex/com.android.runtime/bin:/apex/com.android.art/bin:/system_ext/bin:/system/bin:/system/xbin:/odm/bin:/vendor/bin:/vendor/xbin&#39;, &#39;ANDROID_BOOTLOGO&#39;: &#39;1&#39;, &#39;ANDROID_ROOT&#39;: &#39;/system&#39;, &#39;ANDROID_ASSETS&#39;: &#39;/system/app&#39;, &#39;ANDROID_DATA&#39;: &#39;/data&#39;, &#39;ANDROID_STORAGE&#39;: &#39;/storage&#39;, &#39;ANDROID_ART_ROOT&#39;: &#39;/apex/com.android.art&#39;, &#39;ANDROID_I18N_ROOT&#39;: &#39;/apex/com.android.i18n&#39;, &#39;ANDROID_TZDATA_ROOT&#39;: &#39;/apex/com.android.tzdata&#39;, &#39;EXTERNAL_STORAGE&#39;: &#39;/sdcard&#39;, &#39;ASEC_MOUNTPOINT&#39;: &#39;/mnt/asec&#39;, &#39;BOOTCLASSPATH&#39;: &#39;/apex/com.android.art/javalib/core-oj.jar:/apex/com.android.art/javalib/core-libart.jar:/apex/com.android.art/javalib/core-icu4j.jar:/apex/com.android.art/javalib/okhttp.jar:/apex/com.android.art/javalib/bouncycastle.jar:/apex/com.android.art/javalib/apache-xml.jar:/system/framework/framework.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-atb-backward-compatibility.jar:/system/framework/org.ifaa.android.manager.jar:/system/framework/telephony-ext.jar:/apex/com.android.conscrypt/javalib/conscrypt.jar:/apex/com.android.media/javalib/updatable-media.jar:/apex/com.android.mediaprovider/javalib/framework-mediaprovider.jar:/apex/com.android.os.statsd/javalib/framework-statsd.jar:/apex/com.android.permission/javalib/framework-permission.jar:/apex/com.android.sdkext/javalib/framework-sdkextensions.jar:/apex/com.android.wifi/javalib/framework-wifi.jar:/apex/com.android.tethering/javalib/framework-tethering.jar&#39;, &#39;DEX2OATBOOTCLASSPATH&#39;: &#39;/apex/com.android.art/javalib/core-oj.jar:/apex/com.android.art/javalib/core-libart.jar:/apex/com.android.art/javalib/core-icu4j.jar:/apex/com.android.art/javalib/okhttp.jar:/apex/com.android.art/javalib/bouncycastle.jar:/apex/com.android.art/javalib/apache-xml.jar:/system/framework/framework.jar:/system/framework/ext.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/ims-common.jar:/system/framework/framework-atb-backward-compatibility.jar:/system/framework/org.ifaa.android.manager.jar:/system/framework/telephony-ext.jar&#39;, &#39;SYSTEMSERVERCLASSPATH&#39;: &#39;/system/framework/org.lineageos.platform.jar:/system/framework/com.android.location.provider.jar:/system/framework/services.jar:/system/framework/ethernet-service.jar:/apex/com.android.permission/javalib/service-permission.jar:/apex/com.android.ipsec/javalib/android.net.ipsec.ike.jar&#39;, &#39;DOWNLOAD_CACHE&#39;: &#39;/data/cache&#39;, &#39;TERMINFO&#39;: &#39;/system/etc/terminfo&#39;, &#39;ANDROID_SOCKET_zygote&#39;: &#39;21&#39;, &#39;ANDROID_SOCKET_usap_pool_primary&#39;: &#39;23&#39;, &#39;ANDROID_ENTRYPOINT&#39;: &#39;main.py&#39;, &#39;ANDROID_ARGUMENT&#39;: &#39;/data/user/0/eu.konix.cop/files/app&#39;, &#39;ANDROID_APP_PATH&#39;: &#39;/data/user/0/eu.konix.cop/files/app&#39;, &#39;ANDROID_PRIVATE&#39;: &#39;/data/user/0/eu.konix.cop/files&#39;, &#39;ANDROID_UNPACK&#39;: &#39;/data/user/0/eu.konix.cop/files/app&#39;, &#39;PYTHONHOME&#39;: &#39;/data/user/0/eu.konix.cop/files/app&#39;, &#39;PYTHONPATH&#39;: &#39;/data/user/0/eu.konix.cop/files/app:/data/user/0/eu.konix.cop/files/app/lib&#39;, &#39;PYTHONOPTIMIZE&#39;: &#39;2&#39;, &#39;P4A_BOOTSTRAP&#39;: &#39;SDL2&#39;, &#39;PYTHON_NAME&#39;: &#39;python&#39;, &#39;P4A_IS_WINDOWED&#39;: &#39;True&#39;, &#39;KIVY_ORIENTATION&#39;: &#39;Portrait&#39;, &#39;P4A_NUMERIC_VERSION&#39;: &#39;None&#39;, &#39;P4A_MINSDK&#39;: &#39;21&#39;, &#39;LC_CTYPE&#39;: &#39;C.UTF-8&#39;})
+</span></span><span style="display:flex;"><span>11-08 13:49:30.719 11550 11587 I python  : Android kivy bootstrap done. __name__ is __main__
+</span></span><span style="display:flex;"><span>11-08 13:49:30.719 11550 11587 I python  : AND: Ran string
+</span></span><span style="display:flex;"><span>11-08 13:49:30.719 11550 11587 I python  : Run user program, change dir and execute entrypoint
+</span></span><span style="display:flex;"><span>11-08 13:49:30.719 11550 11587 I python  : HEEEEELLLLLOOO !!!
+</span></span><span style="display:flex;"><span>11-08 13:49:30.719 11550 11587 I python  : Python for android ended.
+</span></span></code></pre></div><p>And changing the icons,</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>magick https://ipfs.konubinix.eu/ipfs/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi -resize 128x128 -background white -gravity center -extent 128x128 ./app/res/mipmap/icon.png
+</span></span></code></pre></div><p>And a different splash screen</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ipfs get https://ipfs.konubinix.eu/ipfs/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi -o ./app/res/drawable/presplash.jpg
+</span></span></code></pre></div><p>And for the name</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>grep -rl <span style="color:#d14">&#39;\bpoc\b&#39;</span> | <span style="color:#000;font-weight:bold">while</span> <span style="color:#0086b3">read</span> line
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0086b3">echo</span> <span style="color:#d14">&#34;Editing </span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span>    sed -i -r <span style="color:#d14">&#39;s/ProofOfConcept/MyWonderfullApp/&#39;</span> <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">line</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">done</span>
+</span></span></code></pre></div><p>Note that I did it from emacs, as poc is to generic a name and it was hard not
+to match the binary files.</p>
+<p>And voilà !!</p>
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafybeibfpc2stqnhap3jg3ud4znzrt5uos4utnpyauvxz4p5ypfcdjezpi?filename=screenshot_20241108_135825_trebuchet.png">
+</figure>
+
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a href="/blog/posts/a_python_runtime_on_android/?title=a_legacy_from_another_lifetime#a-legacy-from-another-lifetime">a legacy from another lifetime</a> (blog)</li>
+<li><a href="/braindump/posts/android/#f2b3d4dc-0526-431d-abe9-e76695811ff7">change the orientation</a></li>
+<li><a href="/braindump/posts/from_old_kivy_launcher_to_custom_android_app/">from old kivy launcher to custom android app</a></li>
+<li><a href="/braindump/posts/share_with_android_kivy/">share with android kivy</a></li>
+<li><a href="/braindump/posts/simple_camera_with_kivy/">simple camera with kivy</a></li>
+<li><a href="/blog/posts/a_python_runtime_on_android/?title=to_debug_services#to-debug-services">to debug services</a> (blog)</li>
+</ul>
+<h2 id="permalink"><a href="/braindump/2eef775a-0bc6-45a1-a204-26f4e814025f?title=from_the_python_android_runtime_to_a_custom_app">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 19 Jun 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 08 Nov 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
