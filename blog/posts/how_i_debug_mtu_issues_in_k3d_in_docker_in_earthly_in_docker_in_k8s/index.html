@@ -37,24 +37,24 @@
 	<h1 class="underline">How I Debug MTU Issues in K3d in Docker in Earthly in Docker in K8s</h1>
 	</header>
   <article>
-	<p><a target="_blank" href="https://konubinix.eu/braindump/posts/earthly/?title=earthly#">earthly</a> is awesome because it unlocks a bunch of use cases that were impossible
+	<p><a target="_blank" href="/braindump/posts/earthly/?title=earthly#">earthly</a> is awesome because it unlocks a bunch of use cases that were impossible
 otherwise. But it comes with several layers of abstraction that may be worth
 understanding.</p>
-<p>In the past, I have already been confronted to issues with running <a target="_blank" href="https://konubinix.eu/braindump/posts/docker/?title=docker#">docker</a> in
-some containerized environment. The last one was about the fact that <a target="_blank" href="https://konubinix.eu/braindump/posts/docker_mtu_issues_and_solutions/?title=docker_does_not_check_the_mtu_at_startup#docker-does-not-check-the-mtu-at-startup">docker does
+<p>In the past, I have already been confronted to issues with running <a target="_blank" href="/braindump/posts/docker/?title=docker#">docker</a> in
+some containerized environment. The last one was about the fact that <a target="_blank" href="/braindump/posts/docker_mtu_issues_and_solutions/?title=docker_does_not_check_the_mtu_at_startup#docker-does-not-check-the-mtu-at-startup">docker does
 not check the mtu at startup</a>.</p>
 <p>I fell into a similar issue today. I needed to dig deeper into all the layer of
-abstraction I set up in the <a target="_blank" href="https://konubinix.eu/braindump/posts/continuous_integration/?title=continuous_integration#">CI</a>. I take advantage of this to write down what I
+abstraction I set up in the <a target="_blank" href="/braindump/posts/continuous_integration/?title=continuous_integration#">CI</a>. I take advantage of this to write down what I
 learned.</p>
-<p>When I need to tests software in the context of <a target="_blank" href="https://konubinix.eu/braindump/posts/kubernetes/?title=kubernetes#">k8s</a>, my CI looks like this:</p>
+<p>When I need to tests software in the context of <a target="_blank" href="/braindump/posts/kubernetes/?title=kubernetes#">k8s</a>, my CI looks like this:</p>
 <ol>
-<li>a virtual machine hosted on <a target="_blank" href="https://konubinix.eu/braindump/posts/hetzner/?title=hetzner#">hetzner</a>,</li>
-<li>running <a target="_blank" href="https://konubinix.eu/braindump/posts/k3s/?title=k3s#">k3s</a>, hence <a target="_blank" href="https://konubinix.eu/braindump/posts/containerd/?title=containerd#">containerd</a>,</li>
-<li>running an <a target="_blank" href="https://konubinix.eu/braindump/posts/actions_runner_controller/?title=actions_runner_controller#">actions-runner-controller</a>,</li>
-<li>running <a target="_blank" href="https://konubinix.eu/braindump/posts/earthly/?title=earthly#">earthly</a>, hence earthly-buildkitd in docker,</li>
-<li>running buildkit-<a target="_blank" href="https://konubinix.eu/braindump/posts/runc/?title=runc#">runc</a>,</li>
+<li>a virtual machine hosted on <a target="_blank" href="/braindump/posts/hetzner/?title=hetzner#">hetzner</a>,</li>
+<li>running <a target="_blank" href="/braindump/posts/k3s/?title=k3s#">k3s</a>, hence <a target="_blank" href="/braindump/posts/containerd/?title=containerd#">containerd</a>,</li>
+<li>running an <a target="_blank" href="/braindump/posts/actions_runner_controller/?title=actions_runner_controller#">actions-runner-controller</a>,</li>
+<li>running <a target="_blank" href="/braindump/posts/earthly/?title=earthly#">earthly</a>, hence earthly-buildkitd in docker,</li>
+<li>running buildkit-<a target="_blank" href="/braindump/posts/runc/?title=runc#">runc</a>,</li>
 <li>running docker (because of WITH DOCKER) to run k3d,</li>
-<li>running k3s, hence <a target="_blank" href="https://konubinix.eu/braindump/posts/containerd/?title=containerd#">containerd</a>,</li>
+<li>running k3s, hence <a target="_blank" href="/braindump/posts/containerd/?title=containerd#">containerd</a>,</li>
 <li>running the pods in am interested in.</li>
 </ol>
 <p>All those layers make sense and provide a comfortable development
@@ -71,7 +71,7 @@ that way<sup id="fnref:2"><a class="internal-link" href="#fn:2" class="footnote-
 tricky.</p>
 <p>This setup did not work out of the box. The cluster never started. Therefore I
 needed to get into the running github action.</p>
-<p>Because I already have some issues with the <a target="_blank" href="https://konubinix.eu/braindump/posts/maximum_transmission_unit/?title=maximum_transmission_unit#">MTU</a>, I started looking at it.</p>
+<p>Because I already have some issues with the <a target="_blank" href="/braindump/posts/maximum_transmission_unit/?title=maximum_transmission_unit#">MTU</a>, I started looking at it.</p>
 <ul>
 <li>ssh in the hetzner machine -&gt; ip a | grep mtu -&gt; 1430</li>
 <li>kubectl exec -t -i myrunningrunner sh
@@ -79,7 +79,7 @@ needed to get into the running github action.</p>
 <li>ip a | grep mtu -&gt; 1430</li>
 <li>dk exec -ti earthly-buildkitd sh
 <ul>
-<li>ip a|grep mtu -&gt; 1400 (because of <a target="_blank" href="https://konubinix.eu/braindump/posts/actions_runner_controller/?title=fix_docker_mtu_issues_and_solutions_in_actions_runner_controller#fix-docker-mtu-issues-and-solutions-in-actions-runner-controller">fix Docker MTU issues and solutions in actions-runner-controller</a>)</li>
+<li>ip a|grep mtu -&gt; 1400 (because of <a target="_blank" href="/braindump/posts/actions_runner_controller/?title=fix_docker_mtu_issues_and_solutions_in_actions_runner_controller#fix-docker-mtu-issues-and-solutions-in-actions-runner-controller">fix Docker MTU issues and solutions in actions-runner-controller</a>)</li>
 <li>buildkit-runc exec -t sw7b9iz0d6ulw7l2rlriozqaz bash (use buildkit-runc list to find the container)
 <ul>
 <li>apt install &ndash;yes iproute2</li>
@@ -97,7 +97,7 @@ needed to get into the running github action.</p>
 </ul>
 </li>
 </ul>
-<figure><img src="https://konubinix.eu/ipfs/bafybeiei3cqsjim3wnantnoymg6vitnd647eu5dti4bdwl3ehzyt7hi3pq?filename=a.png">
+<figure><img src="https://ipfs.konubinix.eu/ipfs/bafybeiei3cqsjim3wnantnoymg6vitnd647eu5dti4bdwl3ehzyt7hi3pq?filename=a.png">
 </figure>
 
 <p>There are two issues here:</p>
@@ -112,17 +112,17 @@ does not overwrite whatever config already exists.</p>
 <code>--registry-use</code>) spawns a container in a network without guessing the
 mtu. Docker falls back on 1500 (even though docker itself is configured to use
 mtu 1400).</p>
-<p>I could extend <a target="_blank" href="https://konubinix.eu/braindump/posts/clk_k8s/?title=clk_k8s#">clk k8s</a> to run create a network with the correct mtu using
+<p>I could extend <a target="_blank" href="/braindump/posts/clk_k8s/?title=clk_k8s#">clk k8s</a> to run create a network with the correct mtu using
 <code>docker network create somename --opt com.docker.network.driver.mtu=1400</code> and
 then use <code>k3d cluster create --network somename</code> and <code>k3d registry create --default-network somename</code>.</p>
-<p>But I got pragmatic and used <a target="_blank" href="https://konubinix.eu/braindump/posts/kubernetes/?title=kind#kind">kind</a> instead, than actually infer the appropriate
+<p>But I got pragmatic and used <a target="_blank" href="/braindump/posts/kubernetes/?title=kind#kind">kind</a> instead, than actually infer the appropriate
 value of mtu: 1400.</p>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/blog/posts/clk_k8s_and_earthly_in_a_local_dev_env/">clk k8s and earthly in a local dev env</a></li>
-<li><a target="_blank" href="https://konubinix.eu/braindump/posts/debug_k8s_in_docker_in_earthly/?title=debug_k8s_in_docker_in_earthly#">debug k8s in docker in earthly</a> (braindump)</li>
+<li><a target="_blank" href="/braindump/posts/debug_k8s_in_docker_in_earthly/?title=debug_k8s_in_docker_in_earthly#">debug k8s in docker in earthly</a> (braindump)</li>
 </ul>
-<h2 id="permalink"><a class="internal-link" href="https://konubinix.eu/blog/d83c0a76-e113-48e5-8099-c18f3c144da4?title=how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s">Permalink</a></h2>
+<h2 id="permalink"><a class="internal-link" href="/blog/d83c0a76-e113-48e5-8099-c18f3c144da4?title=how_i_debug_mtu_issues_in_k3d_in_docker_in_earthly_in_docker_in_k8s">Permalink</a></h2>
 <div class="footnotes" role="doc-endnotes">
 <hr>
 <ol>
@@ -154,7 +154,7 @@ ci:
     WITH DOCKER --load 127.0.0.1:5000/myimage:dev=+myimage
         RUN /app/test.sh
     END
-</code></pre><p>And then in the test (I use <a target="_blank" href="https://konubinix.eu/braindump/posts/clk_k8s/?title=clk_k8s#">clk k8s</a>).</p>
+</code></pre><p>And then in the test (I use <a target="_blank" href="/braindump/posts/clk_k8s/?title=clk_k8s#">clk k8s</a>).</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic">#!/bin/bash
 </span></span></span><span style="display:flex;"><span><span style="color:#999;font-weight:bold;font-style:italic"></span>
 </span></span><span style="display:flex;"><span>clk k8s flow

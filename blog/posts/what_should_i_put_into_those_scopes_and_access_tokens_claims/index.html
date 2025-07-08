@@ -85,39 +85,39 @@
 <!--endtoc-->
 <p>After <a class="internal-link" href="/blog/posts/make_sense_of_keycloak_openid_connect_oauth_2_0_jwt_jws/">making sense of keycloak, openid connect, oauth 2.0, jwt, jws</a> and
 <a class="internal-link" href="/blog/posts/how_do_i_create_an_oauth_2_0_oidc_resource_server/">understanding the creation of an OAuth 2.0/OIDC resource server</a>, I feel that I
-understand well enough the &ldquo;is&rdquo;. I would like to <a target="_blank" href="https://konubinix.eu/braindump/posts/loi_de_hume/?title=loi_de_hume#">focus on the &ldquo;ought to&rdquo;</a>.</p>
-<p>In other words, I want to use <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0#">OAuth 2.0</a> for real, but I don&rsquo;t know yet how to
+understand well enough the &ldquo;is&rdquo;. I would like to <a target="_blank" href="/braindump/posts/loi_de_hume/?title=loi_de_hume#">focus on the &ldquo;ought to&rdquo;</a>.</p>
+<p>In other words, I want to use <a target="_blank" href="/braindump/posts/oauth_2_0/?title=oauth_2_0#">OAuth 2.0</a> for real, but I don&rsquo;t know yet how to
 design my system. Here, I try to document what I could find in the internet that
 helped me.</p>
 <p>TL;DR: I describe what I understand of how several sources do thing, then I give
 <a class="internal-link" href="#a9c0403f-03cc-491a-92dd-3b646eec6aa0">my opinion</a> on how I would design such a system.</p>
-<p>OAuth is very vague in the definition of the <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=access_token#access-token">access token</a>.</p>
+<p>OAuth is very vague in the definition of the <a target="_blank" href="/braindump/posts/oauth_2_0/?title=access_token#access-token">access token</a>.</p>
 <blockquote>
 <p>access token is a string representing an authorization issued to the
 client. The string is usually opaque to the client</p>
 <p>&mdash; <a target="_blank" href="https://datatracker.ietf.org/doc/html/rfc6749">https://datatracker.ietf.org/doc/html/rfc6749</a></p>
 </blockquote>
 <p>It looks like, on top of this very non prescriptive definition, popular
-implementations have reached a consensus of using <a target="_blank" href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=json_web_tokens#">JWT</a>/<a target="_blank" href="https://konubinix.eu/braindump/posts/json_web_signature/?title=json_web_signature#">JWS</a> to encode this
+implementations have reached a consensus of using <a target="_blank" href="/braindump/posts/json_web_tokens/?title=json_web_tokens#">JWT</a>/<a target="_blank" href="/braindump/posts/json_web_signature/?title=json_web_signature#">JWS</a> to encode this
 token.</p>
 <p>OAuth tried to catch up with this trend of encoding access token in JWT and
-finally (late 2021) tried to standardize a bit the <a target="_blank" href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a>s one could find in
+finally (late 2021) tried to standardize a bit the <a target="_blank" href="/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a>s one could find in
 this token. It still is very vague. I assume that there are so many use cases
 that we cannot generalize them well in a standard.</p>
 <p>If I understand correctly, the flow, when using OAuth and access tokens encoded
 in JWT/JWS, looks like this:</p>
 <ol>
-<li>an <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=authorization_server#authorization-server">authorization server</a> has access to a database of users<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</li>
-<li>a <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0_client#oauth-2-dot-0-client">client</a> connects to the authorization server with a scope and gets an access
+<li>an <a target="_blank" href="/braindump/posts/oauth_2_0/?title=authorization_server#authorization-server">authorization server</a> has access to a database of users<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</li>
+<li>a <a target="_blank" href="/braindump/posts/oauth_2_0/?title=oauth_2_0_client#oauth-2-dot-0-client">client</a> connects to the authorization server with a scope and gets an access
 token that contains a set of claims,</li>
-<li>the client connects to a <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=resource_server#resource-server">resource server</a> with the set of claims. The resource
+<li>the client connects to a <a target="_blank" href="/braindump/posts/oauth_2_0/?title=resource_server#resource-server">resource server</a> with the set of claims. The resource
 server checks the validity of the token and infer from it which resource can
 be accessed.</li>
 </ol>
 <p>So the question is: <strong>what kind of messages would I want to convey in the scopes
 and in the claims to have a sensible and maintainable system?</strong></p>
 <p>In my mind, this topic is particularly hard, because it asks questions at
-several dimensions (see the <a target="_blank" href="https://konubinix.eu/braindump/posts/three_worlds_analogy/?title=three_worlds_analogy#">three worlds analogy</a>).</p>
+several dimensions (see the <a target="_blank" href="/braindump/posts/three_worlds_analogy/?title=three_worlds_analogy#">three worlds analogy</a>).</p>
 <ol>
 <li>it needs to define some ontology at the authorization server side, to map
 roles/tenants/groups/users to some claims.</li>
@@ -125,9 +125,9 @@ roles/tenants/groups/users to some claims.</li>
 claims to permissions on resources.</li>
 </ol>
 <p>Those two worlds need to be in sync and are most likely to be administered by
-two different kind of teams, with different <a target="_blank" href="https://konubinix.eu/braindump/posts/getting_things_done/?title=horizons_of_focus#horizons-of-focus">horizons of focus</a>.</p>
+two different kind of teams, with different <a target="_blank" href="/braindump/posts/getting_things_done/?title=horizons_of_focus#horizons-of-focus">horizons of focus</a>.</p>
 <p>Also, the definitions of those terms rely on the expected use cases of the
-users. So this definition must be done by a <a target="_blank" href="https://konubinix.eu/braindump/posts/scrum_team/?title=only_one_product_owner#only-one-product-owner">product owner</a> as much as a <a target="_blank" href="https://konubinix.eu/braindump/posts/scrum_team/?title=developers#developers">technical
+users. So this definition must be done by a <a target="_blank" href="/braindump/posts/scrum_team/?title=only_one_product_owner#only-one-product-owner">product owner</a> as much as a <a target="_blank" href="/braindump/posts/scrum_team/?title=developers#developers">technical
 team</a>.</p>
 <p>Another reason why this is a complicated subject is that the definitions of
 scope/users/group/role/tenant/permission/etc are generally a bit vague. Chances
@@ -156,7 +156,7 @@ case that happens.</p>
 <p>Afterwards, they define permission as a scope. Here again, I don&rsquo;t understand
 the rationale supporting this statement. Maybe do they mean that permission
 gives access to a subset of the resources? If they don&rsquo;t want to refer to
-<a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=scope#scope">oauth 2.0 scope</a>, I think the wording was ambiguous.</p>
+<a target="_blank" href="/braindump/posts/oauth_2_0/?title=scope#scope">oauth 2.0 scope</a>, I think the wording was ambiguous.</p>
 <blockquote>
 <p>permission is a scope, that is, the action that the decorator would like to
 perform at your house</p>
@@ -180,13 +180,13 @@ the &ldquo;Manager&rdquo; role</p>
 <p>Indeed, they separate the step of creating a role and assigning permissions
 to it, which it exactly what I would expect of modeling a mapping from a role
 to a set of permissions. This, to me, supports the idea that it is only a
-<a target="_blank" href="https://konubinix.eu/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> and that we fundamentally agree.</p>
+<a target="_blank" href="/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> and that we fundamentally agree.</p>
 <h3 id="5fdddffa-d0fc-4edc-8b9f-4c788ffbc002">claims and relation to identity</h3>
 <p>They define a claim as something related to the identity, but used in a context
 of granting access. They remind that, for the claim to be useful, it has to be
 trustfully issued by a trusted third party.</p>
-<p>Then, they indicate that this set of claims is actually an <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=access_token#access-token">access token</a> (more
-precisely a <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded access tokens</a>, but they don&rsquo;t go that far).</p>
+<p>Then, they indicate that this set of claims is actually an <a target="_blank" href="/braindump/posts/oauth_2_0/?title=access_token#access-token">access token</a> (more
+precisely a <a target="_blank" href="/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded access tokens</a>, but they don&rsquo;t go that far).</p>
 <blockquote>
 <p>Sometimes authorization is somewhat related to identity.</p>
 <p>[&hellip;]</p>
@@ -205,7 +205,7 @@ of ‘access token’ that grants access rights to jump onto the plane.</p>
 <p>To me, they make the confusion between:</p>
 <ol>
 <li>a claim as an attribute about the user identity,</li>
-<li>a <a target="_blank" href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a> as a key/value given to the resource server to assess
+<li>a <a target="_blank" href="/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a> as a key/value given to the resource server to assess
 whether the access is granted or not,</li>
 </ol>
 <p>To me 1. is a subset of 2.. Indeed, you may well find scopes or roles or
@@ -214,28 +214,28 @@ tenants information in the latter, and I doubt they mean that those belong to
 &ldquo;somewhat related to identity&rdquo;, they mean 1.</p>
 <p>But, when they indicate that the claims must be issued by trusted third
 party, I think they mean all the claims of 2., not only the claims of 1.</p>
-<p>Again, this is a <a target="_blank" href="https://konubinix.eu/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> and I agree in principle, but making this
+<p>Again, this is a <a target="_blank" href="/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> and I agree in principle, but making this
 confusion clear helps me have clear ideas of the concepts and take
 appropriate decisions.</p>
 <h3 id="a5d06eff-73ee-4517-b622-342ae3c0df71">authorization strategies</h3>
-<p>They differentiate between several authorization strategies, among those <a target="_blank" href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>
-and <a target="_blank" href="https://konubinix.eu/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a> (that they call ABAC).</p>
+<p>They differentiate between several authorization strategies, among those <a target="_blank" href="/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>
+and <a target="_blank" href="/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a> (that they call ABAC).</p>
 <blockquote>
 <p>several different authorization strategies that computer systems leverage during
 application deployment. The most prominent ones are Role-Based Access Control
 (RBAC) and Attribute-Based Access Control (ABAC).</p>
 <p>[&hellip;]</p>
-<p>When using <a target="_blank" href="https://konubinix.eu/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">ABAC</a>, a computer system defines whether a user has sufficient access
+<p>When using <a target="_blank" href="/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">ABAC</a>, a computer system defines whether a user has sufficient access
 privileges to execute an action based on a trait (attribute or claim) associated
 with that user.</p>
 <p>[&hellip;]</p>
-<p><a target="_blank" href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>, on the other hand, treats authorization as permissions associated with
+<p><a target="_blank" href="/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>, on the other hand, treats authorization as permissions associated with
 roles and not directly with users.</p>
 <p>&ndash; <a target="_blank" href="https://auth0.com/intro-to-iam/what-is-authorization/">https://auth0.com/intro-to-iam/what-is-authorization/</a></p>
 </blockquote>
-<p>Finally, they refer to more complicated strategies, like <a target="_blank" href="https://konubinix.eu/braindump/posts/relation_based_access_control/?title=relation_based_access_control#">Relation Based
+<p>Finally, they refer to more complicated strategies, like <a target="_blank" href="/braindump/posts/relation_based_access_control/?title=relation_based_access_control#">Relation Based
 Access Control</a>. I&rsquo;m still waaay too noob to understand this strategy, but
-it&rsquo;s good to know as I might <a target="_blank" href="https://konubinix.eu/braindump/posts/serendipite/?title=serendipite#">serendipitously</a> come to that later.</p>
+it&rsquo;s good to know as I might <a target="_blank" href="/braindump/posts/serendipite/?title=serendipite#">serendipitously</a> come to that later.</p>
 <blockquote>
 <p>Relationship Based Access Control examines the following question in regards to
 authorization: “Does this user have a sufficient relationship to this object or
@@ -304,8 +304,8 @@ at <a target="_blank" href="https://developers.google.com/oauthplayground/">http
 <p>&ndash; <a target="_blank" href="https://www.oauth.com/oauth2-servers/scope/defining-scopes/">https://www.oauth.com/oauth2-servers/scope/defining-scopes/</a></p>
 </blockquote>
 <p>I took a look at them <a class="internal-link" href="#org-target--google">later in this document</a>.</p>
-<h2 id="d88c661f-dcda-4ca1-9102-d1dfc6ed9e7a">According to Microsoft <a target="_blank" href="https://konubinix.eu/braindump/posts/windows_active_directory/?title=windows_active_directory#">windows active directory</a></h2>
-<p>They the vocabulary of <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=oauth_2_0#">OAuth 2.0</a>, except that they call the resource server
+<h2 id="d88c661f-dcda-4ca1-9102-d1dfc6ed9e7a">According to Microsoft <a target="_blank" href="/braindump/posts/windows_active_directory/?title=windows_active_directory#">windows active directory</a></h2>
+<p>They the vocabulary of <a target="_blank" href="/braindump/posts/oauth_2_0/?title=oauth_2_0#">OAuth 2.0</a>, except that they call the resource server
 simply resource.</p>
 <blockquote>
 <p>There are two parties involved in an access token request: the client, who
@@ -313,7 +313,7 @@ requests the token, and the resource (the API) that accepts the token when the
 API is called</p>
 <p>&ndash; <a target="_blank" href="https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token">https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens#claims-in-access-token</a></p>
 </blockquote>
-<p>I think this is to reflect the notion of resource that we can find in <a target="_blank" href="https://konubinix.eu/braindump/posts/representational_state_transfer/?title=representational_state_transfer#">REST</a>.</p>
+<p>I think this is to reflect the notion of resource that we can find in <a target="_blank" href="/braindump/posts/representational_state_transfer/?title=representational_state_transfer#">REST</a>.</p>
 <blockquote>
 <p>resource R is a temporally varying membership function MR(t), which for time t
 maps to a set of entities, or values, which are equivalent</p>
@@ -470,7 +470,7 @@ keys to keep the token compact.</p>
 several in combination. They make the distinction between role/resources and
 permissions.</p>
 <blockquote>
-<p>typical app will employ a mix of both (<a target="_blank" href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">Role Based Access Control</a> and <a target="_blank" href="https://konubinix.eu/braindump/posts/resource_based_access_control/?title=resource_based_access_control#">Resource
+<p>typical app will employ a mix of both (<a target="_blank" href="/braindump/posts/role_based_access_control/?title=role_based_access_control#">Role Based Access Control</a> and <a target="_blank" href="/braindump/posts/resource_based_access_control/?title=resource_based_access_control#">Resource
 based access control</a>). For example, to delete a resource, the user must be the
 resource owner or an admin</p>
 <p>[&hellip;]</p>
@@ -480,7 +480,7 @@ permissions, then check the aggregate set against the desired operation</p>
 </blockquote>
 <p>They use the <strong>tenantId</strong> JWT claim to ensure the user only has access to
 resources belonging to pers tenant. Interestingly, they don&rsquo;t use <strong>tid</strong>, like
-in <a target="_blank" href="https://konubinix.eu/braindump/posts/windows_active_directory/?title=windows_active_directory#">windows active directory</a>. And don&rsquo;t follow the advice of having as small
+in <a target="_blank" href="/braindump/posts/windows_active_directory/?title=windows_active_directory#">windows active directory</a>. And don&rsquo;t follow the advice of having as small
 JWT claim keys as possible.</p>
 <blockquote>
 <p>you must ensure that permissions don&rsquo;t &ldquo;leak&rdquo; to another tenant&rsquo;s data.</p>
@@ -551,7 +551,7 @@ RBAC is a specific implementation of CBAC. An example is given to show that
 sometimes, claims (a.k.a. user intrinsic properties) make more sense than
 roles.</p>
 <blockquote>
-<p><a target="_blank" href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a> vs <a target="_blank" href="https://konubinix.eu/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a></p>
+<p><a target="_blank" href="/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a> vs <a target="_blank" href="/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a></p>
 <p>Ok, now, if you ask what is the benefit of Role-based access control or Claim
 based access control, then, think about this page &ldquo;ViewImagesOfViolence&rdquo;. Is not
 it more intuitive to check for a claim &ldquo;Adult-over-18years&rdquo; when determining if
@@ -560,7 +560,7 @@ create more segments within your users comparing roles. In an abstract sense,
 all roles can be claims too, but claims cannot be thought of as roles.</p>
 <p>&ndash; <a target="_blank" href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
 </blockquote>
-<p>Another example is given with more depth : the <a target="_blank" href="https://konubinix.eu/braindump/posts/night_club_analogy/?title=night_club_analogy#">nightclub metaphor</a>. If the
+<p>Another example is given with more depth : the <a target="_blank" href="/braindump/posts/night_club_analogy/?title=night_club_analogy#">nightclub metaphor</a>. If the
 resource server is a night club, the client is the person that wish to enter
 the night club and the access token is the driver&rsquo;s licence, then the bouncer
 checks the claims of the driver&rsquo;s licence to assess whether the client can
@@ -603,7 +603,7 @@ be done using RBAC, but it is not a good fit for a Claim.</p>
 <p>&ndash; <a target="_blank" href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
 </blockquote>
 <p>Also, it is proposed to take care of not coupling JWT claims and
-permissions. This is called: <a target="_blank" href="https://konubinix.eu/braindump/posts/permission_based_access_control/?title=permission_based_access_control#">Permission-Based access control</a>.</p>
+permissions. This is called: <a target="_blank" href="/braindump/posts/permission_based_access_control/?title=permission_based_access_control#">Permission-Based access control</a>.</p>
 <p>It describes that the resource server should not directly check the JWT claims but
 map them to permissions (read, write, update) and assign permissions to the
 endpoints. That way is supposed to ease modeling and maintaining the access
@@ -627,7 +627,7 @@ permission-based access control.</p>
 </blockquote>
 <p>It is recommended not to assign sets of permissions to a users, which is
 exactly what the model &ldquo;role == sets of permission&rdquo; would imply. So I think
-that this is linked to the <a target="_blank" href="https://konubinix.eu/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> <a class="internal-link" href="#org-target--roles-are-not-sets-of-permissions">mentioned earlier</a> and I tend
+that this is linked to the <a target="_blank" href="/braindump/posts/debat_semantique/?title=debat_semantique#">semantic debate</a> <a class="internal-link" href="#org-target--roles-are-not-sets-of-permissions">mentioned earlier</a> and I tend
 to agree with what is written here.</p>
 <blockquote>
 <p>You can assign a set of permissions directly to a user. But do not do that. It
@@ -658,9 +658,9 @@ ones can be added</p>
 
 <p>&ndash; <a target="_blank" href="https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988">https://stackoverflow.com/questions/22814023/role-based-access-control-rbac-vs-claims-based-access-control-cbac-in-asp-n#2281988</a></p>
 </blockquote>
-<h2 id="a9c0403f-03cc-491a-92dd-3b646eec6aa0">My <a target="_blank" href="https://konubinix.eu/braindump/posts/decide_de_croire/?title=decide_de_croire#">opinion</a></h2>
+<h2 id="a9c0403f-03cc-491a-92dd-3b646eec6aa0">My <a target="_blank" href="/braindump/posts/decide_de_croire/?title=decide_de_croire#">opinion</a></h2>
 <p>Here, the objective is to find a framework that allows to think authorization
-and produce meaningful arguments to decide what to put in the <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded
+and produce meaningful arguments to decide what to put in the <a target="_blank" href="/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded
 access tokens</a>.</p>
 <p>I decide to use the following definitions :</p>
 <dl>
@@ -681,20 +681,20 @@ server what access to grant to the client</strong>.</dd>
 groups the users is in. For instance, a user might be given the right to get
 access to all the resources of some kind created by all the users of per
 tenant.</dd>
-<dt><a target="_blank" href="https://konubinix.eu/braindump/posts/getting_things_done/?title=horizons_of_focus#horizons-of-focus">commitment</a></dt>
+<dt><a target="_blank" href="/braindump/posts/getting_things_done/?title=horizons_of_focus#horizons-of-focus">commitment</a></dt>
 <dd>whatever the user has been committed to get done. This
 concept is not actually discussed in implementing authorization because we
 generally only need to know about access to make a decision. Yet, I think it
 helps to understand why the user needs those access at first.</dd>
 <dt>commitments</dt>
 <dd>sets of commitments the users has with relativity to the
-resource. People generally call those &ldquo;roles&rdquo; (see <a target="_blank" href="https://konubinix.eu/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>) but I think this is
+resource. People generally call those &ldquo;roles&rdquo; (see <a target="_blank" href="/braindump/posts/role_based_access_control/?title=role_based_access_control#">RBAC</a>) but I think this is
 an oversimplification of the notion of commitment.</dd>
 <dt>claims</dt>
-<dd>not to be confused with the <a target="_blank" href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a>. Intrinsic properties
-of the user, like the age or some unique identity (see <a target="_blank" href="https://konubinix.eu/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a>). For example,
+<dd>not to be confused with the <a target="_blank" href="/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a>. Intrinsic properties
+of the user, like the age or some unique identity (see <a target="_blank" href="/braindump/posts/claim_based_access_control/?title=claim_based_access_control#">CBAC</a>). For example,
 resources might be available only to adults (age &gt;= 18 in France).</dd>
-<dt><a target="_blank" href="https://konubinix.eu/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a></dt>
+<dt><a target="_blank" href="/braindump/posts/json_web_tokens/?title=jwt_claim#jwt-claim">JWT claim</a></dt>
 <dd>all the key/value data that are stored in a token encoded using
 JWT, and might actually convey information about claims, but also roles,
 scope or groups.</dd>
@@ -722,9 +722,9 @@ access might be dangerous in case the email is subject to change.</p>
 <h3 id="a84bcded-3d8d-4d0f-bf5d-784a794416e3"><span class="org-target" id="org-target--roles-are-not-sets-of-permissions"></span> Side note about how I reason about roles</h3>
 <p>Another popular definition is that roles are actually sets of permissions. I
 don&rsquo;t like it because it hides the more traditional meaning of role as
-commitment. May be this is because I consider myself a <a target="_blank" href="https://konubinix.eu/braindump/posts/getting_things_done/?title=getting_things_done#">gtd</a> practitioner, in
-my opinion, roles are particular cases of <a target="_blank" href="https://konubinix.eu/braindump/posts/getting_things_done/?title=horizon_2_areas_of_focus_and_accountability#horizon-2-areas-of-focus-and-accountability">area of focus</a>.</p>
-<p>For instance, being a <a target="_blank" href="https://konubinix.eu/braindump/posts/technical_lead/?title=technical_lead#">technical lead</a>, I know the difference between</p>
+commitment. May be this is because I consider myself a <a target="_blank" href="/braindump/posts/getting_things_done/?title=getting_things_done#">gtd</a> practitioner, in
+my opinion, roles are particular cases of <a target="_blank" href="/braindump/posts/getting_things_done/?title=horizon_2_areas_of_focus_and_accountability#horizon-2-areas-of-focus-and-accountability">area of focus</a>.</p>
+<p>For instance, being a <a target="_blank" href="/braindump/posts/technical_lead/?title=technical_lead#">technical lead</a>, I know the difference between</p>
 <ol>
 <li>my role that implies stuffs that I need to maintain, like, among other things
 <ol>
@@ -753,7 +753,7 @@ consider that roles can be associated to sets of permissions.</p>
 set of permission. To me, both are is equivalent with respect to the objective
 of controlling access. I&rsquo;m just arguing that I won&rsquo;t.</p>
 <p>Actually, by digging into the examples, I think that we end up thinking of
-the same thing, but with different words, and that this is more of a <a target="_blank" href="https://konubinix.eu/braindump/posts/debat_semantique/?title=debat_semantique#">semantic
+the same thing, but with different words, and that this is more of a <a target="_blank" href="/braindump/posts/debat_semantique/?title=debat_semantique#">semantic
 debate</a>. In the end, it is mostly a matter of taste.</p>
 <h3 id="85547d67-aa64-486b-8f49-ab04df0ba387"><span class="org-target" id="org-target--aware-data"></span> Make the authorization server aware of the data?</h3>
 <p>In all the literature I read, only the resource servers knew about the
@@ -774,7 +774,7 @@ authorization server. This means that the authorization server database
 should be big enough to store the order of magnitude of the resource servers
 time the amount of data in each resource server. This looks pretty cumbersome
 as well. Also, the authorization would have to convey resource information to
-the resource servers. In the case of using <a target="_blank" href="https://konubinix.eu/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded access tokens</a>, this
+the resource servers. In the case of using <a target="_blank" href="/braindump/posts/oauth_2_0/?title=self_encoded_access_tokens#self-encoded-access-tokens">self-encoded access tokens</a>, this
 would lead to pretty big tokens, which is contrary to OAuth 2.0 initial idea.</p>
 <p>I guess that there is no ideal solution and a compromise needs to be
 done.</p>
@@ -789,7 +789,7 @@ looking for others authorization delegation standards than OAuth 2.0.</p>
 are at the frontier between user experience and security.</p>
 <p>Let&rsquo;s see how some popular implementation defined them, to get some food for
 thoughts.</p>
-<h3 id="b9016fd9-c02b-4063-a887-0c6960c5be78"><a target="_blank" href="https://konubinix.eu/braindump/posts/openid_connect/?title=openid_connect#">OpenID Connect</a></h3>
+<h3 id="b9016fd9-c02b-4063-a887-0c6960c5be78"><a target="_blank" href="/braindump/posts/openid_connect/?title=openid_connect#">OpenID Connect</a></h3>
 <p>OpenID connect is mostly about getting access to the resource owner&rsquo;s
 data. Hence, it looks natural that its scopes are about several kind of
 information based on the nature of the data.</p>
@@ -862,12 +862,12 @@ namespaces, permissions, functions and resources.</p>
 </blockquote>
 <p>We can appreciate that this mixes the nature of the resource, the
 responsibilities of the user and user expected journeys.</p>
-<p>One interesting example is at <a target="_blank" href="https://konubinix.eu/braindump/posts/google_drive/?title=google_drive#">google drive</a>.</p>
+<p>One interesting example is at <a target="_blank" href="/braindump/posts/google_drive/?title=google_drive#">google drive</a>.</p>
 <blockquote>
 <dl>
 <dt><a target="_blank" href="https://www.googleapis.com/auth/drive.appdata">https://www.googleapis.com/auth/drive.appdata</a></dt>
 <dd>View and manage its own
-<a target="_blank" href="https://konubinix.eu/braindump/posts/store_application_specific_data_in_google_drive/?title=store_application_specific_data_in_google_drive#">configuration data</a> in your Google Drive</dd>
+<a target="_blank" href="/braindump/posts/store_application_specific_data_in_google_drive/?title=store_application_specific_data_in_google_drive#">configuration data</a> in your Google Drive</dd>
 <dt><a target="_blank" href="https://www.googleapis.com/auth/drive.file">https://www.googleapis.com/auth/drive.file</a></dt>
 <dd>View and manage Google Drive
 files and folders that you have opened or created with this app<sup id="fnref:2"><a class="internal-link" href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></dd>
@@ -888,9 +888,9 @@ driven by expected user journeys.</p>
 <p>Here, the scope is quite simple: a tiling of the resources by nature.</p>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
-<li><a target="_blank" href="https://konubinix.eu/braindump/posts/how_to_deal_with_permissions_in_oauth2/?title=how_to_deal_with_permissions_in_oauth2#">how to deal with permissions in OAuth2?</a> (braindump)</li>
+<li><a target="_blank" href="/braindump/posts/how_to_deal_with_permissions_in_oauth2/?title=how_to_deal_with_permissions_in_oauth2#">how to deal with permissions in OAuth2?</a> (braindump)</li>
 </ul>
-<h2 id="permalink"><a class="internal-link" href="https://konubinix.eu/blog/ae37b219-5eb7-41d7-9687-5a52fb9821f1?title=what_should_i_put_into_those_scopes_and_access_tokens_claims">Permalink</a></h2>
+<h2 id="permalink"><a class="internal-link" href="/blog/ae37b219-5eb7-41d7-9687-5a52fb9821f1?title=what_should_i_put_into_those_scopes_and_access_tokens_claims">Permalink</a></h2>
 <div class="footnotes" role="doc-endnotes">
 <hr>
 <ol>
