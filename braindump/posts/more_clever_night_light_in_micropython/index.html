@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html><title>more clever night light in micropython</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.b811e61bff69a536a655230ea0d2d31babdf62d73d8c770565896943c4470413.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/QmVFwYV7YRZLKU3ybN1hW4jqfyZGPLKJwd8toN2wHz5UAD?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>More Clever Night Light in Micropython</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p><a class="internal-link" href="/braindump/posts/more_clever_night_light/">more clever night light</a> using a <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#fd430d5e-aeeb-447b-85c9-de9702c09d7c">Adafruit Feather HUZZAH with ESP8266</a> with <a class="internal-link" href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a></p>
+<p>using a lot of code from <a class="internal-link" href="/braindump/posts/iot_heart_again_with_micropython/">IOT heart again, with micropython</a> and <a class="internal-link" href="/braindump/posts/more_clever_night_light_in_kivy/">more clever night light in kivy</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spawn webrepl_cli.py -p 0000 192.168.1.219
+</span></span><span style="display:flex;"><span>op:repl, host:192.168.1.219, port:8266, passwd:0000.
+</span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 25, 0)
+</span></span><span style="display:flex;"><span>Use Ctrl-] to exit this shell
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&gt;&gt;&gt;
+</span></span></code></pre></div><p><a id="code-snippet--deploy"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cat<span style="color:#d14">&lt;&lt;EOF &gt; /tmp/main.py
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">#!/usr/bin/env python3
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"># -*- coding:utf-8 -*-
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">import time
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">import machine
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">import neopixel
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">import network
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">import esp
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">import gc
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">import ntptime
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">import requests
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">led = machine.Pin(2, machine.Pin.OUT)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">led.off()  # on
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">time.sleep(2)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">led.on()  # off
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"># * SLEEP_LIGHT - light sleep, shuts down the WiFi Modem circuit and suspends the processor periodically.
+</span></span></span><span style="display:flex;"><span><span style="color:#d14"># The system enters the set sleep mode automatically when possible.
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">esp.sleep_type(esp.SLEEP_LIGHT)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">light = neopixel.NeoPixel(machine.Pin(4), 5)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">holiday_schedule = {
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;almost_hour&#34;: 7,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;almost_minute&#34;: 30,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;getup_hour&#34;: 8,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;getup_minute&#34;: 0,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;day_hour&#34;: 8,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;day_minute&#34;: 40,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;evening_hour&#34;: 20,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;evening_minute&#34;: 0,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;night_hour&#34;: 20,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    &#34;night_minute&#34;: 30,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">}
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">def ease_debugging(schedule, today=None, duration=1, start_time=&#34;night&#34;):
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    now = datetime.now()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    global force_today
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    force_today = today
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    start_assoc = {&#34;night&#34;: 0, &#34;almost&#34;: 1, &#34;getup&#34;: 2, &#34;day&#34;: 3, &#34;evening&#34;: 4,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                   &#34;tomorrow&#34;: 5,}
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;almost_hour&#34;] = (now + timedelta(minutes=duration*(1 - start_assoc[start_time]))).hour
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;almost_minute&#34;] = (now + timedelta(minutes=duration*(1 - start_assoc[start_time]))).minute
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;getup_hour&#34;] = (now + timedelta(minutes=duration*(2 - start_assoc[start_time]))).hour
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;getup_minute&#34;] = (now + timedelta(minutes=duration*(2 - start_assoc[start_time]))).minute
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;day_hour&#34;] = (now + timedelta(minutes=duration*(3 - start_assoc[start_time]))).hour
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;day_minute&#34;] = (now + timedelta(minutes=duration*(3 - start_assoc[start_time]))).minute
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;evening_hour&#34;] = (now + timedelta(minutes=duration*(4 - start_assoc[start_time]))).hour
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;evening_minute&#34;] = (now + timedelta(minutes=duration*(4 - start_assoc[start_time]))).minute
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;night_hour&#34;] = (now + timedelta(minutes=duration*(5 - start_assoc[start_time]))).hour
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    schedule[&#34;night_minute&#34;] = (now + timedelta(minutes=duration*(5 - start_assoc[start_time]))).minute
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">ease_debugging(holiday_schedule, duration=60)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">ease_debugging(school_schedule, duration=60)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">class Connection:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    def __init__(self):
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        self.wlan = network.WLAN()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    def connect(self):
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        self.wlan.connect()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        try:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            ntptime.settime()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        except OSError as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">            requests.post(
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                &#34;http://home:9705/nightlight&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                headers={&#34;title&#34;: &#34;nightlight error&#34;},
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">                data=f&#34;&#34;&#34;{e}
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">while trying to set the time&#34;&#34;&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    @property
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    def isconnected(self):
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        return self.wlan.status() == network.STAT_GOT_IP
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">connection = Connection()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">connection.connect()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">def run_command(led, command, name):
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    r, g, b, l = command
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    command = (int(r*l/255),int(g*l/255),int(b*l/255),)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    now = time.localtime()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    h = now[3]
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    m = now[4]
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    print(f&#34;{h:02d}:{m:02d} - {gc.mem_free()}: {name}: Running command: {command}&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    led.fill(command)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    led.write()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">def step():
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    print(&#34;Do step&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    if not connection.isconnected:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        connection.connect()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    now = time.localtime()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    h = now[3]
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    m = now[4]
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    requests.post(
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        &#34;http://home:9705/nightlight&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        headers={&#34;title&#34;: f&#34;{h:02d}:{m:02d} nightlight&#34;},
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        data=f&#34;&#34;&#34;&#34;&#34;&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    # connection.wlan.disconnect()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    commands = {
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        &#34;left&#34;: [50, 50, 50, 50],
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">        &#34;right&#34;: [50, 50, 50, 50],
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    }
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">print(&#34;Starting&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">while True:
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    step()
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">    machine.lightsleep(10 * 1000)
+</span></span></span><span style="display:flex;"><span><span style="color:#d14">EOF</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>webrepl_cli.py -p <span style="color:#099">0000</span> /tmp/main.py <span style="color:#d14">${</span><span style="color:#008080">ip</span><span style="color:#d14">}</span>:main.py
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:192.168.1.219, port:8266, passwd:0000.
+</span></span><span style="display:flex;"><span>/tmp/main.py -&gt; main.py
+</span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 25, 0)
+</span></span><span style="display:flex;"><span>Sent 0 of 1848 bytes
+</span></span><span style="display:flex;"><span>Sent 1024 of 1848 bytes
+</span></span><span style="display:flex;"><span>Sent 1848 of 1848 bytes
+</span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/33b760f4-ce76-4178-8669-b1dc69e06d4c?title=more_clever_night_light_in_micropython">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 04 Jul 2025</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 04 Jul 2025</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
