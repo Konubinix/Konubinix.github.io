@@ -5,7 +5,7 @@
 <script src="https://hypothes.is/embed.js" async></script>
 <title>Accessing Audit Logs of My Eks Cluster Managed by Aws &middot; Konubinix&#39; Site</title>
 
-<link rel="stylesheet" class="internal-link" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+<link rel="stylesheet" class="internal-link" href="/blog/css/main.min.98810487782ec9625415f87b5fe7ca33aee657a4d9aa430f77cdb2911437b8bc5693a4084980554aeb0a4de6c0947f3f0883771c4557939aa3c2e543baac910a.css" integrity="sha512-mIEEh3guyWJUFfh7X&#43;fKM67mV6TZqkMPd82ykRQ3uLxWk6QISYBVSusKTebAlH8/CIN3HEVXk5qjwuVDuqyRCg==" type="text/css" />
 
 
 <link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
@@ -47,7 +47,7 @@ use the command line instead.</p>
 <h2 id="2c505fc7-c78f-4256-b8a8-646598c14cec">gathering the data</h2>
 <p>I recommend getting its output in a temporary file before processing it in a
 post mortem analysis.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">time</span> aws --profile <span style="color:#d14">&#34;</span><span style="color:#d14">${</span><span style="color:#008080">profile</span><span style="color:#d14">}</span><span style="color:#d14">&#34;</span> logs tail --since 20h <span style="color:#d14">&#34;/aws/eks/</span><span style="color:#d14">${</span><span style="color:#008080">cluster_name</span><span style="color:#d14">}</span><span style="color:#d14">/cluster&#34;</span> &gt; /tmp/out.txt
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6639ba">time</span> aws --profile <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">profile</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> logs tail --since 20h <span style="color:#0a3069">&#34;/aws/eks/</span><span style="color:#0a3069">${</span><span style="color:#953800">cluster_name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/cluster&#34;</span> &gt; /tmp/out.txt
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>real	2m27.090s
 </span></span><span style="display:flex;"><span>user	0m24.328s
 </span></span><span style="display:flex;"><span>sys	0m4.346s
@@ -61,10 +61,10 @@ only on those.</p>
 <p>Also, the data are json encoded, but because Amazons prefixes the line with
 something of its own, we have to pre process it. We still want to conserve the
 date for future analysis though.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">time</span> cat /tmp/out.txt <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>    | grep <span style="color:#d14">&#34;kube-apiserver-audit-&#34;</span> <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>    | sed -r <span style="color:#d14">&#39;s/^(.+) kube-apiserver-audit-[^ ]+ \{(.+)$/{&#34;date&#34;: &#34;\1&#34;, \2/&#39;</span> <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>          &gt; /tmp/audit.txt
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6639ba">time</span> cat /tmp/out.txt <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>    <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#34;kube-apiserver-audit-&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>    <span style="color:#1f2328">|</span> sed -r <span style="color:#0a3069">&#39;s/^(.+) kube-apiserver-audit-[^ ]+ \{(.+)$/{&#34;date&#34;: &#34;\1&#34;, \2/&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>          &gt; /tmp/audit.txt
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>du -sh /tmp/audit.txt
 </span></span><span style="display:flex;"><span>wc -l /tmp/audit.txt
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>467M	/tmp/audit.txt
@@ -78,13 +78,13 @@ only lines that mention some information that are of interest for our current
 analysis and filter out the users that we know won&rsquo;t give us any useful
 insights.</p>
 <p>For instance, to have a hint of what kind of agents tried to &ldquo;abuse&rdquo; our APIs.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cat /tmp/audit.txt <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>    | grep <span style="color:#099">401</span> <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>    | grep -v <span style="color:#d14">&#39;&#34;username&#34;:&#34;\(system:\|eks:\|.\+terraform\)&#39;</span> <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>    | jq -r .userAgent <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>    | sort <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>    | uniq -c <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>    | sort -n
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cat /tmp/audit.txt <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>    <span style="color:#1f2328">|</span> grep <span style="color:#0550ae">401</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>    <span style="color:#1f2328">|</span> grep -v <span style="color:#0a3069">&#39;&#34;username&#34;:&#34;\(system:\|eks:\|.\+terraform\)&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>    <span style="color:#1f2328">|</span> jq -r .userAgent <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>    <span style="color:#1f2328">|</span> sort <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>    <span style="color:#1f2328">|</span> uniq -c <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>    <span style="color:#1f2328">|</span> sort -n
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>  1 Expanse, a Palo Alto Networks company, searches across the global IPv4 space multiple times per day to identify customers&amp;#39; presences on the Internet. If you would like to be excluded from our scans, please send IP addresses/domains to: scaninfo@paloaltonetworks.com
 </span></span><span style="display:flex;"><span>  1 Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 10.0; .NET4.0C; .NET4.0E; .NET CLR 2.0.50727; .NET CLR 3.0.30729; .NET CLR 3.5.30729)
 </span></span><span style="display:flex;"><span>  1 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
@@ -103,15 +103,15 @@ insights.</p>
 </span></span><span style="display:flex;"><span>108 Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/88.0.4324.192 Safari/537.36-AmazonAutoTester-Palisade-Riddler
 </span></span><span style="display:flex;"><span>113 Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)Chrome/51.0.2704.103 Safari/537.36 DynamicScanningFramework (prosecdev-dast-team@amazon.com) -AmazonAutoTester-DyePack [DyePack] [PROD] [804694375827]
 </span></span></code></pre></div><p>Another example could be to trace the lifecycle of a particular resource.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">time</span> <span style="color:#000;font-weight:bold">{</span>
-</span></span><span style="display:flex;"><span>    cat /tmp/audit.txt <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>        | jq -r -c <span style="color:#d14">&#39;select(
-</span></span></span><span style="display:flex;"><span><span style="color:#d14">                     ( .verb                | IN(&#34;create&#34;, &#34;delete&#34;))
-</span></span></span><span style="display:flex;"><span><span style="color:#d14">                 and ( .objectRef.resource  | IN(&#34;deployments&#34;) )
-</span></span></span><span style="display:flex;"><span><span style="color:#d14">                 and ( .objectRef.namespace | IN(&#34;default&#34;) )
-</span></span></span><span style="display:flex;"><span><span style="color:#d14">                 and ( .objectRef.name      | contains(&#34;-doc&#34;) )
-</span></span></span><span style="display:flex;"><span><span style="color:#d14">                 )|&#34;\(.date): \(.verb)&#34;&#39;</span>
-</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6639ba">time</span> <span style="color:#0550ae">{</span>
+</span></span><span style="display:flex;"><span>    cat /tmp/audit.txt <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>        <span style="color:#1f2328">|</span> jq -r -c <span style="color:#0a3069">&#39;select(
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                     ( .verb                | IN(&#34;create&#34;, &#34;delete&#34;))
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                 and ( .objectRef.resource  | IN(&#34;deployments&#34;) )
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                 and ( .objectRef.namespace | IN(&#34;default&#34;) )
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                 and ( .objectRef.name      | contains(&#34;-doc&#34;) )
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                 )|&#34;\(.date): \(.verb)&#34;&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">}</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>2025-05-05T08:27:13.718000+00:00: create
 </span></span><span style="display:flex;"><span>2025-05-05T10:41:28.610000+00:00: delete
 </span></span><span style="display:flex;"><span>2025-05-05T10:41:52.485000+00:00: create
@@ -122,14 +122,14 @@ insights.</p>
 10:41.</p>
 <p>Again, note that jq has a cost, and that using grep, while less precise, might
 speed things a little bit.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0086b3">time</span> <span style="color:#000;font-weight:bold">{</span>
-</span></span><span style="display:flex;"><span>    cat /tmp/audit.txt <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>        | grep <span style="color:#d14">&#39;&#34;resource&#34;:&#34;deployments&#34;&#39;</span> <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>        | grep <span style="color:#d14">&#39;&#34;namespace&#34;:&#34;default&#34;&#39;</span> <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>        | grep <span style="color:#d14">&#39;&#34;name&#34;:&#34;[^&#34;]\+-doc&#34;&#39;</span> <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>        | grep <span style="color:#d14">&#39;&#34;verb&#34;:&#34;\(\create\|delete\)&#39;</span> <span style="color:#d14">\
-</span></span></span><span style="display:flex;"><span><span style="color:#d14"></span>        | jq -r <span style="color:#d14">&#39;&#34;\(.date): \(.verb)&#34;&#39;</span>
-</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6639ba">time</span> <span style="color:#0550ae">{</span>
+</span></span><span style="display:flex;"><span>    cat /tmp/audit.txt <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>        <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#39;&#34;resource&#34;:&#34;deployments&#34;&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>        <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#39;&#34;namespace&#34;:&#34;default&#34;&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>        <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#39;&#34;name&#34;:&#34;[^&#34;]\+-doc&#34;&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>        <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#39;&#34;verb&#34;:&#34;\(\create\|delete\)&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>        <span style="color:#1f2328">|</span> jq -r <span style="color:#0a3069">&#39;&#34;\(.date): \(.verb)&#34;&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">}</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>2025-05-05T08:27:13.718000+00:00: create
 </span></span><span style="display:flex;"><span>2025-05-05T10:41:28.610000+00:00: delete
 </span></span><span style="display:flex;"><span>2025-05-05T10:41:52.485000+00:00: create
@@ -141,9 +141,9 @@ speed things a little bit.</p>
 data. So far, I don&rsquo;t see the gain. Maybe if I need to process much bigger data,
 it might be of interest.</p>
 <p>It requires to submit a query, wait for it to be ready and then output it.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#008080">query_id</span><span style="color:#000;font-weight:bold">=</span><span style="color:#000;font-weight:bold">$(</span>aws --profile <span style="color:#d14">${</span><span style="color:#008080">profile</span><span style="color:#d14">}</span> logs start-query --log-group-name /aws/eks/<span style="color:#d14">${</span><span style="color:#008080">cluster_name</span><span style="color:#d14">}</span>/cluster --start-time <span style="color:#000;font-weight:bold">$(($(</span>date +%s<span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">-</span> <span style="color:#099">36000</span><span style="color:#000;font-weight:bold">))</span> --end-time <span style="color:#000;font-weight:bold">$(</span>date +%s<span style="color:#000;font-weight:bold">)</span>  --query-string <span style="color:#d14">&#34;fields @timestamp, @message | sort @timestamp desc&#34;</span>|jq -r .queryId<span style="color:#000;font-weight:bold">)</span>
-</span></span><span style="display:flex;"><span>sleep <span style="color:#099">10</span> <span style="color:#998;font-style:italic"># wait for some time for the result to be here.</span>
-</span></span><span style="display:flex;"><span>aws --profile <span style="color:#d14">${</span><span style="color:#008080">profile</span><span style="color:#d14">}</span> logs get-query-results --query-id <span style="color:#d14">${</span><span style="color:#008080">query_id</span><span style="color:#d14">}</span>|head -300
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#953800">query_id</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>aws --profile <span style="color:#0a3069">${</span><span style="color:#953800">profile</span><span style="color:#0a3069">}</span> logs start-query --log-group-name /aws/eks/<span style="color:#0a3069">${</span><span style="color:#953800">cluster_name</span><span style="color:#0a3069">}</span>/cluster --start-time <span style="color:#cf222e">$(($(</span>date +%s<span style="color:#cf222e">)</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">36000</span><span style="color:#cf222e">))</span> --end-time <span style="color:#cf222e">$(</span>date +%s<span style="color:#cf222e">)</span>  --query-string <span style="color:#0a3069">&#34;fields @timestamp, @message | sort @timestamp desc&#34;</span><span style="color:#1f2328">|</span>jq -r .queryId<span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span>sleep <span style="color:#0550ae">10</span> <span style="color:#57606a"># wait for some time for the result to be here.</span>
+</span></span><span style="display:flex;"><span>aws --profile <span style="color:#0a3069">${</span><span style="color:#953800">profile</span><span style="color:#0a3069">}</span> logs get-query-results --query-id <span style="color:#0a3069">${</span><span style="color:#953800">query_id</span><span style="color:#0a3069">}</span><span style="color:#1f2328">|</span>head -300
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>    &#34;queryLanguage&#34;: &#34;CWLI&#34;,
 </span></span><span style="display:flex;"><span>    &#34;results&#34;: [
@@ -199,8 +199,7 @@ var.cloudwatch_log_group_tags,
 { Name = &ldquo;/aws/eks/${var.cluster_name}/cluster&rdquo; }
 )
 }</p>
-<p>&mdash; <a target="_blank" href="https://github.com/terraform-aws-modules/terraform-aws-eks/blob/37e3348dffe06ea4b9adf9b54512e4efdb46f425/main.tf#L206">https://github.com/terraform-aws-modules/terraform-aws-eks/blob/37e3348dffe06ea4b9adf9b54512e4efdb46f425/main.tf#L206</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-05-05 Mon]</span></span>)</p>
-</blockquote>
+<p>&mdash; <a target="_blank" href="https://github.com/terraform-aws-modules/terraform-aws-eks/blob/37e3348dffe06ea4b9adf9b54512e4efdb46f425/main.tf#L206">https://github.com/terraform-aws-modules/terraform-aws-eks/blob/37e3348dffe06ea4b9adf9b54512e4efdb46f425/main.tf#L206</a> (<span class="timestamp-wrapper"><span class="timestamp">[2025-05-05 Mon]</span></span>)</p></blockquote>
 &#160;<a class="internal-link" href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
 </ol>
 </div>
