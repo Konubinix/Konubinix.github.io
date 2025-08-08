@@ -47,6 +47,8 @@
 <ul>
 <li><a class="internal-link" href="#004fc8e6-4615-4f16-ad34-6b2760223156">the code</a></li>
 <li><a class="internal-link" href="#f8f6d105-38fa-4c26-a58a-ba130b964756">trying it</a></li>
+<li><a class="internal-link" href="#b2fac98d-35e3-4b3f-bf5e-d10ea9686181">investigating the file descriptor issue on the i9300</a></li>
+<li><a class="internal-link" href="#0c0fb7a6-465c-47f3-9e76-bc59882a2baa">investigating the crash on the cinkpeax2</a></li>
 <li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
@@ -226,16 +228,15 @@ and I did not have a fiber connection to build a new raspberry pi image easily.<
 </span></span><span style="display:flex;"><span>        wifi_service<span style="color:#0550ae">.</span>setWifiEnabled<span style="color:#1f2328">(</span>enable<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        wifi_service<span style="color:#0550ae">.</span>reconnect<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">wake_n_notify</span><span style="color:#1f2328">(</span>message<span style="color:#1f2328">,</span> sleep<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">wake_n_notify</span><span style="color:#1f2328">(</span>message<span style="color:#1f2328">,</span> sleep<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;default&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span>
 </span></span><span style="display:flex;"><span>    set_wifi_enabled<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    now <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    message <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>now<span style="color:#0550ae">.</span>hour<span style="color:#1f2328">,</span> now<span style="color:#0550ae">.</span>minute<span style="color:#1f2328">,</span> now<span style="color:#0550ae">.</span>second<span style="color:#1f2328">,</span> message<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    logger<span style="color:#0550ae">.</span>debug<span style="color:#1f2328">(</span>message<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    show_toast<span style="color:#1f2328">(</span>message<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">3</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> notify<span style="color:#1f2328">(</span>message<span style="color:#1f2328">,</span> channel<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;nightlight&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> notify<span style="color:#1f2328">(</span>message<span style="color:#1f2328">,</span> channel<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;nightlight&#34;</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span>priority<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#57606a"># get_memory_usage(channel=&#34;nightlight&#34;)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># list_open_files(channel=&#34;nightlight&#34;)</span>
 </span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;notification sent: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>message<span style="color:#1f2328">),</span> long<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#57606a"># also sync the date until I get back internet (and ntp) working</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
@@ -267,7 +268,7 @@ and I did not have a fiber connection to build a new raspberry pi image easily.<
 </span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>seconds<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> sleep<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">pass</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a">#set_wifi_enabled(False)</span>
+</span></span><span style="display:flex;"><span>    set_wifi_enabled<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">SettingsScreen</span><span style="color:#1f2328">(</span>Screen<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    steps <span style="color:#0550ae">=</span> NumericProperty<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">)</span>
@@ -581,9 +582,6 @@ and I did not have a fiber connection to build a new raspberry pi image easily.<
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">night_minute</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_get_time<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;night_minute&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">on_click_done</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;click done&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">(</span>NormalScreen<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>click <span style="color:#0550ae">=</span> SoundLoader<span style="color:#0550ae">.</span>load<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>dirname<span style="color:#1f2328">(</span><span style="color:#953800">__file__</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;click.ogg&#34;</span><span style="color:#1f2328">))</span>
@@ -748,7 +746,8 @@ and I did not have a fiber connection to build a new raspberry pi image easily.<
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_minute<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sep<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wakeup<span style="color:#0550ae">.</span>acquire<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;almost time, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>getup_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>getup_minute<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;almost time, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>getup_hour<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                                                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>getup_minute<span style="color:#1f2328">),</span> priority<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>debug <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;default&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;clockwake&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;duration&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>durationuntil<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>getup_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>getup_minute<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;callback&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;nightlight:getup&#34;</span><span style="color:#1f2328">})</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">getup</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
@@ -757,13 +756,13 @@ and I did not have a fiber connection to build a new raspberry pi image easily.<
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sep<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_minute<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wakeup<span style="color:#0550ae">.</span>acquire<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;getup, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>day_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>day_minute<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;getup, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>day_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>day_minute<span style="color:#1f2328">),</span> priority<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>debug <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;default&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>click<span style="color:#0550ae">.</span>seek<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>click<span style="color:#0550ae">.</span>play<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;clockwake&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;duration&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>durationuntil<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>day_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>day_minute<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;callback&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;nightlight:day&#34;</span><span style="color:#1f2328">})</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">day</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;day, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>evening_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>evening_minute<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;day, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>evening_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>evening_minute<span style="color:#1f2328">),</span> priority<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>debug <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;default&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wakeup<span style="color:#0550ae">.</span>release<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_hour<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sep<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
@@ -777,13 +776,13 @@ and I did not have a fiber connection to build a new raspberry pi image easily.<
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sep<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_minute<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wakeup<span style="color:#0550ae">.</span>acquire<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;evening, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>night_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>night_minute<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;evening, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>night_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>night_minute<span style="color:#1f2328">),</span> priority<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>debug <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;default&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>click<span style="color:#0550ae">.</span>seek<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>click<span style="color:#0550ae">.</span>play<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;clockwake&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;duration&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>durationuntil<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>night_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>night_minute<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;callback&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;nightlight:night&#34;</span><span style="color:#1f2328">})</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">night</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;night, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>almost_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>almost_minute<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        wake_n_notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;night, next at </span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>almost_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>almost_minute<span style="color:#1f2328">),</span> priority<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>debug <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;default&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wakeup<span style="color:#0550ae">.</span>release<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> black
 </span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;clockwake&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;duration&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>durationuntil<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>almost_hour<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>almost_minute<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;callback&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;nightlight:almost&#34;</span><span style="color:#1f2328">})</span>
@@ -840,6 +839,125 @@ with turning off and on the wifi.</p>
 <p>I don&rsquo;t like using a solution that is so dependant on the android device, so I
 tried another implementation based on <a class="internal-link" href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a>.</p>
 <p>See <a class="internal-link" href="/braindump/posts/more_clever_night_light_in_micropython/">more clever night light in micropython</a>.</p>
+<h2 id="b2fac98d-35e3-4b3f-bf5e-d10ea9686181">investigating the file descriptor issue on the i9300</h2>
+<p><a id="code-snippet--pid"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android -d i9300 adb shell pidof eu.konubinix.konixpoc
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>20409
+</span></span></code></pre></div><p><a id="code-snippet--askforfd"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#953800">pid</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">${</span><span style="color:#953800">pid</span><span style="color:#0a3069">}</span><span style="color:#1f2328">|</span>trim<span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span>clk android -d i9300 adb shell su -c <span style="color:#0a3069">&#34;&#39;ls -la /proc/</span><span style="color:#0a3069">${</span><span style="color:#953800">pid</span><span style="color:#1f2328">//</span><span style="color:#0a3069">\n</span><span style="color:#1f2328">/</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/fd&#39;&#34;</span><span style="color:#1f2328">|</span>cut -f <span style="color:#0550ae">2</span> -d <span style="color:#0a3069">&#39;&gt;&#39;</span> <span style="color:#1f2328">|</span>sed -r <span style="color:#0a3069">&#39;s/socket:.+$/socket/&#39;</span><span style="color:#1f2328">|</span>sort <span style="color:#1f2328">|</span>uniq -c
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>    1  /dev/binder
+</span></span><span style="display:flex;"><span>    1  /dev/hwbinder
+</span></span><span style="display:flex;"><span>    1  /dev/mali
+</span></span><span style="display:flex;"><span>  114  /dev/null
+</span></span><span style="display:flex;"><span>    1  /dev/ump
+</span></span><span style="display:flex;"><span>    3  /dev/urandom
+</span></span><span style="display:flex;"><span>    1  /system/framework/android.hidl.base-V1.0-java.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/android.hidl.manager-V1.0-java.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/apache-xml.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/bouncycastle.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/conscrypt.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/core-libart.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/core-oj.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/ext.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/framework-res.apk
+</span></span><span style="display:flex;"><span>    1  /system/framework/framework.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/ims-common.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/legacy-test.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/okhttp.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/org.apache.http.legacy.boot.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/telephony-common.jar
+</span></span><span style="display:flex;"><span>    1  /system/framework/voip-common.jar
+</span></span><span style="display:flex;"><span>    3  anon_inode:[eventfd]
+</span></span><span style="display:flex;"><span>    3  anon_inode:[eventpoll]
+</span></span><span style="display:flex;"><span>  168  anon_inode:mali-4232
+</span></span><span style="display:flex;"><span>    6  anon_inode:sync_fence
+</span></span><span style="display:flex;"><span>    2  pipe:[23022]
+</span></span><span style="display:flex;"><span>  114  socket
+</span></span><span style="display:flex;"><span>    1 dr-x------ 2 u0_a101 u0_a101  0 2025-08-07 07:15 .
+</span></span><span style="display:flex;"><span>    1 dr-xr-xr-x 8 u0_a101 u0_a101  0 2025-08-07 07:15 ..
+</span></span><span style="display:flex;"><span>    1 total 0
+</span></span></code></pre></div><p>trying to remove the calls to <code>show_toast</code></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span> 2  /data/app/eu.konubinix.konixpoc-Fy72Z4lKElrJ27GZCjfhAw==/base.apk
+</span></span><span style="display:flex;"><span> 1  /data/data/eu.konubinix.konixpoc/files/app/.kivy/logs/kivy_25-08-07_4.txt
+</span></span><span style="display:flex;"><span> 4  /data/data/eu.konubinix.konixpoc/files/app/_python_bundle/site-packages/kivy/data/fonts/Roboto-Regular.ttf
+</span></span><span style="display:flex;"><span> 1  /data/data/eu.konubinix.konixpoc/files/app/main.pyc
+</span></span><span style="display:flex;"><span> 3  /dev/ashmem
+</span></span><span style="display:flex;"><span> 1  /dev/binder
+</span></span><span style="display:flex;"><span> 1  /dev/hwbinder
+</span></span><span style="display:flex;"><span> 1  /dev/mali
+</span></span><span style="display:flex;"><span>12  /dev/null
+</span></span><span style="display:flex;"><span> 1  /dev/ump
+</span></span><span style="display:flex;"><span> 3  /dev/urandom
+</span></span><span style="display:flex;"><span> 1  /system/framework/android.hidl.base-V1.0-java.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/android.hidl.manager-V1.0-java.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/apache-xml.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/bouncycastle.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/conscrypt.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/core-libart.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/core-oj.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/ext.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/framework-res.apk
+</span></span><span style="display:flex;"><span> 1  /system/framework/framework.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/ims-common.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/legacy-test.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/okhttp.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/org.apache.http.legacy.boot.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/telephony-common.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/voip-common.jar
+</span></span><span style="display:flex;"><span> 2  anon_inode:[eventfd]
+</span></span><span style="display:flex;"><span> 2  anon_inode:[eventpoll]
+</span></span><span style="display:flex;"><span>12  anon_inode:mali-16605
+</span></span><span style="display:flex;"><span> 8  anon_inode:sync_fence
+</span></span><span style="display:flex;"><span> 2  pipe:[133878]
+</span></span><span style="display:flex;"><span>10  socket
+</span></span><span style="display:flex;"><span> 1 dr-x------ 2 u0_a101 u0_a101  0 2025-08-07 08:43 .
+</span></span><span style="display:flex;"><span> 1 dr-xr-xr-x 8 u0_a101 u0_a101  0 2025-08-07 08:43 ..
+</span></span><span style="display:flex;"><span> 1 total 0
+</span></span></code></pre></div><p>Fixing show_toast and trying again</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span> 2  /data/app/eu.konubinix.konixpoc-Fy72Z4lKElrJ27GZCjfhAw==/base.apk
+</span></span><span style="display:flex;"><span> 1  /data/data/eu.konubinix.konixpoc/files/app/.kivy/logs/kivy_25-08-07_12.txt
+</span></span><span style="display:flex;"><span> 4  /data/data/eu.konubinix.konixpoc/files/app/_python_bundle/site-packages/kivy/data/fonts/Roboto-Regular.ttf
+</span></span><span style="display:flex;"><span> 1  /data/data/eu.konubinix.konixpoc/files/app/main.pyc
+</span></span><span style="display:flex;"><span> 3  /dev/ashmem
+</span></span><span style="display:flex;"><span> 1  /dev/binder
+</span></span><span style="display:flex;"><span> 1  /dev/hwbinder
+</span></span><span style="display:flex;"><span> 1  /dev/mali
+</span></span><span style="display:flex;"><span>13  /dev/null
+</span></span><span style="display:flex;"><span> 1  /dev/ump
+</span></span><span style="display:flex;"><span> 3  /dev/urandom
+</span></span><span style="display:flex;"><span> 1  /system/framework/android.hidl.base-V1.0-java.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/android.hidl.manager-V1.0-java.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/apache-xml.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/bouncycastle.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/conscrypt.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/core-libart.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/core-oj.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/ext.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/framework-res.apk
+</span></span><span style="display:flex;"><span> 1  /system/framework/framework.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/ims-common.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/legacy-test.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/okhttp.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/org.apache.http.legacy.boot.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/telephony-common.jar
+</span></span><span style="display:flex;"><span> 1  /system/framework/voip-common.jar
+</span></span><span style="display:flex;"><span> 2  anon_inode:[eventfd]
+</span></span><span style="display:flex;"><span> 2  anon_inode:[eventpoll]
+</span></span><span style="display:flex;"><span>12  anon_inode:mali-20409
+</span></span><span style="display:flex;"><span> 7  anon_inode:sync_fence
+</span></span><span style="display:flex;"><span> 2  pipe:[188587]
+</span></span><span style="display:flex;"><span>10  socket
+</span></span><span style="display:flex;"><span> 1 dr-x------ 2 u0_a101 u0_a101  0 2025-08-07 09:10 .
+</span></span><span style="display:flex;"><span> 1 dr-xr-xr-x 8 u0_a101 u0_a101  0 2025-08-07 09:10 ..
+</span></span><span style="display:flex;"><span> 1 total 0
+</span></span></code></pre></div><p>Now, the i9300 works without noticeable issue. The cinkpeax2 though, still crashes.</p>
+<h2 id="0c0fb7a6-465c-47f3-9e76-bc59882a2baa">investigating the crash on the cinkpeax2</h2>
+<p>This device is able to run the <a class="internal-link" href="/braindump/posts/pomodo_timer_on_kivy/">pomodo timer on kivy</a> for several weeks without
+issue, so there is likely something that triggers the segfault here.</p>
+<p>This is more hairy, because reproducing the error needs to run the application
+for several hours.</p>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/android/#0596455f-cb66-4e06-97aa-7fe8b7a6a980">keep doing something even when the screen is off</a></li>
@@ -1210,7 +1328,7 @@ tried another implementation based on <a class="internal-link" href="/braindump/
 </ol>
 </div>
       </div>
-	  <aside class="date"><time>Last updated: 05 Aug 2025</time></aside>
+	  <aside class="date"><time>Last updated: 07 Aug 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 12 Apr 2025</time></aside>
     </div>
   </div>

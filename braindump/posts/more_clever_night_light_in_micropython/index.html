@@ -58,15 +58,18 @@
 clever night light in kivy</a>, and trying to have a much faster crash recovery than
 in <a class="internal-link" href="/braindump/posts/more_clever_night_light/">more clever night light</a>.</p>
 <p>The logic is handled by a server in my stack that the device requests to find
-out how much time to sleep and what color to set.</p>
+out how much time to sleep and what color to set. That way, most of the fix and
+features will go to the server and I will barely have to wake up the device to
+change its code.</p>
 <h2 id="85ca86b5-eafb-4d05-ae85-ec6ee75c4404">on the server</h2>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">datetime</span> <span style="color:#cf222e">import</span> datetime
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">datetime</span> <span style="color:#cf222e">import</span> datetime<span style="color:#1f2328">,</span> timedelta
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">flask</span> <span style="color:#cf222e">import</span> Flask
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>app <span style="color:#0550ae">=</span> Flask<span style="color:#1f2328">(</span><span style="color:#953800">__name__</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>debug <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;DEBUG&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;true&#34;</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>school_schedule <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;almost_hour&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">6</span><span style="color:#1f2328">,</span>
@@ -94,36 +97,49 @@ out how much time to sleep and what color to set.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;night_minute&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">30</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>debug_schedule <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>state <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">:</span> holiday_schedule<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>pink <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.75</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>orange <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.5</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>cyan <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>white <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>red <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>black <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>green <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>orange <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">50</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">25</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>red <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">30</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>black <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>green <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">30</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">times</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    now <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    almost <span style="color:#0550ae">=</span> now<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>hour<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;almost_hour&#34;</span><span style="color:#1f2328">],</span>
-</span></span><span style="display:flex;"><span>                         minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;almost_minute&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>                         minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;almost_minute&#34;</span><span style="color:#1f2328">],</span> second<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,)</span>
 </span></span><span style="display:flex;"><span>    getup <span style="color:#0550ae">=</span> now<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>hour<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;getup_hour&#34;</span><span style="color:#1f2328">],</span>
-</span></span><span style="display:flex;"><span>                        minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;getup_minute&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>                        minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;getup_minute&#34;</span><span style="color:#1f2328">],</span> second<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,)</span>
 </span></span><span style="display:flex;"><span>    day <span style="color:#0550ae">=</span> now<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>hour<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;day_hour&#34;</span><span style="color:#1f2328">],</span>
-</span></span><span style="display:flex;"><span>                      minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;day_minute&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>                      minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;day_minute&#34;</span><span style="color:#1f2328">],</span> second<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,)</span>
 </span></span><span style="display:flex;"><span>    evening <span style="color:#0550ae">=</span> now<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>hour<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;evening_hour&#34;</span><span style="color:#1f2328">],</span>
-</span></span><span style="display:flex;"><span>                          minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;evening_minute&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>                          minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;evening_minute&#34;</span><span style="color:#1f2328">],</span> second<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,)</span>
 </span></span><span style="display:flex;"><span>    night <span style="color:#0550ae">=</span> now<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>hour<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;night_hour&#34;</span><span style="color:#1f2328">],</span>
-</span></span><span style="display:flex;"><span>                        minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;night_minute&#34;</span><span style="color:#1f2328">])</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> now<span style="color:#1f2328">,</span> almost<span style="color:#1f2328">,</span> getup<span style="color:#1f2328">,</span> day<span style="color:#1f2328">,</span> evening<span style="color:#1f2328">,</span> night
+</span></span><span style="display:flex;"><span>                        minute<span style="color:#0550ae">=</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;schedule&#34;</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;night_minute&#34;</span><span style="color:#1f2328">],</span> second<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,)</span>
+</span></span><span style="display:flex;"><span>    res <span style="color:#0550ae">=</span> now<span style="color:#1f2328">,</span> almost<span style="color:#1f2328">,</span> getup<span style="color:#1f2328">,</span> day<span style="color:#1f2328">,</span> evening<span style="color:#1f2328">,</span> night
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> debug<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> debug_schedule <span style="color:#0550ae">or</span> debug_schedule<span style="color:#1f2328">[</span><span style="color:#0550ae">-</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&lt;</span> now<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            debug_schedule<span style="color:#0550ae">.</span>clear<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            debug_schedule<span style="color:#0550ae">.</span>extend<span style="color:#1f2328">([(</span>now <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>minutes<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>i<span style="color:#0550ae">+</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)))</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>second<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">5</span><span style="color:#1f2328">)])</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>debug_schedule<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#1f2328">[</span>now<span style="color:#1f2328">]</span> <span style="color:#0550ae">+</span> debug_schedule
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> res
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@app.route</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;/&#39;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> _next<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_next</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    now<span style="color:#1f2328">,</span> almost<span style="color:#1f2328">,</span> getup<span style="color:#1f2328">,</span> day<span style="color:#1f2328">,</span> evening<span style="color:#1f2328">,</span> night <span style="color:#0550ae">=</span> times<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> now <span style="color:#0550ae">&lt;</span> almost<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#57606a"># night</span>
@@ -199,19 +215,19 @@ out how much time to sleep and what color to set.</p>
 </span></span><span style="display:flex;"><span>        duration <span style="color:#0550ae">=</span> duration <span style="color:#0550ae">+</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">24</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">3600</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> duration <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">200</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> duration <span style="color:#0550ae">&gt;</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">20</span> <span style="color:#cf222e">if</span> debug <span style="color:#cf222e">else</span> <span style="color:#0550ae">200</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        command <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;sleep&#34;</span><span style="color:#1f2328">:</span> duration <span style="color:#0550ae">-</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;sleep&#34;</span><span style="color:#1f2328">:</span> duration <span style="color:#0550ae">-</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">10</span> <span style="color:#cf222e">if</span> debug <span style="color:#cf222e">else</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;upcolor&#34;</span><span style="color:#1f2328">:</span> upcolornow<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;bottomcolor&#34;</span><span style="color:#1f2328">:</span> bottomcolornow<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        command <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;in&#34;</span><span style="color:#1f2328">:</span> duration <span style="color:#0550ae">-</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">,</span> <span style="color:#57606a"># give it time to wake up</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;in&#34;</span><span style="color:#1f2328">:</span> duration<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;upcolor&#34;</span><span style="color:#1f2328">:</span> upcolornext<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;bottomcolor&#34;</span><span style="color:#1f2328">:</span> bottomcolornext<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>command<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>now<span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>command<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> command
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
@@ -232,61 +248,63 @@ out how much time to sleep and what color to set.</p>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">ntptime</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>led <span style="color:#0550ae">=</span> machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> machine<span style="color:#0550ae">.</span>Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>led<span style="color:#0550ae">.</span>off<span style="color:#1f2328">()</span>  <span style="color:#57606a"># on</span>
-</span></span><span style="display:flex;"><span>time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>led<span style="color:#0550ae">.</span>on<span style="color:#1f2328">()</span>  <span style="color:#57606a"># off</span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># * SLEEP_LIGHT - light sleep, shuts down the WiFi Modem circuit and suspends the processor periodically.</span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># The system enters the set sleep mode automatically when possible.</span>
 </span></span><span style="display:flex;"><span>esp<span style="color:#0550ae">.</span>sleep_type<span style="color:#1f2328">(</span>esp<span style="color:#0550ae">.</span>SLEEP_LIGHT<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>pink <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.75</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>upled <span style="color:#0550ae">=</span> neopixel<span style="color:#0550ae">.</span>NeoPixel<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>bottomled <span style="color:#0550ae">=</span> neopixel<span style="color:#0550ae">.</span>NeoPixel<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">format_message</span><span style="color:#1f2328">(</span>msg<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    _<span style="color:#1f2328">,</span> _<span style="color:#1f2328">,</span> _<span style="color:#1f2328">,</span> h<span style="color:#1f2328">,</span> m<span style="color:#1f2328">,</span> _<span style="color:#1f2328">,</span> _<span style="color:#1f2328">,</span> _ <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>localtime<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>h<span style="color:#0a3069">:</span><span style="color:#0a3069">02d</span><span style="color:#0a3069">}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{</span>m<span style="color:#0a3069">:</span><span style="color:#0a3069">02d</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>msg<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">say</span><span style="color:#1f2328">(</span>message<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>format_message<span style="color:#1f2328">(</span>message<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">notify</span><span style="color:#1f2328">(</span>message<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    say<span style="color:#1f2328">(</span>message<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home:9705/nightlight&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>                      data<span style="color:#0550ae">=</span>format_message<span style="color:#1f2328">(</span>message<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        say<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not notify with message: </span><span style="color:#0a3069">{</span>message<span style="color:#0a3069">}</span><span style="color:#0a3069">, </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">wlan_connect</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    wlan<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">30</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> wlan<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            say<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;waiting 1s to be connected&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> i <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">9</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        notify<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;connected after </span><span style="color:#0a3069">{</span>i<span style="color:#0a3069">}</span><span style="color:#0a3069"> iterations&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>upled <span style="color:#0550ae">=</span> neopixel<span style="color:#0550ae">.</span>NeoPixel<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>bottomled <span style="color:#0550ae">=</span> neopixel<span style="color:#0550ae">.</span>NeoPixel<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>say<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Hello&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> led <span style="color:#0550ae">in</span> upled<span style="color:#1f2328">,</span> bottomled<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>fill<span style="color:#1f2328">(</span>pink<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>fill<span style="color:#1f2328">([</span><span style="color:#0550ae">5</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">5</span><span style="color:#1f2328">])</span>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>wlan<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    ntptime<span style="color:#0550ae">.</span>settime<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    notify<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not set the time: </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>wlan_connect<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> led <span style="color:#0550ae">in</span> upled<span style="color:#1f2328">,</span> bottomled<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>fill<span style="color:#1f2328">([</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">30</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>fill<span style="color:#1f2328">([</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">3</span><span style="color:#1f2328">])</span>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;nowait&#34;</span> <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> os<span style="color:#0550ae">.</span>listdir<span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Waiting a bit before starting&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">60</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">10</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>notify<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Here we go&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> led <span style="color:#0550ae">in</span> upled<span style="color:#1f2328">,</span> bottomled<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>fill<span style="color:#1f2328">([</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">setcolors</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    upcolor <span style="color:#0550ae">=</span> command<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;upcolor&#34;</span><span style="color:#1f2328">]</span>
@@ -301,29 +319,31 @@ out how much time to sleep and what color to set.</p>
 </span></span><span style="display:flex;"><span>    bottomled<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Connecting&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    wlan<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Setting the time&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        ntptime<span style="color:#0550ae">.</span>settime<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        notify<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not set the time: </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    command <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home:9911&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>json<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    say<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Got: </span><span style="color:#0a3069">{</span>command<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        wlan_connect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        command <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home:9911&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>json<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        notify<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Got: </span><span style="color:#0a3069">{</span>command<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;sleep&#34;</span> <span style="color:#0550ae">in</span> command<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            setcolors<span style="color:#1f2328">(</span>command<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;keepconnected&#34;</span> <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> os<span style="color:#0550ae">.</span>listdir<span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>                wlan<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>            machine<span style="color:#0550ae">.</span>lightsleep<span style="color:#1f2328">(</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;sleep&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># we cannot sleep longer than 2**32 / 1000 / 3600 hours ~ 1 hour due</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># to the fact internally micropython uses us and the processor is</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># 32bits. Therefore we may want to split this into several sleep</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># commands.</span>
+</span></span><span style="display:flex;"><span>            time_to_wait <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;sleep&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">while</span> time_to_wait <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                duration <span style="color:#0550ae">=</span> <span style="color:#6639ba">min</span><span style="color:#1f2328">(</span>time_to_wait<span style="color:#1f2328">,</span> <span style="color:#0550ae">3600</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                time_to_wait <span style="color:#0550ae">=</span> time_to_wait <span style="color:#0550ae">-</span> duration
+</span></span><span style="display:flex;"><span>            machine<span style="color:#0550ae">.</span>lightsleep<span style="color:#1f2328">(</span>time_to_wait <span style="color:#0550ae">*</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">elif</span> <span style="color:#0a3069">&#34;in&#34;</span> <span style="color:#0550ae">in</span> command<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            say<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Waiting for </span><span style="color:#0a3069">{</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">[</span><span style="color:#0a3069">&#39;in&#39;</span><span style="color:#1f2328">])</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;in&#34;</span><span style="color:#1f2328">]))</span>
 </span></span><span style="display:flex;"><span>            setcolors<span style="color:#1f2328">(</span>command<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># wait a bit before asking again</span>
-</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">300</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            say<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;wait a bit before asking again, but be precise. It won&#39;t take long&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">3</span><span style="color:#1f2328">)</span> <span style="color:#57606a"># if debug else 300)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span> NotImplementedError<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
@@ -333,9 +353,14 @@ out how much time to sleep and what color to set.</p>
 </span></span><span style="display:flex;"><span>op:repl, host:nightlight, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 25, 0)
 </span></span><span style="display:flex;"><span>Use Ctrl-] to exit this shell
+</span></span><span style="display:flex;"><span>00:00: Here we go
 </span></span><span style="display:flex;"><span>Traceback (most recent call last):
-</span></span><span style="display:flex;"><span>  File &#34;main.py&#34;, line 65, in &lt;module&gt;
+</span></span><span style="display:flex;"><span>  File &#34;main.py&#34;, line 64, in &lt;module&gt;
+</span></span><span style="display:flex;"><span>  File &#34;main.py&#34;, line 32, in notify
+</span></span><span style="display:flex;"><span>  File &#34;requests/__init__.py&#34;, line 209, in post
+</span></span><span style="display:flex;"><span>  File &#34;requests/__init__.py&#34;, line 81, in request
 </span></span><span style="display:flex;"><span>KeyboardInterrupt:
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>MicroPython v1.25.0 on 2025-04-15; ESP module with ESP8266
 </span></span><span style="display:flex;"><span>Type &#34;help()&#34; for more information.
 </span></span><span style="display:flex;"><span>&gt;&gt;&gt;
@@ -351,6 +376,11 @@ of minutes to setup. This was much more practical than the <a class="internal-li
 version</a>.</li>
 </ol>
 <p>Now, only time will tell if the device will manage to deal with.</p>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/bafkreifhhwflpctqwg7tjz5yfylifwevqko5qbdydkiwj7zb7cirtzedxe?filename=a.jpg">a.jpg</a></p>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/bafkreia7b5ury6nlbcbkxvl734vdyxxhfwwnlnv6hxdoh555htobvvsjfu?filename=a.png">a.png</a></p>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/bafkreidcjbupz5tl42ag2gyt42ayzwaj766osocpqnarnrk7ewnfiicwgi?filename=a.png">a.png</a></p>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/bafkreigwa76yjbs3q637g3whqc276egfodbaoasqf5dlilr7mr27lkl34u?filename=a.png">a.png</a></p>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/bafkreicftuborvsgazyk47bempammtky6dhicojnfdr4viq74xp3epdeiq?filename=a.png">a.png</a></p>
 <!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
@@ -358,7 +388,7 @@ version</a>.</li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/33b760f4-ce76-4178-8669-b1dc69e06d4c?title=more_clever_night_light_in_micropython">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 05 Aug 2025</time></aside>
+	  <aside class="date"><time>Last updated: 08 Aug 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 04 Jul 2025</time></aside>
     </div>
   </div>
