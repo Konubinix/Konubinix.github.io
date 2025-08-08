@@ -38,13 +38,11 @@
 	<span class="badge badge-pill badge-warning"><a class="internal-link" href="/blog/tags/evergreen/">Evergreen</a></span></header>
   <article>
 	<p>how to share data using a <a target="_blank" href="/braindump/posts/kubernetes/?title=run_locally_for_development_purpose#run-locally-for-development-purpose">local kubernetes</a> cluster, using a custom <a target="_blank" href="/braindump/posts/persistent_volume/?title=persistent_volume#">PersistentVolume</a>.</p>
-<p>I will use the <a target="_blank" href="/braindump/posts/clk/?title=clk#">clk</a> extension to bootstrap easily a <a target="_blank" href="/braindump/posts/kubernetes/?title=k3d#k3d">k3d</a> cluster.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk parameter <span style="color:#6639ba">set</span> k8s --distribution k3d
-</span></span><span style="display:flex;"><span>clk parameter <span style="color:#6639ba">set</span> k8s.create-cluster --volume /tmp/k3d:/tmp/k3d
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>clk k8s flow
-</span></span></code></pre></div><p>This basically gives the parameters <code>--volume /tmp/k3d:/tmp/k3d</code> to the <code>clk k8s create-cluster</code> command that in turn, will provide it to <code>k3d cluster create</code>.</p>
-<p>Then, say that you are debugging a deployement that contain a <a target="_blank" href="/braindump/posts/persistent_volume_claim/?title=persistent_volume_claim#">PersistentVolumeClaim</a> that is named my-claim in the default namespace.</p>
+<p>I will use the <a target="_blank" href="/braindump/posts/clk/?title=clk#">clk</a> extension to bootstrap easily a <a target="_blank" href="/braindump/posts/kubernetes/?title=kind#kind">kind</a> cluster.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk k8s --distribution kind flow
+</span></span></code></pre></div><p>A hardcoded behavior of clk makes the folder <code>/kind</code> mounted on <code>/shared</code> in the
+kind docker container.</p>
+<p>Then, say that you are debugging a deployment that contain a <a target="_blank" href="/braindump/posts/persistent_volume_claim/?title=persistent_volume_claim#">PersistentVolumeClaim</a> that is named my-claim in the default namespace.</p>
 <p>The <a target="_blank" href="/braindump/posts/persistent_volume/?title=persistent_volume#">PersistentVolume</a> to create is simply.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#0550ae">apiVersion</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>v1<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#0550ae">kind</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>PersistentVolume<span style="color:#fff">
@@ -59,7 +57,7 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">capacity</span><span style="color:#1f2328">:</span><span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">storage</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>1Gi<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">hostPath</span><span style="color:#1f2328">:</span><span style="color:#fff">
-</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">path</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/tmp/k3d/myvolume/<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">path</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/shared/myvolume/<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">type</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>DirectoryOrCreate<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">nodeAffinity</span><span style="color:#1f2328">:</span><span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">required</span><span style="color:#1f2328">:</span><span style="color:#fff">
@@ -68,14 +66,13 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">        </span>- <span style="color:#0550ae">key</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>kubernetes.io/hostname<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">operator</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>In<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">values</span><span style="color:#1f2328">:</span><span style="color:#fff">
-</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span>- k3d-k3s-default-server-0<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span>- clk-k8s-control-plane<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">persistentVolumeReclaimPolicy</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>Delete<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">storageClassName</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>local-path<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">volumeMode</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>Filesystem<span style="color:#fff">
 </span></span></span></code></pre></div><p>The nodeAffinity is not strictly needed as in the standard k3d cluster, you have
 only one node, but it might help remembering that you put this <a target="_blank" href="/braindump/posts/persistent_volume/?title=persistent_volume#">persistent volume</a>
 explicitly on this node.</p>
-<p>Then, appreciate the fact that the claim is correctly bound.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kubectl get pvc my-claim
 </span></span></code></pre></div><table>
   <thead>
@@ -87,6 +84,7 @@ explicitly on this node.</p>
           <th>ACCESS</th>
           <th>MODES</th>
           <th>STORAGECLASS</th>
+          <th>VOLUMEATTRIBUTESCLASS</th>
           <th>AGE</th>
       </tr>
   </thead>
@@ -97,20 +95,123 @@ explicitly on this node.</p>
           <td>shared-volume</td>
           <td>1Gi</td>
           <td>RWO</td>
-          <td>local-path</td>
-          <td>2m31s</td>
+          <td>&lt;unset&gt;</td>
+          <td>56s</td>
+          <td></td>
           <td></td>
       </tr>
   </tbody>
 </table>
-<p>Then, everything that uses this volume can be seen and played with in the path <code>/tmp/k3d</code>.</p>
+<h2 id="4c8e3c8f-bd22-4dad-9230-93eef88ebe30">bonus: create the <a target="_blank" href="/braindump/posts/persistent_volume_claim/?title=persistent_volume_claim#">PersistentVolumeClaim</a></h2>
+<p>This is a simple as that.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#0550ae">apiVersion</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>v1<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#0550ae">kind</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>PersistentVolumeClaim<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#0550ae">metadata</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>my-claim<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#0550ae">spec</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">storageClassName</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">volumeName</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>shared-volume<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">resources</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">requests</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">storage</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>100Mi<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">accessModes</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>- ReadWriteOnce<span style="color:#fff">
+</span></span></span></code></pre></div><p>Let&rsquo;s schedule a pod in it.</p>
+<p><a id="code-snippet--basepod"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">apiVersion</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>v1<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">kind</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>Pod<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">metadata</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>testpod<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">namespace</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>default<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">labels</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">        </span><span style="color:#0550ae">app.kubernetes.io/name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>testpod<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">spec</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">volumes</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">        </span>- <span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>my-volume<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">persistentVolumeClaim</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">claimName</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>my-claim<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">containers</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">        </span>- <span style="color:#0550ae">image</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>nginx:latest<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">imagePullPolicy</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>IfNotPresent<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>maincontainer<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">ports</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span>- <span style="color:#0550ae">containerPort</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">80</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>http<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">livenessProbe</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#0550ae">httpGet</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">path</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">port</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">80</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">initialDelaySeconds</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">3</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">periodSeconds</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">5</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">readinessProbe</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#0550ae">httpGet</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">path</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">port</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">80</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">initialDelaySeconds</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">3</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">periodSeconds</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">5</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">volumeMounts</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span>- <span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>my-volume<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">mountPath</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/usr/share/nginx/html/init<span style="color:#fff">
+</span></span></span></code></pre></div><p>And check that the pod actually sees the content available on the host.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#6639ba">exec</span> pod/testpod -- touch /usr/share/nginx/html/init/foo
+</span></span><span style="display:flex;"><span>ssh colima ls /kind/myvolume
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>foo
+</span></span></code></pre></div><h2 id="e9ccbb82-5d53-418a-8199-70eaff24fbaa">bonus2: Using that path without using <a target="_blank" href="/braindump/posts/persistent_volume/?title=persistent_volume#">PV</a> and <a target="_blank" href="/braindump/posts/persistent_volume_claim/?title=persistent_volume_claim#">PVC</a></h2>
+<p>I can actually access that directory directly from a pod without needing a much work.</p>
+<p><a id="code-snippet--basepod"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">apiVersion</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>v1<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">kind</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>Pod<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">metadata</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>testpod<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">namespace</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>default<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">labels</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">        </span><span style="color:#0550ae">app.kubernetes.io/name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>testpod<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#0550ae">spec</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">volumes</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">        </span>- <span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>shared-volume<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">hostPath</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">path</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/shared/myothervolume<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">      </span><span style="color:#0550ae">containers</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">        </span>- <span style="color:#0550ae">image</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>nginx:latest<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">imagePullPolicy</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>IfNotPresent<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>maincontainer<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">ports</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span>- <span style="color:#0550ae">containerPort</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">80</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>http<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">livenessProbe</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#0550ae">httpGet</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">path</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">port</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">80</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">initialDelaySeconds</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">3</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">periodSeconds</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">5</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">readinessProbe</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#0550ae">httpGet</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">path</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">port</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">80</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">initialDelaySeconds</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">3</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span><span style="color:#0550ae">periodSeconds</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span><span style="color:#0550ae">5</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">          </span><span style="color:#0550ae">volumeMounts</span><span style="color:#1f2328">:</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">            </span>- <span style="color:#0550ae">name</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>shared-volume<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">              </span><span style="color:#0550ae">mountPath</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>/usr/share/nginx/html/init<span style="color:#fff">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#6639ba">exec</span> pod/testpod -- touch /usr/share/nginx/html/init/bar
+</span></span><span style="display:flex;"><span>ssh colima ls /kind/myothervolume
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>bar
+</span></span></code></pre></div><!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a target="_blank" href="/braindump/posts/persistent_local_volumes_with_k3d_kubernetes/?title=persistent_local_volumes_with_k3d_kubernetes#">persistent local volumes with k3d kubernetes</a> (braindump)</li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/blog/10b01b0f-a752-4f11-8d7c-1955ceecc55b?title=how_to_share_data_using_a_local_kubernetes_cluster">Permalink</a></h2>
   </article>
-  <aside class="date"><time>Last updated: 21 Mar 2025</time></aside>
+  <aside class="date"><time>Last updated: 08 Aug 2025</time></aside>
   <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 22 Sep 2021</time></aside>
 </main>
 <hr/>
