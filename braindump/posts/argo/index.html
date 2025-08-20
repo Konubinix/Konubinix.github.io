@@ -44,8 +44,8 @@
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
         <h2 id="31c9ae7c-cb78-4245-a7bd-a0cc77283bab">argoCD</h2>
 <ul>
-<li>
-<p>External reference: <a target="_blank" href="https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/">https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/</a></p>
+<li>External reference: <a target="_blank" href="https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/">https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/</a></li>
+</ul>
 <blockquote>
 <p>Argo CD polls Git repositories every three minutes to detect changes to the manifests</p>
 <p>&mdash; <a target="_blank" href="https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/">https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/</a></p></blockquote>
@@ -56,7 +56,13 @@
 </ul>
 </li>
 </ul>
-</li>
+<h3 id="0d912f96-a991-4eb5-a8ba-12738c08613d">helm hooks in argocd</h3>
+<ul>
+<li>External reference: <a target="_blank" href="https://argo-cd.readthedocs.io/en/stable/user-guide/helm/#helm-hooks">https://argo-cd.readthedocs.io/en/stable/user-guide/helm/#helm-hooks</a></li>
+</ul>
+<h3 id="0bbeee49-2a95-46a0-949f-d7b592355995">Sync Phases and Waves - Argo CD - Declarative GitOps CD for Kubernetes</h3>
+<ul>
+<li>External reference: <a target="_blank" href="https://argo-cd.readthedocs.io/en/stable/user-guide/sync-waves/">https://argo-cd.readthedocs.io/en/stable/user-guide/sync-waves/</a></li>
 </ul>
 <h3 id="3973b16b-e377-4799-8ed3-237ebd332080">diff strategies</h3>
 <ul>
@@ -79,6 +85,28 @@ May be linked to the <a class="internal-link" href="#3973b16b-e377-4799-8ed3-237
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#0550ae">someenv</span><span style="color:#1f2328">:</span><span style="color:#fff"> </span>somevalue<span style="color:#fff">
 </span></span></span></code></pre></div><p>This will always be Out of sync. Argocd desiring to put spec: {} and k8s
 silently removing it because it does not make sense.</p>
+<h4 id="840230ad-5e7c-49c1-a067-c11314e3de3f">beware the <a class="internal-link" href="#0bbeee49-2a95-46a0-949f-d7b592355995">sync-wave</a> and <a class="internal-link" href="#0d912f96-a991-4eb5-a8ba-12738c08613d">helm hooks</a></h4>
+<p>To make some resources sync before others, argocd provides the sync-wave
+annotation. It also provides access to several phases, like PreSync and
+PostSync, but according to the documentation, is is mostly meant to run jobs
+rather than installing generic resources (although the documentation says you can).</p>
+<p>In helm, you can provide <a class="internal-link" href="/braindump/posts/helm/#937b5547-16d9-4a9a-9074-b59bf06f4938">hooks</a> that will decide when the resource will be
+installed.</p>
+<p>argo-cd knows how to deal with helm hooks, but behaves a bit strangely when
+it is not a job.</p>
+<p>When you provide a pre-install hook, you may only want the resource to be
+installed before the other ones. In argo cd, kubectl get on the application
+will show that the resource will also have the property <code>hook: true</code> and
+<code>requiresPruning: true</code>.</p>
+<p>Also, it will appear separately in the interface</p>
+<figure><img src="https://ipfs.konubinix.eu/bafkreickqwg2jlgiwibbsrk735wbeuam64rclsgwztizajqsky4lmnv5fq?a.png">
+</figure>
+
+<p>And it will not be automatically healed if it modified.</p>
+<p>Therefore, I would tend to make sure to use wave-sync to install priority
+resources, like secrets, service accounts, roles etc and leave sync-phases
+(and helm hooks) for transient jobs.</p>
+<!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/gitops/#2bdcf3fe-15d4-4db8-914a-72faefde4500">Cloud Native Live: Crossplane - GitOps-based Infrastructure as Code through Kubernetes API - YouTube</a></li>
@@ -92,7 +120,7 @@ silently removing it because it does not make sense.</p>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/0d8415bb-ae4c-454f-a312-13f08c2da14c?title=argo">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 14 Aug 2025</time></aside>
+	  <aside class="date"><time>Last updated: 20 Aug 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 31 Jul 2024</time></aside>
     </div>
   </div>
