@@ -49,7 +49,8 @@
 <ul>
 <li><a class="internal-link" href="#d0de7a94-489f-4909-b2be-1d71888cac45">comparing them</a>
 <ul>
-<li><a class="internal-link" href="#de8fb775-1a34-410e-ba8e-70314293375a"><span class="timestamp-wrapper"><span class="timestamp">[2024-09-19 Thu] </span></span> dynamic run-name for github action</a>
+<li><a class="internal-link" href="#1233a7dd-4ed1-4f8e-8f7b-21c1163b22f9"><span class="timestamp-wrapper"><span class="timestamp">[2025-08-26 Tue]</span></span> generate a certificate with extra config</a></li>
+<li><a class="internal-link" href="#de8fb775-1a34-410e-ba8e-70314293375a"><span class="timestamp-wrapper"><span class="timestamp">[2024-09-19 Thu]</span></span> dynamic run-name for github action</a>
 <ul>
 <li><a class="internal-link" href="#3032e091-4243-40cd-a8e7-d846021b2579">chatgpt</a></li>
 <li><a class="internal-link" href="#8f4f597f-4d31-487c-9c6f-450b7c5c0fb3">perplexity</a></li>
@@ -68,7 +69,7 @@
 <ul>
 <li><a class="internal-link" href="#e9360c6a-e27b-4793-8422-617bdc3264f6">comparing them</a>
 <ul>
-<li><a class="internal-link" href="#4b2d7207-27d4-4fb2-8190-1b05be07fc73"><span class="timestamp-wrapper"><span class="timestamp">[2024-09-19 Thu] </span></span> generate a house that looks like a sock</a>
+<li><a class="internal-link" href="#4b2d7207-27d4-4fb2-8190-1b05be07fc73"><span class="timestamp-wrapper"><span class="timestamp">[2024-09-19 Thu]</span></span> generate a house that looks like a sock</a>
 <ul>
 <li><a class="internal-link" href="#e9d172e1-ecdb-428d-a7b7-5c618270d4ab">chatgpt</a></li>
 <li><a class="internal-link" href="#6a32cc3e-9ef1-4226-8092-58d86b44f56d">claude</a></li>
@@ -106,7 +107,53 @@
 <li><input checked="" type="checkbox"> phind</li>
 </ol>
 <h3 id="d0de7a94-489f-4909-b2be-1d71888cac45">comparing them</h3>
-<h4 id="de8fb775-1a34-410e-ba8e-70314293375a"><span class="timestamp-wrapper"><span class="timestamp">[2024-09-19 Thu] </span></span> dynamic run-name for github action</h4>
+<h4 id="1233a7dd-4ed1-4f8e-8f7b-21c1163b22f9"><span class="timestamp-wrapper"><span class="timestamp">[2025-08-26 Tue]</span></span> generate a certificate with extra config</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>        def generate_certificate(ca_key):
+</span></span><span style="display:flex;"><span>            return check_output(
+</span></span><span style="display:flex;"><span>                [
+</span></span><span style="display:flex;"><span>                    &#39;docker&#39;,
+</span></span><span style="display:flex;"><span>                    &#39;run&#39;,
+</span></span><span style="display:flex;"><span>                    &#39;--rm&#39;,
+</span></span><span style="display:flex;"><span>                    &#39;--entrypoint&#39;,
+</span></span><span style="display:flex;"><span>                    &#39;/bin/sh&#39;,
+</span></span><span style="display:flex;"><span>                    &#39;alpine/openssl&#39;,
+</span></span><span style="display:flex;"><span>                    &#39;-c&#39;,
+</span></span><span style="display:flex;"><span>                    &#39;echo -e &#34;&#39;
+</span></span><span style="display:flex;"><span>                    + &#39;\\n&#39;.join(ca_key.split(sep=&#39;\n&#39;))
+</span></span><span style="display:flex;"><span>                    + &#39;&#34; | openssl req -x509 -new -nodes -key /dev/stdin -subj /CN=localhost -days 3650&#39;
+</span></span><span style="display:flex;"><span>                    + &#39; -reqexts v3_req -extensions v3_ca&#39;,
+</span></span><span style="display:flex;"><span>                ]
+</span></span><span style="display:flex;"><span>            )  # yapf: disable
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>This is the cert provided to cert-manager as cluster issuer. Add the config needed so that I don&#39;t have this error
+</span></span><span style="display:flex;"><span>http https://api.mine.localtest.me
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>http: error: SSLError: HTTPSConnectionPool(host=&#39;api.mine.localtest.me&#39;, port=443): Max retries exceeded with url: / (Caused by SSLError(SSLCertVerificationError(1, &#39;[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: CA cert does not include key usage extension (_ssl.c:1028)&#39;))) while doing a GET request to URL: https://api.mine.localtest.me/
+</span></span></code></pre></div><p>both chatgpt and claude first tried to overwrite the default configuration, so I added</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>don&#39;t overwrite the defaultconf, it is a smell
+</span></span></code></pre></div><p>They both agreed.</p>
+<p>chatgpt started using <code>-extfile</code> that does not exist and did not manage to avoid using it, even after acknowledging it does not exist</p>
+<p>claude provided this code</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">generate_certificate</span><span style="color:#1f2328">(</span>ca_key<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> check_output<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#39;docker&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#39;run&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#39;--rm&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#39;--entrypoint&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#39;/bin/sh&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#39;alpine/openssl&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#39;-c&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#39;echo -e &#34;&#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#39;</span><span style="color:#0a3069">\\</span><span style="color:#0a3069">n&#39;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>ca_key<span style="color:#0550ae">.</span>split<span style="color:#1f2328">(</span>sep<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#39;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#39;&#34; | openssl req -x509 -new -nodes -key /dev/stdin -subj /CN=localhost -days 3650&#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#39; -addext &#34;basicConstraints=critical,CA:TRUE&#34;&#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#39; -addext &#34;keyUsage=critical,digitalSignature,keyCertSign&#34;&#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#39; -addext &#34;subjectKeyIdentifier=hash&#34;&#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>  <span style="color:#57606a"># yapf: disable</span>
+</span></span></code></pre></div><p>That worked like a charm</p>
+<h4 id="de8fb775-1a34-410e-ba8e-70314293375a"><span class="timestamp-wrapper"><span class="timestamp">[2024-09-19 Thu]</span></span> dynamic run-name for github action</h4>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>in github action, change the value of the run name of the workflow displayed in the github action web view such as
 </span></span><span style="display:flex;"><span>1. if the trigger is schedule or manual, set the value to &#34;Nightly&#34;
 </span></span><span style="display:flex;"><span>2. otherwise, set the name to the string &#34;CI: {the commit message that triggered the workflow}&#34;
@@ -159,19 +206,27 @@ this.</p>
 <li><a target="_blank" href="https://claude.ai/">https://claude.ai/</a></li>
 </ol>
 <h3 id="e9360c6a-e27b-4793-8422-617bdc3264f6">comparing them</h3>
-<h4 id="4b2d7207-27d4-4fb2-8190-1b05be07fc73"><span class="timestamp-wrapper"><span class="timestamp">[2024-09-19 Thu] </span></span> generate a house that looks like a sock</h4>
+<h4 id="4b2d7207-27d4-4fb2-8190-1b05be07fc73"><span class="timestamp-wrapper"><span class="timestamp">[2024-09-19 Thu]</span></span> generate a house that looks like a sock</h4>
 <p>In french, to make sure I tell it correctly</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Génère une image d&#39;une maison qui ressemble à une chaussette
 </span></span></code></pre></div><h5 id="e9d172e1-ecdb-428d-a7b7-5c618270d4ab">chatgpt</h5>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiaykwbgkcnpdwrfbdlm7i3a2ekptt7p562xxkhuqlqlmv4wqux4e4?filename=a.png">a.png</a></p>
+<figure><img src="https://ipfs.konubinix.eu/bafkreiaykwbgkcnpdwrfbdlm7i3a2ekptt7p562xxkhuqlqlmv4wqux4e4?a.png">
+</figure>
+
 <p>That&rsquo;s great</p>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreidmj6p7qrbs2cxy6bgso5gp4ew7niv3th46ljsjarh7figeozuye4?filename=a.png">a.png</a></p>
+<figure><img src="https://ipfs.konubinix.eu/bafkreidmj6p7qrbs2cxy6bgso5gp4ew7niv3th46ljsjarh7figeozuye4?a.png">
+</figure>
+
 <h5 id="6a32cc3e-9ef1-4226-8092-58d86b44f56d">claude</h5>
 <p>It did its best to draw one. That&rsquo;s impressive</p>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiccu5wsszbcissec3wzr43dc47jq4fnqtfh556fjpyznb4kn7trhm?filename=a.png">a.png</a></p>
+<figure><img src="https://ipfs.konubinix.eu/bafkreiccu5wsszbcissec3wzr43dc47jq4fnqtfh556fjpyznb4kn7trhm?a.png">
+</figure>
+
 <p>Yet the result is&hellip;</p>
 <h5 id="498e7732-b507-4756-878e-238d0a39fd1f">leonardo</h5>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreidsmmrziv4ktq7yu5x6q7ritwj7jh64c2vvedbdkd2ehde4cvctfy?filename=a.png">a.png</a></p>
+<figure><img src="https://ipfs.konubinix.eu/bafkreidsmmrziv4ktq7yu5x6q7ritwj7jh64c2vvedbdkd2ehde4cvctfy?a.png">
+</figure>
+
 <p>That&rsquo;s not bad at all!</p>
 <h2 id="0bf0d7c7-7468-4c6a-8941-227bdfc12450">code helper</h2>
 <ol>
@@ -205,7 +260,7 @@ this.</p>
 <p><a target="_blank" href="https://github.com/ahyatt/llm">https://github.com/ahyatt/llm</a></p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/d1133c77-e29b-46d4-915f-5e6dc6f2daa8?title=chatgpt_like_prompts">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 15 Oct 2024</time></aside>
+	  <aside class="date"><time>Last updated: 26 Aug 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Aug 2024</time></aside>
     </div>
   </div>
