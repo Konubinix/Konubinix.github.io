@@ -52,11 +52,12 @@
 <li><a class="internal-link" href="#9029c94d-a741-42da-b6be-b2cd1109279a">printing the support for the enclosure</a></li>
 <li><a class="internal-link" href="#bcb940c9-a3b7-44c8-bb83-9d822b55177b">testing it for real</a></li>
 <li><a class="internal-link" href="#b5d64144-e5fe-4738-90fc-b7d2bf18899e">some stuffs I learned</a></li>
+<li><a class="internal-link" href="#3959e0eb-542f-4923-b187-c884ca15d817">adding a cap to ease turning it off and on again</a></li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
 </div>
 <!--endtoc-->
-<p>in <a class="internal-link" href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a>, with the <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#eb29fb7c-88ff-46fe-abd0-d47c2d8099d9">trinket M0</a> and a <a class="internal-link" href="/braindump/posts/yf_s201_water_flow_sensor/">yf-s201</a></p>
+<p>in <a class="internal-link" href="/braindump/new-posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a>, with the <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#eb29fb7c-88ff-46fe-abd0-d47c2d8099d9">trinket M0</a> and a <a class="internal-link" href="/braindump/posts/yf_s201_water_flow_sensor/">yf-s201</a></p>
 <h2 id="45275883-e314-4441-9984-6bba305a583e">getting familiar with the device</h2>
 <figure><img src="https://ipfs.konubinix.eu/p/bafkreignx32hbzmtkmtn3g55d7wmacwxapikypxzktx6iom7osfoprrdya?a.png">
 </figure>
@@ -202,11 +203,13 @@
 </dl>
 <h2 id="dd171a9a-640a-4dd9-b7b4-78da1982cd49">trying with leds and the <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#9151efe9-6b58-4616-9253-90bee5722342">wemos d1</a> mini</h2>
 <p><a id="code-snippet--app.py"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>  <span style="color:#57606a">#!/usr/bin/env python3</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#57606a"># -*- coding:utf-8 -*-</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>leds <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;red&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">16</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
@@ -240,22 +243,56 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>start_tick <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>liter <span style="color:#0550ae">=</span> <span style="color:#0550ae">450</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">irq_handler</span><span style="color:#1f2328">(</span>pin<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> count
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> consumption
 </span></span><span style="display:flex;"><span>    count <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> count <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">450</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>       consumption <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
-</span></span><span style="display:flex;"><span>       count <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> count <span style="color:#0550ae">&gt;=</span> liter<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        consumption <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>        count <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>data <span style="color:#0550ae">=</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">14</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>IN<span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>PULL_UP<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>data<span style="color:#0550ae">.</span>irq<span style="color:#1f2328">(</span>trigger<span style="color:#0550ae">=</span>Pin<span style="color:#0550ae">.</span>IRQ_FALLING<span style="color:#1f2328">,</span> handler<span style="color:#0550ae">=</span>irq_handler<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>last_count <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>done_count <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>last_stable <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">update_color</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    ms_since_start <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">()</span> <span style="color:#0550ae">-</span> start_tick
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">update</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    current_tick <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    ms_since_start <span style="color:#0550ae">=</span> current_tick <span style="color:#0550ae">-</span> start_tick
 </span></span><span style="display:flex;"><span>    minute<span style="color:#1f2328">,</span> second <span style="color:#0550ae">=</span> <span style="color:#6639ba">divmod</span><span style="color:#1f2328">(</span>ms_since_start <span style="color:#0550ae">//</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">60</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{:02d}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02d}</span><span style="color:#0a3069"> -&gt; </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">, </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>minute<span style="color:#1f2328">,</span> second<span style="color:#1f2328">,</span> consumption<span style="color:#1f2328">,</span> count<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    consumption_to_color<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span>consumption<span style="color:#1f2328">,</span> <span style="color:#cf222e">lambda</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> last_count
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> done_count
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> last_stable
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> last_count <span style="color:#0550ae">==</span> count <span style="color:#0550ae">and</span> count <span style="color:#0550ae">!=</span> done_count<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            r <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;http://home/redislogger/&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                json<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;consumption&#34;</span><span style="color:#1f2328">:</span> consumption <span style="color:#0550ae">+</span> count <span style="color:#0550ae">/</span> liter<span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>                timeout<span style="color:#0550ae">=</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>status_code<span style="color:#1f2328">,</span> r<span style="color:#0550ae">.</span>reason<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># that&#39;s a pity, but that should not stop us</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Error sending data: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>e<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span>
+</span></span><span style="display:flex;"><span>        done_count <span style="color:#0550ae">=</span> count
+</span></span><span style="display:flex;"><span>        last_stable <span style="color:#0550ae">=</span> current_tick
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> last_stable <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#0550ae">and</span> <span style="color:#1f2328">(</span>current_tick <span style="color:#0550ae">-</span> last_stable<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">1000</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">:</span> <span style="color:#57606a"># 10 minutes without actions. Was it forgotten ?</span>
+</span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;http://home/ntfy/n&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;urgent&#34;</span><span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>            data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Please, shut me off!&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        last_stable <span style="color:#0550ae">=</span> current_tick <span style="color:#57606a"># make it wait a bit more</span>
+</span></span><span style="display:flex;"><span>    last_count <span style="color:#0550ae">=</span> count
 </span></span></code></pre></div><p><a id="code-snippet--main.py"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
@@ -287,7 +324,7 @@
 </span></span><span style="display:flex;"><span>turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;green&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    update_color<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    update<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># to debug</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># app.count += 100</span>
@@ -295,24 +332,20 @@
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:wemosd1, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>/tmp/main.py -&gt; main.py
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 565 bytes
-</span></span><span style="display:flex;"><span>Sent 565 of 565 bytes
+</span></span><span style="display:flex;"><span>Sent 0 of 559 bytes
+</span></span><span style="display:flex;"><span>Sent 559 of 559 bytes
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:wemosd1, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>/tmp/app.py -&gt; app.py
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 1153 bytes
-</span></span><span style="display:flex;"><span>Sent 1024 of 1153 bytes
-</span></span><span style="display:flex;"><span>Sent 1153 of 1153 bytes
+</span></span><span style="display:flex;"><span>Sent 0 of 2230 bytes
+</span></span><span style="display:flex;"><span>Sent 1024 of 2230 bytes
+</span></span><span style="display:flex;"><span>Sent 2048 of 2230 bytes
+</span></span><span style="display:flex;"><span>Sent 2230 of 2230 bytes
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spawn webrepl_cli.py -p 0000 wemosd1
 </span></span><span style="display:flex;"><span>op:repl, host:wemosd1, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
 </span></span><span style="display:flex;"><span>Use Ctrl-] to exit this shell
-</span></span><span style="display:flex;"><span>Traceback (most recent call last):
-</span></span><span style="display:flex;"><span>  File &#34;main.py&#34;, line 23, in &lt;module&gt;
-</span></span><span style="display:flex;"><span>KeyboardInterrupt:
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>MicroPython v1.23.0 on 2024-06-02; ESP module (1M) with ESP8266
-</span></span><span style="display:flex;"><span>Type &#34;help()&#34; for more information.
 </span></span><span style="display:flex;"><span>&gt;&gt;&gt;
 </span></span></code></pre></div><figure><img src="https://ipfs.konubinix.eu/p/bafkreia62elclhr6caqjjfij3o4fmxtlillb2yqd4lqdvz4qvqvit5wfd4?a.png">
 </figure>
@@ -368,14 +401,29 @@ piece.</p>
 <p>Kids won&rsquo;t think about removing the cup to switch the device on. It might be a
 good think to also nudge them with something more fancy, like a big push
 button.</p>
-<p>It would have been nicer to think about a <a class="internal-link" href="/braindump/posts/latching_power_switch_circuit/">auto power off circuit</a> before
+<p>It would have been nicer to think about a <a class="internal-link" href="/braindump/new-posts/latching_power_switch_circuit/">auto power off circuit</a> before
 soldering the whole thing. It will be harder to add afterwards.</p>
 <p>Also, the d1 mini still consumes a lot when in deep sleep, using another board
 more energy efficient might open the door for a device always on that would
 wake up when water starts flowing.</p>
+<h2 id="3959e0eb-542f-4923-b187-c884ca15d817">adding a cap to ease turning it off and on again</h2>
+<p>Using another cup as cap.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreidfwzvloflqc63piw2ldeh2pdsivm6t5ak4hh4chgjrkpi2p5gmdq?a.png">
+</figure>
+
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreiervlk2vi33jigqgkxbdshx65br74s43k6zhfwktski5toin5jqau?a.png">
+</figure>
+
+<p>I needed to screw the smaller cup to prevent it from getting off when the cap was removed.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreic62ckrxlxs5g4v5cfjzernyrnvfcwbjpp2vvwtxkvmdegswmkkyi?a.png">
+</figure>
+
+<p>This is not ideal, for the weight alone of the cap is not enough to strongly
+grip on the smaller cup and sometimes, the MCU stops.</p>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeibkvs5kilsfqzlj4d5th55n4capmeh3lkfxvuxd6puxo6lb23hgxm?vid_20250829_223204.mp4">https://ipfs.konubinix.eu/p/bafybeibkvs5kilsfqzlj4d5th55n4capmeh3lkfxvuxd6puxo6lb23hgxm?vid_20250829_223204.mp4</a></p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/5f1d104a-f477-4555-bcb3-a9cf56562f78?title=shower_water_consumption_nudger">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 28 Aug 2025</time></aside>
+	  <aside class="date"><time>Last updated: 01 Sep 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Aug 2025</time></aside>
     </div>
   </div>
