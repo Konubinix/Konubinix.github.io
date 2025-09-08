@@ -68,15 +68,46 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069"># The system enters the set sleep mode automatically when possible.
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">esp.sleep_type(esp.SLEEP_LIGHT)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">left = neopixel.NeoPixel(machine.Pin(4), 5)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">right = neopixel.NeoPixel(machine.Pin(5), 5)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">leds = {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &#34;left&#34;: neopixel.NeoPixel(machine.Pin(4), 5),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &#34;right&#34;: neopixel.NeoPixel(machine.Pin(5), 5),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">}
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">def run_command(name, command):
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    r, g, b, l = command
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    now = time.localtime()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    h = now[3]
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    m = now[4]
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    print(f&#34;{h:02d}:{m:02d} - {gc.mem_free()}: {name}: Running command: {command}&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    command = (int(r*l/255),int(g*l/255),int(b*l/255),)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    led = leds[name]
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    led.fill(command)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    led.write()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">class Connection:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    def __init__(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        self.wlan = network.WLAN()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        self.connect()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    def reconnect(self):
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        self.disconnect()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        self.connect()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    def disconnect(self):
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        self.wlan.disconnect()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    def connect(self):
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        run_command(&#34;left&#34;, [0, 0, 0, 0])
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        run_command(&#34;right&#34;, [0, 0, 0, 0])
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        self.wlan = network.WLAN(network.STA_IF)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        self.wlan.active(True)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        self.wlan.connect()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        run_command(&#34;left&#34;, [0, 50, 0, 50])
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        run_command(&#34;right&#34;, [0, 0, 0, 0])
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        while not self.wlan.isconnected():
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            time.sleep(1)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        run_command(&#34;left&#34;, [0, 0, 0, 0])
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        run_command(&#34;right&#34;, [0, 50, 0, 50])
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        try:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            ntptime.settime()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        except OSError as e:
@@ -86,7 +117,6 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                data=f&#34;&#34;&#34;{e}
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">while trying to set the time&#34;&#34;&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    @property
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    def isconnected(self):
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        return self.wlan.status() == network.STAT_GOT_IP
@@ -94,15 +124,6 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">connection = Connection()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">connection.connect()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">def run_command(led, command, name):
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    r, g, b, l = command
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    now = time.localtime()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    h = now[3]
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    m = now[4]
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    print(f&#34;{h:02d}:{m:02d} - {gc.mem_free()}: {name}: Running command: {command}&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    command = (int(r*l/255),int(g*l/255),int(b*l/255),)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    led.fill(command)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    led.write()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">def try_get():
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    try:
@@ -114,40 +135,17 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">def step():
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    print(&#34;Do step&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    if not connection.isconnected:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        connection.connect()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    if connection.isconnected:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        commands = try_get()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    else:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        # grey
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        commands = {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            &#34;left&#34;: [50, 50, 50, 50],
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            &#34;right&#34;: [50, 50, 50, 50],
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        connection.reconnect()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    commands = try_get()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    if commands is None:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        # pink
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        commands = {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            &#34;left&#34;: [50, 0, 50, 50],
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            &#34;left&#34;: [50, 0, 0, 50],
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            &#34;right&#34;: [50, 0, 0, 50],
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        }
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        try:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            connection.wlan.disconnect()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        except:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            # blue + red
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            commands[&#34;right&#34;] = [50, 50, 0, 50]
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            try:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                connection.connect()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                if connection.isconnected:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    # blue
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    commands[&#34;right&#34;] = [0, 0, 50, 50]
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                else:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    # red
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    commands[&#34;right&#34;] = [50, 0, 0, 50]
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            except:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                # green
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                commands[&#34;right&#34;] = [0, 50, 0, 50]
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        connection.reconnect()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    run_command(left, commands[&#34;left&#34;], &#34;left&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    run_command(right, commands[&#34;right&#34;], &#34;right&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    run_command(&#34;left&#34;, commands[&#34;left&#34;])
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    run_command(&#34;right&#34;, commands[&#34;right&#34;])
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">initialsleeptime = 1
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
@@ -173,34 +171,35 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">will wait for {sleeptime}s&#34;&#34;&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        except Exception as e2:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            print(f&#34;{h:02d}:{m:02d}: Could not notify: {e2}&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    print(f&#34;Waiting for {sleeptime}s&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    machine.lightsleep(sleeptime * 1000)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">EOF</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>webrepl_cli.py -p <span style="color:#0550ae">0000</span> /tmp/main.py <span style="color:#0a3069">${</span><span style="color:#953800">ip</span><span style="color:#0a3069">}</span>:main.py
-</span></span></code></pre></div><p><a id="code-snippet--deployapp"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cat<span style="color:#0a3069">&lt;&lt;EOF &gt; /tmp/app.py
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">EOF</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>webrepl_cli.py -p <span style="color:#0550ae">0000</span> /tmp/app.py <span style="color:#0a3069">${</span><span style="color:#953800">ip</span><span style="color:#0a3069">}</span>:app.py
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:iotheart, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>/tmp/main.py -&gt; main.py
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 25, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 3286 bytes
-</span></span><span style="display:flex;"><span>Sent 1024 of 3286 bytes
-</span></span><span style="display:flex;"><span>Sent 2048 of 3286 bytes
-</span></span><span style="display:flex;"><span>Sent 3072 of 3286 bytes
-</span></span><span style="display:flex;"><span>Sent 3286 of 3286 bytes
+</span></span><span style="display:flex;"><span>Sent 0 of 3207 bytes
+</span></span><span style="display:flex;"><span>Sent 1024 of 3207 bytes
+</span></span><span style="display:flex;"><span>Sent 2048 of 3207 bytes
+</span></span><span style="display:flex;"><span>Sent 3072 of 3207 bytes
+</span></span><span style="display:flex;"><span>Sent 3207 of 3207 bytes
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spawn webrepl_cli.py -p 0000 iotheart
 </span></span><span style="display:flex;"><span>op:repl, host:iotheart, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 25, 0)
 </span></span><span style="display:flex;"><span>Use Ctrl-] to exit this shell
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>&gt;&gt;&gt;
+</span></span></code></pre></div><p><a id="code-snippet--deployapp"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cat<span style="color:#0a3069">&lt;&lt;EOF &gt; /tmp/app.py
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">EOF</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>webrepl_cli.py -p <span style="color:#0550ae">0000</span> /tmp/app.py <span style="color:#0a3069">${</span><span style="color:#953800">ip</span><span style="color:#0a3069">}</span>:app.py
 </span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/5b9c0ae0-252d-4476-bf44-cfe7c7f60acb?title=iot_heart_again_with_micropython">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 31 Aug 2025</time></aside>
+	  <aside class="date"><time>Last updated: 05 Sep 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 21 Oct 2024</time></aside>
     </div>
   </div>

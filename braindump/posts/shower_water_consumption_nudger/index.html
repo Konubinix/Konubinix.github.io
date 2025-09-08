@@ -59,6 +59,7 @@
 </div>
 <!--endtoc-->
 <p>in <a class="internal-link" href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a>, with the <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#eb29fb7c-88ff-46fe-abd0-d47c2d8099d9">trinket M0</a> and a <a class="internal-link" href="/braindump/posts/yf_s201_water_flow_sensor/">yf-s201</a></p>
+<p>Inspired by <a target="_blank" href="https://www.hydrao.com/fr/boutique/54-pommeau-de-douche-aloe">https://www.hydrao.com/fr/boutique/54-pommeau-de-douche-aloe</a> and <a target="_blank" href="https://www.instructables.com/Save-Water-With-the-Shower-Water-Monitor/">https://www.instructables.com/Save-Water-With-the-Shower-Water-Monitor/</a> .</p>
 <h2 id="45275883-e314-4441-9984-6bba305a583e">getting familiar with the device</h2>
 <figure><img src="https://ipfs.konubinix.eu/p/bafkreignx32hbzmtkmtn3g55d7wmacwxapikypxzktx6iom7osfoprrdya?a.png">
 </figure>
@@ -211,27 +212,82 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">dump_exp</span><span style="color:#1f2328">(</span>e<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;error.log&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;a+&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        f<span style="color:#0550ae">.</span>write<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;</span><span style="color:#0a3069">{</span>time<span style="color:#0550ae">.</span>time<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: &#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        sys<span style="color:#0550ae">.</span>print_exception<span style="color:#1f2328">(</span>e<span style="color:#1f2328">,</span> f<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">print_error</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;error.log&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>read<span style="color:#1f2328">())</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>leds <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;red&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">16</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;yellow&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">5</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;blue&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;green&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;blue&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;yellow&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">5</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;red&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">16</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">turn_on_led</span><span style="color:#1f2328">(</span>name<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    turn_off_leds<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    leds<span style="color:#1f2328">[</span>name<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>value<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">turn_on_all</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> led <span style="color:#0550ae">in</span> leds<span style="color:#0550ae">.</span>values<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        led<span style="color:#0550ae">.</span>value<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">turn_off_leds</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> led <span style="color:#0550ae">in</span> leds<span style="color:#0550ae">.</span>values<span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>        led<span style="color:#0550ae">.</span>value<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">progress</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> led <span style="color:#0550ae">in</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;green&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;blue&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;yellow&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;red&#34;</span><span style="color:#1f2328">]:</span>
+</span></span><span style="display:flex;"><span>            turn_on_led<span style="color:#1f2328">(</span>led<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">yield</span> led
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>count <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>consumption <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">WiFi</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__enter__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Noop, most likely a nested call&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Connecting to wifi&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        p <span style="color:#0550ae">=</span> progress<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>                update_color<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Connected to wifi&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>p<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.3</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__exit__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> exc_type<span style="color:#1f2328">,</span> exc_value<span style="color:#1f2328">,</span> traceback<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>exc_value<span style="color:#1f2328">,</span> KeyboardInterrupt<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Ctrl-c =&gt; Keep wifi on for debugging&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Noop, don&#39;t disturb the nested call&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Disconnecting from wifi&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># return</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">post</span><span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>args<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> WiFi<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>args<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">wifi_on</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    WiFi<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__enter__</span><span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>THRESHOLD <span style="color:#0550ae">=</span> <span style="color:#0550ae">10</span>
 </span></span><span style="display:flex;"><span>
@@ -244,8 +300,9 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>start_tick <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>count <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>consumption <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span>liter <span style="color:#0550ae">=</span> <span style="color:#0550ae">450</span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">irq_handler</span><span style="color:#1f2328">(</span>pin<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> count
@@ -255,45 +312,52 @@
 </span></span><span style="display:flex;"><span>        consumption <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
 </span></span><span style="display:flex;"><span>        count <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>data <span style="color:#0550ae">=</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">14</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>IN<span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>PULL_UP<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>data<span style="color:#0550ae">.</span>irq<span style="color:#1f2328">(</span>trigger<span style="color:#0550ae">=</span>Pin<span style="color:#0550ae">.</span>IRQ_FALLING<span style="color:#1f2328">,</span> handler<span style="color:#0550ae">=</span>irq_handler<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>last_count <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">start</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    data<span style="color:#0550ae">.</span>irq<span style="color:#1f2328">(</span>trigger<span style="color:#0550ae">=</span>Pin<span style="color:#0550ae">.</span>IRQ_FALLING<span style="color:#1f2328">,</span> handler<span style="color:#0550ae">=</span>irq_handler<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>last_count <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span>done_count <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">1</span>
 </span></span><span style="display:flex;"><span>last_stable <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">update_color</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    consumption_to_color<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span>consumption<span style="color:#1f2328">,</span> <span style="color:#cf222e">lambda</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">update</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    current_tick <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    ms_since_start <span style="color:#0550ae">=</span> current_tick <span style="color:#0550ae">-</span> start_tick
 </span></span><span style="display:flex;"><span>    minute<span style="color:#1f2328">,</span> second <span style="color:#0550ae">=</span> <span style="color:#6639ba">divmod</span><span style="color:#1f2328">(</span>ms_since_start <span style="color:#0550ae">//</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">60</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{:02d}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02d}</span><span style="color:#0a3069"> -&gt; </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">, </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>minute<span style="color:#1f2328">,</span> second<span style="color:#1f2328">,</span> consumption<span style="color:#1f2328">,</span> count<span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>    consumption_to_color<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span>consumption<span style="color:#1f2328">,</span> <span style="color:#cf222e">lambda</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> last_count
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> done_count
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> last_stable
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> last_count <span style="color:#0550ae">==</span> count <span style="color:#0550ae">and</span> count <span style="color:#0550ae">!=</span> done_count<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            r <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            r <span style="color:#0550ae">=</span> post<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;http://home/redislogger/&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>                json<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;consumption&#34;</span><span style="color:#1f2328">:</span> consumption <span style="color:#0550ae">+</span> count <span style="color:#0550ae">/</span> liter<span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>                timeout<span style="color:#0550ae">=</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>status_code<span style="color:#1f2328">,</span> r<span style="color:#0550ae">.</span>reason<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            done_count <span style="color:#0550ae">=</span> count
+</span></span><span style="display:flex;"><span>            last_stable <span style="color:#0550ae">=</span> current_tick
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#57606a"># that&#39;s a pity, but that should not stop us</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Error sending data: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>e<span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span>
-</span></span><span style="display:flex;"><span>        done_count <span style="color:#0550ae">=</span> count
-</span></span><span style="display:flex;"><span>        last_stable <span style="color:#0550ae">=</span> current_tick
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> last_stable <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#0550ae">and</span> <span style="color:#1f2328">(</span>current_tick <span style="color:#0550ae">-</span> last_stable<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">1000</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">:</span> <span style="color:#57606a"># 10 minutes without actions. Was it forgotten ?</span>
-</span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;http://home/ntfy/n&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>            headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;urgent&#34;</span><span style="color:#1f2328">},</span>
-</span></span><span style="display:flex;"><span>            data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Please, shut me off!&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        last_stable <span style="color:#0550ae">=</span> current_tick <span style="color:#57606a"># make it wait a bit more</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            post<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;http://home/ntfy/n&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;urgent&#34;</span><span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>                data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Please, shut me off!&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            last_stable <span style="color:#0550ae">=</span> current_tick <span style="color:#57606a"># make it wait a bit more</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># that&#39;s a pity, but that should not stop us</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Error sending data: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>e<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    last_count <span style="color:#0550ae">=</span> count
+</span></span><span style="display:flex;"><span>    update_color<span style="color:#1f2328">()</span>
 </span></span></code></pre></div><p><a id="code-snippet--main.py"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
@@ -308,42 +372,41 @@
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#6639ba">hasattr</span><span style="color:#1f2328">(</span>machine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;sleep_type&#39;</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    machine<span style="color:#0550ae">.</span>sleep_type<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>SLEEP_LIGHT<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">with</span> WiFi<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;first update to avoid needing wifi directly after this&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    update<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    start<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Keep wifi on at startup to help debug&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;red&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">5</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.5</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;yellow&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">while</span> <span style="color:#0550ae">not</span> wlan<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;blue&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.5</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;green&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Now, ket&#39;s start!&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    update<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        update<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        dump_exp<span style="color:#1f2328">(</span>e<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span>
 </span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># to debug</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># app.count += 100</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># irq_handler(None)</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:wemosd1, port:8266, passwd:0000.
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:showerlogger, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>/tmp/main.py -&gt; main.py
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 559 bytes
-</span></span><span style="display:flex;"><span>Sent 559 of 559 bytes
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:wemosd1, port:8266, passwd:0000.
+</span></span><span style="display:flex;"><span>Sent 0 of 620 bytes
+</span></span><span style="display:flex;"><span>Sent 620 of 620 bytes
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:showerlogger, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>/tmp/app.py -&gt; app.py
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 2230 bytes
-</span></span><span style="display:flex;"><span>Sent 1024 of 2230 bytes
-</span></span><span style="display:flex;"><span>Sent 2048 of 2230 bytes
-</span></span><span style="display:flex;"><span>Sent 2230 of 2230 bytes
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spawn webrepl_cli.py -p 0000 wemosd1
-</span></span><span style="display:flex;"><span>op:repl, host:wemosd1, port:8266, passwd:0000.
+</span></span><span style="display:flex;"><span>Sent 0 of 4041 bytes
+</span></span><span style="display:flex;"><span>Sent 1024 of 4041 bytes
+</span></span><span style="display:flex;"><span>Sent 2048 of 4041 bytes
+</span></span><span style="display:flex;"><span>Sent 3072 of 4041 bytes
+</span></span><span style="display:flex;"><span>Sent 4041 of 4041 bytes
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spawn webrepl_cli.py -p 0000 showerlogger
+</span></span><span style="display:flex;"><span>op:repl, host:showerlogger, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
 </span></span><span style="display:flex;"><span>Use Ctrl-] to exit this shell
 </span></span><span style="display:flex;"><span>
@@ -424,9 +487,10 @@ grip on the smaller cup and sometimes, the MCU stops.</p>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeibkvs5kilsfqzlj4d5th55n4capmeh3lkfxvuxd6puxo6lb23hgxm?vid_20250829_223204.mp4">https://ipfs.konubinix.eu/p/bafybeibkvs5kilsfqzlj4d5th55n4capmeh3lkfxvuxd6puxo6lb23hgxm?vid_20250829_223204.mp4</a></p>
 <h2 id="2dbffdc5-acdf-407f-bd5b-baf494f0aa08">small upgrade, using another cap</h2>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeib3b3vi4kp3oug7jnnyx2lqo4od4a4pjeefvuexoys5jtkf3wygni?vid_20250901_221132.mp4">https://ipfs.konubinix.eu/p/bafybeib3b3vi4kp3oug7jnnyx2lqo4od4a4pjeefvuexoys5jtkf3wygni?vid_20250901_221132.mp4</a></p>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeig4k4gdwtzcyxh4aufdtnm56yramdthqzurjn3j2xsdtjpohewvvy?vid_20250907_213556.mp4">https://ipfs.konubinix.eu/p/bafybeig4k4gdwtzcyxh4aufdtnm56yramdthqzurjn3j2xsdtjpohewvvy?vid_20250907_213556.mp4</a></p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/5f1d104a-f477-4555-bcb3-a9cf56562f78?title=shower_water_consumption_nudger">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 02 Sep 2025</time></aside>
+	  <aside class="date"><time>Last updated: 08 Sep 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Aug 2025</time></aside>
     </div>
   </div>
