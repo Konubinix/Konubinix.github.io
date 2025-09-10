@@ -58,7 +58,11 @@
 </ul>
 </li>
 <li><a class="internal-link" href="#6419a763-7821-481b-a5c0-eea62f7da8d0">using a couple of esp32</a></li>
-<li><a class="internal-link" href="#6d069c95-d62a-4d26-81ed-b3e5beb8e761">trying with the rfm69hcw by adafruit</a></li>
+<li><a class="internal-link" href="#6d069c95-d62a-4d26-81ed-b3e5beb8e761">trying with the rfm69hcw by adafruit</a>
+<ul>
+<li><a class="internal-link" href="#6bb6546a-59f9-439d-9b22-32b3b445b94e">using the ft232h</a></li>
+</ul>
+</li>
 <li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
@@ -396,21 +400,60 @@ the shutter open button and 3 times again the shutter close button.</p>
 something that will retrospectively appear obvious.</p>
 <h2 id="6419a763-7821-481b-a5c0-eea62f7da8d0">using a couple of esp32</h2>
 <div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/qk0buB_fUaQ" allowfullscreen title="YouTube Video"></iframe></div>
-<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/BkmIUqccwDw" allowfullscreen title="YouTube Video"></iframe></div>
 <p><a target="_blank" href="https://techtotinker.com/2021/09/046-micropython-technotes-rf433-transceivers/">https://techtotinker.com/2021/09/046-micropython-technotes-rf433-transceivers/</a></p>
 <figure><img src="https://ipfs.konubinix.eu/p/bafkreifw4ikdgfu77nmczlbfubelr6flku5q2itnwjjvik7ozqyabkisqa?a.png">
 </figure>
 
+<p>Still nothing, putting the data pin to high and low every 3 seconds on the
+emitter and scanning the receiver every second, I can see nothing.</p>
+<p>I think I tried with all combinations of my 5 transmitters X 5 receivers.</p>
+<p>This video suggests that they are in fact quite bad.</p>
+<div class="iframe-container ratio169"><iframe src="https://www.youtube-nocookie.com/embed/BkmIUqccwDw" allowfullscreen title="YouTube Video"></iframe></div>
+<p>I also soldered 17cm wires as antennas, without more luck so far.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreif7rzajsnw35q55gk6euwjdf742feuuj2rkbva5iuirm2o7qsbmvy?a.png">
+</figure>
+
 <h2 id="6d069c95-d62a-4d26-81ed-b3e5beb8e761">trying with the rfm69hcw <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#e9fc5b6c-ab52-4695-99a5-c2e631b2aeda">by adafruit</a></h2>
 <p><a target="_blank" href="https://learn.adafruit.com/radio-featherwing/circuitpython-for-rfm69">https://learn.adafruit.com/radio-featherwing/circuitpython-for-rfm69</a></p>
-<!--more-->
+<h3 id="6bb6546a-59f9-439d-9b22-32b3b445b94e">using the <a class="internal-link" href="/braindump/posts/ft232h/">ft232h</a></h3>
+<p><a target="_blank" href="https://docs.circuitpython.org/projects/rfm69/en/latest/examples.html">https://docs.circuitpython.org/projects/rfm69/en/latest/examples.html</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk pip install adafruit-circuitpython-rfm69
+</span></span></code></pre></div><figure><img src="https://ipfs.konubinix.eu/p/bafkreiebphzrq5jnnxosqcve5uaqwrguiqzw5liwjqtv5ok63njfyguqyy?a.png">
+</figure>
+
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">board</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">busio</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">digitalio</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">adafruit_rfm69</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>RADIO_FREQ_MHZ <span style="color:#0550ae">=</span> <span style="color:#0550ae">433.0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>CS <span style="color:#0550ae">=</span> digitalio<span style="color:#0550ae">.</span>DigitalInOut<span style="color:#1f2328">(</span>board<span style="color:#0550ae">.</span>D5<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>RESET <span style="color:#0550ae">=</span> digitalio<span style="color:#0550ae">.</span>DigitalInOut<span style="color:#1f2328">(</span>board<span style="color:#0550ae">.</span>D6<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>spi <span style="color:#0550ae">=</span> busio<span style="color:#0550ae">.</span>SPI<span style="color:#1f2328">(</span>board<span style="color:#0550ae">.</span>SCK<span style="color:#1f2328">,</span> MOSI<span style="color:#0550ae">=</span>board<span style="color:#0550ae">.</span>MOSI<span style="color:#1f2328">,</span> MISO<span style="color:#0550ae">=</span>board<span style="color:#0550ae">.</span>MISO<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>rfm69 <span style="color:#0550ae">=</span> adafruit_rfm69<span style="color:#0550ae">.</span>RFM69<span style="color:#1f2328">(</span>spi<span style="color:#1f2328">,</span> CS<span style="color:#1f2328">,</span> RESET<span style="color:#1f2328">,</span> RADIO_FREQ_MHZ<span style="color:#1f2328">,</span> baudrate<span style="color:#0550ae">=</span><span style="color:#0550ae">1000000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>rfm69<span style="color:#0550ae">.</span>send<span style="color:#1f2328">(</span><span style="color:#6639ba">bytes</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Hello world!</span><span style="color:#0a3069">\r\n</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;utf-8&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    packet <span style="color:#0550ae">=</span> rfm69<span style="color:#0550ae">.</span>receive<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> packet <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Received nothing! Listening again...&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Received (raw bytes): </span><span style="color:#0a3069">{</span>packet<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        packet_text <span style="color:#0550ae">=</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>packet<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;ascii&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Received (ASCII): </span><span style="color:#0a3069">{</span>packet_text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/playing_with_circuitpython_in_circuit_playground_express/">playing with circuitpython in circuit playground express</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/6d75bdea-5c6c-4f8c-be2f-fa78434f4957?title=433mhz_test">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 09 Sep 2025</time></aside>
+	  <aside class="date"><time>Last updated: 10 Sep 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 11 Jul 2023</time></aside>
     </div>
   </div>
