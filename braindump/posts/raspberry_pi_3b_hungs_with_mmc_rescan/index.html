@@ -122,11 +122,11 @@ sd card is not at fault.</p>
 <p>Some decrease the values of <a class="internal-link" href="/braindump/posts/vm_dirty_ratio_and_vm_dirty_background_ratio/">vm.dirty_ratio and vm.dirty_background_ratio</a> to make
 those flush happen more often, leading to decreasing overall performances but
 also the odds of getting into this situation. see <a class="internal-link" href="/braindump/posts/linux_kernel_panic_issue_how_to_fix_hung_task_timeout_secs_and_blocked_for_more_than_120_seconds_problem/">Linux Kernel panic issue: How to fix hung_task_timeout_secs and blocked for more than 120 seconds problem</a></p>
-<h2 id="trying-to-reproduce-the-issue"><span class="timestamp-wrapper"><span class="timestamp">[2023-06-28 Wed] </span></span> Trying to reproduce the issue</h2>
+<h2 id="trying-to-reproduce-the-issue"><span class="timestamp-wrapper"><span class="timestamp">[2023-06-28 Wed]</span></span> Trying to reproduce the issue</h2>
 <p>This should happen when a big file is being read (creating many <a class="internal-link" href="/braindump/posts/dirty_pages/">dirty pages</a>)
 while a process is asking for much memory.</p>
-<p>EDIT <span class="timestamp-wrapper"><span class="timestamp">[2023-08-03 Thu] </span></span> I did not continue this</p>
-<h2 id="setting-the-dirty-ratio-values"><span class="timestamp-wrapper"><span class="timestamp">[2023-07-06 Thu] </span></span> Setting the dirty_ratio values</h2>
+<p>EDIT <span class="timestamp-wrapper"><span class="timestamp">[2023-08-03 Thu]</span></span> I did not continue this</p>
+<h2 id="setting-the-dirty-ratio-values"><span class="timestamp-wrapper"><span class="timestamp">[2023-07-06 Thu]</span></span> Setting the dirty_ratio values</h2>
 <p>The current value on my rpi is</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh burberry sudo sysctl -a <span style="color:#1f2328">|</span>grep dirty_<span style="color:#1f2328">|</span>grep ratio
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>vm.dirty_background_ratio = 10
@@ -143,15 +143,15 @@ sudo sysctl -p</p>
 vm.dirty_ratio = 10</p>
 <p>&mdash; <a target="_blank" href="https://www.blackmoreops.com/2014/09/22/linux-kernel-panic-issue-fix-hung_task_timeout_secs-blocked-120-seconds-problem/">https://www.blackmoreops.com/2014/09/22/linux-kernel-panic-issue-fix-hung_task_timeout_secs-blocked-120-seconds-problem/</a></p></blockquote>
 <p>It did not change the issue.</p>
-<h2 id="adding-reserved-memory-in-nomad--nomad-dot-md"><span class="timestamp-wrapper"><span class="timestamp">[2023-07-06 Thu] </span></span> Adding <a target="_blank" href="https://developer.hashicorp.com/nomad/docs/configuration/client#reserved">reserved memory</a> in <a class="internal-link" href="/braindump/posts/nomad/">nomad</a></h2>
+<h2 id="adding-reserved-memory-in-nomad--nomad-dot-md"><span class="timestamp-wrapper"><span class="timestamp">[2023-07-06 Thu]</span></span> Adding <a target="_blank" href="https://developer.hashicorp.com/nomad/docs/configuration/client#reserved">reserved memory</a> in <a class="internal-link" href="/braindump/posts/nomad/">nomad</a></h2>
 <p>Those machines are actually nomad agents.
 I added this block in their configuration.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">reserved</span> {
 </span></span><span style="display:flex;"><span>  &#34;memory&#34; <span style="color:#0550ae">=</span> <span style="color:#0550ae">100</span>
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>So far, so good. I did not have any issue for about a whole week.</p>
-<p><span class="timestamp-wrapper"><span class="timestamp">[2023-07-12 Wed] </span></span> I got a few of them today, moving on to using RPI4B instead.</p>
-<h2 id="trying-soft-reboot-from-time-to-time"><span class="timestamp-wrapper"><span class="timestamp">[2023-08-03 Thu] </span></span> Trying soft reboot from time to time</h2>
+<p><span class="timestamp-wrapper"><span class="timestamp">[2023-07-12 Wed]</span></span> I got a few of them today, moving on to using RPI4B instead.</p>
+<h2 id="trying-soft-reboot-from-time-to-time"><span class="timestamp-wrapper"><span class="timestamp">[2023-08-03 Thu]</span></span> Trying soft reboot from time to time</h2>
 <blockquote>
 <p>I have solved the issue for me, but it is not a general solutions. Anyway i describe here my workarround maybe it helps some other to solve the problem.
 As is wrote earlier, my setup is a raspberry pi kubernetes cluster with 3 worker and 1 master. The master and 2 of the worker are Raspberry Pi 3 B+ and one worker is a older Pi 3 B. The problem happens on every worker after 24-28 hours when the worker runs my home automation software called FHEM. When the problem happens, kubernetes rescheduled FHEM to run on another worker, so every worker has the problem. FHEM collects many data from external sensors like temperature in rooms or values from the heating or wind data. This many data is written via GlusterFS to a GlusterFS cluster which is based on two Raspberry 1 with USB Sticks for the data. Kubernetes and Docker wrote their status messages and other stuff to the local SD card. My solution is to restart FHEM every night at 00:05:00 am. After that the problem never happens again, it is running stable since 5. june. The restart command shuts down the kubernetes pod and kubernetes restarts the pod after a few seconds. This means that in the background the docker container in which the FHEM runs will be shutdown and restarted.</p>
