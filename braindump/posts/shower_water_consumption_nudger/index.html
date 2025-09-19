@@ -211,9 +211,22 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">espnow</span> <span style="color:#cf222e">import</span> ESPNow
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>espnow <span style="color:#0550ae">=</span> ESPNow<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>iothelper <span style="color:#0550ae">=</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#39;</span><span style="color:#0a3069">\xc4</span><span style="color:#0a3069">[</span><span style="color:#0a3069">\xbe</span><span style="color:#0a3069">b</span><span style="color:#0a3069">\xc2\xdb</span><span style="color:#0a3069">&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">setup_espnow</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    wlan<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    espnow<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    espnow<span style="color:#0550ae">.</span>add_peer<span style="color:#1f2328">(</span>iothelper<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">dump_exp</span><span style="color:#1f2328">(</span>e<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;error.log&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;a+&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
@@ -335,17 +348,19 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> last_stable
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> last_count <span style="color:#0550ae">==</span> count <span style="color:#0550ae">and</span> count <span style="color:#0550ae">!=</span> done_count<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            r <span style="color:#0550ae">=</span> post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;http://home/redislogger/&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                json<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;consumption&#34;</span><span style="color:#1f2328">:</span> consumption <span style="color:#0550ae">+</span> count <span style="color:#0550ae">/</span> liter<span style="color:#1f2328">},</span>
-</span></span><span style="display:flex;"><span>                timeout<span style="color:#0550ae">=</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>status_code<span style="color:#1f2328">,</span> r<span style="color:#0550ae">.</span>reason<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            espnow<span style="color:#0550ae">.</span>send<span style="color:#1f2328">(</span>iothelper<span style="color:#1f2328">,</span> json<span style="color:#0550ae">.</span>dumps<span style="color:#1f2328">({</span><span style="color:#0a3069">&#34;path&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;showerlogger&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;json&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;consumption&#34;</span><span style="color:#1f2328">:</span> consumption <span style="color:#0550ae">+</span> count <span style="color:#0550ae">/</span> liter<span style="color:#1f2328">}}))</span>
 </span></span><span style="display:flex;"><span>            done_count <span style="color:#0550ae">=</span> count
 </span></span><span style="display:flex;"><span>            last_stable <span style="color:#0550ae">=</span> current_tick
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># that&#39;s a pity, but that should not stop us</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Error sending data: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>e<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                post<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#0a3069">&#34;http://home/ntfy/n&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                    headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;urgent&#34;</span><span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>                    data<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not send data </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#57606a"># that&#39;s a pity, but that should not stop us</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Error sending data: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>e<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> last_stable <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#0550ae">and</span> <span style="color:#1f2328">(</span>current_tick <span style="color:#0550ae">-</span> last_stable<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">1000</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">:</span> <span style="color:#57606a"># 10 minutes without actions. Was it forgotten ?</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            post<span style="color:#1f2328">(</span>
@@ -373,20 +388,20 @@
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#6639ba">hasattr</span><span style="color:#1f2328">(</span>machine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;sleep_type&#39;</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    machine<span style="color:#0550ae">.</span>sleep_type<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>SLEEP_LIGHT<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>w <span style="color:#0550ae">=</span> WiFi<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>w<span style="color:#0550ae">.</span><span style="color:#6639ba">__enter__</span><span style="color:#1f2328">()</span> <span style="color:#57606a"># force wifi for now</span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">with</span> WiFi<span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;yellow&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;first update to avoid needing wifi directly after this&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    update<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;blue&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Keep wifi on at startup to help debug&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">5</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Now, ket&#39;s start!&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Now, let&#39;s start!&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;yellow&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>setup_espnow<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;First update before starting measuring the flow, to have a proper base&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>update<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>start<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
@@ -403,16 +418,17 @@
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:showerlogger, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>/tmp/main.py -&gt; main.py
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 740 bytes
-</span></span><span style="display:flex;"><span>Sent 740 of 740 bytes
+</span></span><span style="display:flex;"><span>Sent 0 of 718 bytes
+</span></span><span style="display:flex;"><span>Sent 718 of 718 bytes
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:showerlogger, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>/tmp/app.py -&gt; app.py
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 3996 bytes
-</span></span><span style="display:flex;"><span>Sent 1024 of 3996 bytes
-</span></span><span style="display:flex;"><span>Sent 2048 of 3996 bytes
-</span></span><span style="display:flex;"><span>Sent 3072 of 3996 bytes
-</span></span><span style="display:flex;"><span>Sent 3996 of 3996 bytes
+</span></span><span style="display:flex;"><span>Sent 0 of 4424 bytes
+</span></span><span style="display:flex;"><span>Sent 1024 of 4424 bytes
+</span></span><span style="display:flex;"><span>Sent 2048 of 4424 bytes
+</span></span><span style="display:flex;"><span>Sent 3072 of 4424 bytes
+</span></span><span style="display:flex;"><span>Sent 4096 of 4424 bytes
+</span></span><span style="display:flex;"><span>Sent 4424 of 4424 bytes
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spawn webrepl_cli.py -p 0000 showerlogger
 </span></span><span style="display:flex;"><span>op:repl, host:showerlogger, port:8266, passwd:0000.
 </span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
@@ -507,7 +523,7 @@ network in my <a class="internal-link" href="/braindump/posts/iot_heart_again_wi
 the main network.</p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/5f1d104a-f477-4555-bcb3-a9cf56562f78?title=shower_water_consumption_nudger">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 14 Sep 2025</time></aside>
+	  <aside class="date"><time>Last updated: 19 Sep 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Aug 2025</time></aside>
     </div>
   </div>
