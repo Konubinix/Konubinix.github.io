@@ -542,62 +542,61 @@
 </span></span></code></pre></div><p><a id="code-snippet--gun-js-code-ex"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-org" data-lang="org"><span style="display:flex;"><span>[[<span style="color:#1f2328">gun-js-code</span>]]
 </span></span></code></pre></div><h2 id="b5be28e7-1096-4afc-a932-ac61ce9723b9">modal</h2>
-<p><a id="org6db571f"></a></p>
-<p>#+BEGIN_SRC mhtml :noweb yes
-&lt;template x-if=&ldquo;modal.show&rdquo;&gt;
-&lt;div
-class=&ldquo;fixed inset-0 z-30 flex items-center justify-center overflow-auto bg-white text-black bg-opacity-10&rdquo;
-@click.stop=&ldquo;modal.show = false&rdquo;
-@keydown.window.escape=&ldquo;modal.show = false&rdquo;
-x-transition:enter=&ldquo;motion-safe:ease-out duration-300&rdquo;
-x-transition:enter-start=&ldquo;opacity-0 scale-90&rdquo;
-x-transition:enter-end=&ldquo;opacity-100 scale-100&rdquo;
-&gt;
-&lt;template x-if=&ldquo;metadata&rdquo;&gt;
-&lt;div @click.stop=&quot;&quot;&gt;
-&lt;select x-effect=&ldquo;await $nextTick() ; $el.value = cur_tag.key&rdquo;
-@change=&quot;
-cur_tag.key = $el.value
-cur_tag.value = [&hellip;metadata[$el.value]].sort()[0]
-&ldquo;&gt;
-&lt;template x-for=&ldquo;key in [&hellip;Object.keys(metadata)].sort()&quot;&gt;
-&lt;option :value=&ldquo;key&rdquo; x-text=&ldquo;key&rdquo;&gt;&lt;/option&gt;
-&lt;/template&gt;
-&lt;/select&gt;
-&lt;select x-effect=&ldquo;await $nextTick() ; $el.value = cur_tag.value&rdquo;
-@change=&ldquo;cur_tag.value = $el.value&rdquo;&gt;
-&lt;template x-for=&ldquo;value in [&hellip;metadata[cur_tag.key]].sort()&quot;&gt;
-&lt;option :value=&ldquo;value&rdquo; x-text=&ldquo;value&rdquo;&gt;&lt;/option&gt;
-&lt;/template&gt;
-&lt;/select&gt;
-&lt;div&gt;
-&lt;button class=&ldquo;m-2 rounded bg-white p-2&rdquo; @click=&ldquo;wanted_index = normalized_index ; await apply_tag([current_doc.cid], cur_tag.key, cur_tag.value) ; modal.show = false ; await fetch_docs() ; info(`added ${cur_tag.key}: ${cur_tag.value}`)&quot;&gt;apply&lt;/button&gt;
-&lt;button class=&ldquo;m-2 rounded bg-white p-2&rdquo; @click=&ldquo;wanted_index = normalized_index ; let key = cur_tag.key ; let value = cur_tag.value ; await remove_tag([current_doc.cid], key, value) ; modal.show = false ; await fetch_docs() ; info(`removed ${key}: ${value}`)&quot;&gt;remove&lt;/button&gt;
-&lt;/div&gt;
-&lt;div&gt;
-&lt;div x-data=&quot;{state: null}&rdquo;
-x-model=&ldquo;modal.wanted_state&rdquo;
-x-modelable=&ldquo;state&rdquo;
-&gt;
-&lt;div&gt;
-&lt;button class=&ldquo;m-2 rounded bg-white p-2&rdquo; @click=&ldquo;wanted_index = normalized_index ; await move_to_state([current_doc.cid], modal.wanted_state) ; modal.show = false ; await fetch_docs() ; info(`applied -&gt; ${modal.wanted_state}`)&quot;&gt;move&lt;/button&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;/template&gt;
-&lt;div class=&ldquo;w-32 border-4 border-red-500&rdquo;&gt;
-&lt;img class=&ldquo;w-32 object-contain&rdquo; :src=&ldquo;current_doc &amp;&amp; current_doc.thumbnail_cid ? current_doc.thumbnail_cid : &lsquo;&rsquo;&rdquo;/&gt;
-&lt;/div&gt;
-&lt;div
-x-data=&quot;{url: &lsquo;&rsquo;}&rdquo;
-&gt;
-&lt;a class=&ldquo;bg-white&rdquo; target=&quot;_blank&rdquo; :target="_blank" href=&ldquo;share_url&rdquo;&gt;share&lt;/a&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;/template&gt;
-#+END_SRC»</p>
-<h2 id="598fc034-dc7b-4dff-8ef1-0ec10145e08b">slider</h2>
+<p><a id="code-snippet--modal"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">template</span> <span style="color:#1f2328">x-if</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;modal.show&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;fixed inset-0 z-30 flex items-center justify-center overflow-auto bg-white text-black bg-opacity-10&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">click</span><span style="color:#f6f8fa;background-color:#82071e">.</span><span style="color:#1f2328">stop</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;modal.show = false&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">keydown</span><span style="color:#f6f8fa;background-color:#82071e">.</span><span style="color:#1f2328">window</span><span style="color:#f6f8fa;background-color:#82071e">.</span><span style="color:#1f2328">escape</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;modal.show = false&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">x-transition:enter</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;motion-safe:ease-out duration-300&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">x-transition:enter-start</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;opacity-0 scale-90&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">x-transition:enter-end</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;opacity-100 scale-100&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">template</span> <span style="color:#1f2328">x-if</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;metadata&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">click</span><span style="color:#f6f8fa;background-color:#82071e">.</span><span style="color:#1f2328">stop</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">select</span> <span style="color:#1f2328">x-effect</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;await $nextTick() ; $el.value = cur_tag.key&#34;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">change</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                         cur_tag.key = $el.value
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                         cur_tag.value = [...metadata[$el.value]].sort()[0]
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                         &#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">template</span> <span style="color:#1f2328">x-for</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;key in [...Object.keys(metadata)].sort()&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">option</span> <span style="color:#1f2328">:value</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;key&#34;</span> <span style="color:#1f2328">x-text</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;key&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">option</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">template</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">select</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">select</span> <span style="color:#1f2328">x-effect</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;await $nextTick() ; $el.value = cur_tag.value&#34;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">change</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;cur_tag.value = $el.value&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">template</span> <span style="color:#1f2328">x-for</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;value in [...metadata[cur_tag.key]].sort()&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">option</span> <span style="color:#1f2328">:value</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;value&#34;</span> <span style="color:#1f2328">x-text</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;value&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">option</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">template</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">select</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">button</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;m-2 rounded bg-white p-2&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">click</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;wanted_index = normalized_index ; await apply_tag([current_doc.cid], cur_tag.key, cur_tag.value) ; modal.show = false ; await fetch_docs() ; info(`added ${cur_tag.key}: ${cur_tag.value}`)&#34;</span><span style="color:#1f2328">&gt;</span>apply<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">button</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">button</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;m-2 rounded bg-white p-2&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">click</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;wanted_index = normalized_index ; let key = cur_tag.key ; let value = cur_tag.value ; await remove_tag([current_doc.cid], key, value) ; modal.show = false ; await fetch_docs() ; info(`removed ${key}: ${value}`)&#34;</span><span style="color:#1f2328">&gt;</span>remove<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">button</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#1f2328">x-data</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;{state: null}&#34;</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">x-model</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;modal.wanted_state&#34;</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">x-modelable</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;state&#34;</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>            [[state-selector]]
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">button</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;m-2 rounded bg-white p-2&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">click</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;wanted_index = normalized_index ; await move_to_state([current_doc.cid], modal.wanted_state) ; modal.show = false ; await fetch_docs() ; info(`applied -&gt; ${modal.wanted_state}`)&#34;</span><span style="color:#1f2328">&gt;</span>move<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">button</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">template</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;w-32 border-4 border-red-500&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">img</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;w-32 object-contain&#34;</span> <span style="color:#1f2328">:src</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;current_doc &amp;&amp; current_doc.thumbnail_cid ? current_doc.thumbnail_cid : &#39;&#39;&#34;</span><span style="color:#1f2328">/&gt;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">x-data</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;{url: &#39;&#39;}&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">a</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;bg-white&#34;</span> <span style="color:#1f2328">target</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;_blank&#34;</span> <span style="color:#1f2328">:href</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;share_url&#34;</span><span style="color:#1f2328">&gt;</span>share<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">a</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">template</span><span style="color:#1f2328">&gt;</span>
+</span></span></code></pre></div><h2 id="598fc034-dc7b-4dff-8ef1-0ec10145e08b">slider</h2>
 <p><a id="code-snippet--slider-code"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a">// span conveys how many items to show on the left and on the
@@ -1613,7 +1612,7 @@ x-data=&quot;{url: &lsquo;&rsquo;}&rdquo;
 </span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/6b5e4704-44dd-4764-b4f0-fb5606a13c6c?title=wip_ipfsdocs_slider_alpinejs">Permalink</a></h2>
 
       </div>
-	  <aside class="date"><time>Last updated: 16 Sep 2025</time></aside>
+	  <aside class="date"><time>Last updated: 20 Sep 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 01 Mar 2024</time></aside>
     </div>
   </div>
