@@ -64,6 +64,7 @@
 </span></span><span style="display:flex;"><span>from kivy.uix.screenmanager import Screen, ScreenManagerException, ScreenManager
 </span></span><span style="display:flex;"><span>from helpers.osc import oschandler, to_service
 </span></span><span style="display:flex;"><span>from helpers.wakelock import WakeLock
+</span></span><span style="display:flex;"><span>from helpers.notify import show_toast
 </span></span><span style="display:flex;"><span>from logging import getLogger
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>logger = getLogger(__name__)
@@ -213,15 +214,20 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if self.ids.progress.value == self.ids.progress.max:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.interrupted_time = None
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.ids.progress.value = 0
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                if self.state == &#34;pomodoro&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;done&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                elif self.state == &#34;break&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;done_break&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                elif self.state in (&#34;interruption&#34;, &#34;exterruption&#34;):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption_too_big&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                elif self.state == &#34;twominutes&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_over&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.delete(&#34;http:/</span>/konix:8500/v1/kv<span style="color:#1f2328">/pomodoro&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    if self.state == &#34;pomodoro&#34;:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                        requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;done&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    elif self.state == &#34;break&#34;:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                        requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;done_break&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    elif self.state in (&#34;interruption&#34;, &#34;exterruption&#34;):
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                        requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption_too_big&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    elif self.state == &#34;twominutes&#34;:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                        requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                     data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_over&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    requests.delete(&#34;http:/</span>/konix:8500/v1/kv<span style="color:#1f2328">/pomodoro&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    show_toast(&#34;Could not update state&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.reset()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            end = datetime.now() + timedelta(minutes=25)
@@ -230,15 +236,18 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def enter(self):
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        resp = requests.get(&#34;http:/</span>/konix:8500/v1/kv<span style="color:#1f2328">/pomodoro&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if resp.status_code == 200:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.start_state()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            # endtime = datetime.fromisoformat(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode())
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            # compatibility python2
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            endtime = datetime.strptime(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode(), &#34;%Y-%m-%dT%H:%M:%S.%f&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            now = datetime.now()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.progress.value = self.ids.progress.max - (endtime - now).total_seconds()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.endtime.text = endtime.strftime(&#34;%H:%M&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            resp = requests.get(&#34;http:/</span>/konix:8500/v1/kv<span style="color:#1f2328">/pomodoro&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if resp.status_code == 200:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.start_state()
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                # endtime = datetime.fromisoformat(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode())
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                # compatibility python2
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                endtime = datetime.strptime(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode(), &#34;%Y-%m-%dT%H:%M:%S.%f&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                now = datetime.now()
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.ids.progress.value = self.ids.progress.max - (endtime - now).total_seconds()
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.ids.endtime.text = endtime.strftime(&#34;%H:%M&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            show_toast(&#34;Could not get previous state&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.clock = Clock.schedule_interval(self.update, 1)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        wl.acquire()
@@ -256,14 +265,22 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def interruption(self):
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;interruption&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_interruption&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_interruption&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for handled interruption&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if self.interrupted_time:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.start()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            else:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.reset()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            return
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for interruption&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;pomodoro&#34; and not self.interrupted_time:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.interrupted_time = (self.ids.progress.value, self.ids.progress.max)
@@ -279,14 +296,22 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def exterruption(self):
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;exterruption&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_ext_interruption&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_ext_interruption&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for handled exterruption&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if self.interrupted_time:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.start()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            else:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.reset()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            return
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;external_interruption&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;external_interruption&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for exterruption&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;pomodoro&#34; and not self.interrupted_time:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.interrupted_time = (self.ids.progress.value, self.ids.progress.max)
@@ -300,14 +325,22 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def twominutes(self):
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;twominutes&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_done&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_done&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for handled two minutes&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if self.interrupted_time:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.start()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            else:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.reset()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            return
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for two minutes&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;pomodoro&#34; and not self.interrupted_time:
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.interrupted_time = (self.ids.progress.value, self.ids.progress.max)
@@ -321,7 +354,11 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = yellow[:3]
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def short_break(self, *_):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;start_break&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         data=&#39;&#39;&#39;{&#34;message&#34;: &#34;start_break&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            show_toast(&#34;Could not update state for break&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = True
@@ -332,7 +369,11 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = green[:3]
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def long_break(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;start_long_break&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire<span style="color:#1f2328">/pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         data=&#39;&#39;&#39;{&#34;message&#34;: &#34;start_long_break&#34;}&#39;&#39;&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        except requests.RequestException as e:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            show_toast(&#34;Could not update state for long break&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = True
@@ -365,18 +406,23 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            end = datetime.now() + timedelta(minutes=duration)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.endtime.text = end.strftime(&#34;%H:%M&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        session_id = requests.put(&#34;http:/</span>/konix:8500/v1/session<span style="color:#1f2328">/create&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                     json={
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         &#34;TTL&#34;: &#34;{}m&#34;.format(duration),
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         &#34;Behavior&#34;: &#34;delete&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         &#34;Name&#34;: &#34;pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         &#34;Checks&#34;: [],
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                     }).json()[&#34;ID&#34;]
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        logger.debug(&#34;Registering pomodoro for session {}&#34;.format(session_id))
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        requests.delete(&#34;http:/</span>/konix:8500/v1/kv<span style="color:#1f2328">/pomodoro&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        requests.put(&#34;http:/</span>/konix:8500/v1/kv<span style="color:#1f2328">/pomodoro?acquire={}&#34;.format(session_id),
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                     data=end.isoformat())
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        requests.put(&#34;http:/</span>/konix:8500/v1/event/fire/pomodoro&#34;, data=&#39;{{&#34;message&#34;: &#34;start_pomodoro&#34;, &#34;end&#34;: &#34;{}&#34;}}&#39;.format(end.isoformat()))
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        try:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            session_id = requests.put(&#34;http:/</span>/konix:8500/v1/session<span style="color:#1f2328">/create&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                      json={
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                          &#34;TTL&#34;: &#34;{}m&#34;.format(duration),
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                          &#34;Behavior&#34;: &#34;delete&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                          &#34;Name&#34;: &#34;pomodoro&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                          &#34;Checks&#34;: [],
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                      }).json()[&#34;ID&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.delete(&#34;http:/</span>/konix:8500/v1/kv<span style="color:#1f2328">/pomodoro&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/kv<span style="color:#1f2328">/pomodoro?acquire={}&#34;.format(session_id),
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         data=end.isoformat())
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/konix:8500/v1/event/fire/pomodoro&#34;,
+</span></span><span style="display:flex;"><span>                         data=&#39;{{&#34;message&#34;: &#34;start_pomodoro&#34;, &#34;end&#34;:
+</span></span><span style="display:flex;"><span>                         &#34;{}&#34;}}&#39;.format(end.isoformat()))
+</span></span><span style="display:flex;"><span>        except requests.RequestException as e:
+</span></span><span style="display:flex;"><span>            show_toast(&#34;Could not update state for start&#34;)
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>class PomodoroApp(App):
 </span></span><span style="display:flex;"><span>
@@ -418,6 +464,7 @@
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.screenmanager</span> <span style="color:#cf222e">import</span> Screen<span style="color:#1f2328">,</span> ScreenManagerException<span style="color:#1f2328">,</span> ScreenManager
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers.osc</span> <span style="color:#cf222e">import</span> oschandler<span style="color:#1f2328">,</span> to_service
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers.wakelock</span> <span style="color:#cf222e">import</span> WakeLock
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers.notify</span> <span style="color:#cf222e">import</span> show_toast
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">logging</span> <span style="color:#cf222e">import</span> getLogger
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>logger <span style="color:#0550ae">=</span> getLogger<span style="color:#1f2328">(</span><span style="color:#953800">__name__</span><span style="color:#1f2328">)</span>
@@ -567,15 +614,20 @@
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">==</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                    requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;done&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;break&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                    requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;done_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;interruption&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;exterruption&#34;</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>                    requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption_too_big&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;twominutes&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                    requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_over&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>delete<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/kv/pomodoro&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;done&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;break&#34;</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;done_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;interruption&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;exterruption&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption_too_big&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;twominutes&#34;</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                     data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_over&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                    requests<span style="color:#0550ae">.</span>delete<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/kv/pomodoro&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            end <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>minutes<span style="color:#0550ae">=</span><span style="color:#0550ae">25</span><span style="color:#1f2328">)</span>
@@ -584,15 +636,18 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">enter</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        resp <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/kv/pomodoro&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> resp<span style="color:#0550ae">.</span>status_code <span style="color:#0550ae">==</span> <span style="color:#0550ae">200</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start_state<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># endtime = datetime.fromisoformat(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode())</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># compatibility python2</span>
-</span></span><span style="display:flex;"><span>            endtime <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>strptime<span style="color:#1f2328">(</span>base64<span style="color:#0550ae">.</span>b64decode<span style="color:#1f2328">(</span>resp<span style="color:#0550ae">.</span>json<span style="color:#1f2328">()[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;Value&#34;</span><span style="color:#1f2328">])</span><span style="color:#0550ae">.</span>decode<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;%Y-%m-</span><span style="color:#0a3069">%d</span><span style="color:#0a3069">T%H:%M:%S.</span><span style="color:#0a3069">%f</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            now <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">-</span> <span style="color:#1f2328">(</span>endtime <span style="color:#0550ae">-</span> now<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>total_seconds<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>endtime<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> endtime<span style="color:#0550ae">.</span>strftime<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;%H:%M&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            resp <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/kv/pomodoro&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> resp<span style="color:#0550ae">.</span>status_code <span style="color:#0550ae">==</span> <span style="color:#0550ae">200</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start_state<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#57606a"># endtime = datetime.fromisoformat(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode())</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#57606a"># compatibility python2</span>
+</span></span><span style="display:flex;"><span>                endtime <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>strptime<span style="color:#1f2328">(</span>base64<span style="color:#0550ae">.</span>b64decode<span style="color:#1f2328">(</span>resp<span style="color:#0550ae">.</span>json<span style="color:#1f2328">()[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;Value&#34;</span><span style="color:#1f2328">])</span><span style="color:#0550ae">.</span>decode<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;%Y-%m-</span><span style="color:#0a3069">%d</span><span style="color:#0a3069">T%H:%M:%S.</span><span style="color:#0a3069">%f</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                now <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">-</span> <span style="color:#1f2328">(</span>endtime <span style="color:#0550ae">-</span> now<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>total_seconds<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>endtime<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> endtime<span style="color:#0550ae">.</span>strftime<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;%H:%M&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not get previous state&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock <span style="color:#0550ae">=</span> Clock<span style="color:#0550ae">.</span>schedule_interval<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>update<span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        wl<span style="color:#0550ae">.</span>acquire<span style="color:#1f2328">()</span>
@@ -610,14 +665,22 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">interruption</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;interruption&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for handled interruption&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for interruption&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span> <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">)</span>
@@ -633,14 +696,22 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">exterruption</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;exterruption&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_ext_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_ext_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for handled exterruption&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;external_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;external_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for exterruption&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span> <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">)</span>
@@ -654,14 +725,22 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">twominutes</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;twominutes&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_done&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_done&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for handled two minutes&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for two minutes&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span> <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">)</span>
@@ -675,7 +754,11 @@
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> yellow<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">short_break</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;start_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                         data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;start_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for break&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
@@ -686,7 +769,11 @@
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> green<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">long_break</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;start_long_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                         data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;start_long_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for long break&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
@@ -719,18 +806,23 @@
 </span></span><span style="display:flex;"><span>            end <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>minutes<span style="color:#0550ae">=</span>duration<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>endtime<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> end<span style="color:#0550ae">.</span>strftime<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;%H:%M&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        session_id <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/session/create&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                     json<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>                         <span style="color:#0a3069">&#34;TTL&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">m&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>duration<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>                         <span style="color:#0a3069">&#34;Behavior&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;delete&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                         <span style="color:#0a3069">&#34;Name&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                         <span style="color:#0a3069">&#34;Checks&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">[],</span>
-</span></span><span style="display:flex;"><span>                     <span style="color:#1f2328">})</span><span style="color:#0550ae">.</span>json<span style="color:#1f2328">()[</span><span style="color:#0a3069">&#34;ID&#34;</span><span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>        logger<span style="color:#0550ae">.</span>debug<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Registering pomodoro for session </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>session_id<span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>delete<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/kv/pomodoro&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/kv/pomodoro?acquire=</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>session_id<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>                     data<span style="color:#0550ae">=</span>end<span style="color:#0550ae">.</span>isoformat<span style="color:#1f2328">())</span>
-</span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;{{&#34;message&#34;: &#34;start_pomodoro&#34;, &#34;end&#34;: &#34;</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;}}&#39;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>end<span style="color:#0550ae">.</span>isoformat<span style="color:#1f2328">()))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            session_id <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/session/create&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                      json<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>                                          <span style="color:#0a3069">&#34;TTL&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">m&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>duration<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>                                          <span style="color:#0a3069">&#34;Behavior&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;delete&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                          <span style="color:#0a3069">&#34;Name&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                          <span style="color:#0a3069">&#34;Checks&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">[],</span>
+</span></span><span style="display:flex;"><span>                                      <span style="color:#1f2328">})</span><span style="color:#0550ae">.</span>json<span style="color:#1f2328">()[</span><span style="color:#0a3069">&#34;ID&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>delete<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/kv/pomodoro&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/kv/pomodoro?acquire=</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>session_id<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>                         data<span style="color:#0550ae">=</span>end<span style="color:#0550ae">.</span>isoformat<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://konix:8500/v1/event/fire/pomodoro&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                         data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;{{&#34;message&#34;: &#34;start_pomodoro&#34;, &#34;end&#34;:</span>
+</span></span><span style="display:flex;"><span>                         <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">}}</span><span style="color:#0a3069">&#39;.format(end.isoformat()))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for start&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">PomodoroApp</span><span style="color:#1f2328">(</span>App<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>
@@ -760,7 +852,7 @@
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/aec7a5a4-ee92-407b-b39b-dc8baaa13ac0?title=pomodo_timer_on_kivy">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 09 Jul 2025</time></aside>
+	  <aside class="date"><time>Last updated: 08 Oct 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 26 Nov 2024</time></aside>
     </div>
   </div>
