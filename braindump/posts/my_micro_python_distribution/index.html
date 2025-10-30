@@ -42,7 +42,7 @@
 		<p class="lead">
         <h1>My Micro Python Distribution</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
-        <p>my <a class="internal-link" href="/braindump/new-posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micro python</a> distribution</p>
+        <p>my <a class="internal-link" href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micro python</a> distribution</p>
 <p>boot.py is meant to deal with devices specific stuffs, like setting the
 scheduler speed.</p>
 <p>main.py contains the application code. I want that code to follow some common
@@ -104,17 +104,129 @@ should be upgraded</p>
 </li>
 </ol>
 <!--listend-->
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
+<p><a id="code-snippet--helpers"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">upgrade</span><span style="color:#1f2328">(</span>url<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    new_values <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span>url<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>json<span style="color:#1f2328">()</span>
-</span></span></code></pre></div><h2 id="notes-linking-here">Notes linking here</h2>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">machine</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">espnow</span> <span style="color:#cf222e">import</span> ESPNow
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>espnow <span style="color:#0550ae">=</span> ESPNow<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>iothelper <span style="color:#0550ae">=</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#39;</span><span style="color:#0a3069">\xc4</span><span style="color:#0a3069">[</span><span style="color:#0a3069">\xbe</span><span style="color:#0a3069">b</span><span style="color:#0a3069">\xc2\xdb</span><span style="color:#0a3069">&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">WiFi</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> progress<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>progress <span style="color:#0550ae">=</span> progress
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__enter__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Noop, most likely a nested call&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Connecting to wifi&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>progress<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            p <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>progress<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Connected to wifi&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>progress<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>p<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.3</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__exit__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> exc_type<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> exc_value<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> traceback<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>exc_value<span style="color:#1f2328">,</span> KeyboardInterrupt<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Ctrl-c =&gt; Keep wifi on for debugging&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Noop, don&#39;t disturb the nested call&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Disconnecting from wifi&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># return</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">on</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__enter__</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">off</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__exit__</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">reset</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;&#34;&#34;Make sure the wifi is at a coherent state.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      Activating the STA and disconnecting prevent from ghost isconnected messages
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      from previous run before reset.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      see https://docs.micropython.org/en/latest/library/espnow.html
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>      sta <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>WLAN<span style="color:#0550ae">.</span>IF_STA<span style="color:#1f2328">);</span> sta<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      ap <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>WLAN<span style="color:#0550ae">.</span>IF_AP<span style="color:#1f2328">);</span> ap<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      sta<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">while</span> <span style="color:#0550ae">not</span> sta<span style="color:#0550ae">.</span>active<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>          time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      sta<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">while</span> sta<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>          time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">return</span> sta<span style="color:#1f2328">,</span> ap
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>wifi <span style="color:#0550ae">=</span> WiFi<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">setup_espnow</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    sta<span style="color:#1f2328">,</span> ap <span style="color:#0550ae">=</span> wifi_reset<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    sta<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#0550ae">not</span> sta<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Waiting for first connection&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    sta<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># somehow, using the AP does not seem to do it anymore but I cannot understand why</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># sta.active(False)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ap.active(True)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ap.config(essid=&#34;ESP_NOW_AP&#34;, hidden=True, channel=11, pm=network.WLAN.PM_POWERSAVE)</span>
+</span></span><span style="display:flex;"><span>    espnow<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    espnow<span style="color:#0550ae">.</span>add_peer<span style="color:#1f2328">(</span>iothelper<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> sta<span style="color:#1f2328">,</span> ap
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">ntfy</span><span style="color:#1f2328">(</span>message<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> wifi<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        res <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;mp&#34;</span><span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>            data<span style="color:#0550ae">=</span>message<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> res<span style="color:#0550ae">.</span>status_code <span style="color:#0550ae">//</span> <span style="color:#0550ae">100</span> <span style="color:#0550ae">!=</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#cf222e">raise</span> Exception<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;ntfy failed: </span><span style="color:#0a3069">{</span>res<span style="color:#0550ae">.</span>status_code<span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">{</span>res<span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> res
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">deep_sleep</span><span style="color:#1f2328">(</span>msecs<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    rtc <span style="color:#0550ae">=</span> machine<span style="color:#0550ae">.</span>RTC<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    rtc<span style="color:#0550ae">.</span>irq<span style="color:#1f2328">(</span>trigger<span style="color:#0550ae">=</span>rtc<span style="color:#0550ae">.</span>ALARM0<span style="color:#1f2328">,</span> wake<span style="color:#0550ae">=</span>machine<span style="color:#0550ae">.</span>DEEPSLEEP<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    rtc<span style="color:#0550ae">.</span>alarm<span style="color:#1f2328">(</span>rtc<span style="color:#0550ae">.</span>ALARM0<span style="color:#1f2328">,</span> msecs<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    machine<span style="color:#0550ae">.</span>deepsleep<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">lowpower</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    machine<span style="color:#0550ae">.</span>freq<span style="color:#1f2328">(</span><span style="color:#0550ae">80000000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#6639ba">hasattr</span><span style="color:#1f2328">(</span>machine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;sleep_type&#39;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        machine<span style="color:#0550ae">.</span>sleep_type<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>SLEEP_LIGHT<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/iot_heart_again_with_remote_control/">IOT heart again, with remote control</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/bfa09bd4-254a-4fc5-a634-b1d6ea4fbee6?title=my_micro_python_distribution">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 21 Oct 2025</time></aside>
+	  <aside class="date"><time>Last updated: 30 Oct 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Oct 2025</time></aside>
     </div>
   </div>
