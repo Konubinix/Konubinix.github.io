@@ -46,48 +46,69 @@
 <li>External reference: <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></li>
 </ul>
 <p><a class="internal-link" href="/braindump/posts/kubernetes/">kubernetes</a>, Debug Running <a class="internal-link" href="/braindump/posts/pod/">Pods</a></p>
+<h2 id="7e28ae39-9cdb-47e4-9455-4f42d09e2bd4">to dig into the filesystem of some distroless container (/proc/1/root)</h2>
+<p>kubectl debug with the <code>--target</code> option<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</p>
+<p><code>k debug -ti pod/clk-collector-6cd64d897b-dxdk9 --image busybox --target otc-container</code></p>
+<h3 id="5262a874-0884-499b-94a9-226708c5f170">get access to the filesystem</h3>
+<p>in the debug container, /proc/1/root is the filesystem of the main container.</p>
+<p>But you may have a permission denied. In that case, look at its group and user
+ls -n /proc/1/root
+<code>lrwxrwxrwx    1 10001    0                0 Nov  3 16:55 /proc/1/root</code></p>
+<p>Then, create a user with those exact user and group id.</p>
+<p><code>adduser -u 10001 -G root test</code></p>
+<p>Then su to that user and you will have access to the container filesystem.</p>
+<h3 id="e61b7581-9d5b-46bf-bbd1-ed8bbc99f991">looking at the listening ports</h3>
+<p>The debug container share the same network namespace, so simply run <code>netstat -tupln</code></p>
+<h2 id="09f3f655-4413-4d65-8592-49ac5460d5a1">to start another pod like the one you want to debug with slightly modified settings</h2>
+<p>changing the image and the command of the container</p>
+<p><code>k debug -ti pod/clk-collector-6cd64d897b-dxdk9 --image busybox --container otc-container -- sh</code><sup id="fnref:2"><a class="internal-link" href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup></p>
+<p>creating a copy of the pod with a debug container inside<sup id="fnref:3"><a class="internal-link" href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup></p>
+<p><code>k debug -ti pod/clk-collector-6cd64d897b-dxdk9 --image busybox --share-process -- sh</code></p>
+<p>this is slightly less practical than <a class="internal-link" href="#7e28ae39-9cdb-47e4-9455-4f42d09e2bd4">to dig into the filesystem of some
+distroless container</a> as /proc/1 is not necessarily the pod to debug here.  .</p>
+<p>run the same pod with a different command<sup id="fnref:4"><a class="internal-link" href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup></p>
+<p><code>k debug -ti pod/clk-collector-6cd64d897b-dxdk9 --copy-to test --container otc-container -- sh</code></p>
+<p>This won&rsquo;t help for distroless ones.</p>
+<p>It may be useful in combination with <code>--set-image</code> to provide a devel version of
+the image, not distroless<sup id="fnref:5"><a class="internal-link" href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>.</p>
+<h2 id="0dfe6b5d-77ff-4006-8bc4-69369ee8b876">debug the node itself</h2>
+<blockquote>
+<p>kubectl debug node/mynode -it &ndash;image=ubuntu</p>
+<p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
+<p>This will mount the node filesystem under <code>/host</code></p>
+<h2 id="permalink"><a class="internal-link" href="/braindump/0893e96b-2cb9-4823-8968-6f3fb4d6c4c8?title=kubernetes_debug_running_pods">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
 <blockquote>
 <p>kubectl debug -it ephemeral-demo &ndash;image=busybox:1.28 &ndash;target=ephemeral-demo
 Defaulting debug</p>
 <p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
+&#160;<a class="internal-link" href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:2">
 <blockquote>
-<p>The &ndash;target
-parameter targets the process namespace of another container. It&rsquo;s necessary
-here because kubectl run does not enable process namespace sharing in the pod it
-creates</p>
+<p>can use kubectl debug to create a copy of this Pod with the command
+changed to an interactive kubectl debug myapp -it &ndash;copy-to=myapp-debug &ndash;container=myapp &ndash; sh
+If you don&rsquo;t</p>
 <p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
+&#160;<a class="internal-link" href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:3">
 <blockquote>
 <p>kubectl debug myapp -it &ndash;image=ubuntu &ndash;share-processes &ndash;copy-to=myapp-debug
 Defaulting</p>
 <p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
-<blockquote>
-<p>The &ndash;share-processes allows the containers in this Pod to see processes
-from the other containers in the Pod. For more information about how this
-works, see Share Process Namespace between Containers in a Pod.</p>
-<p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
-<blockquote>
-<p>simulate a crashing application,</p>
-<p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
-<blockquote>
-<p>can use kubectl debug to create a copy of this Pod with the command
-changed to an interactive <kubectl> debug myapp -it &ndash;copy-to=myapp-debug &ndash;container=myapp &ndash; sh
-If you don&rsquo;t</p>
-<p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
+&#160;<a class="internal-link" href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:4">
 <blockquote>
 <p>Now you have an interactive shell that you can use to perform tasks like
 checking filesystem paths or running the container command manually.</p>
 <p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
+&#160;<a class="internal-link" href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:5">
 <blockquote>
-<p>change the command of a specific container you must
-specify its name using &ndash;container or kubectl debug will instead
-create a new container to run the command you specified.</p>
+<p>kubectl debug myapp &ndash;copy-to=myapp-debug &ndash;set-image=*=ubuntu
+The syntax</p>
 <p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
 <!--quoteend-->
 <blockquote>
@@ -95,29 +116,11 @@ create a new container to run the command you specified.</p>
 production container images to an image containing a debugging build or
 additional utilities.</p>
 <p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
-<blockquote>
-<p>kubectl debug myapp &ndash;copy-to=myapp-debug &ndash;set-image=*=ubuntu
-The syntax</p>
-<p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
-<blockquote>
-<p>. *=ubuntu means change the image of all containers
-to ubuntu</p>
-<p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
-<blockquote>
-<p>If none of these approaches work, you can find the Node on which the Pod is
-running and create a Pod running on the Node</p>
-<p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<!--quoteend-->
-<blockquote>
-<p>kubectl debug node/mynode -it &ndash;image=ubuntu
-Creating</p>
-<p>&mdash; <a target="_blank" href="https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/">https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/</a></p></blockquote>
-<h2 id="permalink"><a class="internal-link" href="/braindump/0893e96b-2cb9-4823-8968-6f3fb4d6c4c8?title=kubernetes_debug_running_pods">Permalink</a></h2>
+&#160;<a class="internal-link" href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
       </div>
-	  <aside class="date"><time>Last updated: 14 Apr 2023</time></aside>
+	  <aside class="date"><time>Last updated: 03 Nov 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 14 Apr 2023</time></aside>
     </div>
   </div>

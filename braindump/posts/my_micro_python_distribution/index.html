@@ -43,74 +43,15 @@
         <h1>My Micro Python Distribution</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
         <p>my <a class="internal-link" href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micro python</a> distribution</p>
-<p>boot.py is meant to deal with devices specific stuffs, like setting the
-scheduler speed.</p>
-<p>main.py contains the application code. I want that code to follow some common
-patterns, like:</p>
-<ul>
-<li>custom exception handling:
-<ul>
-<li>dump in the file system,</li>
-<li>notification on my nyfy server,</li>
-</ul>
-</li>
-<li>def wifi_reset as per the doc of espnow</li>
-<li>helpers to:
-<ul>
-<li>notify,</li>
-<li>communicate with my other devices via espnow,</li>
-<li>log,</li>
-<li>deal with deep sleep,</li>
-</ul>
-</li>
-</ul>
-<p>I believe in the value of a fast feedback loop setup, so I need a way to upgrade
-this distribution and the main code easily, something as simple as:</p>
-<ul>
-<li>webrepl_cli.py -p 0000 mydevice</li>
-<li>C-c</li>
-<li>from upgrade import upgrade</li>
-<li>upgrade(&ldquo;urltomy/install.json&rdquo;)</li>
-</ul>
-<p>install.json should look like:
-[
-{&ldquo;url&rdquo;: &ldquo;someurl&rdquo;, &ldquo;path&rdquo;: &ldquo;somepath&rdquo;},
-{&ldquo;url&rdquo;: &ldquo;someurl&rdquo;, &ldquo;path&rdquo;: &ldquo;somepath&rdquo;},
-&hellip;
-]
-The upgrade process should:</p>
-<ol>
-<li>
-<p><input type="checkbox"> read the content of the url</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span>url<span style="color:#1f2328">)</span>
-</span></span></code></pre></div></li>
-<li>
-<p><input type="checkbox"> once processed, move it to installed.json</p>
-</li>
-<li>
-<p><input type="checkbox"> clean the files that are in installed.json but not in install.json</p>
-</li>
-<li>
-<p><input type="checkbox"> install the new files</p>
-</li>
-<li>
-<p><input type="checkbox"> update the existing files only if the url changes. I will use ipfs to host the
-data. That means that the url contains a hash of the data and therefore
-simply comparing the url is enough to decide if the content is up to date or
-should be upgraded</p>
-</li>
-<li>
-<p><input type="checkbox"> leave boot.py alone. That file is very board dependant</p>
-</li>
-</ol>
-<!--listend-->
+<h2 id="a455021b-c8aa-4895-8cfd-48ceb98a1ba4">helpers</h2>
 <p><a id="code-snippet--helpers"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">machine</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">utime</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">espnow</span> <span style="color:#cf222e">import</span> ESPNow
@@ -181,11 +122,10 @@ should be upgraded</p>
 </span></span><span style="display:flex;"><span>          time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#cf222e">return</span> sta<span style="color:#1f2328">,</span> ap
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>wifi <span style="color:#0550ae">=</span> WiFi<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">setup_espnow</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    sta<span style="color:#1f2328">,</span> ap <span style="color:#0550ae">=</span> wifi_reset<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">setup_espnow</span><span style="color:#1f2328">(</span>peers<span style="color:#0550ae">=</span><span style="color:#1f2328">[]):</span>
+</span></span><span style="display:flex;"><span>    sta<span style="color:#1f2328">,</span> ap <span style="color:#0550ae">=</span> wifi<span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    sta<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#0550ae">not</span> sta<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Waiting for first connection&#34;</span><span style="color:#1f2328">)</span>
@@ -196,29 +136,226 @@ should be upgraded</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ap.active(True)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ap.config(essid=&#34;ESP_NOW_AP&#34;, hidden=True, channel=11, pm=network.WLAN.PM_POWERSAVE)</span>
 </span></span><span style="display:flex;"><span>    espnow<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    espnow<span style="color:#0550ae">.</span>add_peer<span style="color:#1f2328">(</span>iothelper<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> peer <span style="color:#0550ae">in</span> peers<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        espnow<span style="color:#0550ae">.</span>add_peer<span style="color:#1f2328">(</span>peer<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> sta<span style="color:#1f2328">,</span> ap
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">ntfy</span><span style="color:#1f2328">(</span>message<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">ntfy</span><span style="color:#1f2328">(</span>message<span style="color:#1f2328">,</span> title<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;mp&#34;</span><span style="color:#1f2328">,</span> channel<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;n&#34;</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;low&#34;</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> wifi<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        res <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>            headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;mp&#34;</span><span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;http://home:9705/</span><span style="color:#0a3069">{</span>channel<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> title<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> priority<span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>            data<span style="color:#0550ae">=</span>message<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> res<span style="color:#0550ae">.</span>status_code <span style="color:#0550ae">//</span> <span style="color:#0550ae">100</span> <span style="color:#0550ae">!=</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>              <span style="color:#cf222e">raise</span> Exception<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;ntfy failed: </span><span style="color:#0a3069">{</span>res<span style="color:#0550ae">.</span>status_code<span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">{</span>res<span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> res
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">deep_sleep</span><span style="color:#1f2328">(</span>msecs<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    rtc <span style="color:#0550ae">=</span> machine<span style="color:#0550ae">.</span>RTC<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>rtc <span style="color:#0550ae">=</span> machine<span style="color:#0550ae">.</span>RTC<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">datetime_to_ts</span><span style="color:#1f2328">(</span>datetime<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Convert RTC datetime tuple to timestamp</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">import</span> <span style="color:#24292e">utime</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> utime<span style="color:#0550ae">.</span>mktime<span style="color:#1f2328">((</span>year<span style="color:#1f2328">,</span> month<span style="color:#1f2328">,</span> day<span style="color:#1f2328">,</span> hour<span style="color:#1f2328">,</span> minute<span style="color:#1f2328">,</span> second<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">))()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">pulse</span><span style="color:#1f2328">(</span>pin<span style="color:#1f2328">,</span> duration_ms<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    pin<span style="color:#0550ae">.</span>on<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    utime<span style="color:#0550ae">.</span>sleep_ms<span style="color:#1f2328">(</span>duration_ms<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    pin<span style="color:#0550ae">.</span>off<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">LatchingRelay</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> pin_a<span style="color:#1f2328">,</span> pin_b<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pin_a <span style="color:#0550ae">=</span> Pin<span style="color:#1f2328">(</span>pin_a<span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pin_b <span style="color:#0550ae">=</span> Pin<span style="color:#1f2328">(</span>pin_b<span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pin_a<span style="color:#0550ae">.</span>off<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pin_b<span style="color:#0550ae">.</span>off<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">a</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        pulse<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pin_a<span style="color:#1f2328">,</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">b</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        pulse<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pin_b<span style="color:#1f2328">,</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>deep_sleep_max <span style="color:#0550ae">=</span> <span style="color:#0550ae">3600</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># deep_sleep_max = 10</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>deep_sleep_context_version <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">deep_sleep_handler</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    mem <span style="color:#0550ae">=</span> rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># beware that hard reseting while in deep sleep will still cause a DEEPSLEEP_RESET</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> machine<span style="color:#0550ae">.</span>reset_cause<span style="color:#1f2328">()</span> <span style="color:#0550ae">!=</span> machine<span style="color:#0550ae">.</span>DEEPSLEEP_RESET<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Normal reset, clearing deep sleep memory to avoid mistakenly resuming a sleep triggered by a previous algorithm&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;resetdeepsleep&#34;</span> <span style="color:#0550ae">in</span> os<span style="color:#0550ae">.</span>listdir<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;New algorithm uploaded, reseting the deep sleep memory&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          os<span style="color:#0550ae">.</span>unlink<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;resetdeepsleep&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> mem <span style="color:#0550ae">and</span> machine<span style="color:#0550ae">.</span>reset_cause<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> machine<span style="color:#0550ae">.</span>DEEPSLEEP_RESET<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Woke from deep sleep with memory:&#34;</span><span style="color:#1f2328">,</span> mem<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            context <span style="color:#0550ae">=</span> json<span style="color:#0550ae">.</span>loads<span style="color:#1f2328">(</span>mem<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> ValueError<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Invalid deep sleep context, continuing execution&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> context<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;version&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">!=</span> deep_sleep_context_version<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Incompatible deep sleep context version, continuing execution&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        now <span style="color:#0550ae">=</span> utime<span style="color:#0550ae">.</span>mktime<span style="color:#1f2328">(</span>utime<span style="color:#0550ae">.</span>gmtime<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>        wake_on <span style="color:#0550ae">=</span> context<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;wake_on&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        remaining <span style="color:#0550ae">=</span> wake_on <span style="color:#0550ae">-</span> now
+</span></span><span style="display:flex;"><span>        threshold <span style="color:#0550ae">=</span> <span style="color:#0550ae">5</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> remaining <span style="color:#0550ae">&gt;</span> threshold<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;now (</span><span style="color:#0a3069">{</span>now<span style="color:#0a3069">}</span><span style="color:#0a3069">) &lt; target (</span><span style="color:#0a3069">{</span>wake_on<span style="color:#0a3069">}</span><span style="color:#0a3069">). Going back to deep sleep for remaining </span><span style="color:#0a3069">{</span>remaining<span style="color:#0a3069">}</span><span style="color:#0a3069">s&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            deep_sleep<span style="color:#1f2328">(</span>remaining<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">elif</span> remaining <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Almost reached target wake time, don&#39;t waste power in a </span><span style="color:#0a3069">{</span>threshold<span style="color:#0a3069">}</span><span style="color:#0a3069">s deep sleep&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>remaining<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;No remaining sleep. Target missed by </span><span style="color:#0a3069">{</span>remaining<span style="color:#0a3069">}</span><span style="color:#0a3069">s, continuing execution&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">deep_sleep</span><span style="color:#1f2328">(</span>seconds<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    rtc<span style="color:#0550ae">.</span>irq<span style="color:#1f2328">(</span>trigger<span style="color:#0550ae">=</span>rtc<span style="color:#0550ae">.</span>ALARM0<span style="color:#1f2328">,</span> wake<span style="color:#0550ae">=</span>machine<span style="color:#0550ae">.</span>DEEPSLEEP<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    rtc<span style="color:#0550ae">.</span>alarm<span style="color:#1f2328">(</span>rtc<span style="color:#0550ae">.</span>ALARM0<span style="color:#1f2328">,</span> msecs<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Going to deep sleep for&#34;</span><span style="color:#1f2328">,</span> seconds<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;seconds&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> seconds <span style="color:#0550ae">&gt;</span> deep_sleep_max<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        now <span style="color:#0550ae">=</span> utime<span style="color:#0550ae">.</span>mktime<span style="color:#1f2328">(</span>utime<span style="color:#0550ae">.</span>gmtime<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>        wake_on <span style="color:#0550ae">=</span> now <span style="color:#0550ae">+</span> seconds
+</span></span><span style="display:flex;"><span>        seconds <span style="color:#0550ae">=</span> deep_sleep_max
+</span></span><span style="display:flex;"><span>        context <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;version&#34;</span><span style="color:#1f2328">:</span> deep_sleep_context_version<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;wake_on&#34;</span><span style="color:#1f2328">:</span> wake_on<span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>        rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">(</span>json<span style="color:#0550ae">.</span>dumps<span style="color:#1f2328">(</span>context<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;recording to wake in </span><span style="color:#0a3069">{</span>deep_sleep_max<span style="color:#0a3069">}</span><span style="color:#0a3069">s to resume sleeping after&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    overhead <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span> <span style="color:#57606a"># expected time to process the deep sleep</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># overhead = 2</span>
+</span></span><span style="display:flex;"><span>    rtc<span style="color:#0550ae">.</span>alarm<span style="color:#1f2328">(</span>rtc<span style="color:#0550ae">.</span>ALARM0<span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span>seconds <span style="color:#0550ae">-</span> overhead<span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    machine<span style="color:#0550ae">.</span>deepsleep<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">runner</span><span style="color:#1f2328">(</span>debugpin<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> debugtime<span style="color:#0550ae">=</span><span style="color:#0550ae">5</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">decorator</span><span style="color:#1f2328">(</span>func<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> debugpin <span style="color:#0550ae">and</span> debugpin<span style="color:#0550ae">.</span>value<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Debug pin is high, skipping deep sleep handler, waiting a bit for </span><span style="color:#0a3069">{</span>debugtime<span style="color:#0a3069">}</span><span style="color:#0a3069">s instead&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>debugtime<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            deep_sleep_handler<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            func<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">from</span> <span style="color:#24292e">conf</span> <span style="color:#cf222e">import</span> BOARD
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">import</span> <span style="color:#24292e">io</span>
+</span></span><span style="display:flex;"><span>            buf <span style="color:#0550ae">=</span> io<span style="color:#0550ae">.</span>StringIO<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            sys<span style="color:#0550ae">.</span>print_exception<span style="color:#1f2328">(</span>e<span style="color:#1f2328">,</span> buf<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;error.log&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;a+&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                f<span style="color:#0550ae">.</span>write<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;</span><span style="color:#0a3069">{</span>time<span style="color:#0550ae">.</span>time<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: &#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                f<span style="color:#0550ae">.</span>write<span style="color:#1f2328">(</span>buf<span style="color:#0550ae">.</span>getvalue<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            err <span style="color:#0550ae">=</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;Exception in main: </span><span style="color:#0a3069">{</span>buf<span style="color:#0550ae">.</span>getvalue<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>err<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                ntfy<span style="color:#1f2328">(</span>err<span style="color:#1f2328">,</span> title<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>BOARD<span style="color:#0a3069">}</span><span style="color:#0a3069">: mp exception&#34;</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;high&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> ne<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Failed to notify exception:&#34;</span><span style="color:#1f2328">,</span> ne<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span> e
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> decorator
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">lowpower</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    machine<span style="color:#0550ae">.</span>freq<span style="color:#1f2328">(</span><span style="color:#0550ae">80000000</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#6639ba">hasattr</span><span style="color:#1f2328">(</span>machine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;sleep_type&#39;</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        machine<span style="color:#0550ae">.</span>sleep_type<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>SLEEP_LIGHT<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h2 id="7ffa1a25-b563-4714-8794-4f686a164d4d">utils</h2>
+<p><a id="code-snippet--manifest"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-elisp" data-lang="elisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#953800">result</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">s-equals-p</span> <span style="color:#6639ba">block</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">`</span><span style="color:#1f2328">((</span><span style="color:#0a3069">&#34;main.py&#34;</span> <span style="color:#0550ae">.</span> <span style="color:#0550ae">,</span><span style="color:#1f2328">(</span><span style="color:#953800">konix/org-babel-ipfa-block</span> <span style="color:#6639ba">block</span> <span style="color:#953800">file</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">result</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">append</span> <span style="color:#953800">result</span> <span style="color:#0550ae">`</span><span style="color:#1f2328">((</span><span style="color:#0a3069">&#34;conf.py&#34;</span> <span style="color:#0550ae">.</span> <span style="color:#0550ae">,</span><span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#0a3069">&#34;# Configuration for &#34;</span> <span style="color:#953800">name</span> <span style="color:#0a3069">&#34;\n&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#0a3069">&#34;BOARD = \&#34;&#34;</span> <span style="color:#953800">name</span> <span style="color:#0a3069">&#34;\&#34;\n&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#953800">konix/ipfa-buffer</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">))))))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">mapc</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">extra_file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#953800">file_name</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#953800">extra_file</span> <span style="color:#0a3069">&#34;.py&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#953800">file_content</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/org-babel-ipfa-block</span> <span style="color:#953800">extra_file</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">result</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">(</span><span style="color:#6639ba">append</span> <span style="color:#953800">result</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#0550ae">`</span><span style="color:#1f2328">((</span><span style="color:#0550ae">,</span><span style="color:#953800">file_name</span> <span style="color:#0550ae">.</span> <span style="color:#0550ae">,</span><span style="color:#953800">file_content</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#953800">extra</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">json-encode</span> <span style="color:#953800">result</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p><a id="code-snippet--test-manifest"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">manifest</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Mon Nov  3 12:20:08 CET 2025
+</span></span><span style="display:flex;"><span>clk mp remote install https://ipfs.konubinix.eu/p/bafkreifhphvejkizynvk3bjyp62kth2lni4w6hr5ufijcdg2xqlsqaukui
+</span></span></code></pre></div><h2 id="6bc9d370-3752-4e06-b540-360ff68918c0">boot</h2>
+<p><a id="code-snippet--boot"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a"># This file is executed on every boot (including wake-boot from deepsleep)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">#import esp</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">#esp.osdebug(None)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span><span style="color:#0550ae">,</span> <span style="color:#24292e">machine</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">#os.dupterm(None, 1) # disable REPL on UART(0)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">gc</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>wlan<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">(</span>ssid<span style="color:#1f2328">,</span> key<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">webrepl</span>
+</span></span><span style="display:flex;"><span>webrepl<span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>gc<span style="color:#0550ae">.</span>collect<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><p><a id="code-snippet--webrepl-cfg"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a"># stores the webrepl password</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Mon Nov  3 11:56:36 CET 2025
+</span></span><span style="display:flex;"><span>Writing into boot.py in mpremote
+</span></span><span style="display:flex;"><span>Writing into webrepl_cfg.py in mpremote
+</span></span></code></pre></div><p><a id="code-snippet--helloworld"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;hello world&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Mon Nov  3 12:51:26 CET 2025
+</span></span><span style="display:flex;"><span>Checking the current installation
+</span></span><span style="display:flex;"><span>Reading install.json from mpremote
+</span></span><span style="display:flex;"><span>Writing into main.py in mpremote
+</span></span><span style="display:flex;"><span>Writing into helpers.py in mpremote
+</span></span><span style="display:flex;"><span>Writing into install.json in mpremote
+</span></span><span style="display:flex;"><span>Writing into error.log in mpremote
+</span></span><span style="display:flex;"><span>Writing into resetdeepsleep in mpremote
+</span></span></code></pre></div><h2 id="5b596550-9aef-4377-9d71-30bf864d58d8">tests</h2>
+<h3 id="bb0727cc-1bba-4cb5-b0ee-ce4da8b98a81">exception handling</h3>
+<p><a id="code-snippet--exception-handling-code"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> deep_sleep<span style="color:#1f2328">,</span> deep_sleep_handler<span style="color:#1f2328">,</span> rtc<span style="color:#1f2328">,</span> runner
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@runner</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">run</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">1</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">0</span>  <span style="color:#57606a"># trigger a ZeroDivisionError</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Mon Nov  3 12:23:03 CET 2025
+</span></span><span style="display:flex;"><span>clk mp remote install --reset https://ipfs.konubinix.eu/p/bafkreifhphvejkizynvk3bjyp62kth2lni4w6hr5ufijcdg2xqlsqaukui
+</span></span></code></pre></div><h3 id="56e28eb4-ebed-4d8d-943c-a27f5866b4f1">deepsleep</h3>
+<p><a id="code-snippet--deepsleep-test-code"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> deep_sleep<span style="color:#1f2328">,</span> deep_sleep_handler<span style="color:#1f2328">,</span> rtc<span style="color:#1f2328">,</span> runner
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@runner</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">run</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>rtc<span style="color:#0550ae">.</span>memory<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;hello&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;going into deep sleep&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    deep_sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">30</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
@@ -226,7 +363,7 @@ should be upgraded</p>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/bfa09bd4-254a-4fc5-a634-b1d6ea4fbee6?title=my_micro_python_distribution">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 30 Oct 2025</time></aside>
+	  <aside class="date"><time>Last updated: 03 Nov 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Oct 2025</time></aside>
     </div>
   </div>
