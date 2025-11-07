@@ -62,10 +62,14 @@
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@blueprint.route</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/basilic&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">record</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># called with http://home:9911/basilic?value={value}</span>
-</span></span><span style="display:flex;"><span>    value <span style="color:#0550ae">=</span> request<span style="color:#0550ae">.</span>args<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;value&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    value <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>request<span style="color:#0550ae">.</span>args<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;value&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    priority <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">if</span> value <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">200</span> <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;high&#34;</span>
 </span></span><span style="display:flex;"><span>    requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;http://home:9705/basilic&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>        headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;mp&#34;</span><span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>        headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;mp&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> priority<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>        data<span style="color:#0550ae">=</span><span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>value<span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
@@ -81,14 +85,11 @@
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">break</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        found <span style="color:#0550ae">=</span> times<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>days<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># the mcu rtc tends to</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># wake up too early, let&#39;s ask for a bit later to compensate and avoid it</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># calling me twice in a row</span>
-</span></span><span style="display:flex;"><span>    wait_seconds <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>found <span style="color:#0550ae">-</span> now<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>total_seconds<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> <span style="color:#0550ae">300</span>
+</span></span><span style="display:flex;"><span>    wait_seconds <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>found <span style="color:#0550ae">-</span> now<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>total_seconds<span style="color:#1f2328">()</span> <span style="color:#cf222e">if</span> priority <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">else</span> <span style="color:#0550ae">600</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>wait_seconds<span style="color:#1f2328">)</span>
 </span></span></code></pre></div><h2 id="4dfd5cf6-d7b9-438a-aede-a7c130b589e3">on the MCU</h2>
 <p><a id="code-snippet--main"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> deep_sleep<span style="color:#1f2328">,</span> lowpower<span style="color:#1f2328">,</span> deep_sleep_handler<span style="color:#1f2328">,</span> wifi<span style="color:#1f2328">,</span> LatchingRelay<span style="color:#1f2328">,</span> runner
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> deep_sleep<span style="color:#1f2328">,</span> lowpower<span style="color:#1f2328">,</span> deep_sleep_handler<span style="color:#1f2328">,</span> wifi<span style="color:#1f2328">,</span> LatchingRelay<span style="color:#1f2328">,</span> runner<span style="color:#1f2328">,</span> dump_exception
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin<span style="color:#1f2328">,</span> ADC
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">machine</span>
@@ -123,21 +124,21 @@
 </span></span><span style="display:flex;"><span>                time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>waiting_seconds<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                deep_sleep<span style="color:#1f2328">(</span>waiting_seconds<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        dump_exception<span style="color:#1f2328">(</span>e<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;error2.log&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#57606a"># wait a bit before restarting</span>
-</span></span><span style="display:flex;"><span>        deep_sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">300</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Wed Nov  5 13:17:16 CET 2025
+</span></span><span style="display:flex;"><span>        deep_sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">600</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Thu Nov  6 13:23:38 CET 2025
 </span></span><span style="display:flex;"><span>Checking the current installation
-</span></span><span style="display:flex;"><span>Reading install.json from basilic2
-</span></span><span style="display:flex;"><span>Writing into main.py in basilic2
-</span></span><span style="display:flex;"><span>Writing into conf.py in basilic2
-</span></span><span style="display:flex;"><span>Writing into helpers.py in basilic2
-</span></span><span style="display:flex;"><span>Writing into install.json in basilic2
-</span></span><span style="display:flex;"><span>Writing into error.log in basilic2
-</span></span><span style="display:flex;"><span>Writing into resetdeepsleep in basilic2
+</span></span><span style="display:flex;"><span>Reading install.json from mpremote
+</span></span><span style="display:flex;"><span>Writing into main.py in mpremote
+</span></span><span style="display:flex;"><span>Writing into helpers.py in mpremote
+</span></span><span style="display:flex;"><span>Writing into install.json in mpremote
+</span></span><span style="display:flex;"><span>Writing into error.log in mpremote
+</span></span><span style="display:flex;"><span>Writing into resetdeepsleep in mpremote
 </span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/b926351e-6e54-4817-bbc7-1fec3ca515f3?title=plant_moisture_sensor">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 05 Nov 2025</time></aside>
+	  <aside class="date"><time>Last updated: 07 Nov 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 Oct 2025</time></aside>
     </div>
   </div>

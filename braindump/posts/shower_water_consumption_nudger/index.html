@@ -61,7 +61,7 @@
 </ul>
 </div>
 <!--endtoc-->
-<p>in <a class="internal-link" href="/braindump/new-posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a>, with the <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#eb29fb7c-88ff-46fe-abd0-d47c2d8099d9">trinket M0</a> and a <a class="internal-link" href="/braindump/posts/yf_s201_water_flow_sensor/">yf-s201</a></p>
+<p>in <a class="internal-link" href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a>, with the <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#eb29fb7c-88ff-46fe-abd0-d47c2d8099d9">trinket M0</a> and a <a class="internal-link" href="/braindump/posts/yf_s201_water_flow_sensor/">yf-s201</a></p>
 <p>Inspired by <a target="_blank" href="https://www.hydrao.com/fr/boutique/54-pommeau-de-douche-aloe">https://www.hydrao.com/fr/boutique/54-pommeau-de-douche-aloe</a> and <a target="_blank" href="https://www.instructables.com/Save-Water-With-the-Shower-Water-Monitor/">https://www.instructables.com/Save-Water-With-the-Shower-Water-Monitor/</a> .</p>
 <h2 id="45275883-e314-4441-9984-6bba305a583e">getting familiar with the device</h2>
 <figure><img src="https://ipfs.konubinix.eu/p/bafkreignx32hbzmtkmtn3g55d7wmacwxapikypxzktx6iom7osfoprrdya?a.png">
@@ -207,62 +207,17 @@
 <dd>1.9 L -&gt; that&rsquo;s a lot, I may have to check this more carefully</dd>
 </dl>
 <h2 id="dd171a9a-640a-4dd9-b7b4-78da1982cd49">trying with leds and the <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#9151efe9-6b58-4616-9253-90bee5722342">wemos d1</a> mini</h2>
-<p><a id="code-snippet--app"></a></p>
+<p><a id="code-snippet--main"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">espnow</span> <span style="color:#cf222e">import</span> ESPNow
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>espnow <span style="color:#0550ae">=</span> ESPNow<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> espnow<span style="color:#1f2328">,</span> lowpower<span style="color:#1f2328">,</span> runner<span style="color:#1f2328">,</span> setup_espnow<span style="color:#1f2328">,</span> wifi
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>iothelper <span style="color:#0550ae">=</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#39;</span><span style="color:#0a3069">\xc4</span><span style="color:#0a3069">[</span><span style="color:#0a3069">\xbe</span><span style="color:#0a3069">b</span><span style="color:#0a3069">\xc2\xdb</span><span style="color:#0a3069">&#39;</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">wifi_reset</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;&#34;&#34;Make sure the wifi is at a coherent state.
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  Activating the STA and disconnecting prevent from ghost isconnected messages
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  from previous run before reset.
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  see https://docs.micropython.org/en/latest/library/espnow.html
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  &#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>  sta <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>WLAN<span style="color:#0550ae">.</span>IF_STA<span style="color:#1f2328">);</span> sta<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  ap <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>WLAN<span style="color:#0550ae">.</span>IF_AP<span style="color:#1f2328">);</span> ap<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  sta<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">while</span> <span style="color:#0550ae">not</span> sta<span style="color:#0550ae">.</span>active<span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>      time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  sta<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">while</span> sta<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>      time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">return</span> sta<span style="color:#1f2328">,</span> ap
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">setup_espnow</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    sta<span style="color:#1f2328">,</span> ap <span style="color:#0550ae">=</span> wifi_reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    sta<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#0550ae">not</span> sta<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Waiting for first connection&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>      time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    sta<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># somehow, using the AP does not seem to do it anymore but I cannot understand why</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># sta.active(False)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ap.active(True)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ap.config(essid=&#34;ESP_NOW_AP&#34;, hidden=True, channel=11, pm=network.WLAN.PM_POWERSAVE)</span>
-</span></span><span style="display:flex;"><span>    espnow<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    espnow<span style="color:#0550ae">.</span>add_peer<span style="color:#1f2328">(</span>iothelper<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> sta<span style="color:#1f2328">,</span> ap
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">dump_exp</span><span style="color:#1f2328">(</span>e<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;error.log&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;a+&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        f<span style="color:#0550ae">.</span>write<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;</span><span style="color:#0a3069">{</span>time<span style="color:#0550ae">.</span>time<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: &#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        sys<span style="color:#0550ae">.</span>print_exception<span style="color:#1f2328">(</span>e<span style="color:#1f2328">,</span> f<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">print_error</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;error.log&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>read<span style="color:#1f2328">())</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>leds <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;green&#34;</span><span style="color:#1f2328">:</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">),</span>
@@ -289,47 +244,11 @@
 </span></span><span style="display:flex;"><span>            turn_on_led<span style="color:#1f2328">(</span>led<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">yield</span> led
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">WiFi</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__enter__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Noop, most likely a nested call&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Connecting to wifi&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        p <span style="color:#0550ae">=</span> progress<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>isconnected<span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>                update_color<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Connected to wifi&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan
-</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>p<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.3</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__exit__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> exc_type<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> exc_value<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> traceback<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>exc_value<span style="color:#1f2328">,</span> KeyboardInterrupt<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Ctrl-c =&gt; Keep wifi on for debugging&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Noop, don&#39;t disturb the nested call&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wasconnected <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Disconnecting from wifi&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># return</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>disconnect<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>wifi<span style="color:#0550ae">.</span>progress <span style="color:#0550ae">=</span> progress
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">post</span><span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>args<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> WiFi<span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>args<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">wifi_on</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    WiFi<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__enter__</span><span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>debug_pin <span style="color:#0550ae">=</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>IN<span style="color:#1f2328">)</span>
@@ -373,9 +292,9 @@
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">update</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> debug
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> debug <span style="color:#0550ae">and</span> debug_pin<span style="color:#0550ae">.</span>value<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        wifi_on<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        wifi<span style="color:#0550ae">.</span>on<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;http://home/ntfy/n&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>          headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower nudger&#34;</span><span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>          data<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;wifi was turned on&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
@@ -394,9 +313,9 @@
 </span></span><span style="display:flex;"><span>            res <span style="color:#0550ae">=</span> espnow<span style="color:#0550ae">.</span>send<span style="color:#1f2328">(</span>iothelper<span style="color:#1f2328">,</span> json<span style="color:#0550ae">.</span>dumps<span style="color:#1f2328">({</span><span style="color:#0a3069">&#34;path&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;showerlogger&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;json&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;consumption&#34;</span><span style="color:#1f2328">:</span> value<span style="color:#1f2328">}}),</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> res<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                    wifi_on<span style="color:#1f2328">()</span> <span style="color:#57606a"># keep it on so that I can debug</span>
+</span></span><span style="display:flex;"><span>                    wifi<span style="color:#0550ae">.</span>on<span style="color:#1f2328">()</span> <span style="color:#57606a"># keep it on so that I can debug</span>
 </span></span><span style="display:flex;"><span>                    post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>                        <span style="color:#0a3069">&#34;http://home/ntfy/n&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>                        headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;high&#34;</span><span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>                        data<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not send consumption&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>                    <span style="color:#1f2328">)</span>
@@ -409,7 +328,7 @@
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#0a3069">&#34;http://home/ntfy/n&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>                    headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;urgent&#34;</span><span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>                    data<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not send data </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#1f2328">)</span>
@@ -419,7 +338,7 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> last_stable <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#0550ae">and</span> <span style="color:#1f2328">(</span>current_tick <span style="color:#0550ae">-</span> last_stable<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">1000</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">:</span> <span style="color:#57606a"># 10 minutes without actions. Was it forgotten ?</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;http://home/ntfy/n&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>                headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;urgent&#34;</span><span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>                data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Please, shut me off!&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#1f2328">)</span>
@@ -429,66 +348,29 @@
 </span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Error sending data: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>e<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    last_count <span style="color:#0550ae">=</span> count
 </span></span><span style="display:flex;"><span>    update_color<span style="color:#1f2328">()</span>
-</span></span></code></pre></div><p><a id="code-snippet--main"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">app</span> <span style="color:#cf222e">import</span> <span style="color:#0550ae">*</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">app</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">machine</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>machine<span style="color:#0550ae">.</span>freq<span style="color:#1f2328">(</span><span style="color:#0550ae">80000000</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#6639ba">hasattr</span><span style="color:#1f2328">(</span>machine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;sleep_type&#39;</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    machine<span style="color:#0550ae">.</span>sleep_type<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>SLEEP_LIGHT<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>lowpower<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;blue&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>sta<span style="color:#1f2328">,</span> ap <span style="color:#0550ae">=</span> setup_espnow<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@runner</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">run</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    sta<span style="color:#1f2328">,</span> ap <span style="color:#0550ae">=</span> setup_espnow<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;First update before starting measuring the flow, to have a proper base&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>update<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;First update before starting measuring the flow, to have a proper base&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    update<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>start<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    start<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        update<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        dump_exp<span style="color:#1f2328">(</span>e<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span>
-</span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># to debug</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># app.count += 100</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># irq_handler(None)</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:showerlogger, port:8266, passwd:0000.
-</span></span><span style="display:flex;"><span>/tmp/main.py -&gt; main.py
-</span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 557 bytes
-</span></span><span style="display:flex;"><span>Sent 557 of 557 bytes
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>op:put, host:showerlogger, port:8266, passwd:0000.
-</span></span><span style="display:flex;"><span>/tmp/app.py -&gt; app.py
-</span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Sent 0 of 6157 bytes
-</span></span><span style="display:flex;"><span>Sent 1024 of 6157 bytes
-</span></span><span style="display:flex;"><span>Sent 2048 of 6157 bytes
-</span></span><span style="display:flex;"><span>Sent 3072 of 6157 bytes
-</span></span><span style="display:flex;"><span>Sent 4096 of 6157 bytes
-</span></span><span style="display:flex;"><span>Sent 5120 of 6157 bytes
-</span></span><span style="display:flex;"><span>Sent 6144 of 6157 bytes
-</span></span><span style="display:flex;"><span>Sent 6157 of 6157 bytes
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spawn webrepl_cli.py -p 0000 showerlogger
-</span></span><span style="display:flex;"><span>op:repl, host:showerlogger, port:8266, passwd:0000.
-</span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 23, 0)
-</span></span><span style="display:flex;"><span>Use Ctrl-] to exit this shell
-</span></span><span style="display:flex;"><span>Traceback (most recent call last):
-</span></span><span style="display:flex;"><span>  File &#34;main.py&#34;, line 29, in &lt;module&gt;
-</span></span><span style="display:flex;"><span>KeyboardInterrupt:
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>MicroPython v1.23.0 on 2024-06-02; ESP module (1M) with ESP8266
-</span></span><span style="display:flex;"><span>Type &#34;help()&#34; for more information.
-</span></span><span style="display:flex;"><span>&gt;&gt;&gt;
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Fri Nov  7 18:22:27 CET 2025
+</span></span><span style="display:flex;"><span>Checking the current installation
+</span></span><span style="display:flex;"><span>Reading install.json from mpremote
+</span></span><span style="display:flex;"><span>Writing into main.py in mpremote
+</span></span><span style="display:flex;"><span>Writing into install.json in mpremote
+</span></span><span style="display:flex;"><span>Writing into error.log in mpremote
+</span></span><span style="display:flex;"><span>Writing into resetdeepsleep in mpremote
 </span></span></code></pre></div><figure><img src="https://ipfs.konubinix.eu/p/bafkreia62elclhr6caqjjfij3o4fmxtlillb2yqd4lqdvz4qvqvit5wfd4?a.png">
 </figure>
 
@@ -544,7 +426,7 @@ piece.</p>
 <p>Kids won&rsquo;t think about removing the cup to switch the device on. It might be a
 good think to also nudge them with something more fancy, like a big push
 button.</p>
-<p>It would have been nicer to think about a <a class="internal-link" href="/braindump/new-posts/latching_power_switch_circuit/">auto power off circuit</a> before
+<p>It would have been nicer to think about a <a class="internal-link" href="/braindump/posts/latching_power_switch_circuit/">auto power off circuit</a> before
 soldering the whole thing. It will be harder to add afterwards.</p>
 <p>Also, the d1 mini still consumes a lot when in deep sleep, using another board
 more energy efficient might open the door for a device always on that would
@@ -572,7 +454,7 @@ grip on the smaller cup and sometimes, the MCU stops.</p>
 tried to make it connect as little as possible.</p>
 <p>I think that using espnow might improve a lot on that aspect. Yet, I realized
 that it is <a class="internal-link" href="/braindump/posts/how_to_play_with_espnow_between_an_esp8266_micropython_and_linux/">hard to make it work on raspberry pi</a>.</p>
-<p>Fortunately, I already have another <a class="internal-link" href="/braindump/new-posts/microcontroller/#57965d54-a7ad-4764-b82a-a4836f447715">ESP8266</a> always connected to the
+<p>Fortunately, I already have another <a class="internal-link" href="/braindump/posts/microcontroller/#57965d54-a7ad-4764-b82a-a4836f447715">ESP8266</a> always connected to the
 network in my <a class="internal-link" href="/braindump/posts/iot_heart_again_with_micropython/">IOT heart again, with micropython</a>. Let&rsquo;s reuse it as a proxy to
 the main network.</p>
 <h2 id="4b44fd3b-55d8-4399-9ec9-acd0510d81d7">toy as magnetic switch</h2>
@@ -606,11 +488,11 @@ the main network.</p>
 <!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
-<li><a class="internal-link" href="/braindump/new-posts/iot_heart_again_with_remote_control/">IOT heart again, with remote control</a></li>
+<li><a class="internal-link" href="/braindump/posts/iot_heart_again_with_remote_control/">IOT heart again, with remote control</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/5f1d104a-f477-4555-bcb3-a9cf56562f78?title=shower_water_consumption_nudger">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 19 Oct 2025</time></aside>
+	  <aside class="date"><time>Last updated: 07 Nov 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Aug 2025</time></aside>
     </div>
   </div>
