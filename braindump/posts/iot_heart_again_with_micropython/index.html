@@ -47,7 +47,7 @@
 <p><a id="code-snippet--main"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> ntfy<span style="color:#1f2328">,</span> lowpower<span style="color:#1f2328">,</span> wifi<span style="color:#1f2328">,</span> setup_espnow<span style="color:#1f2328">,</span> espnow<span style="color:#1f2328">,</span> runner
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> ntfy<span style="color:#1f2328">,</span> lowpower<span style="color:#1f2328">,</span> wifi<span style="color:#1f2328">,</span> setup_espnow<span style="color:#1f2328">,</span> espnow<span style="color:#1f2328">,</span> runner<span style="color:#1f2328">,</span> KV
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
@@ -102,9 +102,12 @@
 </span></span><span style="display:flex;"><span>            ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;&#34;&#34;</span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">while trying to set the time&#34;&#34;&#34;</span><span style="color:#1f2328">,</span> channel<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;iotheart&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>kv <span style="color:#0550ae">=</span> KV<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>value <span style="color:#0550ae">=</span> kv<span style="color:#0550ae">.</span>follow<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;heart&#34;</span><span style="color:#1f2328">,</span> wait<span style="color:#0550ae">=</span><span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">try_get</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/iotheart/get2&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>json<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>value<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
@@ -113,11 +116,13 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Do step&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    commands <span style="color:#0550ae">=</span> try_get<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> commands <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Got nothing, using a default value&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        commands <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">[</span><span style="color:#0550ae">50</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">50</span><span style="color:#1f2328">],</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">[</span><span style="color:#0550ae">50</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">50</span><span style="color:#1f2328">],</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        commands <span style="color:#0550ae">=</span> json<span style="color:#0550ae">.</span>loads<span style="color:#1f2328">(</span>commands<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    run_command<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">,</span> commands<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">])</span>
 </span></span><span style="display:flex;"><span>    run_command<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">,</span> commands<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">])</span>
 </span></span><span style="display:flex;"><span>
@@ -161,10 +166,10 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Waiting for </span><span style="color:#0a3069">{</span>sleeptime<span style="color:#0a3069">}</span><span style="color:#0a3069">s&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        machine<span style="color:#0550ae">.</span>lightsleep<span style="color:#1f2328">(</span>sleeptime <span style="color:#0550ae">*</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Wed Nov  5 22:59:36 CET 2025
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Fri Nov 14 16:30:03 CET 2025
 </span></span><span style="display:flex;"><span>Checking the current installation
 </span></span><span style="display:flex;"><span>Reading install.json from iotheart
-</span></span><span style="display:flex;"><span>Writing into main.py in iotheart
+</span></span><span style="display:flex;"><span>Writing into helpers.py in iotheart
 </span></span><span style="display:flex;"><span>Writing into install.json in iotheart
 </span></span><span style="display:flex;"><span>Writing into error.log in iotheart
 </span></span><span style="display:flex;"><span>Writing into resetdeepsleep in iotheart
@@ -176,7 +181,7 @@
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/5b9c0ae0-252d-4476-bf44-cfe7c7f60acb?title=iot_heart_again_with_micropython">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 05 Nov 2025</time></aside>
+	  <aside class="date"><time>Last updated: 14 Nov 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 21 Oct 2024</time></aside>
     </div>
   </div>
