@@ -216,7 +216,7 @@
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> lowpower<span style="color:#1f2328">,</span> runner
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">comm</span> <span style="color:#cf222e">import</span> setup_espnow<span style="color:#1f2328">,</span> wifi<span style="color:#1f2328">,</span> post
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">comm</span> <span style="color:#cf222e">import</span> setup_espnow<span style="color:#1f2328">,</span> wifi<span style="color:#1f2328">,</span> post<span style="color:#1f2328">,</span> ntfy
 </span></span><span style="display:flex;"><span>iothelper <span style="color:#0550ae">=</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#39;</span><span style="color:#0a3069">\xc4</span><span style="color:#0a3069">[</span><span style="color:#0a3069">\xbe</span><span style="color:#0a3069">b</span><span style="color:#0a3069">\xc2\xdb</span><span style="color:#0a3069">&#39;</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>leds <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
@@ -277,15 +277,18 @@
 </span></span><span style="display:flex;"><span>done_count <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">1</span>
 </span></span><span style="display:flex;"><span>last_stable <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>THRESHOLD <span style="color:#0550ae">=</span> <span style="color:#0550ae">8</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">update_color</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> consumption <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">1</span> <span style="color:#0550ae">*</span> THRESHOLD<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;green&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> consumption <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> THRESHOLD<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># too small, not really a shower</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> consumption <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;blue&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> consumption <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">3</span> <span style="color:#0550ae">*</span> THRESHOLD<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># sweet spot</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> consumption <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">12</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;green&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># even with a full body/hair shower, it&#39;s a lot</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> consumption <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">20</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;yellow&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># now, you are clearly wasting water</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        turn_on_led<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;red&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
@@ -293,11 +296,7 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> debug
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> debug <span style="color:#0550ae">and</span> debug_pin<span style="color:#0550ae">.</span>value<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        wifi<span style="color:#0550ae">.</span>on<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>          headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower nudger&#34;</span><span style="color:#1f2328">},</span>
-</span></span><span style="display:flex;"><span>          data<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;wifi was turned on&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;wifi was turned on&#34;</span><span style="color:#1f2328">,</span> title<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;shower nudger&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        debug <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
 </span></span><span style="display:flex;"><span>    current_tick <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    ms_since_start <span style="color:#0550ae">=</span> current_tick <span style="color:#0550ae">-</span> start_tick
@@ -328,11 +327,7 @@
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                    wifi<span style="color:#0550ae">.</span>on<span style="color:#1f2328">()</span> <span style="color:#57606a"># keep it on so that I can debug</span>
-</span></span><span style="display:flex;"><span>                    post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>                        <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                        headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;high&#34;</span><span style="color:#1f2328">},</span>
-</span></span><span style="display:flex;"><span>                        data<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not send consumption&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not send consumption&#34;</span><span style="color:#1f2328">,</span> title<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;high&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                    <span style="color:#57606a"># that&#39;s a pity, but that should not stop us</span>
 </span></span><span style="display:flex;"><span>                    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Error sending data: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>e<span style="color:#1f2328">))</span>
@@ -341,11 +336,8 @@
 </span></span><span style="display:flex;"><span>            last_stable <span style="color:#0550ae">=</span> current_tick
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                post<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#0a3069">&#34;http://home:9705/n&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                    headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;urgent&#34;</span><span style="color:#1f2328">},</span>
-</span></span><span style="display:flex;"><span>                    data<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not send data </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                ntfy<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>                ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Could not send data </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> title<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;shower&#34;</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;urgent&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#57606a"># that&#39;s a pity, but that should not stop us</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Error sending data: </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>e<span style="color:#1f2328">))</span>
@@ -381,10 +373,15 @@
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        update<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Sat Nov 15 18:27:04 CET 2025
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Fri Nov 28 07:35:15 CET 2025
 </span></span><span style="display:flex;"><span>Checking the current installation
 </span></span><span style="display:flex;"><span>Reading install.json from showerlogger
 </span></span><span style="display:flex;"><span>Writing into main.py in showerlogger
+</span></span><span style="display:flex;"><span>Writing into helpers.py in showerlogger
+</span></span><span style="display:flex;"><span>Writing into state.py in showerlogger
+</span></span><span style="display:flex;"><span>Writing into comm.py in showerlogger
+</span></span><span style="display:flex;"><span>Writing into aioespnow.mpy in showerlogger
+</span></span><span style="display:flex;"><span>Writing into asynciohttp.mpy in showerlogger
 </span></span><span style="display:flex;"><span>Writing into install.json in showerlogger
 </span></span><span style="display:flex;"><span>Writing into error.log in showerlogger
 </span></span><span style="display:flex;"><span>Writing into resetdeepsleep in showerlogger
@@ -509,7 +506,7 @@ the main network.</p>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/5f1d104a-f477-4555-bcb3-a9cf56562f78?title=shower_water_consumption_nudger">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 25 Nov 2025</time></aside>
+	  <aside class="date"><time>Last updated: 28 Nov 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Aug 2025</time></aside>
     </div>
   </div>
