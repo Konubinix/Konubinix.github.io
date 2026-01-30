@@ -48,7 +48,14 @@
 </ul>
 </li>
 <li><a class="internal-link" href="#638862b4-661d-44c3-938a-b48cc9f79b0f">2024-2025</a></li>
-<li><a class="internal-link" href="#2025-2026">2025-2026</a></li>
+<li><a class="internal-link" href="#2025-2026">2025-2026</a>
+<ul>
+<li><a class="internal-link" href="#7a2e0f2b-outliers-2026">look at outliers</a></li>
+<li><a class="internal-link" href="#4b3e1f8a-analysis-2026">analysis</a></li>
+<li><a class="internal-link" href="#9c4d2e1b-xmas-2026">Christmas heat-up anomaly</a></li>
+<li><a class="internal-link" href="#f8e3a2d1-conclusion-2026">conclusion</a></li>
+</ul>
+</li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
 </div>
@@ -256,6 +263,9 @@ we claim that this is not needed (this year).</p>
 easily explained by inertia when the radiator gets up in temperature.</p>
 <p>Therefore, I don&rsquo;t see a point in flushing them this year also.</p>
 <h2 id="2025-2026">2025-2026</h2>
+<p>Note: the following was almost entirely made using <a target="_blank" href="/braindump/posts/claude_ai/?title=claude_ai#">Claude</a> Opus. It needed a
+little help and made strange hypothesis from time to time. But overall after a
+few iterations, this is the result.</p>
 <p><a id="code-snippet--radiator2026"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">redis</span> <span style="color:#cf222e">import</span> StrictRedis
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">pandas</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">pd</span>
@@ -271,27 +281,131 @@ easily explained by inertia when the radiator gets up in temperature.</p>
 </span></span><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> pd<span style="color:#0550ae">.</span>concat<span style="color:#1f2328">([</span>top<span style="color:#1f2328">,</span> bottom<span style="color:#1f2328">])</span>
 </span></span><span style="display:flex;"><span>r<span style="color:#0550ae">.</span>index <span style="color:#0550ae">=</span> pd<span style="color:#0550ae">.</span>to_datetime<span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>index<span style="color:#1f2328">,</span> unit<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;ms&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> r<span style="color:#0550ae">.</span>sort_index<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># remove a single bogus top sensor reading (4.17°C glitch surrounded by ~19°C)</span>
+</span></span><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> r<span style="color:#1f2328">[(</span>r<span style="color:#0550ae">.</span>index <span style="color:#0550ae">&lt;</span> <span style="color:#0a3069">&#39;2025-10-08 06:50&#39;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>index <span style="color:#0550ae">&gt;</span> <span style="color:#0a3069">&#39;2025-10-08 06:51&#39;</span><span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># remove bottom sensor spike (values up to 1177°C)</span>
+</span></span><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> r<span style="color:#1f2328">[(</span>r<span style="color:#0550ae">.</span>index <span style="color:#0550ae">&lt;</span> <span style="color:#0a3069">&#39;2025-10-21 17:02&#39;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>index <span style="color:#0550ae">&gt;</span> <span style="color:#0a3069">&#39;2025-10-21 19:33&#39;</span><span style="color:#1f2328">)]</span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># let&#39;s try hard to have values for both top and bottom at each point in time, so that we can compare them</span>
 </span></span><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> r<span style="color:#0550ae">.</span>interpolate<span style="color:#1f2328">(</span>method<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;polynomial&#39;</span><span style="color:#1f2328">,</span> order<span style="color:#0550ae">=</span><span style="color:#0550ae">5</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>dropna<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>file <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;/tmp/radiator2026.csv&#34;</span>
 </span></span><span style="display:flex;"><span>r<span style="color:#0550ae">.</span>to_csv<span style="color:#1f2328">(</span>file<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">return</span> file
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>https://ipfs.konubinix.eu/p/bafybeifysf7j3iq3aslyiex3ppt3y566oavhayhp2wn753erzpwo5etcnm
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>https://ipfs.konubinix.eu/p/bafybeicjpzyfsk4q7er4h5ht3jnvpgtnw2zbidx5nj64iyt4tow3ome74u
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">pandas</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">pd</span>
 </span></span><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> pd<span style="color:#0550ae">.</span>read_csv<span style="color:#1f2328">(</span>file<span style="color:#1f2328">,</span> parse_dates<span style="color:#0550ae">=</span><span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;time&#34;</span><span style="color:#1f2328">],</span> index_col<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;time&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">((</span>r<span style="color:#0550ae">.</span>top <span style="color:#0550ae">-</span> r<span style="color:#0550ae">.</span>bottom<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>describe<span style="color:#1f2328">())</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>count    15055.000000
-</span></span><span style="display:flex;"><span>mean        -0.130982
-</span></span><span style="display:flex;"><span>std         15.540553
-</span></span><span style="display:flex;"><span>min      -1158.467850
-</span></span><span style="display:flex;"><span>25%         -0.238227
-</span></span><span style="display:flex;"><span>50%         -0.008059
-</span></span><span style="display:flex;"><span>75%          0.315193
-</span></span><span style="display:flex;"><span>max          4.501629
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>count    15164.000000
+</span></span><span style="display:flex;"><span>mean         0.138452
+</span></span><span style="display:flex;"><span>std          0.853415
+</span></span><span style="display:flex;"><span>min         -6.108131
+</span></span><span style="display:flex;"><span>25%         -0.236968
+</span></span><span style="display:flex;"><span>50%         -0.006891
+</span></span><span style="display:flex;"><span>75%          0.318501
+</span></span><span style="display:flex;"><span>max         20.654299
 </span></span><span style="display:flex;"><span>dtype: float64
-</span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/blog/c4a506d6-0f7b-4875-9baf-01e42851ebf3?title=should_i_have_my_radiators_flushed">Permalink</a></h2>
+</span></span></code></pre></div><p>Something is off: the min is -6°C, the std is large, and the mean is near
+zero. Previous years showed a consistent ~4°C difference. Let&rsquo;s investigate.</p>
+<p>Let&rsquo;s load the data into a session for further analysis.</p>
+<p><a id="code-snippet--charger-donnees-2026"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">pandas</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">pd</span>
+</span></span><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> pd<span style="color:#0550ae">.</span>read_csv<span style="color:#1f2328">(</span>file<span style="color:#1f2328">,</span> parse_dates<span style="color:#0550ae">=</span><span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;time&#34;</span><span style="color:#1f2328">],</span> index_col<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;time&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>r<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>                           top     bottom
+</span></span><span style="display:flex;"><span>time
+</span></span><span style="display:flex;"><span>2025-10-01 09:00:01  14.981538  13.100000
+</span></span><span style="display:flex;"><span>2025-10-01 09:13:14  17.060000  16.614807
+</span></span><span style="display:flex;"><span>2025-10-01 09:14:01  17.204665  16.720000
+</span></span><span style="display:flex;"><span>2025-10-01 09:15:14  17.420000  16.866503
+</span></span><span style="display:flex;"><span>2025-10-01 09:17:01  17.699998  17.050000
+</span></span><span style="display:flex;"><span>...                        ...        ...
+</span></span><span style="display:flex;"><span>2026-01-30 19:43:17  17.288472  17.320000
+</span></span><span style="display:flex;"><span>2026-01-30 19:44:53  17.280000  17.318960
+</span></span><span style="display:flex;"><span>2026-01-30 20:13:16  17.225580  17.290000
+</span></span><span style="display:flex;"><span>2026-01-30 20:14:53  17.230000  17.288455
+</span></span><span style="display:flex;"><span>2026-01-30 20:43:15  17.267005  17.300000
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[15164 rows x 2 columns]
+</span></span></code></pre></div><h3 id="7a2e0f2b-outliers-2026">look at outliers</h3>
+<p>Before the cleanup, the raw data contained two sensor anomalies. Let&rsquo;s
+visualize what was removed.</p>
+<p>The bottom sensor spiked to absurd values (up to 1177°C) on <span class="timestamp-wrapper"><span class="timestamp">[2025-10-21 Tue]</span></span>
+between 17:02 and 19:33. The top sensor read normally (~18°C) during that time.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreibexkycpiubak23fhx33efsshiedwy2stqmnomqaxqgclkoincmnq?radiator2026_overview.png">
+</figure>
+
+<p>The top sensor also had a single bogus reading of 4.17°C on <span class="timestamp-wrapper"><span class="timestamp">[2025-10-08 Wed]</span></span>
+at 06:50, surrounded by ~19°C values, followed by a 9-hour data gap. This
+looks like a sensor glitch.</p>
+<p>Both anomalies were removed in the data extraction step above.</p>
+<h3 id="4b3e1f8a-analysis-2026">analysis</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>r<span style="color:#0550ae">.</span>describe<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>                top        bottom
+</span></span><span style="display:flex;"><span>count  15164.000000  15164.000000
+</span></span><span style="display:flex;"><span>mean      17.926148     17.787697
+</span></span><span style="display:flex;"><span>std        1.532137      1.591077
+</span></span><span style="display:flex;"><span>min        9.980000     -1.624299
+</span></span><span style="display:flex;"><span>25%       16.970000     16.836432
+</span></span><span style="display:flex;"><span>50%       17.919019     17.632768
+</span></span><span style="display:flex;"><span>75%       18.780000     18.551108
+</span></span><span style="display:flex;"><span>max       25.550000     30.450000
+</span></span></code></pre></div><p>The mean difference (top - bottom) is near zero (0.14°C), compared to ~4°C in
+previous years. Let&rsquo;s look at the distribution.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>a <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>top <span style="color:#0550ae">-</span> r<span style="color:#0550ae">.</span>bottom<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><figure><img src="https://ipfs.konubinix.eu/p/bafkreiazv554yk7v5eenonbxajgnvyi6bn7ufnhlz53rgwjyhmd3py6xia?radiator2026_diff_histogram.png">
+</figure>
+
+<p>The distribution is tightly centered around zero, with a left tail going
+down to -6°C. This tail comes from a single event: the Christmas heat-up.</p>
+<h3 id="9c4d2e1b-xmas-2026">Christmas heat-up anomaly</h3>
+<p>On Christmas Eve, the radiator was off and both sensors cooled down to ~10°C.
+When the heating kicked back in around 23:05, the bottom sensor heated up much
+faster than the top, reaching ~30°C while the top was only at ~24°C. This
+created a sustained -6°C inversion lasting about 5 hours.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreig7brkapgsg5vlj3h62z7uzn5oecxelsptryadveh2mjvzx5ldgra?radiator2026_xmas_heatup.png">
+</figure>
+
+<p>Since hot water enters the radiator at the top, we would expect the top sensor
+to heat up first. The fact that the bottom heats faster is surprising.</p>
+<p>One hypothesis is that the sensor labels (&ldquo;top&rdquo; and &ldquo;bottom&rdquo;) were accidentally
+swapped. However, this doesn&rsquo;t hold up: during normal heating cycles (e.g. Oct
+1), the current &ldquo;top&rdquo; label consistently leads, which is the expected behavior.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a"># Check Oct 1 morning heat-up: does &#34;top&#34; lead?</span>
+</span></span><span style="display:flex;"><span>warmup <span style="color:#0550ae">=</span> r<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;2025-10-01 09:00&#34;</span><span style="color:#1f2328">:</span><span style="color:#0a3069">&#34;2025-10-01 11:00&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>diff_warmup <span style="color:#0550ae">=</span> warmup<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;top&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> warmup<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;bottom&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Oct 1 heat-up: top always &gt; bottom? </span><span style="color:#0a3069">{</span><span style="color:#1f2328">(</span>diff_warmup <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>all<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Oct 1 mean diff: </span><span style="color:#0a3069">{</span>diff_warmup<span style="color:#0550ae">.</span>mean<span style="color:#1f2328">()</span><span style="color:#0a3069">:</span><span style="color:#0a3069">.2f</span><span style="color:#0a3069">}</span><span style="color:#0a3069">°C&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># Check stable periods</span>
+</span></span><span style="display:flex;"><span>stable <span style="color:#0550ae">=</span> r<span style="color:#1f2328">[</span>r<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;top&#34;</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>diff<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>abs<span style="color:#1f2328">()</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">0.1</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>stable_diff <span style="color:#0550ae">=</span> stable<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;top&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> stable<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;bottom&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Stable periods: mean diff = </span><span style="color:#0a3069">{</span>stable_diff<span style="color:#0550ae">.</span>mean<span style="color:#1f2328">()</span><span style="color:#0a3069">:</span><span style="color:#0a3069">.3f</span><span style="color:#0a3069">}</span><span style="color:#0a3069">°C&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Stable periods: top &gt; bottom </span><span style="color:#0a3069">{</span><span style="color:#0550ae">100</span><span style="color:#0550ae">*</span><span style="color:#1f2328">(</span>stable_diff <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>mean<span style="color:#1f2328">()</span><span style="color:#0a3069">:</span><span style="color:#0a3069">.1f</span><span style="color:#0a3069">}</span><span style="color:#0a3069">% of the time&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 1 heat-up: top always &gt; bottom? True
+</span></span><span style="display:flex;"><span>Oct 1 mean diff: 0.94°C
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Stable periods: mean diff = -0.010°C
+</span></span><span style="display:flex;"><span>Stable periods: top &gt; bottom 41.0% of the time
+</span></span></code></pre></div><p>So the labels are not simply swapped. The Christmas inversion remains
+unexplained &ndash; possibly related to the radiator restarting after a prolonged
+cold period with different flow dynamics.</p>
+<h3 id="f8e3a2d1-conclusion-2026">conclusion</h3>
+<p>Unlike previous years where the top-bottom difference was consistently ~4°C
+(well below the 5°C flushing threshold), this year&rsquo;s data shows a mean
+difference near zero (0.14°C).</p>
+<p>This makes the &ldquo;is the bottom significantly colder?&rdquo; diagnostic unreliable for
+this setup: the two sensors track each other too closely during normal
+operation to reveal any meaningful gradient.</p>
+<p>The only moment with a significant difference is the Christmas heat-up
+(-6°C), but its cause is ambiguous and it occurs in a transient regime, not
+during steady-state operation.</p>
+<p>Without a consistent top-bottom gradient comparable to previous years, the data
+this year is inconclusive. The flushing question cannot be reliably answered
+from this dataset. To get a definitive answer, we would need to either
+reproduce the measurement on the same radiator as previous years, or verify
+the sensor positions on this one.</p>
+<h2 id="permalink"><a class="internal-link" href="/blog/c4a506d6-0f7b-4875-9baf-01e42851ebf3?title=should_i_have_my_radiators_flushed">Permalink</a></h2>
   </article>
-  <aside class="date"><time>Last updated: 29 Jan 2026</time></aside>
+  <aside class="date"><time>Last updated: 30 Jan 2026</time></aside>
   <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 16 Apr 2024</time></aside>
 </main>
 <hr/>
