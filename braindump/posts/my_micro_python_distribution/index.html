@@ -350,8 +350,10 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>deep_sleep_context_version <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ERROR_LOG_PATH <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;error.log&#39;</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">dump_exception</span><span style="color:#1f2328">(</span>e<span style="color:#1f2328">,</span> path<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;error.log&#39;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">dump_exception</span><span style="color:#1f2328">(</span>e<span style="color:#1f2328">,</span> path<span style="color:#0550ae">=</span>ERROR_LOG_PATH<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">import</span> <span style="color:#24292e">io</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
 </span></span><span style="display:flex;"><span>    buf <span style="color:#0550ae">=</span> io<span style="color:#0550ae">.</span>StringIO<span style="color:#1f2328">()</span>
@@ -437,6 +439,20 @@
 </span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>debugtime<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            deep_sleep_handler<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#57606a"># Check for previous errors in error.log</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> ERROR_LOG_PATH <span style="color:#0550ae">in</span> os<span style="color:#0550ae">.</span>listdir<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>ERROR_LOG_PATH<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;r&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    content <span style="color:#0550ae">=</span> f<span style="color:#0550ae">.</span>read<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> content<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Found previous errors in error.log, notifying&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">from</span> <span style="color:#24292e">comm</span> <span style="color:#cf222e">import</span> ntfy
+</span></span><span style="display:flex;"><span>                    ntfy<span style="color:#1f2328">(</span>content<span style="color:#1f2328">,</span> title<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;previous error.log&#34;</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;max&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#57606a"># Empty the error log</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>ERROR_LOG_PATH<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;w&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#cf222e">pass</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Failed to process error.log:&#34;</span><span style="color:#1f2328">,</span> e<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            res <span style="color:#0550ae">=</span> func<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6639ba">hasattr</span><span style="color:#1f2328">(</span>res<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;__next__&#34;</span><span style="color:#1f2328">):</span> <span style="color:#57606a"># pre coroutine implem</span>
@@ -444,14 +460,13 @@
 </span></span><span style="display:flex;"><span>                asyncio<span style="color:#0550ae">.</span>run<span style="color:#1f2328">(</span>res<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">from</span> <span style="color:#24292e">conf</span> <span style="color:#cf222e">import</span> BOARD
 </span></span><span style="display:flex;"><span>            value <span style="color:#0550ae">=</span> dump_exception<span style="color:#1f2328">(</span>e<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            err <span style="color:#0550ae">=</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;Exception in main: </span><span style="color:#0a3069">{</span>value<span style="color:#0a3069">}</span><span style="color:#0a3069">&#39;</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>err<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Notifying the error&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#cf222e">from</span> <span style="color:#24292e">comm</span> <span style="color:#cf222e">import</span> ntfy
-</span></span><span style="display:flex;"><span>                ntfy<span style="color:#1f2328">(</span>err<span style="color:#1f2328">,</span> title<span style="color:#0550ae">=</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>BOARD<span style="color:#0a3069">}</span><span style="color:#0a3069">: mp exception&#34;</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;high&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                ntfy<span style="color:#1f2328">(</span>err<span style="color:#1f2328">,</span> title<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;mp exception&#34;</span><span style="color:#1f2328">,</span> priority<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;high&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> ne<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Failed to notify exception:&#34;</span><span style="color:#1f2328">,</span> ne<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span> e
@@ -600,7 +615,7 @@
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/bfa09bd4-254a-4fc5-a634-b1d6ea4fbee6?title=my_micro_python_distribution">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 11 Dec 2025</time></aside>
+	  <aside class="date"><time>Last updated: 07 Feb 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Oct 2025</time></aside>
     </div>
   </div>
