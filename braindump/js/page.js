@@ -69,6 +69,18 @@ function fetchNote(href, level) {
 function initializePage(page, level) {
   level = level || pages.length;
 
+  // Execute inline scripts that were inserted via innerHTML (they don't run automatically)
+  let scripts = Array.prototype.slice.call(page.querySelectorAll("script"));
+  scripts.forEach(function (oldScript) {
+    let newScript = document.createElement("script");
+    if (oldScript.src) {
+      newScript.src = oldScript.src;
+    } else {
+      newScript.textContent = oldScript.textContent;
+    }
+    oldScript.parentNode.replaceChild(newScript, oldScript);
+  });
+
   links = Array.prototype.slice.call(page.querySelectorAll("a[class='internal-link']"));
 
   links.forEach(async function (element) {
