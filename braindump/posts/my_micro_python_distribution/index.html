@@ -345,7 +345,8 @@ boot time. But it takes quite some amount of RAM and time to build.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ap.active(True)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ap.config(essid=&#34;ESP_NOW_AP&#34;, hidden=True, channel=11, pm=network.WLAN.PM_POWERSAVE)</span>
 </span></span><span style="display:flex;"><span>    e<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> peer <span style="color:#0550ae">in</span> peers<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    to_debug <span style="color:#0550ae">=</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#39;|</span><span style="color:#0a3069">\\\xf8\xb3\xe0</span><span style="color:#0a3069">R&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> peer <span style="color:#0550ae">in</span> peers <span style="color:#0550ae">+</span> <span style="color:#1f2328">[</span>to_debug<span style="color:#1f2328">]:</span>
 </span></span><span style="display:flex;"><span>        e<span style="color:#0550ae">.</span>add_peer<span style="color:#1f2328">(</span>peer<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> e<span style="color:#1f2328">,</span> sta<span style="color:#1f2328">,</span> ap
 </span></span><span style="display:flex;"><span>
@@ -529,6 +530,28 @@ boot time. But it takes quite some amount of RAM and time to build.</p>
 </span></span><span style="display:flex;"><span>    machine<span style="color:#0550ae">.</span>freq<span style="color:#1f2328">(</span><span style="color:#0550ae">80000000</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#6639ba">hasattr</span><span style="color:#1f2328">(</span>machine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;sleep_type&#39;</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        machine<span style="color:#0550ae">.</span>sleep_type<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>SLEEP_LIGHT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">async_retry</span><span style="color:#1f2328">(</span>retries<span style="color:#0550ae">=</span><span style="color:#0550ae">5</span><span style="color:#1f2328">,</span> delay<span style="color:#0550ae">=</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> channel<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;n&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">decorator</span><span style="color:#1f2328">(</span>fn<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        description <span style="color:#0550ae">=</span> fn<span style="color:#0550ae">.</span><span style="color:#953800">__name__</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34; &#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">async</span> <span style="color:#cf222e">def</span> <span style="color:#6639ba">wrapper</span><span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>args<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">import</span> <span style="color:#24292e">asyncio</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">from</span> <span style="color:#24292e">comm</span> <span style="color:#cf222e">import</span> ntfy
+</span></span><span style="display:flex;"><span>            last_error <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">for</span> attempt <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>retries<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    result <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> fn<span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>args<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">if</span> attempt <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                        ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>description<span style="color:#0a3069">}</span><span style="color:#0a3069">: succeeded after </span><span style="color:#0a3069">{</span>attempt <span style="color:#0550ae">+</span> <span style="color:#0550ae">1</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> attempts&#34;</span><span style="color:#1f2328">,</span> channel<span style="color:#0550ae">=</span>channel<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">return</span> result
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    last_error <span style="color:#0550ae">=</span> e
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">if</span> attempt <span style="color:#0550ae">&lt;</span> retries <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#cf222e">await</span> asyncio<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>delay<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>description<span style="color:#0a3069">}</span><span style="color:#0a3069">: failed after </span><span style="color:#0a3069">{</span>retries<span style="color:#0a3069">}</span><span style="color:#0a3069"> attempts: </span><span style="color:#0a3069">{</span>last_error<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> channel<span style="color:#0550ae">=</span>channel<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span> last_error
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> wrapper
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> decorator
 </span></span></code></pre></div><h3 id="d4e5f6a7-8b9c-0d1e-2f3a-4b5c6d7e8f9a">distro_main</h3>
 <p>This is the generated main.py that imports the user&rsquo;s app and runs it through the runner.</p>
 <p><a id="code-snippet--distro-main"></a></p>
@@ -975,7 +998,7 @@ boot time. But it takes quite some amount of RAM and time to build.</p>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/bfa09bd4-254a-4fc5-a634-b1d6ea4fbee6?title=my_micro_python_distribution">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 22 Feb 2026</time></aside>
+	  <aside class="date"><time>Last updated: 24 Feb 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Oct 2025</time></aside>
     </div>
   </div>
