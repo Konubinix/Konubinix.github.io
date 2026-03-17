@@ -50,8 +50,14 @@ baseplate which is not suitable here.</p>
 parametric system in <a class="internal-link" href="/braindump/posts/build123d/">build123d</a> with <a class="internal-link" href="/braindump/posts/claude_ai/">Claude</a>.</p>
 <p>The parameters are calibrated to fit well with a 0.8mm nozzle on a <a class="internal-link" href="/braindump/posts/bambulab_a1_mini/">bambulab a1 mini</a>.</p>
 <h2 id="f152864c-3591-4b78-9785-f3b381c341fa">Vase mode printing</h2>
-<p>The bins are designed for <strong>vase mode</strong> (aka spiral/contour mode). In vase mode, the slicer prints a single continuous spiral — no retractions, no seams. The model must therefore be a solid block: the slicer itself creates the thin wall by tracing the outer contour. This means we extrude a solid shape and let the slicer hollow it out, rather than modeling walls explicitly.</p>
-<p>This constrains the geometry: everything must be a single continuous shell with no internal features, overhangs that would need support, or disconnected volumes.</p>
+<p>The bins are designed for <strong>vase mode</strong> (aka spiral/contour mode). In vase mode,
+the slicer prints a single continuous spiral — no retractions, no seams. The
+model must therefore be a solid block: the slicer itself creates the thin wall
+by tracing the outer contour. This means we extrude a solid shape and let the
+slicer hollow it out, rather than modeling walls explicitly.</p>
+<p>This constrains the geometry: everything must be a single continuous shell with
+no internal features, overhangs that would need support, or disconnected
+volumes.</p>
 <h2 id="05f1a7db-bee7-4ee4-9932-0acc23280aa2">Snap-fit interlocking</h2>
 <p>The bins interlock by sliding together vertically. <strong>Primary</strong> walls (front, left)
 carry bumps at grid-unit centers (0.5) and boundaries (0.0, 1.0, …), while
@@ -76,10 +82,9 @@ inset by <code>NOZZLE_SIZE + STACK_CLEARANCE</code> per side, leaving <code>STAC
 they don&rsquo;t interfere with stacking.</p>
 <p><strong>Inner volume trade-off</strong>: in vase mode the wall thickness is fixed at
 <code>NOZZLE_SIZE</code>, so the smaller outer of the lip also shrinks the inner cavity by
-<code>NOZZLE_SIZE + STACK_CLEARANCE</code> per side in the bottom <code>STACK_HEIGHT</code> mm. This
-creates a ~1 mm inward step on the interior at the lip-to-body transition.
-There is no way to compensate in vase mode (wall thickness cannot be varied),
-but the step is shallow and only affects the first few millimeters of depth.</p>
+<code>NOZZLE_SIZE + STACK_CLEARANCE</code> per side at the bottom. The lip is built as a
+loft from the smaller footprint at Z=0 to the full body size at Z==STACK_HEIGHT=,
+giving a smooth taper that slices cleanly in vase mode (no abrupt step).</p>
 <h2 id="c9267d8d-99dd-45cc-9244-bb81e2a58335">Parameters</h2>
 <p>The design is fully parametric. The sub-cell width <code>sub = GRID_UNIT / 2</code>
 defines the bump spacing. Finger ratio controls the base width of each finger.
@@ -178,13 +183,17 @@ secondary walls (back <code>+y</code>, right <code>+x</code>) place 2 bumps at p
 </span></span><span style="display:flex;"><span>    finger_depth <span style="color:#0550ae">=</span> FINGER_DEPTH
 </span></span><span style="display:flex;"><span>    tip_width <span style="color:#0550ae">=</span> subcell <span style="color:#0550ae">-</span> finger_width <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> CLEARANCE  <span style="color:#57606a"># fills gap between facing-wall bumps</span>
 </span></span><span style="display:flex;"><span>    stack_inset <span style="color:#0550ae">=</span> NOZZLE_SIZE <span style="color:#0550ae">+</span> STACK_CLEARANCE  <span style="color:#57606a"># per-side inset for nesting lip</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Bottom nesting lip: smaller so it fits inside another bin&#39;s top</span>
-</span></span><span style="display:flex;"><span>    lip <span style="color:#0550ae">=</span> Box<span style="color:#1f2328">(</span>outer_width <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> stack_inset<span style="color:#1f2328">,</span> outer_depth <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> stack_inset<span style="color:#1f2328">,</span> STACK_HEIGHT<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>              align<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>Align<span style="color:#0550ae">.</span>CENTER<span style="color:#1f2328">,</span> Align<span style="color:#0550ae">.</span>CENTER<span style="color:#1f2328">,</span> Align<span style="color:#0550ae">.</span>MIN<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Bottom nesting lip: loft from smaller footprint at Z=0 to full size at Z=STACK_HEIGHT</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> BuildPart<span style="color:#1f2328">()</span> <span style="color:#cf222e">as</span> lip_part<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>outer_width <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> stack_inset<span style="color:#1f2328">,</span> outer_depth <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> stack_inset<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#0550ae">.</span>offset<span style="color:#1f2328">(</span>STACK_HEIGHT<span style="color:#1f2328">)):</span>
+</span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>outer_width<span style="color:#1f2328">,</span> outer_depth<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        loft<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Main body at full size, starting above the lip</span>
 </span></span><span style="display:flex;"><span>    body <span style="color:#0550ae">=</span> Pos<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> STACK_HEIGHT<span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> Box<span style="color:#1f2328">(</span>outer_width<span style="color:#1f2328">,</span> outer_depth<span style="color:#1f2328">,</span> height <span style="color:#0550ae">-</span> STACK_HEIGHT<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>              align<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>Align<span style="color:#0550ae">.</span>CENTER<span style="color:#1f2328">,</span> Align<span style="color:#0550ae">.</span>CENTER<span style="color:#1f2328">,</span> Align<span style="color:#0550ae">.</span>MIN<span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>    bin_solid <span style="color:#0550ae">=</span> lip <span style="color:#0550ae">+</span> body
+</span></span><span style="display:flex;"><span>    bin_solid <span style="color:#0550ae">=</span> lip_part<span style="color:#0550ae">.</span>part <span style="color:#0550ae">+</span> body
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Chamfer the vertical corner edges</span>
 </span></span><span style="display:flex;"><span>    vertical_edges <span style="color:#0550ae">=</span> bin_solid<span style="color:#0550ae">.</span>edges<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>filter_by<span style="color:#1f2328">(</span>Axis<span style="color:#0550ae">.</span>Z<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    bin_solid <span style="color:#0550ae">=</span> chamfer<span style="color:#1f2328">(</span>vertical_edges<span style="color:#1f2328">,</span> length<span style="color:#0550ae">=</span><span style="color:#0550ae">0.5</span><span style="color:#1f2328">)</span>
@@ -216,11 +225,16 @@ secondary walls (back <code>+y</code>, right <code>+x</code>) place 2 bumps at p
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#6639ba">max</span><span style="color:#1f2328">(</span>bin_solid<span style="color:#1f2328">,</span> key<span style="color:#0550ae">=</span><span style="color:#cf222e">lambda</span> s<span style="color:#1f2328">:</span> s<span style="color:#0550ae">.</span>volume<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> bin_solid
 </span></span></code></pre></div><h2 id="3c44654e-9edf-4cb0-948c-a1548e4143d8">Generating the STL</h2>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeib42mlv3cwveihdox46oo65i2itor53mavrhn4jprcqi742c46mui?bin.stl" style="border:0;width:100%;height:500px;"></iframe>
-([<i class="fas fa-download"></i>](https://ipfs.konubinix.eu/p/bafybeib42mlv3cwveihdox46oo65i2itor53mavrhn4jprcqi742c46mui?bin.stl))
+<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeiegqvdgmdi2vc5oibb4um3mafuc4syywuuohx4c5h3ngfstoy57fa?bin.stl" style="border:0;width:100%;height:500px;"></iframe>
+<a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeiegqvdgmdi2vc5oibb4um3mafuc4syywuuohx4c5h3ngfstoy57fa?bin.stl"><i class="fas fa-download"></i></a>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a class="internal-link" href="/braindump/posts/thingiverse_rangement_pour_le_jeu_code_names_by_lawrent34/">Thingiverse - Rangement pour le jeu &ldquo;CODE NAMES&rdquo; by Lawrent34</a></li>
+</ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/09e5cbd1-3745-45e6-b0e8-d52a8443ad55?title=modular_snap_together_bins">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 12 Mar 2026</time></aside>
+	  <aside class="date"><time>Last updated: 17 Mar 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Mar 2026</time></aside>
     </div>
   </div>

@@ -47,73 +47,17 @@
         <ul>
 <li>Référence externe : <a target="_blank" href="https://www.thingiverse.com/thing:3126862/files">https://www.thingiverse.com/thing:3126862/files</a></li>
 </ul>
+<p><a class="internal-link" href="/braindump/posts/tag_note/#5b95405e-8eaa-41a0-a930-c5952373adf7">tag: learning 3D printing</a></p>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeicenb6lim2gajv3ns7qpwkqomqmm2px4sjhrapqfu7tytucasf5ny?filename=codenames.stl">CodeNames.stl</a></p>
 <p>Fonctionne bien mais les cartes carrées vont sortir pendant le transport du
-jeu. Il faudrait faire un couvercle qui se coince dessus. On a un peu moins de
-5mm de profondeur.</p>
-<h2 id="couvercle-press-fit">Couvercle press-fit</h2>
-<p>Le couvercle couvre uniquement le compartiment carré des cartes. C&rsquo;est une
-plaque plate avec une lèvre qui descend dans l&rsquo;ouverture du compartiment.</p>
-<p>Dimensions du compartiment carré mesurées depuis le STL :</p>
-<ul>
-<li>Trou au sommet : 70 × 70 mm</li>
-<li>Rayon des coins : ~5 mm</li>
-<li>Profondeur disponible : ~5 mm</li>
-</ul>
-<h3 id="c676d171-ff26-42f2-a0bf-90228c15ba0f">Paramètres</h3>
-<p><a id="code-snippet--lid-parameters"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>HOLE_SIZE <span style="color:#0550ae">=</span> <span style="color:#0550ae">70.0</span>            <span style="color:#57606a"># mm, taille du trou carré (70 × 70)</span>
-</span></span><span style="display:flex;"><span>HOLE_CORNER_RADIUS <span style="color:#0550ae">=</span> <span style="color:#0550ae">5.0</span>    <span style="color:#57606a"># mm, rayon des coins du trou</span>
-</span></span><span style="display:flex;"><span>LID_LIP_HEIGHT <span style="color:#0550ae">=</span> <span style="color:#0550ae">4.0</span>        <span style="color:#57606a"># mm, hauteur de la lèvre (&lt; 5mm de profondeur dispo)</span>
-</span></span><span style="display:flex;"><span>LID_PLATE_THICKNESS <span style="color:#0550ae">=</span> <span style="color:#0550ae">1.2</span>   <span style="color:#57606a"># mm, épaisseur de la plaque du dessus</span>
-</span></span><span style="display:flex;"><span>LID_CLEARANCE <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.15</span>        <span style="color:#57606a"># mm, jeu par côté pour l&#39;insertion</span>
-</span></span><span style="display:flex;"><span>LID_PLATE_OVERHANG <span style="color:#0550ae">=</span> <span style="color:#0550ae">5.0</span>    <span style="color:#57606a"># mm, dépassement de la plaque pour la prise</span>
-</span></span><span style="display:flex;"><span>LID_CHAMFER <span style="color:#0550ae">=</span> <span style="color:#0550ae">1.0</span>           <span style="color:#57606a"># mm, biseau en bas de la lèvre pour insertion progressive</span>
-</span></span></code></pre></div><h3 id="4742b5cf-0c95-4b80-8c55-1e99b9c34466">Génération du couvercle</h3>
-<p>La lèvre descend dans le trou de 70 mm avec un biseau en bas pour une insertion
-progressive. La plaque repose sur le dessus et dépasse pour faciliter le retrait.</p>
-<p><a id="code-snippet--make-lid"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">make_lid</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Lèvre : descend dans le trou</span>
-</span></span><span style="display:flex;"><span>    lip_size <span style="color:#0550ae">=</span> HOLE_SIZE <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> LID_CLEARANCE
-</span></span><span style="display:flex;"><span>    lip_r <span style="color:#0550ae">=</span> HOLE_CORNER_RADIUS <span style="color:#0550ae">-</span> LID_CLEARANCE
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Biseau : en bas de la lèvre, plus petit pour guider l&#39;insertion</span>
-</span></span><span style="display:flex;"><span>    chamfer_size <span style="color:#0550ae">=</span> lip_size <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> LID_CHAMFER
-</span></span><span style="display:flex;"><span>    chamfer_r <span style="color:#0550ae">=</span> <span style="color:#6639ba">max</span><span style="color:#1f2328">(</span>lip_r <span style="color:#0550ae">-</span> LID_CHAMFER<span style="color:#1f2328">,</span> <span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Plaque : dépasse au-delà du trou pour la prise</span>
-</span></span><span style="display:flex;"><span>    plate_size <span style="color:#0550ae">=</span> HOLE_SIZE <span style="color:#0550ae">+</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> LID_PLATE_OVERHANG
-</span></span><span style="display:flex;"><span>    plate_r <span style="color:#0550ae">=</span> HOLE_CORNER_RADIUS <span style="color:#0550ae">+</span> LID_PLATE_OVERHANG
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> BuildPart<span style="color:#1f2328">()</span> <span style="color:#cf222e">as</span> lid<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#57606a"># Biseau : profil réduit en bas, s&#39;élargit vers le haut</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>            RectangleRounded<span style="color:#1f2328">(</span>chamfer_size<span style="color:#1f2328">,</span> chamfer_size<span style="color:#1f2328">,</span> chamfer_r<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#0550ae">.</span>offset<span style="color:#1f2328">(</span>LID_CHAMFER<span style="color:#1f2328">)):</span>
-</span></span><span style="display:flex;"><span>            RectangleRounded<span style="color:#1f2328">(</span>lip_size<span style="color:#1f2328">,</span> lip_size<span style="color:#1f2328">,</span> lip_r<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        loft<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#57606a"># Corps de la lèvre au-dessus du biseau</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#0550ae">.</span>offset<span style="color:#1f2328">(</span>LID_CHAMFER<span style="color:#1f2328">)):</span>
-</span></span><span style="display:flex;"><span>            RectangleRounded<span style="color:#1f2328">(</span>lip_size<span style="color:#1f2328">,</span> lip_size<span style="color:#1f2328">,</span> lip_r<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        extrude<span style="color:#1f2328">(</span>amount<span style="color:#0550ae">=</span>LID_LIP_HEIGHT <span style="color:#0550ae">-</span> LID_CHAMFER<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#57606a"># Plaque du dessus</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#0550ae">.</span>offset<span style="color:#1f2328">(</span>LID_LIP_HEIGHT<span style="color:#1f2328">)):</span>
-</span></span><span style="display:flex;"><span>            RectangleRounded<span style="color:#1f2328">(</span>plate_size<span style="color:#1f2328">,</span> plate_size<span style="color:#1f2328">,</span> plate_r<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        extrude<span style="color:#1f2328">(</span>amount<span style="color:#0550ae">=</span>LID_PLATE_THICKNESS<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> lid<span style="color:#0550ae">.</span>part
-</span></span></code></pre></div><h3 id="30e7a746-acdd-413d-aa79-5a160ba695e3">Génération du STL</h3>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafkreib57nh4cs5hxm3vx5arvcgssib3xxyxw7rgjdhdckr5imjtvvoq7e?codenames_lid.stl" style="border:0;width:100%;height:500px;"></iframe>
-<a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreib57nh4cs5hxm3vx5arvcgssib3xxyxw7rgjdhdckr5imjtvvoq7e?codenames_lid.stl"><i class="fas fa-download"></i></a>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafkreiaji6ccuhditcqmhoxogbv535ygsdjx7wid45njibuw6vls2bpvq4?codenames_lid.stl" style="border:0;width:100%;height:500px;"></iframe>
-<a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiaji6ccuhditcqmhoxogbv535ygsdjx7wid45njibuw6vls2bpvq4?codenames_lid.stl"><i class="fas fa-download"></i></a>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>phone-stl <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">stl</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
-</span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/dc5b144c-ad0b-48b0-9cfc-9c5107cd6421?title=thingiverse_rangement_pour_le_jeu_code_names_by_lawrent34">Permalink</a></h2>
+jeu. Heureusement, j&rsquo;avais un misprint de <a class="internal-link" href="/braindump/posts/modular_snap_together_bins/">modular snap together bins</a> qui fait
+très bien le rôle de cale ici.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeigbdwprgc2dyjsktsatkzn7dekkxqyzceuq4obm55cn5iw3rft26i?a.png">
+</figure>
+
+<h2 id="permalink"><a class="internal-link" href="/braindump/dc5b144c-ad0b-48b0-9cfc-9c5107cd6421?title=thingiverse_rangement_pour_le_jeu_code_names_by_lawrent34">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 16 Mar 2026</time></aside>
+	  <aside class="date"><time>Last updated: 17 Mar 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 16 Mar 2026</time></aside>
     </div>
   </div>
