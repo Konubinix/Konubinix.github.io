@@ -224,12 +224,45 @@ secondary walls (back <code>+y</code>, right <code>+x</code>) place 2 bumps at p
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>bin_solid<span style="color:#1f2328">,</span> _b123d<span style="color:#0550ae">.</span>topology<span style="color:#0550ae">.</span>shape_core<span style="color:#0550ae">.</span>ShapeList<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#6639ba">max</span><span style="color:#1f2328">(</span>bin_solid<span style="color:#1f2328">,</span> key<span style="color:#0550ae">=</span><span style="color:#cf222e">lambda</span> s<span style="color:#1f2328">:</span> s<span style="color:#0550ae">.</span>volume<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> bin_solid
+</span></span></code></pre></div><h2 id="7a3b8c1d-2e4f-5a6b-9c0d-1e2f3a4b5c6d">Lid</h2>
+<p>The lid closes the bin while leaving the dovetail bumps accessible for
+side-by-side snapping. It is printed <strong>upside-down</strong> in vase mode (flange on the
+build plate), then flipped after printing.</p>
+<ul>
+<li><strong>Flange</strong> (Z=0 when printing, becomes top when flipped): full
+<code>outer_width × outer_depth</code>, sits flush with the bin&rsquo;s outer wall tops.</li>
+<li><strong>Lip</strong> (Z==STACK_HEIGHT= when printing, becomes bottom when flipped): inset by
+<code>NOZZLE_SIZE + STACK_CLEARANCE</code> per side — drops into the bin&rsquo;s inner cavity,
+same fit as the stacking lip.</li>
+<li>A <strong>loft</strong> connects the two sketches, giving a smooth taper that slices cleanly
+in vase mode.</li>
+</ul>
+<p>The flange does not extend beyond the bin&rsquo;s outer walls, so adjacent bins'
+dovetail bumps remain fully accessible.</p>
+<p><a id="code-snippet--make-lid"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">make_lid</span><span style="color:#1f2328">(</span>width_units<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> depth_units<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    outer_width <span style="color:#0550ae">=</span> width_units <span style="color:#0550ae">*</span> GRID_UNIT
+</span></span><span style="display:flex;"><span>    outer_depth <span style="color:#0550ae">=</span> depth_units <span style="color:#0550ae">*</span> GRID_UNIT
+</span></span><span style="display:flex;"><span>    inset <span style="color:#0550ae">=</span> NOZZLE_SIZE <span style="color:#0550ae">+</span> STACK_CLEARANCE
+</span></span><span style="display:flex;"><span>    lip_width <span style="color:#0550ae">=</span> outer_width <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> inset
+</span></span><span style="display:flex;"><span>    lip_depth <span style="color:#0550ae">=</span> outer_depth <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> inset
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Printed upside-down: flange at Z=0 (build plate), lip at Z=STACK_HEIGHT</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> BuildPart<span style="color:#1f2328">()</span> <span style="color:#cf222e">as</span> lid_part<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>outer_width<span style="color:#1f2328">,</span> outer_depth<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#0550ae">.</span>offset<span style="color:#1f2328">(</span>STACK_HEIGHT<span style="color:#1f2328">)):</span>
+</span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>lip_width<span style="color:#1f2328">,</span> lip_depth<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        loft<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> lid_part<span style="color:#0550ae">.</span>part
 </span></span></code></pre></div><h2 id="3c44654e-9edf-4cb0-948c-a1548e4143d8">Generating the STL</h2>
 <iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeiegqvdgmdi2vc5oibb4um3mafuc4syywuuohx4c5h3ngfstoy57fa?bin.stl" style="border:0;width:100%;height:500px;"></iframe>
 <a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeiegqvdgmdi2vc5oibb4um3mafuc4syywuuohx4c5h3ngfstoy57fa?bin.stl"><i class="fas fa-download"></i></a>
 <figure><img src="https://ipfs.konubinix.eu/p/bafybeiegzqhg4hyar7tqk2nrssevgizulv2cr7533egsit3kkdpkau67fm?a.png">
 </figure>
 
+<h2 id="8b4c9d2e-3f5a-6b7c-0d1e-2f3a4b5c6d7e">Generating the lid STL</h2>
+<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafkreicgudvr3ltvmepx2lz6ydqgv54cvujncyap2bkdejtn7axpqcddw4?lid.stl" style="border:0;width:100%;height:500px;"></iframe>
+<a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicgudvr3ltvmepx2lz6ydqgv54cvujncyap2bkdejtn7axpqcddw4?lid.stl"><i class="fas fa-download"></i></a>
 <!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
@@ -237,7 +270,7 @@ secondary walls (back <code>+y</code>, right <code>+x</code>) place 2 bumps at p
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/09e5cbd1-3745-45e6-b0e8-d52a8443ad55?title=modular_snap_together_bins">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 19 Mar 2026</time></aside>
+	  <aside class="date"><time>Last updated: 26 Mar 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Mar 2026</time></aside>
     </div>
   </div>
