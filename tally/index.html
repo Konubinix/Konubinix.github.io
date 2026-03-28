@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script>
+if(new URLSearchParams(location.search).has('purge')&&'serviceWorker'in navigator){
+  caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});
+  navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(s){s.unregister()})});
+  location.replace(location.pathname);
+}
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href="manifest.json">
+<title>Tally</title>
+<script>
+if (location.pathname.indexOf('/debug') !== -1) {
+  var YStub = `
+    var _doc = null;
+    function _save(){if(_doc)_doc._save();}
+    class YArray {
+      constructor(){this._=[];}
+      get length(){return this._.length;}
+      push(a){for(var i=0;i<a.length;i++)this._.push(a[i]);_save();}
+      get(i){return this._[i];}
+      delete(i,l){this._.splice(i,l||1);_save();}
+      insert(i,a){for(var j=a.length-1;j>=0;j--)this._.splice(i,0,a[j]);_save();}
+      toArray(){return this._.slice();}
+      toJSON(){return this._.map(function(v){return v&&v.toJSON?v.toJSON():v});}
+      forEach(f){this._.forEach(f);}
+      observe(){} unobserve(){}
+    }
+    class YMap {
+      constructor(){this._m={};}
+      set(k,v){this._m[k]=v;_save();}
+      get(k){return this._m[k];}
+      delete(k){delete this._m[k];_save();}
+      toJSON(){return Object.assign({},this._m);}
+      has(k){return k in this._m;}
+      observe(){} unobserve(){}
+    }
+    class Doc {
+      constructor(){this._a={};this._m={};this._k='ystub_tally';_doc=this;this._load();}
+      getArray(n){if(!this._a[n])this._a[n]=new YArray();return this._a[n];}
+      getMap(n){if(!this._m[n])this._m[n]=new YMap();return this._m[n];}
+      on(){} off(){} transact(f){f();}
+      _save(){try{var o={a:{},m:{}};for(var k in this._a)o.a[k]=this._a[k].toJSON();for(var k in this._m)o.m[k]=this._m[k].toJSON();localStorage.setItem(this._k,JSON.stringify(o));}catch(e){}}
+      _load(){try{var s=localStorage.getItem(this._k);if(!s)return;var o=JSON.parse(s);for(var k in o.a){var arr=this.getArray(k);o.a[k].forEach(function(v){if(v&&typeof v==='object'&&!Array.isArray(v)){var m=new YMap();for(var p in v)m._m[p]=v[p];arr._.push(m);}else{arr._.push(v);}});}for(var k in o.m){var map=this.getMap(k);for(var p in o.m[k])map._m[p]=o.m[k][p];}}catch(e){}}
+    }
+    export { Doc, YArray as Array, YMap as Map };
+    export default { Doc, Array: YArray, Map: YMap };
+  `;
+  var Persistence = 'export class IndexeddbPersistence { constructor(){} on(e,f){if(e==="synced")setTimeout(f,0);} once(e,f){this.on(e,f);} }';
+  var WsProvider = 'export class WebsocketProvider { constructor(){} on(){} disconnect(){} destroy(){} }';
+  var b = function(s){return 'data:text/javascript;base64,'+btoa(s);};
+  document.write('<script type="importmap">{"imports":{"yjs":"'+b(YStub)+'","y-indexeddb":"'+b(Persistence)+'","y-websocket":"'+b(WsProvider)+'"}}<\/script>');
+}
+</script>
+<script type="importmap">
+{"imports":{
+  "yjs":"https://esm.sh/yjs@13.6.29",
+  "y-indexeddb":"https://esm.sh/y-indexeddb@9?deps=yjs@13.6.29",
+  "y-websocket":"https://esm.sh/y-websocket@2?bundle-deps&deps=yjs@13.6.29",
+  "lib0/broadcastchannel":"https://esm.sh/lib0@0.2.99/broadcastchannel",
+  "lib0/time":"https://esm.sh/lib0@0.2.99/time",
+  "lib0/encoding":"https://esm.sh/lib0@0.2.99/encoding",
+  "lib0/decoding":"https://esm.sh/lib0@0.2.99/decoding",
+  "lib0/observable":"https://esm.sh/lib0@0.2.99/observable",
+  "lib0/math":"https://esm.sh/lib0@0.2.99/math",
+  "lib0/url":"https://esm.sh/lib0@0.2.99/url",
+  "lib0/environment":"https://esm.sh/lib0@0.2.99/environment",
+  "y-protocols/sync":"https://esm.sh/y-protocols@1.0.6/sync?deps=yjs@13.6.29",
+  "y-protocols/auth":"https://esm.sh/y-protocols@1.0.6/auth?deps=yjs@13.6.29",
+  "y-protocols/awareness":"https://esm.sh/y-protocols@1.0.6/awareness?deps=yjs@13.6.29",
+  "alpinejs":"https://esm.sh/alpinejs@3"
+}}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#1a1a2e;--surface:#16213e;--card:#0f3460;
+  --accent:#e94560;--accent2:#533483;--text:#eee;--muted:#888;
+  --green:#4ecca3;--red:#e94560;--radius:12px;
+}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--text);
+  -webkit-tap-highlight-color:transparent;
+  display:flex;flex-direction:column;
+}
+/* ── Header ── */
+header{
+  background:var(--surface);border-bottom:1px solid rgba(255,255,255,.06);
+  padding:6px 10px;display:flex;align-items:center;gap:6px;
+  flex-shrink:0;position:sticky;top:0;z-index:10;
+  backdrop-filter:blur(12px);
+}
+header h1{font-size:1.1rem;font-weight:800;letter-spacing:-.5px;flex-shrink:0}
+header h1 span{color:var(--accent)}
+.sync-dot{
+  width:14px;height:14px;border-radius:50%;flex-shrink:0;
+  background:var(--muted);transition:background .3s;
+  border:none;padding:0;cursor:pointer;
+}
+body[data-ws="connected"] .sync-dot{background:var(--green)}
+body[data-ws="denied"] .sync-dot{background:var(--accent)}
+.sync-dot.syncing{animation:pulse .4s ease-out}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(78,204,163,.6)}100%{box-shadow:0 0 0 6px transparent}}
+.game-name-input{
+  flex:1;min-width:0;background:none;border:none;
+  border-bottom:1.5px solid rgba(255,255,255,.1);
+  color:var(--text);font-family:inherit;font-size:.8rem;font-weight:600;
+  padding:2px 2px;outline:none;transition:border-color .15s;
+}
+.game-name-input:focus{border-color:var(--accent)}
+.game-name-input::placeholder{color:var(--muted);font-weight:400}
+.header-actions{display:flex;gap:4px;flex-shrink:0}
+.icon-btn{
+  background:rgba(255,255,255,.08);border:none;color:var(--text);
+  width:38px;height:38px;border-radius:10px;cursor:pointer;
+  display:grid;place-items:center;font-size:1rem;
+  transition:background .15s;flex-shrink:0;
+}
+.icon-btn:active{background:rgba(255,255,255,.18)}
+.icon-btn.primary{background:var(--accent)}
+.icon-btn.primary:active{background:#c23350}
+/* ── Table area ── */
+.table-wrap{
+  flex:1;overflow:auto;padding:0;
+  -webkit-overflow-scrolling:touch;
+}
+table{
+  border-collapse:separate;border-spacing:0;
+  width:100%;min-width:fit-content;
+}
+th,td{
+  padding:7px 10px;text-align:center;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  min-width:90px;
+}
+th:first-child,td:first-child{
+  position:sticky;left:0;z-index:2;
+  background:var(--bg);min-width:42px;width:42px;
+  color:var(--muted);font-size:.75rem;
+}
+thead th{
+  position:sticky;top:0;z-index:3;
+  background:var(--surface);font-size:.8rem;font-weight:700;
+}
+thead th:first-child{z-index:4;background:var(--surface)}
+.player-name-input{
+  background:none;border:none;color:var(--text);
+  font-family:inherit;font-size:.8rem;font-weight:700;
+  text-align:center;width:100%;outline:none;padding:2px 0;
+}
+.player-name-input::placeholder{color:var(--muted)}
+.player-name-input:focus{border-bottom:1.5px solid var(--accent)}
+.remove-player{
+  font-size:.6rem;color:var(--muted);cursor:pointer;
+  background:none;border:none;display:block;margin:2px auto 0;
+}
+.remove-player:active{color:var(--red)}
+.score-cell{
+  cursor:pointer;font-variant-numeric:tabular-nums;
+  font-weight:500;font-size:.85rem;transition:background .1s;
+  border-radius:4px;
+}
+.score-cell:hover{background:rgba(255,255,255,.06)}
+.positive{color:var(--green)}
+.negative{color:var(--red)}
+tfoot td{
+  font-weight:800;font-size:1rem;
+  border-top:2px solid rgba(255,255,255,.15);
+  background:var(--surface);position:sticky;bottom:0;z-index:2;
+}
+tfoot td:first-child{z-index:4;background:var(--surface)}
+.winner{color:#ffd700}
+/* ── Entry row (in-table) ── */
+.entry-row td{padding:4px 2px}
+.entry-input{
+  width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.1);
+  border-radius:8px;color:var(--text);font-family:inherit;font-size:1rem;
+  font-weight:700;text-align:center;padding:8px 4px;outline:none;
+  -moz-appearance:textfield;box-sizing:border-box;
+}
+.entry-input::-webkit-inner-spin-button,
+.entry-input::-webkit-outer-spin-button{-webkit-appearance:none}
+.entry-input.active-pad{border-color:var(--accent)}
+.entry-confirm{
+  width:36px;height:36px;border-radius:10px;border:none;
+  background:var(--green);color:#111;font-size:1.2rem;font-weight:800;
+  cursor:pointer;display:grid;place-items:center;
+}
+.entry-confirm:active{background:#3ab88e}
+/* ── Numpad ── */
+.numpad{
+  position:fixed;bottom:0;left:0;right:0;z-index:150;
+  background:var(--surface);border-top:1px solid rgba(255,255,255,.1);
+  padding:8px;display:none;
+}
+.numpad.open{display:block}
+.numpad-display{
+  text-align:center;font-size:1.3rem;font-weight:800;color:var(--text);
+  padding:6px;margin-bottom:6px;
+}
+.numpad-display .np-label{font-size:.7rem;color:var(--muted);font-weight:600}
+.numpad-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+}
+.np-btn{
+  padding:14px 0;border:none;border-radius:10px;font-size:1.1rem;font-weight:700;
+  cursor:pointer;font-family:inherit;color:var(--text);
+  background:rgba(255,255,255,.08);
+}
+.np-btn:active{background:rgba(255,255,255,.18)}
+.np-btn.np-accent{background:var(--accent);color:#fff}
+.np-btn.np-green{background:var(--green);color:#111}
+.np-btn.np-quick{background:rgba(255,255,255,.05);font-size:.85rem}
+/* ── Empty state ── */
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state .emoji{font-size:3rem;margin-bottom:12px}
+.empty-state p{font-size:.95rem;line-height:1.5}
+/* ── Modals ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);
+  display:none;place-items:center;z-index:100;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.open{display:grid}
+.modal{
+  background:var(--surface);border-radius:20px;
+  padding:28px;width:min(400px,92vw);
+  animation:popIn .2s ease-out;
+  max-height:85vh;overflow-y:auto;
+}
+@keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+.modal h2{margin-bottom:16px;font-size:1.2rem}
+.modal-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 14px;background:rgba(255,255,255,.05);border-radius:12px;
+  margin-bottom:6px;
+}
+.modal-row .rank{font-weight:800;font-size:1.1rem;margin-right:12px}
+.modal-row .rank.gold{color:#ffd700}
+.modal-row .rank.silver{color:#c0c0c0}
+.modal-row .rank.bronze{color:#cd7f32}
+.modal-name{font-weight:600}
+.modal-score{font-weight:800;font-size:1.2rem}
+.modal-close{
+  margin-top:16px;width:100%;padding:14px;border-radius:12px;
+  background:var(--accent);border:none;color:#fff;
+  font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;
+}
+.modal-close:disabled{opacity:.35;cursor:not-allowed}
+.pick-chips{display:flex;flex-wrap:wrap;gap:8px}
+.pick-chip{
+  padding:10px 18px;border-radius:20px;
+  background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);
+  color:var(--text);font-size:.9rem;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:all .15s;
+}
+.pick-chip.selected{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+.pick-chip-wrap{position:relative;display:inline-block}
+.pick-chip-del{
+  position:absolute;top:-6px;right:-6px;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--red,#e94560);border:none;color:#fff;
+  font-size:.65rem;line-height:18px;text-align:center;
+  cursor:pointer;padding:0;opacity:.7;transition:opacity .15s;
+}
+.pick-chip-del:hover{opacity:1}
+.game-entry{
+  padding:14px;background:rgba(255,255,255,.05);border-radius:12px;
+  margin-bottom:8px;cursor:pointer;transition:background .12s;
+}
+.game-entry:active{background:rgba(255,255,255,.1)}
+.game-entry-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:6px;
+}
+.game-entry-name{font-weight:700;font-size:.95rem}
+.game-entry-date{font-size:.7rem;color:var(--muted)}
+.game-entry-players{font-size:.8rem;color:var(--muted);line-height:1.5}
+.game-entry-winner{color:#ffd700;font-weight:600}
+.game-entry-load,.game-entry-delete{
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:.85rem;padding:4px 8px;border-radius:6px;
+  transition:background .15s,color .15s;
+}
+.game-entry-load:hover{background:var(--green);color:#fff}
+.game-entry-delete:hover{background:var(--red);color:#fff}
+.no-games{text-align:center;color:var(--muted);padding:20px;font-size:.9rem}
+/* ── Edit cell highlight ── */
+.score-cell.active-edit{
+  outline:2px solid var(--accent);
+  outline-offset:-2px;
+  background:rgba(224,176,255,.1);
+}
+.np-del-round{
+  display:block;margin:0 auto 6px;padding:8px 16px;border-radius:8px;
+  background:rgba(255,255,255,.08);border:none;color:var(--muted);
+  font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.np-del-round:active{color:var(--red)}
+</style>
+<script>
+// Capture beforeinstallprompt early so it is not missed.
+window.__pwaInstallEvent = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  window.__pwaInstallEvent = e;
+  var btn = document.getElementById('btnInstall');
+  if (btn) btn.style.display = '';
+});
+window.addEventListener('appinstalled', function() {
+  window.__pwaInstallEvent = null;
+  var btn = document.getElementById('btnInstall');
+  if (btn) btn.style.display = 'none';
+});
+</script>
+</head>
+<body x-data>
+
+<header>
+  <h1><span>T</span>ally</h1>
+  <a class="sync-dot" id="syncDot" title="Sync status" onclick="if(document.body.getAttribute('data-ws')==='connected'&&confirm('Clear authorization?')){location.href='/authorizationserver/clear-cookie?resource=ywebsocket/'+_roomName}"></a>
+  <input type="text" class="game-name-input" id="gameName" placeholder="Game name&#x2026;" spellcheck="false"
+    @input="setGameName($el.value)">
+  <div class="header-actions">
+    <button class="icon-btn" id="btnInstall" title="Install" style="display:none" @click="installApp()">&#x1f4f2;</button>
+    <button class="icon-btn" id="btnScoreboard" title="Scoreboard" @click="openScoreboard()">&#x1f3c6;</button>
+    <button class="icon-btn" id="btnLoad" title="Load" @click="openLoadModal()">&#x1f4cb;</button>
+    <button class="icon-btn" id="btnExport" title="Export CSV" @click="exportCSV()">&#x1f4e5;</button>
+    <button class="icon-btn" id="btnNewGame" title="New Game" @click="newGame()">&#x25b6;</button>
+    <button class="icon-btn primary" id="btnAddPlayer" title="Add Player" @click="openAddPlayerModal()">+</button>
+  </div>
+</header>
+
+<div class="table-wrap" id="tableWrap">
+  <div class="empty-state" id="emptyState" x-show="!$store.game.hasPlayers">
+    <div class="emoji">&#x1f3b2;</div>
+    <p>No players yet.</p>
+    <button class="modal-close" id="btnStartGame" style="margin-top:16px;width:auto;padding:14px 32px" @click="openPickModal()">Start Game</button>
+  </div>
+  <table id="scoreTable" x-show="$store.game.hasPlayers" x-cloak>
+    <thead>
+      <tr id="headerRow">
+        <th>#</th>
+        <template x-for="(p, i) in $store.game.players" :key="i">
+          <th :style="'border-bottom:3px solid ' + p.color">
+            <input class="player-name-input" :value="p.name" :data-pidx="i"
+              x-bind:placeholder="'Player ' + (i+1)" spellcheck="false"
+              @input="updatePlayerName(i, $el.value)">
+            <button class="remove-player" :data-pidx="i" title="Remove"
+              @click="removePlayer(i)">&#x2715; remove</button>
+          </th>
+        </template>
+      </tr>
+    </thead>
+    <tbody id="scoreBody">
+      <template x-for="(r, ri) in $store.game.rounds" :key="'r'+ri">
+        <tr>
+          <td x-text="ri + 1"></td>
+          <template x-for="(v, pi) in r" :key="'c'+ri+'_'+pi">
+            <td class="score-cell"
+              :class="{ 'positive': v > 0, 'negative': v < 0 }"
+              :data-round="ri" :data-player="pi"
+              @click="openEdit(ri, pi)"
+              x-text="v"></td>
+          </template>
+        </tr>
+      </template>
+      <tr class="entry-row" x-show="$store.game.hasPlayers">
+        <td>
+          <button class="entry-confirm" id="entryConfirm" title="Add round"
+            @click="addRound()">+</button>
+        </td>
+        <template x-for="(p, i) in $store.game.players" :key="'e'+i">
+          <td>
+            <input type="number" readonly class="entry-input"
+              :data-pidx="i" :id="'entry_' + i" placeholder="0"
+              :data-pname="p.name"
+              :value="$store.game.entries[i] || ''"
+              @click="openNumpad($el)">
+          </td>
+        </template>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr id="totalRow">
+        <td>&#x03a3;</td>
+        <template x-for="(t, i) in $store.game.liveTotals" :key="'t'+i">
+          <td style="font-weight:800;font-size:1rem"
+            :class="{ 'winner': $store.game.players.length > 1 && t === $store.game.liveMaxTotal && t !== 0 }"
+            x-text="t"></td>
+        </template>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- Scoreboard Modal -->
+<div class="modal-overlay" id="modalScoreboard" :class="{ 'open': $store.app.showScoreboard }" @click.self="$store.app.showScoreboard = false">
+  <div class="modal">
+    <h2>&#x1f3c6; Results</h2>
+    <div id="scoreboardList">
+      <template x-for="(e, i) in $store.game.scoreboardEntries" :key="'sb'+i">
+        <div class="modal-row">
+          <div>
+            <span class="rank" :class="{ gold: i===0, silver: i===1, bronze: i===2 }"
+              x-text="'#' + (i+1)"></span>
+            <span class="modal-name" x-text="e.name"></span>
+          </div>
+          <span class="modal-score" x-text="e.score"></span>
+        </div>
+      </template>
+      <p x-show="$store.game.players.length === 0" style="color:var(--muted);text-align:center;padding:20px">No players yet.</p>
+    </div>
+    <button class="modal-close" id="closeScoreboard" @click="$store.app.showScoreboard = false">Close</button>
+  </div>
+</div>
+
+<!-- Saved Games Modal -->
+<div class="modal-overlay" id="modalGames" :class="{ 'open': $store.app.showGames }" @click.self="$store.app.showGames = false">
+  <div class="modal">
+    <h2>&#x1f4cb; Saved Games</h2>
+    <div id="gamesList">
+      <p x-show="$store.game.savedGames.length === 0" class="no-games">No saved games.</p>
+      <template x-for="(g, ri) in $store.game.savedGames" :key="'sg'+ri">
+        <div class="game-entry" :data-gidx="g._idx">
+          <div class="game-entry-header">
+            <span class="game-entry-name" x-text="g.gameName"></span>
+            <span class="game-entry-date" x-text="g._dateStr"></span>
+            <button class="game-entry-load" :data-gloadidx="g._idx"
+              @click="loadGame(g._idx)">&#x25b6;</button>
+            <button class="game-entry-delete" :data-gdelidx="g._idx"
+              @click="deleteGame(g._idx)">&#x1f5d1;</button>
+          </div>
+          <div class="game-entry-players" x-text="g._summary"></div>
+        </div>
+      </template>
+    </div>
+    <button class="modal-close" id="closeGames" @click="$store.app.showGames = false">Close</button>
+  </div>
+</div>
+
+<!-- Edit Cell: now uses inline numpad (no modal) -->
+
+<!-- Pick Players for Game -->
+<div class="modal-overlay" id="modalPick" :class="{ 'open': $store.app.showPick }" @click.self="$store.app.showPick = false">
+  <div class="modal">
+    <h2>New Game</h2>
+    <input type="text" class="game-name-input" id="pickGameName" placeholder="Game name&#x2026;" spellcheck="false" style="width:100%;box-sizing:border-box;margin-bottom:12px"
+      @input="updatePickStartEnabled()">
+    <div id="pickList" x-show="$store.game.roster.length > 0">
+      <div class="pick-chips">
+        <template x-for="(p, i) in $store.game.roster" :key="'pk'+i">
+          <span class="pick-chip-wrap">
+            <button class="pick-chip" :id="'pick_' + i" :data-pname="p.name"
+              :class="{ 'selected': $store.app.pickSelected[p.name] }"
+              @click="togglePick(p.name)" x-text="p.name"></button>
+            <button class="pick-chip-del" :data-pname="p.name" title="Remove from roster"
+              @click.stop="deleteFromRoster(i)">&#x2715;</button>
+          </span>
+        </template>
+      </div>
+    </div>
+    <p id="pickEmpty" x-show="$store.game.roster.length === 0" style="color:var(--muted);text-align:center;padding:16px 0">No players in roster yet.</p>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <input type="text" id="rosterInput" placeholder="Add player&#x2026;" spellcheck="false"
+        style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);background:var(--bg);color:var(--text);font-size:.95rem;font-family:inherit"
+        @keydown.enter="addToRoster()">
+      <button class="modal-close" id="rosterAdd" style="width:auto;margin:0;padding:10px 20px" @click="addToRoster()">Add</button>
+    </div>
+    <button class="modal-close" id="pickStart" x-show="$store.game.roster.length > 0" @click="startGame()">Start Game</button>
+    <button class="modal-close" id="pickCancel" style="background:var(--muted);margin-top:8px" @click="$store.app.showPick = false">Cancel</button>
+  </div>
+</div>
+<!-- Add Player to current game -->
+<div class="modal-overlay" id="modalAddPlayer" :class="{ 'open': $store.app.showAddPlayer }" @click.self="$store.app.showAddPlayer = false">
+  <div class="modal">
+    <h2>Add Player</h2>
+    <template x-if="$store.app.showAddPlayer">
+    <div id="addPlayerList" x-show="$store.game.availablePlayers.length > 0">
+      <div class="pick-chips">
+        <template x-for="(p, i) in $store.game.availablePlayers" :key="'ap'+i">
+          <button class="pick-chip" :data-pname="p.name"
+            @click="addPlayerFromChip(p.name)" x-text="p.name"></button>
+        </template>
+      </div>
+    </div>
+    </template>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <input type="text" id="addPlayerInput" placeholder="New player name&#x2026;" spellcheck="false"
+        style="flex:1;padding:10px;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);background:var(--bg);color:var(--text);font-size:.95rem;font-family:inherit"
+        @keydown.enter="addPlayerFromInput()">
+      <button class="modal-close" id="addPlayerAdd" style="width:auto;margin:0;padding:10px 20px" @click="addPlayerFromInput()">Add</button>
+    </div>
+    <button class="modal-close" id="addPlayerClose" style="background:var(--muted);margin-top:8px" @click="$store.app.showAddPlayer = false">Cancel</button>
+  </div>
+</div>
+
+<div class="numpad" id="numpad" :class="{ 'open': $store.app.showNumpad }">
+  <div class="numpad-display"><span class="np-label" id="npLabel"></span><br><span id="npValue">0</span></div>
+  <button class="np-del-round" id="npDelRound" style="display:none" onclick="deleteEditRound()">Delete Round</button>
+  <div class="numpad-grid">
+    <button class="np-btn np-quick" data-delta="-10">-10</button>
+    <button class="np-btn np-quick" data-delta="-5">-5</button>
+    <button class="np-btn np-quick" data-delta="+5">+5</button>
+    <button class="np-btn np-quick" data-delta="+10">+10</button>
+    <button class="np-btn" data-key="7">7</button>
+    <button class="np-btn" data-key="8">8</button>
+    <button class="np-btn" data-key="9">9</button>
+    <button class="np-btn" data-key="del">&#x232b;</button>
+    <button class="np-btn" data-key="4">4</button>
+    <button class="np-btn" data-key="5">5</button>
+    <button class="np-btn" data-key="6">6</button>
+    <button class="np-btn" data-key="sign">+/&#x2212;</button>
+    <button class="np-btn" data-key="1">1</button>
+    <button class="np-btn" data-key="2">2</button>
+    <button class="np-btn" data-key="3">3</button>
+    <button class="np-btn np-green" data-key="next">&#x2192;</button>
+    <button class="np-btn" data-key="0">0</button>
+    <button class="np-btn" data-key="00">00</button>
+    <button class="np-btn" data-key="clear">C</button>
+    <button class="np-btn np-accent" data-key="done">&#x2713;</button>
+  </div>
+</div>
+
+<script type="module">
+import Alpine from 'alpinejs';
+import * as Y from 'yjs';
+import { IndexeddbPersistence } from 'y-indexeddb';
+import { WebsocketProvider } from 'y-websocket';
+
+// ── Yjs setup (shared with tally_score_tracker) ──
+var _roomName = new URLSearchParams(location.search).get('room') || 'tally';
+var ydoc = new Y.Doc();
+var persistence = new IndexeddbPersistence(_roomName, ydoc);
+var yPlayers = ydoc.getArray('currentPlayers'); // Y.Map {name}
+var yRounds  = ydoc.getArray('rounds');         // [[d0, d1, ...], ...]
+var yGames   = ydoc.getArray('savedGames');     // [{id,date,gameName,players,rounds}]
+var yRoster  = ydoc.getArray('sc_roster');      // [{name:'...'}] persistent player roster
+var yMeta    = ydoc.getMap('meta');              // gameName
+var COLORS   = ['#e94560','#4ecca3','#533483','#f9a826','#3fc1c9','#fc5185','#8dc6ff','#6c5ce7'];
+var MAX_PLAYERS = 8;
+
+window.ydoc = ydoc;
+window.Y = Y;
+
+// ── DOM refs ──
+var $ = function(id){ return document.getElementById(id); };
+
+// ── Helpers ──
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function getPlayers(){
+  var a = [];
+  for(var i=0;i<yPlayers.length;i++) a.push({name: yPlayers.get(i).get('name')});
+  return a;
+}
+function getRounds(){
+  var a = [];
+  for(var i=0;i<yRounds.length;i++) a.push(yRounds.get(i));
+  return a;
+}
+function getSavedGames(){
+  var a = [];
+  for(var i=0;i<yGames.length;i++) a.push(yGames.get(i));
+  return a;
+}
+
+function totals(){
+  var players = getPlayers();
+  var rounds = getRounds();
+  var t = players.map(function(){ return 0; });
+  rounds.forEach(function(r){
+    r.forEach(function(v,i){ t[i] += (v||0); });
+  });
+  return t;
+}
+
+// render() is an alias for syncFromYjs() — see js-alpine-store
+
+// ── Player management ──
+function removePlayer(idx){
+  var pm = yPlayers.get(idx);
+  if(!confirm('Remove ' + pm.get('name') + '?')) return;
+  yPlayers.delete(idx, 1);
+  for(var i=0;i<yRounds.length;i++){
+    var r = yRounds.get(i).slice();
+    r.splice(idx, 1);
+    yRounds.delete(i, 1);
+    if(r.length > 0) yRounds.insert(i, [r]);
+    else { i--; }
+  }
+  render();
+}
+
+// ── Roster helpers ──
+function getRoster() {
+  var a = [];
+  for (var i = 0; i < yRoster.length; i++) {
+    var r = yRoster.get(i);
+    a.push({ name: r.get ? r.get('name') : r.name });
+  }
+  return a;
+}
+
+function deleteFromRoster(idx) {
+  var r = yRoster.get(idx); var name = r.get ? r.get('name') : r.name;
+  if (!confirm('Remove ' + name + ' from roster?')) return;
+  yRoster.delete(idx, 1);
+  syncFromYjs();
+}
+
+function addToRoster() {
+  var name = $('rosterInput').value.trim();
+  if (!name) return;
+  // Duplicate check
+  for (var i = 0; i < yRoster.length; i++) {
+    var ri = yRoster.get(i); if ((ri.get ? ri.get('name') : ri.name) === name) { alert(name + ' already exists'); return; }
+  }
+  yRoster.push([{ name: name }]);
+  var sel = Alpine.store('app').pickSelected;
+  sel[name] = true;
+  Alpine.store('app').pickSelected = Object.assign({}, sel);
+  $('rosterInput').value = '';
+  syncFromYjs();
+  $('rosterInput').focus();
+}
+
+// ── Player picker ──
+function togglePick(name) {
+  var sel = Alpine.store('app').pickSelected;
+  if (sel[name]) { delete sel[name]; } else { sel[name] = true; }
+  Alpine.store('app').pickSelected = Object.assign({}, sel);
+}
+
+function openPickModal() {
+  var sel = {};
+  for (var i = 0; i < yPlayers.length; i++) {
+    sel[yPlayers.get(i).get('name')] = true;
+  }
+  Alpine.store('app').pickSelected = sel;
+  $('pickGameName').value = yMeta.get('gameName') || '';
+  $('rosterInput').value = '';
+  syncFromYjs();
+  updatePickStartEnabled();
+  Alpine.store('app').showPick = true;
+}
+
+function updatePickStartEnabled() {
+  var gn = $('pickGameName').value.trim();
+  $('pickStart').disabled = !gn;
+}
+function startGame() {
+  var gn = $('pickGameName').value.trim();
+  if (!gn) return;
+  var sel = Alpine.store('app').pickSelected;
+  var names = [];
+  getRoster().forEach(function(p) {
+    if (sel[p.name]) names.push(p.name);
+  });
+  if (names.length === 0) { alert('Select at least one player'); return; }
+  yMeta.set('gameName', gn);
+  $('gameName').value = gn;
+  yPlayers.delete(0, yPlayers.length);
+  yRounds.delete(0, yRounds.length);
+  Alpine.store('game').entries = [];
+  names.forEach(function(n) {
+    var pm = new Y.Map();
+    pm.set('name', n);
+    yPlayers.push([pm]);
+  });
+  Alpine.store('app').showPick = false;
+  render();
+}
+
+// ── Add player to current game ──
+function getCurrentPlayerNames() {
+  var names = {};
+  for (var i = 0; i < yPlayers.length; i++) names[yPlayers.get(i).get('name')] = true;
+  return names;
+}
+
+function addPlayerToGame(name) {
+  if (!name) return;
+  var current = getCurrentPlayerNames();
+  if (current[name]) return;
+  var pm = new Y.Map();
+  pm.set('name', name);
+  yPlayers.push([pm]);
+  for (var i = 0; i < yRounds.length; i++) {
+    var r = yRounds.get(i).slice();
+    r.push(0);
+    yRounds.delete(i, 1);
+    yRounds.insert(i, [r]);
+  }
+  // Also add to roster if not already there
+  var inRoster = false;
+  for (var j = 0; j < yRoster.length; j++) {
+    var rj = yRoster.get(j); if ((rj.get ? rj.get('name') : rj.name) === name) { inRoster = true; break; }
+  }
+  if (!inRoster) yRoster.push([{ name: name }]);
+}
+
+function openAddPlayerModal() {
+  syncFromYjs();
+  $('addPlayerInput').value = '';
+  Alpine.store('app').showAddPlayer = true;
+  setTimeout(function() { $('addPlayerInput').focus(); }, 100);
+}
+
+function addPlayerFromChip(name) {
+  addPlayerToGame(name);
+  Alpine.store('app').showAddPlayer = false;
+  render();
+}
+
+function addPlayerFromInput() {
+  var name = $('addPlayerInput').value.trim();
+  if (!name) return;
+  addPlayerToGame(name);
+  Alpine.store('app').showAddPlayer = false;
+  render();
+}
+
+// ── Round management ──
+function addRound(){
+  var g = Alpine.store('game');
+  if(yPlayers.length === 0){ alert('Add players first!'); return; }
+  var scores = g.entries.slice();
+  var anyNonZero = scores.some(function(v){ return v !== 0; });
+  if(!anyNonZero && !confirm('All scores are 0. Add this round?')) return;
+  closeNumpad();
+  yRounds.push([scores]);
+  for(var i = 0; i < g.entries.length; i++) g.entries[i] = 0;
+  render();
+  setTimeout(function(){
+    $('tableWrap').scrollTop = $('tableWrap').scrollHeight;
+    var first = $('scoreBody').querySelector('.entry-input');
+    if (first) openNumpad(first);
+  }, 50);
+}
+
+// ── Edit cell ──
+function openEdit(ri, pi){
+  openNumpadForEdit(ri, pi);
+}
+
+function deleteEditRound(){
+  if(!npEditMode) return;
+  if(!confirm('Delete round ' + (npEditRound+1) + '?')) return;
+  var ri = npEditRound;
+  document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
+  $('npDelRound').style.display = 'none';
+  npEditMode = false;
+  npEditRound = -1;
+  npEditPlayer = -1;
+  Alpine.store('app').showNumpad = false;
+  npTarget = null;
+  yRounds.delete(ri, 1);
+  render();
+}
+
+// ── Scoreboard ──
+function openScoreboard(){
+  Alpine.store('app').showScoreboard = true;
+}
+
+// ── Save ──
+function saveGame(){
+  if(yPlayers.length === 0) return;
+  var players = getPlayers();
+  var rounds = getRounds();
+  var t = totals();
+  var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  yGames.push([{
+    id: id,
+    date: new Date().toISOString(),
+    gameName: yMeta.get('gameName') || 'Untitled',
+    players: players.map(function(p,i){ return {name:p.name, score:t[i]}; }),
+    rounds: JSON.parse(JSON.stringify(rounds))
+  }]);
+}
+
+// ── Load ──
+function openLoadModal(){
+  syncFromYjs();
+  Alpine.store('app').showGames = true;
+}
+
+// ── New Game ──
+function newGame(){
+  if(yPlayers.length > 0){
+    saveGame();
+  }
+  openPickModal();
+}
+
+// ── Export CSV ──
+function exportCSV(){
+  if(yPlayers.length === 0){ alert('Nothing to export.'); return; }
+  var players = getPlayers();
+  var rounds = getRounds();
+  var t = totals();
+  var lines = [];
+  lines.push(['Round'].concat(players.map(function(p){ return '"'+p.name.replace(/"/g,'""')+'"'; })).join(','));
+  rounds.forEach(function(r, ri){
+    lines.push([ri+1].concat(r).join(','));
+  });
+  lines.push(['TOTAL'].concat(t).join(','));
+  var blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (yMeta.get('gameName') || 'scores') + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+function loadGame(idx){
+  var g = getSavedGames()[idx];
+  if(!g) return;
+  var hasScores = yRounds.length > 0;
+  if(hasScores){
+    if(!confirm('Save current game before loading?')) return;
+    saveGame();
+  }
+  yPlayers.delete(0, yPlayers.length);
+  yRounds.delete(0, yRounds.length);
+  (g.players||[]).forEach(function(p){
+    var pm = new Y.Map();
+    pm.set('name', p.name);
+    yPlayers.push([pm]);
+  });
+  // Backward compat: convert old tally format (finalScore/history) to rounds
+  if(g.rounds){
+    g.rounds.forEach(function(r){ yRounds.push([r]); });
+  } else if(g.players && g.players[0] && g.players[0].history){
+    var histories = g.players.map(function(p){
+      var h = typeof p.history === 'string' ? JSON.parse(p.history) : (p.history || []);
+      return h;
+    });
+    var maxLen = Math.max.apply(null, histories.map(function(h){ return h.length; }));
+    for(var ri=0;ri<maxLen;ri++){
+      var row = histories.map(function(h){
+        var cur = ri < h.length ? h[ri] : (h.length ? h[h.length-1] : 0);
+        var prev = ri > 0 && ri-1 < h.length ? h[ri-1] : 0;
+        return cur - prev;
+      });
+      yRounds.push([row]);
+    }
+  }
+  yMeta.set('gameName', g.gameName || '');
+  Alpine.store('app').showGames = false;
+  render();
+}
+
+function deleteGame(idx){
+  if(confirm('Delete this saved game?')){
+    yGames.delete(idx, 1);
+    openLoadModal();
+  }
+}
+
+
+// ── Numpad ──
+var npTarget = null; // current entry input element
+var npRaw = ''; // raw digit string (without sign)
+var npNeg = false;
+var npEditMode = false; // true when editing a committed cell
+var npEditRound = -1;
+var npEditPlayer = -1;
+var npHistoryPushed = false; // true when a history entry was pushed for the numpad
+var npClosingFromHistory = false; // guard to avoid popstate loop
+
+function npValue() {
+  var val = npNeg && npRaw !== '' && npRaw !== '0' ? '-' + npRaw : npRaw;
+  return val ? parseInt(val) : 0;
+}
+
+function npSync() {
+  var val = npNeg && npRaw !== '' && npRaw !== '0' ? '-' + npRaw : npRaw;
+  $('npValue').textContent = val || '0';
+  if (npEditMode) {
+    Alpine.store('game').rounds[npEditRound][npEditPlayer] = val ? parseInt(val) : 0;
+  } else if (npTarget) {
+    var pi = parseInt(npTarget.dataset.pidx);
+    Alpine.store('game').entries[pi] = val ? parseInt(val) : 0;
+  }
+}
+
+function openNumpad(input) {
+  document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
+  npEditMode = false;
+  npTarget = input;
+  var cur = parseInt(input.value) || 0;
+  npNeg = cur < 0;
+  npRaw = Math.abs(cur).toString();
+  if (cur === 0) npRaw = '';
+  $('npLabel').textContent = input.dataset.pname || '';
+  npSync();
+  document.querySelectorAll('.entry-input').forEach(function(el) { el.classList.remove('active-pad'); });
+  input.classList.add('active-pad');
+  $('npDelRound').style.display = 'none';
+  Alpine.store('app').showNumpad = true;
+  if (!npHistoryPushed) { history.pushState({numpad: true}, ''); npHistoryPushed = true; }
+}
+
+function openNumpadForEdit(ri, pi) {
+  npEditMode = true;
+  npEditRound = ri;
+  npEditPlayer = pi;
+  npTarget = null;
+  var players = Alpine.store('game').players;
+  var cur = yRounds.get(ri)[pi];
+  npNeg = cur < 0;
+  npRaw = Math.abs(cur).toString();
+  if (cur === 0) npRaw = '';
+  $('npLabel').textContent = (players[pi].name || '') + ' \u2014 R' + (ri + 1);
+  document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
+  var cell = document.querySelector('td.score-cell[data-round="' + ri + '"][data-player="' + pi + '"]');
+  if (cell) cell.classList.add('active-edit');
+  document.querySelectorAll('.entry-input').forEach(function(el) { el.classList.remove('active-pad'); });
+  npSync();
+  $('npDelRound').style.display = 'block';
+  Alpine.store('app').showNumpad = true;
+  if (!npHistoryPushed) { history.pushState({numpad: true}, ''); npHistoryPushed = true; }
+}
+
+function closeNumpad() {
+  if (npEditMode) {
+    var r = yRounds.get(npEditRound).slice();
+    r[npEditPlayer] = npValue();
+    yRounds.delete(npEditRound, 1);
+    yRounds.insert(npEditRound, [r]);
+    document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
+    $('npDelRound').style.display = 'none';
+    npEditMode = false;
+    npEditRound = -1;
+    npEditPlayer = -1;
+    render();
+  }
+  Alpine.store('app').showNumpad = false;
+  if (npTarget) npTarget.classList.remove('active-pad');
+  npTarget = null;
+  if (npHistoryPushed && !npClosingFromHistory) { npHistoryPushed = false; history.back(); }
+  else { npHistoryPushed = false; }
+}
+
+window.addEventListener('popstate', function() {
+  if (Alpine.store('app').showNumpad) {
+    npClosingFromHistory = true;
+    closeNumpad();
+    npClosingFromHistory = false;
+  }
+});
+
+document.addEventListener('click', function(e) {
+  if (!Alpine.store('app').showNumpad) return;
+  if (e.target.closest('#numpad') || e.target.closest('.entry-input') || e.target.closest('.score-cell')) return;
+  closeNumpad();
+});
+
+$('numpad').onclick = function(e) {
+  var btn = e.target.closest('.np-btn');
+  if (!btn) return;
+  var key = btn.dataset.key;
+  var delta = btn.dataset.delta;
+
+  if (delta) {
+    var cur;
+    if (npEditMode) {
+      cur = npNeg ? -(parseInt(npRaw) || 0) : (parseInt(npRaw) || 0);
+    } else {
+      cur = parseInt(npTarget && npTarget.value) || 0;
+    }
+    cur += parseInt(delta);
+    npNeg = cur < 0;
+    npRaw = Math.abs(cur).toString();
+    npSync();
+    return;
+  }
+
+  if (key >= '0' && key <= '9') {
+    npRaw += key;
+    npSync();
+  } else if (key === '00') {
+    npRaw += '00';
+    npSync();
+  } else if (key === 'del') {
+    npRaw = npRaw.slice(0, -1);
+    npSync();
+  } else if (key === 'clear') {
+    npRaw = '';
+    npNeg = false;
+    npSync();
+  } else if (key === 'sign') {
+    npNeg = !npNeg;
+    npSync();
+  } else if (key === 'next') {
+    if (npEditMode) { closeNumpad(); return; }
+    if (!npTarget) return;
+    var idx = parseInt(npTarget.dataset.pidx);
+    var next = $('entry_' + (idx + 1));
+    if (next) openNumpad(next);
+    else { addRound(); }
+  } else if (key === 'done') {
+    closeNumpad();
+  }
+};
+
+// ── Shared sync infrastructure ──
+var wsProvider;
+var _rendering = false;
+var _scheduleRender;
+
+function setupSync(persistence, ydoc, onReady, scheduleRenderFn) {
+  _scheduleRender = scheduleRenderFn || function() {
+    if (_rendering) return;
+    _rendering = true;
+    requestAnimationFrame(function() { _rendering = false; onReady(); });
+  };
+
+  // Re-render on any non-local Yjs update (including IndexedDB sync)
+  ydoc.on('update', function(update, origin) {
+    if (origin === null) return;
+    _scheduleRender();
+  });
+
+  // WebSocket — connect only after IndexedDB synced, retry on denial
+  var _wsRetryTimer = null;
+  function connectWs() {
+    try {
+      if (wsProvider) return;
+      var wsHost = location.host.endsWith('.konubinix.eu') ? 'konubinix.eu' : location.host;
+      var wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + wsHost + '/ywebsocket';
+      var wsEverConnected = false;
+      wsProvider = new WebsocketProvider(wsUrl, _roomName, ydoc);
+      var syncBtn = document.getElementById('syncDot');
+      wsProvider.on('status', function(e) {
+        if (e.status === 'connected') {
+          wsEverConnected = true;
+          if (_wsRetryTimer) { clearInterval(_wsRetryTimer); _wsRetryTimer = null; }
+        }
+        var state = e.status === 'connected' ? 'connected' : 'offline';
+        document.body.setAttribute('data-ws', state);
+        if (syncBtn) syncBtn.title = state === 'connected' ? 'Synced' : 'Offline';
+      });
+      wsProvider.on('connection-close', function(e) {
+        if (!wsEverConnected) {
+          document.body.setAttribute('data-ws', 'denied');
+          if (syncBtn) syncBtn.title = 'Not authorized';
+          wsProvider.destroy();
+          wsProvider = null;
+          if (!_wsRetryTimer) {
+            _wsRetryTimer = setInterval(connectWs, 10000);
+          }
+        }
+      });
+    } catch(e) { console.warn('WebSocket setup failed:', e); }
+  }
+
+  function init() {
+    onReady();
+    document.body.setAttribute('data-ready', 'true');
+  }
+
+  persistence.once('synced', connectWs);
+  persistence.once('synced', function() { setTimeout(init, 0); });
+  if (persistence.synced) { connectWs(); setTimeout(init, 0); }
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+}
+
+// ── Wake Lock ──
+var wakeLock = null;
+async function requestWakeLock(){
+  try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+}
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible') requestWakeLock();
+});
+requestWakeLock();
+
+// ── PWA Install (late wiring) ──
+if (window.__pwaInstallEvent) {
+  $('btnInstall').style.display = '';
+}
+function installApp() {
+  if (!window.__pwaInstallEvent) return;
+  window.__pwaInstallEvent.prompt();
+  window.__pwaInstallEvent.userChoice.then(function() {
+    window.__pwaInstallEvent = null;
+    $('btnInstall').style.display = 'none';
+  });
+}
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  $('btnInstall').style.display = 'none';
+}
+
+// ── Window compat wrappers ──
+window.renderFromYjs = render;
+
+// ── Alpine store ──
+Alpine.store('app', {
+  // Modal visibility
+  showPick: false,
+  showAddPlayer: false,
+  showScoreboard: false,
+  showGames: false,
+  showNumpad: false,
+  pickSelected: {},
+});
+
+Alpine.store('game', {
+  players: [],
+  rounds: [],
+  entries: [],
+  hasPlayers: false,
+  gameName: '',
+  roster: [],
+  savedGames: [],
+  get liveTotals(){
+    var self = this;
+    var t = self.players.map(function(){ return 0; });
+    self.rounds.forEach(function(r){
+      r.forEach(function(v, i){ if(i < t.length) t[i] += (v || 0); });
+    });
+    self.entries.forEach(function(v, i){
+      if(i < t.length) t[i] += (v || 0);
+    });
+    return t;
+  },
+  get liveMaxTotal(){
+    var t = this.liveTotals;
+    return Math.max.apply(null, t.length ? t : [0]);
+  },
+  get scoreboardEntries(){
+    var self = this;
+    var entries = self.players.map(function(p, i){ return {name: p.name, score: self.liveTotals[i]||0}; });
+    entries.sort(function(a, b){ return b.score - a.score; });
+    return entries;
+  },
+  get availablePlayers(){
+    var current = {};
+    this.players.forEach(function(p){ current[p.name] = true; });
+    return this.roster.filter(function(p){ return !current[p.name]; });
+  },
+});
+
+function syncFromYjs(){
+  var g = Alpine.store('game');
+  var players = getPlayers();
+  g.players = players.map(function(p, i){
+    return { name: p.name, color: COLORS[i % 8] };
+  });
+  g.rounds = getRounds();
+  g.hasPlayers = players.length > 0;
+  g.gameName = yMeta.get('gameName') || '';
+  if(document.activeElement !== $('gameName')) $('gameName').value = g.gameName;
+  // Resize entries to match player count, preserving values
+  while(g.entries.length < players.length) g.entries.push(0);
+  while(g.entries.length > players.length) g.entries.pop();
+  g.roster = getRoster().map(function(r){ return { name: r.get ? r.get('name') : r.name }; });
+  var games = getSavedGames();
+  g.savedGames = games.slice().reverse().map(function(gm, ri){
+    var idx = games.length - 1 - ri;
+    var d = new Date(gm.date);
+    var dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    var pStr = (gm.players||[]).map(function(p){ return esc(p.name)+': '+(p.score!==undefined?p.score:(p.finalScore||0)); }).join(', ');
+    var nRounds = (gm.rounds||[]).length;
+    return { gameName: gm.gameName||'Untitled', _dateStr: dateStr, _summary: pStr+' ('+nRounds+' rounds)', _idx: idx, _raw: gm };
+  });
+}
+var render = syncFromYjs;
+
+// Expose functions to Alpine's scope so @click directives work
+window.openPickModal = openPickModal;
+window.openAddPlayerModal = openAddPlayerModal;
+window.addToRoster = addToRoster;
+window.deleteFromRoster = deleteFromRoster;
+window.togglePick = togglePick;
+window.startGame = startGame;
+window.updatePickStartEnabled = updatePickStartEnabled;
+window.addPlayerFromInput = addPlayerFromInput;
+window.addPlayerFromChip = addPlayerFromChip;
+window.openScoreboard = openScoreboard;
+window.openLoadModal = openLoadModal;
+window.newGame = newGame;
+window.exportCSV = exportCSV;
+window.deleteEditRound = deleteEditRound;
+window.installApp = installApp;
+window.setGameName = function(v){ yMeta.set('gameName', v); };
+window.updatePlayerName = function(i, v){ yPlayers.get(i).set('name', v); };
+window.removePlayer = removePlayer;
+window.openEdit = openEdit;
+window.openNumpad = openNumpad;
+window.openNumpadForEdit = openNumpadForEdit;
+window.addRound = addRound;
+window.loadGame = loadGame;
+window.deleteGame = deleteGame;
+window.syncFromYjs = syncFromYjs;
+
+Alpine.start();
+
+// ── Init ──
+setupSync(persistence, ydoc, render);
+</script>
+
+</body>
+</html>
