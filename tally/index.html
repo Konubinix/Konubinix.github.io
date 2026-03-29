@@ -1039,8 +1039,16 @@ function setupSync(persistence, ydoc, onReady, scheduleRenderFn) {
   function connectWs() {
     try {
       if (wsProvider) return;
-      var wsHost = location.host.endsWith('.konubinix.eu') ? 'konubinix.eu' : location.host;
-      var wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + wsHost + '/ywebsocket';
+      var params = new URLSearchParams(location.search);
+      var paramWsUrl = params.get('websocket_url');
+      if (paramWsUrl) {
+        localStorage.setItem('websocket_url', paramWsUrl);
+        var cleanUrl = new URL(location);
+        cleanUrl.searchParams.delete('websocket_url');
+        history.replaceState(null, '', cleanUrl);
+      }
+      var wsUrl = paramWsUrl || localStorage.getItem('websocket_url');
+      if (!wsUrl) return;
       var wsEverConnected = false;
       wsProvider = new WebsocketProvider(wsUrl, _roomName, ydoc);
       var syncBtn = document.getElementById('syncDot');
