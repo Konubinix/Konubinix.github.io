@@ -1,3 +1,4 @@
+// [[id:16c070b8-5772-4361-bc3e-595330a61148::+BEGIN_SRC js :results verbatim :exports none :noweb yes :tangle ~/perso/org-publish/github/tally/sw.js][No heading:3]]
 const CACHE = 'tally-v6';
 const ASSETS = [
   './',
@@ -35,3 +36,4 @@ self.addEventListener('fetch', e => {
     );
   }
 });
+// No heading:3 ends here

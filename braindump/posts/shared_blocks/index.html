@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html><title>shared blocks</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Shared Blocks</h1>
+		</p>
+        <p>Shared noweb blocks for braindump and blog notes.
+Consumer files use cross-file references like <code>&lt;&lt;shared_blocks.org:deploy_iframe-ex()&gt;&gt;</code>.</p>
+<h2 id="deploy-iframe">Deploy iframe</h2>
+<p>Embeds the deployed app in an iframe on the braindump/blog page.  The caller
+sets the shell variable <code>deploy_url</code> to the path prefix (e.g. <code>/tally/</code> or
+<code>/p/bafyxyz</code>) before expanding the block.</p>
+<h2 id="deploy">Deploy</h2>
+<p>Publishes the calling file&rsquo;s <code>[[root]]</code> block to IPFS via <code>ipfa</code>, then
+embeds it in an iframe.  Use with <code>#+call: shared_blocks.org:deploy()</code>.</p>
+<h2 id="pwa-meta">PWA meta tags</h2>
+<p>Generic PWA meta tags: charset, purge escape hatch, viewport, and manifest
+link.  Callers add their own <code>&lt;title&gt;</code> and <code>&lt;meta name</code>&ldquo;theme-color&rdquo;&gt;=.</p>
+<h2 id="sync-setup">Sync infrastructure</h2>
+<p>Shared Yjs WebSocket connection, remote-change rendering, and init logic.
+Each app calls <code>setupSync(persistence, ydoc, onReady)</code> where <code>onReady</code> is
+the app-specific first-render function.</p>
+<p><a id="code-snippet--js-sync-setup"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#57606a">// ── Shared sync infrastructure ──
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span><span style="color:#cf222e">var</span> <span style="color:#1f2328">wsProvider</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">var</span> <span style="color:#1f2328">_rendering</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">false</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">var</span> <span style="color:#1f2328">_scheduleRender</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">setupSync</span><span style="color:#1f2328">(</span><span style="color:#1f2328">persistence</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">ydoc</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">onReady</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">scheduleRenderFn</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">_scheduleRender</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">scheduleRenderFn</span> <span style="color:#0550ae">||</span> <span style="color:#cf222e">function</span><span style="color:#1f2328">()</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">_rendering</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">_rendering</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">requestAnimationFrame</span><span style="color:#1f2328">(</span><span style="color:#cf222e">function</span><span style="color:#1f2328">()</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">_rendering</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">false</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">onReady</span><span style="color:#1f2328">();</span> <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">};</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">// Re-render on any non-local Yjs update (including IndexedDB sync)
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>  <span style="color:#1f2328">ydoc</span><span style="color:#1f2328">.</span><span style="color:#1f2328">on</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;update&#39;</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">function</span><span style="color:#1f2328">(</span><span style="color:#1f2328">update</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">origin</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">origin</span> <span style="color:#0550ae">===</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">_scheduleRender</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">// WebSocket — connect only after IndexedDB synced, retry on denial
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>  <span style="color:#cf222e">var</span> <span style="color:#1f2328">_wsRetryTimer</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">function</span> <span style="color:#1f2328">connectWs</span><span style="color:#1f2328">()</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">wsProvider</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">var</span> <span style="color:#1f2328">params</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">URLSearchParams</span><span style="color:#1f2328">(</span><span style="color:#1f2328">location</span><span style="color:#1f2328">.</span><span style="color:#1f2328">search</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">var</span> <span style="color:#1f2328">paramWsUrl</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">params</span><span style="color:#1f2328">.</span><span style="color:#1f2328">get</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;websocket_url&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">paramWsUrl</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">localStorage</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setItem</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;websocket_url&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">paramWsUrl</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">var</span> <span style="color:#1f2328">cleanUrl</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">URL</span><span style="color:#1f2328">(</span><span style="color:#1f2328">location</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">cleanUrl</span><span style="color:#1f2328">.</span><span style="color:#1f2328">searchParams</span><span style="color:#1f2328">.</span><span style="color:#cf222e">delete</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;websocket_url&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">history</span><span style="color:#1f2328">.</span><span style="color:#1f2328">replaceState</span><span style="color:#1f2328">(</span><span style="color:#cf222e">null</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">cleanUrl</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">var</span> <span style="color:#1f2328">wsUrl</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">paramWsUrl</span> <span style="color:#0550ae">||</span> <span style="color:#1f2328">localStorage</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getItem</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;websocket_url&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#1f2328">wsUrl</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">var</span> <span style="color:#1f2328">wsEverConnected</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">false</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">wsProvider</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">WebsocketProvider</span><span style="color:#1f2328">(</span><span style="color:#1f2328">wsUrl</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">_roomName</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">ydoc</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">var</span> <span style="color:#1f2328">syncBtn</span> <span style="color:#0550ae">=</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getElementById</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;syncDot&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">wsProvider</span><span style="color:#1f2328">.</span><span style="color:#1f2328">on</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;status&#39;</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">function</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">status</span> <span style="color:#0550ae">===</span> <span style="color:#0a3069">&#39;connected&#39;</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">wsEverConnected</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">_wsRetryTimer</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">clearInterval</span><span style="color:#1f2328">(</span><span style="color:#1f2328">_wsRetryTimer</span><span style="color:#1f2328">);</span> <span style="color:#1f2328">_wsRetryTimer</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">var</span> <span style="color:#1f2328">state</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">status</span> <span style="color:#0550ae">===</span> <span style="color:#0a3069">&#39;connected&#39;</span> <span style="color:#0550ae">?</span> <span style="color:#0a3069">&#39;connected&#39;</span> <span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;offline&#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;data-ws&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">state</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">syncBtn</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">syncBtn</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">state</span> <span style="color:#0550ae">===</span> <span style="color:#0a3069">&#39;connected&#39;</span> <span style="color:#0550ae">?</span> <span style="color:#0a3069">&#39;Synced&#39;</span> <span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;Offline&#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">wsProvider</span><span style="color:#1f2328">.</span><span style="color:#1f2328">on</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;connection-close&#39;</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">function</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#1f2328">wsEverConnected</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;data-ws&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;denied&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">syncBtn</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">syncBtn</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;Not authorized&#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">wsProvider</span><span style="color:#1f2328">.</span><span style="color:#1f2328">destroy</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">wsProvider</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#1f2328">_wsRetryTimer</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">_wsRetryTimer</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">setInterval</span><span style="color:#1f2328">(</span><span style="color:#1f2328">connectWs</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">10000</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span> <span style="color:#cf222e">catch</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">console</span><span style="color:#1f2328">.</span><span style="color:#1f2328">warn</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;WebSocket setup failed:&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">e</span><span style="color:#1f2328">);</span> <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">function</span> <span style="color:#1f2328">init</span><span style="color:#1f2328">()</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">onReady</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;data-ready&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;true&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">persistence</span><span style="color:#1f2328">.</span><span style="color:#1f2328">once</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;synced&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">connectWs</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">persistence</span><span style="color:#1f2328">.</span><span style="color:#1f2328">once</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;synced&#39;</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">function</span><span style="color:#1f2328">()</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">setTimeout</span><span style="color:#1f2328">(</span><span style="color:#1f2328">init</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">);</span> <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">persistence</span><span style="color:#1f2328">.</span><span style="color:#1f2328">synced</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">connectWs</span><span style="color:#1f2328">();</span> <span style="color:#1f2328">setTimeout</span><span style="color:#1f2328">(</span><span style="color:#1f2328">init</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">);</span> <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;serviceWorker&#39;</span> <span style="color:#cf222e">in</span> <span style="color:#1f2328">navigator</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">navigator</span><span style="color:#1f2328">.</span><span style="color:#1f2328">serviceWorker</span><span style="color:#1f2328">.</span><span style="color:#1f2328">register</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;sw.js&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">updateViaCache</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;none&#39;</span> <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/f7a3c1d8-4e2b-4f89-9a1c-shared-blocks?title=shared_blocks">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 29 Mar 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 Mar 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

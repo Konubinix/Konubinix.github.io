@@ -1,3 +1,4 @@
+<!-- [[id:16c070b8-5772-4361-bc3e-595330a61148::+BEGIN_SRC mhtml :results verbatim :exports none :noweb yes :tangle ~/perso/org-publish/github/tally/index.html][No heading:1]] -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,8 +13,9 @@ if(new URLSearchParams(location.search).has('purge')&&'serviceWorker'in navigato
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1a1a2e">
 <link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#1a1a2e">
 <title>Tally</title>
 <script>
 if (location.pathname.indexOf('/debug') !== -1) {
@@ -412,8 +414,8 @@ window.addEventListener('appinstalled', function() {
       <template x-for="(e, i) in $store.game.scoreboardEntries" :key="'sb'+i">
         <div class="modal-row">
           <div>
-            <span class="rank" :class="{ gold: i===0, silver: i===1, bronze: i===2 }"
-              x-text="'#' + (i+1)"></span>
+            <span class="rank" :class="{ gold: e.rank===0, silver: e.rank===1, bronze: e.rank===2 }"
+              x-text="'#' + (e.rank+1)"></span>
             <span class="modal-name" x-text="e.name"></span>
           </div>
           <span class="modal-score" x-text="e.score"></span>
@@ -421,6 +423,11 @@ window.addEventListener('appinstalled', function() {
       </template>
       <p x-show="$store.game.players.length === 0" style="color:var(--muted);text-align:center;padding:20px">No players yet.</p>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;cursor:pointer;font-size:.9rem">
+      <input type="checkbox" id="scoreboardLowWins"
+        :checked="$store.game.lowWins"
+        @change="toggleLowWins($el.checked)"> Lowest score wins
+    </label>
     <button class="modal-close" id="closeScoreboard" @click="$store.app.showScoreboard = false">Close</button>
   </div>
 </div>
@@ -477,6 +484,9 @@ window.addEventListener('appinstalled', function() {
         @keydown.enter="addToRoster()">
       <button class="modal-close" id="rosterAdd" style="width:auto;margin:0;padding:10px 20px" @click="addToRoster()">Add</button>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin:12px 0;cursor:pointer">
+      <input type="checkbox" id="pickLowWins"> Lowest score wins
+    </label>
     <button class="modal-close" id="pickStart" x-show="$store.game.roster.length > 0" @click="startGame()">Start Game</button>
     <button class="modal-close" id="pickCancel" style="background:var(--muted);margin-top:8px" @click="$store.app.showPick = false">Cancel</button>
   </div>
@@ -649,6 +659,7 @@ function openPickModal() {
   }
   Alpine.store('app').pickSelected = sel;
   $('pickGameName').value = yMeta.get('gameName') || '';
+  $('pickLowWins').checked = !!yMeta.get('lowWins');
   $('rosterInput').value = '';
   syncFromYjs();
   updatePickStartEnabled();
@@ -669,6 +680,7 @@ function startGame() {
   });
   if (names.length === 0) { alert('Select at least one player'); return; }
   yMeta.set('gameName', gn);
+  yMeta.set('lowWins', $('pickLowWins').checked);
   $('gameName').value = gn;
   yPlayers.delete(0, yPlayers.length);
   yRounds.delete(0, yRounds.length);
@@ -773,6 +785,10 @@ function deleteEditRound(){
 function openScoreboard(){
   Alpine.store('app').showScoreboard = true;
 }
+function toggleLowWins(checked){
+  yMeta.set('lowWins', checked);
+  render();
+}
 
 // ── Save ──
 function saveGame(){
@@ -785,6 +801,7 @@ function saveGame(){
     id: id,
     date: new Date().toISOString(),
     gameName: yMeta.get('gameName') || 'Untitled',
+    lowWins: !!yMeta.get('lowWins'),
     players: players.map(function(p,i){ return {name:p.name, score:t[i]}; }),
     rounds: JSON.parse(JSON.stringify(rounds))
   }]);
@@ -858,6 +875,7 @@ function loadGame(idx){
     }
   }
   yMeta.set('gameName', g.gameName || '');
+  yMeta.set('lowWins', !!g.lowWins);
   Alpine.store('app').showGames = false;
   render();
 }
@@ -1133,6 +1151,7 @@ Alpine.store('game', {
   entries: [],
   hasPlayers: false,
   gameName: '',
+  lowWins: false,
   roster: [],
   savedGames: [],
   get liveTotals(){
@@ -1148,12 +1167,19 @@ Alpine.store('game', {
   },
   get liveMaxTotal(){
     var t = this.liveTotals;
-    return Math.max.apply(null, t.length ? t : [0]);
+    if(!t.length) return 0;
+    return this.lowWins ? Math.min.apply(null, t) : Math.max.apply(null, t);
   },
   get scoreboardEntries(){
     var self = this;
     var entries = self.players.map(function(p, i){ return {name: p.name, score: self.liveTotals[i]||0}; });
-    entries.sort(function(a, b){ return b.score - a.score; });
+    var lw = self.lowWins;
+    entries.sort(function(a, b){ return lw ? a.score - b.score : b.score - a.score; });
+    var rank = 0;
+    for(var i = 0; i < entries.length; i++){
+      if(i > 0 && entries[i].score !== entries[i-1].score) rank++;
+      entries[i].rank = rank;
+    }
     return entries;
   },
   get availablePlayers(){
@@ -1172,6 +1198,7 @@ function syncFromYjs(){
   g.rounds = getRounds();
   g.hasPlayers = players.length > 0;
   g.gameName = yMeta.get('gameName') || '';
+  g.lowWins = !!yMeta.get('lowWins');
   if(document.activeElement !== $('gameName')) $('gameName').value = g.gameName;
   // Resize entries to match player count, preserving values
   while(g.entries.length < players.length) g.entries.push(0);
@@ -1200,6 +1227,7 @@ window.updatePickStartEnabled = updatePickStartEnabled;
 window.addPlayerFromInput = addPlayerFromInput;
 window.addPlayerFromChip = addPlayerFromChip;
 window.openScoreboard = openScoreboard;
+window.toggleLowWins = toggleLowWins;
 window.openLoadModal = openLoadModal;
 window.newGame = newGame;
 window.exportCSV = exportCSV;
@@ -1224,3 +1252,4 @@ setupSync(persistence, ydoc, render);
 
 </body>
 </html>
+<!-- No heading:1 ends here -->
