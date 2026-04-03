@@ -45,9 +45,21 @@
         <div class="ox-hugo-toc toc">
 <div class="heading">Table of Contents</div>
 <ul>
-<li><a class="internal-link" href="#85ca86b5-eafb-4d05-ae85-ec6ee75c4404">on the server</a></li>
-<li><a class="internal-link" href="#9dc805ce-593b-45bc-b5b2-d2f18627012a">on the MCU</a></li>
-<li><a class="internal-link" href="#08a91691-cb2c-47d1-b4b3-b7a76483fa58">trying it</a></li>
+<li><a class="internal-link" href="#how-it-works">How it works</a></li>
+<li><a class="internal-link" href="#85ca86b5-eafb-4d05-ae85-ec6ee75c4404">The daily rhythm</a>
+<ul>
+<li><a class="internal-link" href="#schedules">Schedules</a></li>
+<li><a class="internal-link" href="#what-happens-at-each-transition">What happens at each transition</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#waking-up-with-music">Waking up with music</a></li>
+<li><a class="internal-link" href="#9dc805ce-593b-45bc-b5b2-d2f18627012a">The device</a>
+<ul>
+<li><a class="internal-link" href="#booting-up">Booting up</a></li>
+<li><a class="internal-link" href="#the-main-loop">The main loop</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#08a91691-cb2c-47d1-b4b3-b7a76483fa58">Trying it</a></li>
 <li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
@@ -63,20 +75,55 @@ features will go to the server and I will barely have to wake up the device to
 change its code.</p>
 <p>I extracted a piezzo speaker from an old remote and used it to play a short tune
 when it is wake up time.</p>
-<h2 id="85ca86b5-eafb-4d05-ae85-ec6ee75c4404">on the server</h2>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">datetime</span> <span style="color:#cf222e">import</span> datetime<span style="color:#1f2328">,</span> timedelta
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">quart</span> <span style="color:#cf222e">import</span> Blueprint
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>blueprint <span style="color:#0550ae">=</span> Blueprint<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;nightlight&#34;</span><span style="color:#1f2328">,</span> <span style="color:#953800">__name__</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>debug <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;NIGHTLIGHT_DEBUG&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;true&#34;</span>
-</span></span><span style="display:flex;"><span>holidays <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;NIGHTLIGHT_HOLIDAYS&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;true&#34;</span>
-</span></span><span style="display:flex;"><span>brightness <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;NIGHTLIGHT_BRIGHTNESS&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">50</span><span style="color:#1f2328">))</span>  <span style="color:#57606a"># 1-100</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>school_schedule <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a class="internal-link" href="#how-it-works">How it works</a></li>
+<li><a class="internal-link" href="#85ca86b5-eafb-4d05-ae85-ec6ee75c4404">The daily rhythm</a>
+<ul>
+<li><a class="internal-link" href="#schedules">Schedules</a></li>
+<li><a class="internal-link" href="#what-happens-at-each-transition">What happens at each transition</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#waking-up-with-music">Waking up with music</a></li>
+<li><a class="internal-link" href="#9dc805ce-593b-45bc-b5b2-d2f18627012a">The device</a>
+<ul>
+<li><a class="internal-link" href="#booting-up">Booting up</a></li>
+<li><a class="internal-link" href="#the-main-loop">The main loop</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#08a91691-cb2c-47d1-b4b3-b7a76483fa58">Trying it</a></li>
+<li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
+<li><a class="internal-link" href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<h2 id="how-it-works">How it works</h2>
+<p>The device &mdash; a <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#cd6c9b7c-72e8-4143-a134-fc2afcba7660">wemos d1</a> running <a class="internal-link" href="/braindump/posts/microcontroller_board_programming/#1c1f4c49-6356-4a95-908a-dc935de81650">micropython</a> &mdash; wakes up, connects to
+WiFi, and asks the server &ldquo;what should I do?&rdquo;. The server looks at the
+current time, decides which phase of the day we are in, and replies with
+either &ldquo;set these LED colors and sleep for N seconds&rdquo; or &ldquo;wait N seconds
+then switch to these colors&rdquo;. The device obeys, then asks again.</p>
+<p>This document walks through the system the way a day unfolds: first the
+schedules that define the rhythm, then the transitions that give each
+phase its color, the melody that signals wake-up time, and finally the
+device code that ties it all together.</p>
+<h2 id="85ca86b5-eafb-4d05-ae85-ec6ee75c4404">The daily rhythm</h2>
+<p>A day has five phases, each signaled by a different LED color:</p>
+<ol>
+<li><strong>Night</strong> &mdash; both LEDs off (black). The child should be sleeping.</li>
+<li><strong>Almost</strong> &mdash; bottom LED orange. It is getting close to wake-up time.</li>
+<li><strong>Get up</strong> &mdash; top LED green, and on school days a melody plays.</li>
+<li><strong>Day</strong> &mdash; both LEDs off. No need for a signal during the day.</li>
+<li><strong>Evening</strong> &mdash; bottom LED red. Time to wind down for bed.</li>
+</ol>
+<p>School days and holidays follow different schedules. On school days the
+wake-up sequence starts at 6:30; on holidays it shifts to 7:30.</p>
+<h3 id="schedules">Schedules</h3>
+<p>The server picks the right schedule based on the day of the week.
+Holidays override everything when the <code>NIGHTLIGHT_HOLIDAYS</code> flag is set.</p>
+<p><a id="code-snippet--server-schedules"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>school_schedule <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;almost_hour&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">6</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;almost_minute&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">30</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;getup_hour&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">7</span><span style="color:#1f2328">,</span>
@@ -103,94 +150,12 @@ when it is wake up time.</p>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>debug_schedule <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>orange <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> brightness <span style="color:#0550ae">/</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">50</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">25</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>red <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> brightness <span style="color:#0550ae">/</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">30</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>black <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> brightness <span style="color:#0550ae">/</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>green <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> brightness <span style="color:#0550ae">/</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">30</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>quarter <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.6</span>
-</span></span><span style="display:flex;"><span>dotted <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">1.5</span>
-</span></span><span style="display:flex;"><span>eighth <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.5</span>
-</span></span><span style="display:flex;"><span>whole <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">4</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>MELODY <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;G5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> quarter<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;F5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C#5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;G5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> quarter<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C#5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;G5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> quarter<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;F5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C#5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;G5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> quarter<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> whole<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">times</span><span style="color:#1f2328">():</span>
+</span></span></code></pre></div><p>The <code>times()</code> function figures out which schedule applies right now and
+returns all the transition timestamps. It handles the tricky case of
+schedule changes at night &mdash; if it is past tonight&rsquo;s bedtime, tomorrow&rsquo;s
+schedule (school or holiday) kicks in for the morning transitions.</p>
+<p><a id="code-snippet--server-times"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">times</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    now <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> holidays <span style="color:#0550ae">and</span> now<span style="color:#0550ae">.</span>weekday<span style="color:#1f2328">()</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">]:</span>  <span style="color:#57606a"># mon, tue, thu, fri</span>
 </span></span><span style="display:flex;"><span>        schedule <span style="color:#0550ae">=</span> school_schedule
@@ -247,9 +212,21 @@ when it is wake up time.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#1f2328">[</span>now<span style="color:#1f2328">]</span> <span style="color:#0550ae">+</span> debug_schedule <span style="color:#0550ae">+</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;school&#34;</span><span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> res
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#0550ae">@blueprint.route</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/nightlight&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h3 id="what-happens-at-each-transition">What happens at each transition</h3>
+<p>Each phase gets a pair of LED colors (top and bottom). The server also
+precomputes what the <em>next</em> phase&rsquo;s colors will be, so the device can
+transition smoothly.</p>
+<p><a id="code-snippet--server-colors"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>orange <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> brightness <span style="color:#0550ae">/</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">50</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">25</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>red <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> brightness <span style="color:#0550ae">/</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">30</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>black <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> brightness <span style="color:#0550ae">/</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>green <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>i <span style="color:#0550ae">*</span> brightness <span style="color:#0550ae">/</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">30</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)]</span>
+</span></span></code></pre></div><p>The route handler maps the current phase to its colors and tells the
+device either to sleep until the next transition or to wait and then
+switch. It also handles DST changes by adjusting the &ldquo;almost&rdquo; time on
+the day before a clock shift.</p>
+<p><a id="code-snippet--server-routes"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@blueprint.route</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/nightlight&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">def</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> _next<span style="color:#1f2328">()</span>
@@ -382,32 +359,95 @@ when it is wake up time.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>now<span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>command<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> command
-</span></span></code></pre></div><h2 id="9dc805ce-593b-45bc-b5b2-d2f18627012a">on the MCU</h2>
-<p><a id="code-snippet--main.py"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">gc</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
+</span></span></code></pre></div><h2 id="waking-up-with-music">Waking up with music</h2>
+<p>A piezo speaker extracted from an old remote plays a short tune when it
+is time to get up &mdash; but only on school days. The melody is defined on
+the server so it can be updated without reflashing the device: the server
+sends the note list as part of the &ldquo;get up&rdquo; command.</p>
+<p><a id="code-snippet--server-melody"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>quarter <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.6</span>
+</span></span><span style="display:flex;"><span>dotted <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">1.5</span>
+</span></span><span style="display:flex;"><span>eighth <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.5</span>
+</span></span><span style="display:flex;"><span>whole <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">4</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">esp</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">machine</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">neopixel</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">ntptime</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> PWM<span style="color:#1f2328">,</span> Pin
-</span></span><span style="display:flex;"><span>buzzer <span style="color:#0550ae">=</span> PWM<span style="color:#1f2328">(</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">5</span><span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>buzzer<span style="color:#0550ae">.</span>duty<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>upled <span style="color:#0550ae">=</span> neopixel<span style="color:#0550ae">.</span>NeoPixel<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>bottomled <span style="color:#0550ae">=</span> neopixel<span style="color:#0550ae">.</span>NeoPixel<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>NOTES <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>MELODY <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;G5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> quarter<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;F5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C#5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;G5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> quarter<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C#5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;G5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> quarter<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;F5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C#5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;G5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;E5&#34;</span><span style="color:#1f2328">,</span> dotted<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> quarter<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;C5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;D5&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;B4&#34;</span><span style="color:#1f2328">,</span> eighth<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> whole<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">]</span>
+</span></span></code></pre></div><p>On the device side, a frequency table maps note names to Hz. Two small
+functions drive the piezo buzzer: <code>play_note</code> sounds a single note,
+<code>play_melody</code> sequences through the list.</p>
+<p><a id="code-snippet--mcu-notes"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>NOTES <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Octave 4</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;C4&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">262</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;C#4&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">277</span><span style="color:#1f2328">,</span>
@@ -474,8 +514,11 @@ when it is wake up time.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;A#8&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">7459</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;B8&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">7902</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>quarter <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.6</span>
+</span></span></code></pre></div><p>The melody and its player live on the device too: <code>play_note</code> drives the
+buzzer at the right frequency for each note, and <code>play_melody</code> steps
+through the list.</p>
+<p><a id="code-snippet--mcu-melody"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>quarter <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.6</span>
 </span></span><span style="display:flex;"><span>dotted <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">1.5</span>
 </span></span><span style="display:flex;"><span>eighth <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.5</span>
 </span></span><span style="display:flex;"><span>whole <span style="color:#0550ae">=</span> quarter <span style="color:#0550ae">*</span> <span style="color:#0550ae">4</span>
@@ -497,8 +540,44 @@ when it is wake up time.</p>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">play_melody</span><span style="color:#1f2328">(</span>melody<span style="color:#0550ae">=</span>MELODY<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> note<span style="color:#1f2328">,</span> duration <span style="color:#0550ae">in</span> melody<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        play_note<span style="color:#1f2328">(</span>note<span style="color:#1f2328">,</span> duration<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h2 id="9dc805ce-593b-45bc-b5b2-d2f18627012a">The device</h2>
+<p>The device is a <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#cd6c9b7c-72e8-4143-a134-fc2afcba7660">wemos d1</a> with two <a class="internal-link" href="/braindump/posts/neopixel/">neopixel</a> LEDs and a piezo buzzer. It
+connects to WiFi, fetches commands from the server, sets LED colors, and
+sleeps to save power. On error it waits five minutes and retries.</p>
+<h3 id="booting-up">Booting up</h3>
+<p>On power-up the device lights both LEDs purple (a visual &ldquo;I&rsquo;m alive&rdquo;
+signal), connects to WiFi (LEDs turn blue while connecting), waits ten
+seconds for stability, then clears the LEDs and enters the main loop.</p>
+<p>First the hardware is set up: imports, WiFi, two neopixel strips (one
+on top, one at the bottom), and a PWM-driven piezo buzzer.</p>
+<p><a id="code-snippet--mcu-imports"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">gc</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">format_message</span><span style="color:#1f2328">(</span>msg<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">esp</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">machine</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">neopixel</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">network</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">ntptime</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> PWM<span style="color:#1f2328">,</span> Pin
+</span></span><span style="display:flex;"><span>buzzer <span style="color:#0550ae">=</span> PWM<span style="color:#1f2328">(</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">5</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>buzzer<span style="color:#0550ae">.</span>duty<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>wlan <span style="color:#0550ae">=</span> network<span style="color:#0550ae">.</span>WLAN<span style="color:#1f2328">(</span>network<span style="color:#0550ae">.</span>STA_IF<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>wlan<span style="color:#0550ae">.</span>active<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>upled <span style="color:#0550ae">=</span> neopixel<span style="color:#0550ae">.</span>NeoPixel<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>bottomled <span style="color:#0550ae">=</span> neopixel<span style="color:#0550ae">.</span>NeoPixel<span style="color:#1f2328">(</span>machine<span style="color:#0550ae">.</span>Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>A few helpers handle logging and notifications. <code>notify</code> sends a
+message to a monitoring endpoint so crashes and reconnections show up
+in the logs.</p>
+<p><a id="code-snippet--mcu-utils"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">format_message</span><span style="color:#1f2328">(</span>msg<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># _, _, _, h, m, _, _, _ = time.localtime()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a"># return f&#34;{h:02d}:{m:02d}: {msg}&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>msg<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
@@ -524,9 +603,11 @@ when it is wake up time.</p>
 </span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> i <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">9</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        notify<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;connected after </span><span style="color:#0a3069">{</span>i<span style="color:#0a3069">}</span><span style="color:#0a3069"> iterations&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>say<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Hello&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>The actual boot sequence: purple LEDs as a heartbeat, blue while
+connecting to WiFi, then clear and go. A ten-second pause lets the
+network settle before entering the main loop.</p>
+<p><a id="code-snippet--mcu-boot"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>say<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Hello&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> led <span style="color:#0550ae">in</span> upled<span style="color:#1f2328">,</span> bottomled<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>fill<span style="color:#1f2328">([</span><span style="color:#0550ae">255</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">])</span>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
@@ -557,8 +638,13 @@ when it is wake up time.</p>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>fill<span style="color:#1f2328">([</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">])</span>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    led<span style="color:#0550ae">.</span>write<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">setcolors</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">):</span>
+</span></span></code></pre></div><h3 id="the-main-loop">The main loop</h3>
+<p>The device enters an endless cycle: connect to WiFi, fetch the next
+command, obey it (set colors and sleep, or wait then transition), and
+repeat. Light sleep saves power between transitions. If the server is
+unreachable the device waits five minutes and tries again.</p>
+<p><a id="code-snippet--mcu-main-loop"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">setcolors</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    upcolor <span style="color:#0550ae">=</span> command<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;upcolor&#34;</span><span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>    bottomcolor <span style="color:#0550ae">=</span> command<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;bottomcolor&#34;</span><span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>    say<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Setting up:</span><span style="color:#0a3069">{</span>upcolor<span style="color:#0a3069">}</span><span style="color:#0a3069">, bottom:</span><span style="color:#0a3069">{</span>bottomcolor<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
@@ -605,13 +691,7 @@ when it is wake up time.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        notify<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Failed: </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">, waiting for 5m before trying again&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">300</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spawn webrepl_cli.py -p 0000 nightlight
-</span></span><span style="display:flex;"><span>op:repl, host:nightlight, port:8266, passwd:0000.
-</span></span><span style="display:flex;"><span>Remote WebREPL version: (1, 25, 0)
-</span></span><span style="display:flex;"><span>Use Ctrl-] to exit this shell
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>&gt;&gt;&gt;
-</span></span></code></pre></div><h2 id="08a91691-cb2c-47d1-b4b3-b7a76483fa58">trying it</h2>
+</span></span></code></pre></div><h2 id="08a91691-cb2c-47d1-b4b3-b7a76483fa58">Trying it</h2>
 <p>So far, so good. I eventually moved the code to a <a class="internal-link" href="/braindump/posts/board_with_a_single_microcontroller/#cd6c9b7c-72e8-4143-a134-fc2afcba7660">wemos d1</a>. This had several
 advantages:</p>
 <ol>
@@ -641,7 +721,6 @@ updates before sending them to the device &ldquo;in production&rdquo;.</li>
 <figure><img src="https://ipfs.konubinix.eu/p/bafkreicftuborvsgazyk47bempammtky6dhicojnfdr4viq74xp3epdeiq?a.png">
 </figure>
 
-<!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/more_clever_night_light_in_kivy/">more clever night light in kivy</a></li>
