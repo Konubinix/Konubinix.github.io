@@ -135,42 +135,50 @@ body[data-ws="denied"] .sync-dot{background:var(--accent)}
   -webkit-overflow-scrolling:touch;
 }
 table{
-  border-collapse:separate;border-spacing:0;
-  width:100%;min-width:fit-content;
+  border-collapse:collapse;
+  width:100%;table-layout:fixed;
 }
 th,td{
-  padding:7px 10px;text-align:center;
-  border-bottom:1px solid rgba(255,255,255,.06);
-  min-width:90px;
+  padding:4px 3px;text-align:center;
+  border:1px solid rgba(255,255,255,.08);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 th:first-child,td:first-child{
   position:sticky;left:0;z-index:2;
-  background:var(--bg);min-width:42px;width:42px;
+  background:var(--bg);min-width:28px;width:28px;
   color:var(--muted);font-size:.75rem;
 }
 thead th{
   position:sticky;top:0;z-index:3;
   background:var(--surface);font-size:.8rem;font-weight:700;
+  vertical-align:bottom;padding:0;
 }
 thead th:first-child{z-index:4;background:var(--surface)}
+.player-header{
+  height:80px;
+  position:relative;
+}
 .player-name-input{
   background:none;border:none;color:var(--text);
-  font-family:inherit;font-size:.8rem;font-weight:700;
-  text-align:center;width:100%;outline:none;padding:2px 0;
+  font-family:monospace;font-size:.75rem;font-weight:700;
+  outline:none;padding:0;
+  position:absolute;bottom:0;
+  left:max(0.75rem * sin(55deg), calc(50% - 6ch * cos(55deg) + 0.375rem * sin(55deg)));
+  transform-origin:bottom left;transform:rotate(-55deg);
+  width:12ch;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .player-name-input::placeholder{color:var(--muted)}
 .player-name-input:focus{border-bottom:1.5px solid var(--accent)}
 .remove-player{
   font-size:.6rem;color:var(--muted);cursor:pointer;
-  background:none;border:none;display:block;margin:2px auto 0;
+  background:none;border:none;display:block;margin:0 auto;padding:0;
 }
 .remove-player:active{color:var(--red)}
 .score-cell{
   cursor:pointer;font-variant-numeric:tabular-nums;
-  font-weight:500;font-size:.85rem;transition:background .1s;
-  border-radius:4px;
+  font-weight:500;font-size:.85rem;
 }
-.score-cell:hover{background:rgba(255,255,255,.06)}
 .positive{color:var(--green)}
 .negative{color:var(--red)}
 tfoot td{
@@ -349,17 +357,20 @@ window.addEventListener('appinstalled', function() {
     <p>No players yet.</p>
     <button class="modal-close" id="btnStartGame" style="margin-top:16px;width:auto;padding:14px 32px" @click="openPickModal()">Start Game</button>
   </div>
-  <table id="scoreTable" x-show="$store.game.hasPlayers" x-cloak>
+  <table id="scoreTable" x-show="$store.game.hasPlayers" x-cloak
+    :style="'min-width:' + ($store.game.colWidths.reduce(function(s,v){return s+v},0) + 28) + 'px'">
     <thead>
       <tr id="headerRow">
         <th>#</th>
         <template x-for="(p, i) in $store.game.players" :key="i">
-          <th :style="'border-bottom:3px solid ' + p.color">
-            <input class="player-name-input" :value="p.name" :data-pidx="i"
-              x-bind:placeholder="'Player ' + (i+1)" spellcheck="false"
-              @input="updatePlayerName(i, $el.value)">
+          <th :style="'width:' + $store.game.colWidths[i] + 'px;border-bottom:3px solid ' + p.color">
+            <div class="player-header">
+              <input class="player-name-input" :value="p.name" :data-pidx="i"
+                x-bind:placeholder="'Player ' + (i+1)" spellcheck="false"
+                @input="updatePlayerName(i, $el.value)">
+            </div>
             <button class="remove-player" :data-pidx="i" title="Remove"
-              @click="removePlayer(i)">&#x2715; remove</button>
+              @click="removePlayer(i)">&#x2715;</button>
           </th>
         </template>
       </tr>
@@ -593,6 +604,41 @@ function totals(){
     r.forEach(function(v,i){ t[i] += (v||0); });
   });
   return t;
+}
+
+// ── Per-column widths from distinguishing prefixes (diagonal) ──
+var _cosAngle = Math.cos(55 * Math.PI / 180);
+var _chPx = null;
+function chToPx(){
+  if(_chPx) return _chPx;
+  var el = document.createElement('span');
+  el.style.cssText = 'font:700 .8rem monospace;position:absolute;visibility:hidden';
+  el.textContent = '0';
+  document.body.appendChild(el);
+  _chPx = el.offsetWidth;
+  document.body.removeChild(el);
+  return _chPx;
+}
+function colWidths(names){
+  if(names.length === 0) return [];
+  // For each name, find the shortest prefix that distinguishes it
+  var lens = names.map(function(n, i){
+    var need = 1;
+    for(var j = 0; j < names.length; j++){
+      if(j === i) continue;
+      var shared = 0;
+      var a = n.toLowerCase(), b = names[j].toLowerCase();
+      while(shared < a.length && shared < b.length && a[shared] === b[shared]) shared++;
+      if(shared + 1 > need) need = shared + 1;
+    }
+    return Math.min(need, n.length);
+  });
+  var ch = chToPx();
+  return names.map(function(n, i){
+    // +1 for the ellipsis character when truncated
+    var chars = lens[i] < n.length ? lens[i] + 1 : lens[i];
+    return Math.max(20, Math.ceil(chars * ch * _cosAngle));
+  });
 }
 
 // render() is an alias for syncFromYjs() — see js-alpine-store
@@ -914,6 +960,33 @@ function npSync() {
   }
 }
 
+function syncNumpadPadding(open, scrollTarget) {
+  var tw = $('tableWrap');
+  var np = $('numpad');
+  if (open) {
+    np.style.display = 'block';
+    var npH = np.offsetHeight;
+    tw.style.paddingBottom = npH + 'px';
+    np.style.display = '';
+    if (scrollTarget) {
+      requestAnimationFrame(function() {
+        var twRect = tw.getBoundingClientRect();
+        var elRect = scrollTarget.getBoundingClientRect();
+        var visibleBottom = twRect.bottom - npH;
+        if (elRect.bottom > visibleBottom) {
+          tw.scrollTop += elRect.bottom - visibleBottom;
+        }
+        // If the entry row is being edited, scroll to bottom to show totals too
+        if (scrollTarget.classList.contains('entry-input')) {
+          tw.scrollTop = tw.scrollHeight;
+        }
+      });
+    }
+  } else {
+    tw.style.paddingBottom = '0';
+  }
+}
+
 function openNumpad(input) {
   document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
   npEditMode = false;
@@ -929,6 +1002,7 @@ function openNumpad(input) {
   $('npDelRound').style.display = 'none';
   Alpine.store('app').showNumpad = true;
   if (!npHistoryPushed) { history.pushState({numpad: true}, ''); npHistoryPushed = true; }
+  syncNumpadPadding(true, input);
 }
 
 function openNumpadForEdit(ri, pi) {
@@ -950,6 +1024,7 @@ function openNumpadForEdit(ri, pi) {
   $('npDelRound').style.display = 'block';
   Alpine.store('app').showNumpad = true;
   if (!npHistoryPushed) { history.pushState({numpad: true}, ''); npHistoryPushed = true; }
+  syncNumpadPadding(true, cell);
 }
 
 function closeNumpad() {
@@ -965,6 +1040,7 @@ function closeNumpad() {
     npEditPlayer = -1;
     render();
   }
+  syncNumpadPadding(false);
   Alpine.store('app').showNumpad = false;
   if (npTarget) npTarget.classList.remove('active-pad');
   npTarget = null;
@@ -1154,6 +1230,7 @@ Alpine.store('game', {
   lowWins: false,
   roster: [],
   savedGames: [],
+  colWidths: [],
   get liveTotals(){
     var self = this;
     var t = self.players.map(function(){ return 0; });
@@ -1195,6 +1272,7 @@ function syncFromYjs(){
   g.players = players.map(function(p, i){
     return { name: p.name, color: COLORS[i % 8] };
   });
+  g.colWidths = colWidths(players.map(function(p){ return p.name; }));
   g.rounds = getRounds();
   g.hasPlayers = players.length > 0;
   g.gameName = yMeta.get('gameName') || '';
