@@ -168,6 +168,8 @@ thead th:first-child{z-index:4;background:var(--surface)}
 }
 .player-name-input::placeholder{color:var(--muted)}
 .player-name-input:focus{border-bottom:1.5px solid var(--accent)}
+th.active-player{background:rgba(233,69,96,.15)}
+th.active-player .player-name-input{color:#fff;font-weight:800}
 .remove-player{
   font-size:.6rem;color:var(--muted);cursor:pointer;
   background:none;border:none;display:block;margin:0 auto;padding:0;
@@ -186,6 +188,8 @@ tfoot td{
 }
 tfoot td:first-child{z-index:4;background:var(--surface)}
 .winner{color:#ffd700}
+.game-won{color:#ffd700;text-shadow:0 0 8px #ffd700}
+.preset-btn{padding:6px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,.15);background:var(--surface);color:var(--text);font-size:.8rem;cursor:pointer}
 /* ── Entry row (in-table) ── */
 .entry-row td{padding:4px 2px}
 .entry-input{
@@ -207,14 +211,14 @@ tfoot td:first-child{z-index:4;background:var(--surface)}
 .numpad{
   position:fixed;bottom:0;left:0;right:0;z-index:150;
   background:var(--surface);border-top:1px solid rgba(255,255,255,.1);
-  padding:8px;display:none;
+  padding:8px;display:none;max-height:100vh;max-height:100dvh;overflow-y:auto;
 }
 .numpad.open{display:block}
 .numpad-display{
   text-align:center;font-size:1.3rem;font-weight:800;color:var(--text);
   padding:6px;margin-bottom:6px;
 }
-.numpad-display .np-label{font-size:.7rem;color:var(--muted);font-weight:600}
+.numpad-display .np-label{font-size:.85rem;color:var(--text);font-weight:700}
 .numpad-grid{
   display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
 }
@@ -227,6 +231,12 @@ tfoot td:first-child{z-index:4;background:var(--surface)}
 .np-btn.np-accent{background:var(--accent);color:#fff}
 .np-btn.np-green{background:var(--green);color:#111}
 .np-btn.np-quick{background:rgba(255,255,255,.05);font-size:.85rem}
+@media(max-height:400px){
+  .numpad{padding:4px}
+  .numpad-display{padding:2px;margin-bottom:2px;font-size:1rem}
+  .numpad-grid{gap:3px}
+  .np-btn{padding:8px 0;font-size:.95rem;border-radius:6px}
+}
 /* ── Empty state ── */
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-state .emoji{font-size:3rem;margin-bottom:12px}
@@ -282,6 +292,40 @@ tfoot td:first-child{z-index:4;background:var(--surface)}
   cursor:pointer;padding:0;opacity:.7;transition:opacity .15s;
 }
 .pick-chip-del:hover{opacity:1}
+/* ── Reorder modal ── */
+.reorder-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;position:relative}
+.reorder-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:rgba(255,255,255,.05);border-radius:12px;
+  user-select:none;
+}
+.reorder-item.drag-placeholder{
+  opacity:.3;border:2px dashed rgba(255,255,255,.25);background:transparent;
+}
+.drag-clone{
+  position:fixed;z-index:9999;pointer-events:none;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:12px;
+  background:var(--accent);color:#fff;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+  transform:scale(1.04);opacity:.95;
+  font-family:inherit;font-size:inherit;
+}
+.drag-clone .reorder-grip{color:#fff}
+.drag-drop-line{
+  position:absolute;left:0;right:0;height:3px;
+  background:var(--accent);border-radius:2px;
+  pointer-events:none;z-index:100;
+  transition:top .1s ease;
+}
+.reorder-grip{
+  display:grid;place-items:center;width:36px;height:36px;
+  cursor:grab;touch-action:none;color:var(--muted);font-size:1.2rem;
+  flex-shrink:0;border-radius:8px;
+}
+.reorder-grip:active{cursor:grabbing;background:rgba(255,255,255,.1)}
+.reorder-rank{font-weight:800;font-size:1.1rem;min-width:1.4em;text-align:center}
+.reorder-name{flex:1;font-weight:600}
 .game-entry{
   padding:14px;background:rgba(255,255,255,.05);border-radius:12px;
   margin-bottom:8px;cursor:pointer;transition:background .12s;
@@ -315,6 +359,14 @@ tfoot td:first-child{z-index:4;background:var(--surface)}
   font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;
 }
 .np-del-round:active{color:var(--red)}
+.win-toast{
+  position:fixed;top:0;left:0;right:0;
+  padding:16px;text-align:center;font-size:1.1rem;font-weight:700;
+  background:linear-gradient(135deg,#ffd700,#ff8c00);color:#1a1a2e;
+  transform:translateY(-100%);transition:transform .3s ease;
+  z-index:9999;
+}
+.win-toast.show{transform:translateY(0)}
 </style>
 <script>
 // Capture beforeinstallprompt early so it is not missed.
@@ -345,6 +397,7 @@ window.addEventListener('appinstalled', function() {
     <button class="icon-btn" id="btnLoad" title="Load" @click="openLoadModal()">&#x1f4cb;</button>
     <button class="icon-btn" id="btnExport" title="Export CSV" @click="exportCSV()">&#x1f4e5;</button>
     <button class="icon-btn" id="btnNewGame" title="New Game" @click="newGame()">&#x25b6;</button>
+    <button class="icon-btn" id="btnReorder" title="Reorder" x-show="$store.game.players.length > 1" @click="openReorderModal()">&#x2195;</button>
     <button class="icon-btn primary" id="btnAddPlayer" title="Add Player" @click="openAddPlayerModal()">+</button>
   </div>
 </header>
@@ -394,10 +447,10 @@ window.addEventListener('appinstalled', function() {
         </td>
         <template x-for="(p, i) in $store.game.players" :key="'e'+i">
           <td>
-            <input type="number" readonly class="entry-input"
-              :data-pidx="i" :id="'entry_' + i" placeholder="0"
+            <input type="text" inputmode="none" readonly class="entry-input"
+              :data-pidx="i" :id="'entry_' + i" placeholder="–"
               :data-pname="p.name"
-              :value="$store.game.entries[i] || ''"
+              :value="$store.game.entries[i]"
               @click="openNumpad($el)">
           </td>
         </template>
@@ -408,7 +461,7 @@ window.addEventListener('appinstalled', function() {
         <td>&#x03a3;</td>
         <template x-for="(t, i) in $store.game.liveTotals" :key="'t'+i">
           <td style="font-weight:800;font-size:1rem"
-            :class="{ 'winner': $store.game.players.length > 1 && t === $store.game.liveMaxTotal && t !== 0 }"
+            :class="{ 'winner': $store.game.players.length > 1 && t === $store.game.liveMaxTotal && t !== 0, 'game-won': $store.game.liveWinners[i] }"
             x-text="t"></td>
         </template>
       </tr>
@@ -438,6 +491,19 @@ window.addEventListener('appinstalled', function() {
         :checked="$store.game.lowWins"
         @change="toggleLowWins($el.checked)"> Lowest score wins
     </label>
+    <label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Score transform (JS)
+      <input type="text" id="scoreTransformInput" placeholder="e.g. total > 50 ? 25 : total"
+        :value="$store.game.scoreTransform"
+        @change="setScoreTransform($el.value)"
+        style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:var(--bg);color:var(--text);font-family:monospace;font-size:.85rem">
+    </label>
+    <label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Winning condition (JS)
+      <input type="text" id="winConditionInput" placeholder="e.g. total === 50"
+        :value="$store.game.winCondition"
+        @change="setWinCondition($el.value)"
+        style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:var(--bg);color:var(--text);font-family:monospace;font-size:.85rem">
+    </label>
+    <div style="margin:8px 0"><button class="preset-btn" id="presetMolkky" @click="applyPreset('molkky')">M&#xF6;lkky</button></div>
     <button class="modal-close" id="closeScoreboard" @click="$store.app.showScoreboard = false">Close</button>
   </div>
 </div>
@@ -494,9 +560,27 @@ window.addEventListener('appinstalled', function() {
         @keydown.enter="addToRoster()">
       <button class="modal-close" id="rosterAdd" style="width:auto;margin:0;padding:10px 20px" @click="addToRoster()">Add</button>
     </div>
+    <div id="pickOrderList" class="reorder-list" data-reorder="pickOrder" x-show="$store.app.pickOrder.length > 1" style="margin-top:12px">
+      <template x-for="(p, i) in $store.app.pickOrder" :key="'po'+i">
+        <div class="reorder-item" :data-idx="i">
+          <span class="reorder-grip" aria-label="Drag to reorder">⠿</span>
+          <span class="reorder-rank" x-text="i + 1"></span>
+          <span class="reorder-name" x-text="p.name"></span>
+        </div>
+      </template>
+    </div>
     <label style="display:flex;align-items:center;gap:8px;margin:12px 0;cursor:pointer">
       <input type="checkbox" id="pickLowWins"> Lowest score wins
     </label>
+    <label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Score transform (JS)
+      <input type="text" id="pickScoreTransform" placeholder="e.g. total > 50 ? 25 : total"
+        style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:var(--bg);color:var(--text);font-family:monospace;font-size:.85rem">
+    </label>
+    <label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Winning condition (JS)
+      <input type="text" id="pickWinCondition" placeholder="e.g. total === 50"
+        style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:var(--bg);color:var(--text);font-family:monospace;font-size:.85rem">
+    </label>
+    <div style="margin:8px 0"><button class="preset-btn" id="pickPresetMolkky" @click="applyPickPreset('molkky')">M&#xF6;lkky</button></div>
     <button class="modal-close" id="pickStart" x-show="$store.game.roster.length > 0" @click="startGame()">Start Game</button>
     <button class="modal-close" id="pickCancel" style="background:var(--muted);margin-top:8px" @click="$store.app.showPick = false">Cancel</button>
   </div>
@@ -522,6 +606,24 @@ window.addEventListener('appinstalled', function() {
       <button class="modal-close" id="addPlayerAdd" style="width:auto;margin:0;padding:10px 20px" @click="addPlayerFromInput()">Add</button>
     </div>
     <button class="modal-close" id="addPlayerClose" style="background:var(--muted);margin-top:8px" @click="$store.app.showAddPlayer = false">Cancel</button>
+  </div>
+</div>
+
+<!-- Reorder Players -->
+<div class="modal-overlay" id="modalReorder" :class="{ 'open': $store.app.showReorder }" @click.self="$store.app.showReorder = false">
+  <div class="modal">
+    <h2>Player Order</h2>
+    <div class="reorder-list" data-reorder="reorderList">
+      <template x-for="(p, i) in $store.app.reorderList" :key="'ro'+i">
+        <div class="reorder-item" :data-idx="i">
+          <span class="reorder-grip" aria-label="Drag to reorder">⠿</span>
+          <span class="reorder-rank" x-text="i + 1"></span>
+          <span class="reorder-name" x-text="p.name"></span>
+        </div>
+      </template>
+    </div>
+    <button class="modal-close" id="reorderConfirm" @click="confirmReorder()">Apply</button>
+    <button class="modal-close" id="reorderCancel" style="background:var(--muted);margin-top:8px" @click="$store.app.showReorder = false">Cancel</button>
   </div>
 </div>
 
@@ -551,6 +653,8 @@ window.addEventListener('appinstalled', function() {
     <button class="np-btn np-accent" data-key="done">&#x2713;</button>
   </div>
 </div>
+
+<div id="winToast" class="win-toast"></div>
 
 <script type="module">
 import Alpine from 'alpinejs';
@@ -595,12 +699,44 @@ function getSavedGames(){
   return a;
 }
 
+// ── Custom rule caches ──
+var _cachedTransformFn = null;
+var _cachedTransformExpr = '';
+var _cachedWinFn = null;
+var _cachedWinExpr = '';
+
+function getTransformFn(expr){
+  if(!expr) return null;
+  if(expr === _cachedTransformExpr && _cachedTransformFn) return _cachedTransformFn;
+  try {
+    _cachedTransformFn = new Function('total', 'playerIndex', 'round', 'return ' + expr);
+    _cachedTransformExpr = expr;
+    return _cachedTransformFn;
+  } catch(e){ return null; }
+}
+
+function getWinFn(expr){
+  if(!expr) return null;
+  if(expr === _cachedWinExpr && _cachedWinFn) return _cachedWinFn;
+  try {
+    _cachedWinFn = new Function('total', 'playerIndex', 'round', 'return ' + expr);
+    _cachedWinExpr = expr;
+    return _cachedWinFn;
+  } catch(e){ return null; }
+}
+
 function totals(){
   var players = getPlayers();
   var rounds = getRounds();
+  var tfn = getTransformFn(yMeta.get('scoreTransform') || '');
   var t = players.map(function(){ return 0; });
-  rounds.forEach(function(r){
+  rounds.forEach(function(r, ri){
     r.forEach(function(v,i){ t[i] += (v||0); });
+    if(tfn){
+      for(var i = 0; i < t.length; i++){
+        try { t[i] = tfn(t[i], i, ri); } catch(e){}
+      }
+    }
   });
   return t;
 }
@@ -655,6 +791,174 @@ function removePlayer(idx){
   render();
 }
 
+// ── Reorder players ──
+function openReorderModal() {
+  var list = getPlayers().map(function(p){ return { name: p.name }; });
+  Alpine.store('app').reorderList = list;
+  Alpine.store('app').showReorder = true;
+}
+
+function confirmReorder() {
+  var newOrder = Alpine.store('app').reorderList;
+  var oldNames = getPlayers().map(function(p){ return p.name; });
+  // Build permutation: perm[newIdx] = oldIdx
+  var perm = newOrder.map(function(p) {
+    return oldNames.indexOf(p.name);
+  });
+  // Apply to yPlayers: delete all and re-create in new order
+  yPlayers.delete(0, yPlayers.length);
+  perm.forEach(function(oldIdx) {
+    var pm = new Y.Map();
+    pm.set('name', oldNames[oldIdx]);
+    yPlayers.push([pm]);
+  });
+  // Apply to yRounds: permute each round
+  for (var i = 0; i < yRounds.length; i++) {
+    var old = yRounds.get(i);
+    var newRow = perm.map(function(oldIdx){ return old[oldIdx] || 0; });
+    yRounds.delete(i, 1);
+    yRounds.insert(i, [newRow]);
+  }
+  // Permute pending entries
+  var g = Alpine.store('game');
+  var oldEntries = g.entries.slice();
+  g.entries = perm.map(function(oldIdx){ return oldEntries[oldIdx] || 0; });
+  Alpine.store('app').showReorder = false;
+  render();
+}
+
+// ── Drag-and-drop reorder engine ──
+// Each .reorder-list[data-reorder] names the Alpine store('app') array it
+// controls.  Dragging a .reorder-grip moves items in that array in real time.
+// Visual feedback: floating clone follows the pointer, a dashed placeholder
+// marks the original slot, and a coloured line shows the insertion point.
+(function initDragReorder() {
+  var dragging = null; // { list, storeKey, curIdx, clone, dropLine, offsetY }
+
+  function getListAndKey(grip) {
+    var item = grip.closest('.reorder-item');
+    var list = grip.closest('.reorder-list');
+    if (!item || !list) return null;
+    return { list: list, storeKey: list.dataset.reorder };
+  }
+
+  function getItemIndex(item) {
+    return parseInt(item.dataset.idx, 10);
+  }
+
+  function moveInStore(key, fromIdx, toIdx) {
+    var arr = Alpine.store('app')[key].slice();
+    var item = arr.splice(fromIdx, 1)[0];
+    arr.splice(toIdx, 0, item);
+    Alpine.store('app')[key] = arr;
+  }
+
+  function markPlaceholder() {
+    var items = dragging.list.querySelectorAll('.reorder-item');
+    items.forEach(function(el, i) {
+      el.classList.toggle('drag-placeholder', i === dragging.curIdx);
+    });
+  }
+
+  function updateDropLine(clientY) {
+    var items = dragging.list.querySelectorAll('.reorder-item');
+    var listRect = dragging.list.getBoundingClientRect();
+    var lineY = null;
+    for (var i = 0; i < items.length; i++) {
+      var rect = items[i].getBoundingClientRect();
+      var mid = rect.top + rect.height / 2;
+      if (clientY < mid) {
+        lineY = rect.top - listRect.top - 1;
+        break;
+      }
+    }
+    if (lineY === null) {
+      var last = items[items.length - 1].getBoundingClientRect();
+      lineY = last.bottom - listRect.top + 2;
+    }
+    dragging.dropLine.style.top = lineY + 'px';
+  }
+
+  function onStart(e) {
+    var grip = e.target.closest('.reorder-grip');
+    if (!grip) return;
+    var info = getListAndKey(grip);
+    if (!info) return;
+    var item = grip.closest('.reorder-item');
+    var idx = getItemIndex(item);
+    var rect = item.getBoundingClientRect();
+    var clientY = e.clientY;
+
+    // Build floating clone — strip Alpine directives so it stays inert
+    var clone = document.createElement('div');
+    clone.className = 'drag-clone';
+    clone.style.width = rect.width + 'px';
+    clone.innerHTML = item.innerHTML;
+    clone.querySelectorAll('*').forEach(function(el) {
+      Array.from(el.attributes).forEach(function(a) {
+        if (a.name.indexOf('x-') === 0 || a.name.indexOf(':') === 0) el.removeAttribute(a.name);
+      });
+    });
+    clone.style.left = rect.left + 'px';
+    clone.style.top = rect.top + 'px';
+    document.body.appendChild(clone);
+
+    // Create drop-line indicator
+    var dropLine = document.createElement('div');
+    dropLine.className = 'drag-drop-line';
+    info.list.appendChild(dropLine);
+
+    dragging = {
+      list: info.list, storeKey: info.storeKey, curIdx: idx,
+      clone: clone, dropLine: dropLine, offsetY: clientY - rect.top
+    };
+    markPlaceholder();
+    updateDropLine(clientY);
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    var clientY = e.clientY;
+
+    // Move the floating clone
+    dragging.clone.style.top = (clientY - dragging.offsetY) + 'px';
+
+    updateDropLine(clientY);
+
+    var items = dragging.list.querySelectorAll('.reorder-item');
+    for (var i = 0; i < items.length; i++) {
+      var rect = items[i].getBoundingClientRect();
+      if (clientY >= rect.top && clientY <= rect.bottom && i !== dragging.curIdx) {
+        moveInStore(dragging.storeKey, dragging.curIdx, i);
+        dragging.curIdx = i;
+        markPlaceholder();
+        var rank = dragging.clone.querySelector('.reorder-rank');
+        if (rank) rank.textContent = i + 1;
+        break;
+      }
+    }
+  }
+
+  function onEnd() {
+    if (!dragging) return;
+    dragging.clone.remove();
+    dragging.dropLine.remove();
+    dragging.list.querySelectorAll('.drag-placeholder').forEach(function(el) {
+      el.classList.remove('drag-placeholder');
+    });
+    dragging = null;
+  }
+
+  document.addEventListener('pointerdown', function(e) {
+    if (e.target.closest('.reorder-grip')) onStart(e);
+  });
+  document.addEventListener('pointermove', function(e) { onMove(e); });
+  document.addEventListener('pointerup', function(e) { onEnd(e); });
+  document.addEventListener('pointercancel', function(e) { onEnd(e); });
+})();
+
 // ── Roster helpers ──
 function getRoster() {
   var a = [];
@@ -683,6 +987,9 @@ function addToRoster() {
   var sel = Alpine.store('app').pickSelected;
   sel[name] = true;
   Alpine.store('app').pickSelected = Object.assign({}, sel);
+  var order = Alpine.store('app').pickOrder.slice();
+  order.push({ name: name });
+  Alpine.store('app').pickOrder = order;
   $('rosterInput').value = '';
   syncFromYjs();
   $('rosterInput').focus();
@@ -691,18 +998,32 @@ function addToRoster() {
 // ── Player picker ──
 function togglePick(name) {
   var sel = Alpine.store('app').pickSelected;
-  if (sel[name]) { delete sel[name]; } else { sel[name] = true; }
+  var order = Alpine.store('app').pickOrder.slice();
+  if (sel[name]) {
+    delete sel[name];
+    order = order.filter(function(p){ return p.name !== name; });
+  } else {
+    sel[name] = true;
+    order.push({ name: name });
+  }
   Alpine.store('app').pickSelected = Object.assign({}, sel);
+  Alpine.store('app').pickOrder = order;
 }
 
 function openPickModal() {
   var sel = {};
+  var order = [];
   for (var i = 0; i < yPlayers.length; i++) {
-    sel[yPlayers.get(i).get('name')] = true;
+    var n = yPlayers.get(i).get('name');
+    sel[n] = true;
+    order.push({ name: n });
   }
   Alpine.store('app').pickSelected = sel;
+  Alpine.store('app').pickOrder = order;
   $('pickGameName').value = yMeta.get('gameName') || '';
   $('pickLowWins').checked = !!yMeta.get('lowWins');
+  $('pickScoreTransform').value = yMeta.get('scoreTransform') || '';
+  $('pickWinCondition').value = yMeta.get('winCondition') || '';
   $('rosterInput').value = '';
   syncFromYjs();
   updatePickStartEnabled();
@@ -716,14 +1037,14 @@ function updatePickStartEnabled() {
 function startGame() {
   var gn = $('pickGameName').value.trim();
   if (!gn) return;
-  var sel = Alpine.store('app').pickSelected;
-  var names = [];
-  getRoster().forEach(function(p) {
-    if (sel[p.name]) names.push(p.name);
-  });
+  var names = Alpine.store('app').pickOrder.map(function(p){ return p.name; });
   if (names.length === 0) { alert('Select at least one player'); return; }
   yMeta.set('gameName', gn);
   yMeta.set('lowWins', $('pickLowWins').checked);
+  yMeta.set('scoreTransform', $('pickScoreTransform').value);
+  yMeta.set('winCondition', $('pickWinCondition').value);
+  _cachedTransformFn = null;
+  _cachedWinFn = null;
   $('gameName').value = gn;
   yPlayers.delete(0, yPlayers.length);
   yRounds.delete(0, yRounds.length);
@@ -790,13 +1111,27 @@ function addPlayerFromInput() {
 function addRound(){
   var g = Alpine.store('game');
   if(yPlayers.length === 0){ alert('Add players first!'); return; }
-  var scores = g.entries.slice();
+  var scores = g.entries.map(function(v){ return v || 0; });
   var anyNonZero = scores.some(function(v){ return v !== 0; });
   if(!anyNonZero && !confirm('All scores are 0. Add this round?')) return;
   closeNumpad();
   yRounds.push([scores]);
-  for(var i = 0; i < g.entries.length; i++) g.entries[i] = 0;
+  for(var i = 0; i < g.entries.length; i++){
+    g.entries[i] = '';
+    var inp = $('entry_' + i);
+    if(inp) inp.value = '';
+  }
   render();
+  var winners = g.liveWinners;
+  var winnerNames = [];
+  for(var wi = 0; wi < g.players.length; wi++){
+    if(winners[wi]) winnerNames.push(g.players[wi].name);
+  }
+  if(winnerNames.length > 0){
+    showWinToast(winnerNames);
+    setTimeout(function(){ openScoreboard(); }, 300);
+    return;
+  }
   setTimeout(function(){
     $('tableWrap').scrollTop = $('tableWrap').scrollHeight;
     var first = $('scoreBody').querySelector('.entry-input');
@@ -832,6 +1167,37 @@ function toggleLowWins(checked){
   yMeta.set('lowWins', checked);
   render();
 }
+function setScoreTransform(v){
+  yMeta.set('scoreTransform', v);
+  _cachedTransformFn = null;
+  render();
+}
+function setWinCondition(v){
+  yMeta.set('winCondition', v);
+  _cachedWinFn = null;
+  render();
+}
+function applyPreset(preset){
+  if(preset === 'molkky'){
+    $('scoreTransformInput').value = 'total > 50 ? 25 : total';
+    $('winConditionInput').value = 'total === 50';
+    setScoreTransform('total > 50 ? 25 : total');
+    setWinCondition('total === 50');
+  }
+}
+function applyPickPreset(preset){
+  if(preset === 'molkky'){
+    $('pickScoreTransform').value = 'total > 50 ? 25 : total';
+    $('pickWinCondition').value = 'total === 50';
+  }
+}
+function showWinToast(names){
+  var el = $('winToast');
+  var verb = names.length > 1 ? ' win!' : ' wins!';
+  el.textContent = '\uD83C\uDFC6 ' + names.join(', ') + verb;
+  el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 4000);
+}
 
 // ── Save ──
 function saveGame(){
@@ -845,6 +1211,8 @@ function saveGame(){
     date: new Date().toISOString(),
     gameName: yMeta.get('gameName') || 'Untitled',
     lowWins: !!yMeta.get('lowWins'),
+    scoreTransform: yMeta.get('scoreTransform') || '',
+    winCondition: yMeta.get('winCondition') || '',
     players: players.map(function(p,i){ return {name:p.name, score:t[i]}; }),
     rounds: JSON.parse(JSON.stringify(rounds))
   }]);
@@ -919,6 +1287,10 @@ function loadGame(idx){
   }
   yMeta.set('gameName', g.gameName || '');
   yMeta.set('lowWins', !!g.lowWins);
+  yMeta.set('scoreTransform', g.scoreTransform || '');
+  yMeta.set('winCondition', g.winCondition || '');
+  _cachedTransformFn = null;
+  _cachedWinFn = null;
   Alpine.store('app').showGames = false;
   render();
 }
@@ -936,6 +1308,7 @@ var npTarget = null; // current entry input element
 var npRaw = ''; // raw digit string (without sign)
 var npNeg = false;
 var npEditMode = false; // true when editing a committed cell
+var npReplaceOnKey = false; // first keystroke replaces old value in edit mode
 var npEditRound = -1;
 var npEditPlayer = -1;
 var npHistoryPushed = false; // true when a history entry was pushed for the numpad
@@ -948,12 +1321,16 @@ function npValue() {
 
 function npSync() {
   var val = npNeg && npRaw !== '' && npRaw !== '0' ? '-' + npRaw : npRaw;
-  $('npValue').textContent = val || '0';
+  $('npValue').textContent = val || '\u2013';
   if (npEditMode) {
     Alpine.store('game').rounds[npEditRound][npEditPlayer] = val ? parseInt(val) : 0;
   } else if (npTarget) {
     var pi = parseInt(npTarget.dataset.pidx);
-    Alpine.store('game').entries[pi] = val ? parseInt(val) : 0;
+    if (npRaw !== '') {
+      var n = val ? parseInt(val) : 0;
+      Alpine.store('game').entries[pi] = n;
+      npTarget.value = n;
+    }
   }
 }
 
@@ -996,6 +1373,9 @@ function openNumpad(input) {
   npSync();
   document.querySelectorAll('.entry-input').forEach(function(el) { el.classList.remove('active-pad'); });
   input.classList.add('active-pad');
+  document.querySelectorAll('th.active-player').forEach(function(el) { el.classList.remove('active-player'); });
+  var th = document.querySelectorAll('#headerRow th')[parseInt(input.dataset.pidx) + 1];
+  if (th) th.classList.add('active-player');
   $('npDelRound').style.display = 'none';
   Alpine.store('app').showNumpad = true;
   if (!npHistoryPushed) { history.pushState({numpad: true}, ''); npHistoryPushed = true; }
@@ -1004,6 +1384,7 @@ function openNumpad(input) {
 
 function openNumpadForEdit(ri, pi) {
   npEditMode = true;
+  npReplaceOnKey = true;
   npEditRound = ri;
   npEditPlayer = pi;
   npTarget = null;
@@ -1017,6 +1398,9 @@ function openNumpadForEdit(ri, pi) {
   var cell = document.querySelector('td.score-cell[data-round="' + ri + '"][data-player="' + pi + '"]');
   if (cell) cell.classList.add('active-edit');
   document.querySelectorAll('.entry-input').forEach(function(el) { el.classList.remove('active-pad'); });
+  document.querySelectorAll('th.active-player').forEach(function(el) { el.classList.remove('active-player'); });
+  var th = document.querySelectorAll('#headerRow th')[pi + 1];
+  if (th) th.classList.add('active-player');
   npSync();
   $('npDelRound').style.display = 'block';
   Alpine.store('app').showNumpad = true;
@@ -1040,6 +1424,7 @@ function closeNumpad() {
   syncNumpadPadding(false);
   Alpine.store('app').showNumpad = false;
   if (npTarget) npTarget.classList.remove('active-pad');
+  document.querySelectorAll('th.active-player').forEach(function(el) { el.classList.remove('active-player'); });
   npTarget = null;
   if (npHistoryPushed && !npClosingFromHistory) { npHistoryPushed = false; history.back(); }
   else { npHistoryPushed = false; }
@@ -1066,6 +1451,7 @@ $('numpad').onclick = function(e) {
   var delta = btn.dataset.delta;
 
   if (delta) {
+    npReplaceOnKey = false;
     var cur;
     if (npEditMode) {
       cur = npNeg ? -(parseInt(npRaw) || 0) : (parseInt(npRaw) || 0);
@@ -1080,25 +1466,36 @@ $('numpad').onclick = function(e) {
   }
 
   if (key >= '0' && key <= '9') {
+    if (npReplaceOnKey) { npRaw = ''; npNeg = false; npReplaceOnKey = false; }
     npRaw += key;
     npSync();
   } else if (key === '00') {
+    if (npReplaceOnKey) { npRaw = ''; npNeg = false; npReplaceOnKey = false; }
     npRaw += '00';
     npSync();
   } else if (key === 'del') {
+    npReplaceOnKey = false;
     npRaw = npRaw.slice(0, -1);
     npSync();
   } else if (key === 'clear') {
+    npReplaceOnKey = false;
     npRaw = '';
     npNeg = false;
     npSync();
   } else if (key === 'sign') {
+    npReplaceOnKey = false;
     npNeg = !npNeg;
     npSync();
   } else if (key === 'next') {
     if (npEditMode) { closeNumpad(); return; }
     if (!npTarget) return;
-    var idx = parseInt(npTarget.dataset.pidx);
+    // Finalize current entry to 0 if nothing was typed
+    var pi = parseInt(npTarget.dataset.pidx);
+    if (npRaw === '') {
+      Alpine.store('game').entries[pi] = 0;
+      npTarget.value = 0;
+    }
+    var idx = pi;
     var next = $('entry_' + (idx + 1));
     if (next) openNumpad(next);
     else { addRound(); }
@@ -1216,6 +1613,9 @@ Alpine.store('app', {
   showGames: false,
   showNumpad: false,
   pickSelected: {},
+  showReorder: false,
+  reorderList: [],
+  pickOrder: [],
 });
 
 Alpine.store('game', {
@@ -1225,24 +1625,48 @@ Alpine.store('game', {
   hasPlayers: false,
   gameName: '',
   lowWins: false,
+  scoreTransform: '',
+  winCondition: '',
   roster: [],
   savedGames: [],
   colWidths: [],
   get liveTotals(){
     var self = this;
+    var tfn = getTransformFn(self.scoreTransform);
     var t = self.players.map(function(){ return 0; });
-    self.rounds.forEach(function(r){
+    self.rounds.forEach(function(r, ri){
       r.forEach(function(v, i){ if(i < t.length) t[i] += (v || 0); });
+      if(tfn){
+        for(var i = 0; i < t.length; i++){
+          try { t[i] = tfn(t[i], i, ri); } catch(e){}
+        }
+      }
     });
     self.entries.forEach(function(v, i){
       if(i < t.length) t[i] += (v || 0);
     });
+    if(tfn){
+      for(var i = 0; i < t.length; i++){
+        try { t[i] = tfn(t[i], i, self.rounds.length); } catch(e){}
+      }
+    }
     return t;
   },
   get liveMaxTotal(){
     var t = this.liveTotals;
     if(!t.length) return 0;
     return this.lowWins ? Math.min.apply(null, t) : Math.max.apply(null, t);
+  },
+  get liveWinners(){
+    var self = this;
+    var wfn = getWinFn(self.winCondition);
+    if(!wfn) return {};
+    var t = self.liveTotals;
+    var winners = {};
+    for(var i = 0; i < t.length; i++){
+      try { if(wfn(t[i], i, self.rounds.length)) winners[i] = true; } catch(e){}
+    }
+    return winners;
   },
   get scoreboardEntries(){
     var self = this;
@@ -1274,9 +1698,11 @@ function syncFromYjs(){
   g.hasPlayers = players.length > 0;
   g.gameName = yMeta.get('gameName') || '';
   g.lowWins = !!yMeta.get('lowWins');
+  g.scoreTransform = yMeta.get('scoreTransform') || '';
+  g.winCondition = yMeta.get('winCondition') || '';
   if(document.activeElement !== $('gameName')) $('gameName').value = g.gameName;
   // Resize entries to match player count, preserving values
-  while(g.entries.length < players.length) g.entries.push(0);
+  while(g.entries.length < players.length) g.entries.push('');
   while(g.entries.length > players.length) g.entries.pop();
   g.roster = getRoster().map(function(r){ return { name: r.get ? r.get('name') : r.name }; });
   var games = getSavedGames();
@@ -1303,6 +1729,11 @@ window.addPlayerFromInput = addPlayerFromInput;
 window.addPlayerFromChip = addPlayerFromChip;
 window.openScoreboard = openScoreboard;
 window.toggleLowWins = toggleLowWins;
+window.setScoreTransform = setScoreTransform;
+window.setWinCondition = setWinCondition;
+window.showWinToast = showWinToast;
+window.applyPreset = applyPreset;
+window.applyPickPreset = applyPickPreset;
 window.openLoadModal = openLoadModal;
 window.newGame = newGame;
 window.exportCSV = exportCSV;
@@ -1317,6 +1748,8 @@ window.openNumpadForEdit = openNumpadForEdit;
 window.addRound = addRound;
 window.loadGame = loadGame;
 window.deleteGame = deleteGame;
+window.openReorderModal = openReorderModal;
+window.confirmReorder = confirmReorder;
 window.syncFromYjs = syncFromYjs;
 
 Alpine.start();
