@@ -38,22 +38,34 @@
 	<span class="badge badge-pill badge-warning"><a class="internal-link" href="/blog/tags/fleeting/">Fleeting</a></span></header>
   <article>
 	<p>Using <a target="_blank" href="/braindump/posts/web_embedded_search_engine/?title=pagefind#pagefind">pagefind</a></p>
-<link class="internal-link" href="/blog/pagefind/pagefind-ui.css" rel="stylesheet">
-<script src="/blog/pagefind/pagefind-ui.js" type="text/javascript"></script>
-<div id="search_pagefind"></div>
-<script>
-  window.addEventListener('DOMContentLoaded', (event) => {
-      new PagefindUI({
-      element: "#search_pagefind",
-      baseUrl: "/blog/",
-      indexWeight: 2,
-      mergeIndex: [{
-      bundlePath: "/braindump/pagefind",
-      indexWeight: 0.5
-      }]
+<link class="internal-link" href="/blog/pagefind/pagefind-component-ui.css" rel="stylesheet">
+<script src="/blog/pagefind/pagefind-component-ui.js" type="module"></script>
+<script type="module">
+  const waitForComponents = () =>
+      window.PagefindComponents
+          ? Promise.resolve(window.PagefindComponents)
+          : new Promise((resolve) => {
+              const t = setInterval(() => {
+                  if (window.PagefindComponents) {
+                      clearInterval(t);
+                      resolve(window.PagefindComponents);
+                  }
+              }, 10);
+          });
+
+  waitForComponents().then(({ configureInstance }) => {
+      configureInstance("default", {
+          bundlePath: "/blog/pagefind/",
+          baseUrl: "/blog/",
+          mergeIndex: [
+              { bundlePath: "/braindump/pagefind/", indexWeight: 0.5 }
+          ]
       });
   });
 </script>
+<p><pagefind-input placeholder="Search…"></pagefind-input>
+<pagefind-summary></pagefind-summary>
+<pagefind-results></pagefind-results></p>
 <h2 id="permalink"><a class="internal-link" href="/blog/blog_search?title=search_through_my_blog">Permalink</a></h2>
   </article>
   <aside class="date"><time>Last updated: 01 Feb 2024</time></aside>
