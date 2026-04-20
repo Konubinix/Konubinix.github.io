@@ -1,5 +1,5 @@
 const CACHE = 'condorcet-v1';
-const ASSETS = ['./', './index.html', 'https://esm.sh/petite-vue@0.4.1', 'https://esm.sh/sortablejs@1'];
+const ASSETS = ['./', './index.html', './bundle.js'];
 
 self.addEventListener('install', e => {
     e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
