@@ -1,597 +1,761 @@
 <!-- [[id:33913178-24ce-4f1b-8548-4c9be2a4420c::+BEGIN_SRC mhtml :results verbatim :exports none :noweb yes :tangle ~/perso/org-publish/github/condorcet/index.html][No heading:1]] -->
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-<meta charset="UTF-8">
-<script>
-if(new URLSearchParams(location.search).has('purge')&&'serviceWorker'in navigator){
-  caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});
-  navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(s){s.unregister()})});
-  location.replace(location.pathname);
-}
-</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.json">
+  <head>
+    <meta charset="UTF-8">
+    <script>
+    if(new URLSearchParams(location.search).has('purge')&&'serviceWorker'in navigator){
+      caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});
+      navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(s){s.unregister()})});
+      location.replace(location.pathname);
+    }
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
 
-<meta name="theme-color" content="#1b1d2e">
-<title>Condorcet</title>
-<script type="importmap">
-{"imports":{
-  "petite-vue":"https://esm.sh/petite-vue@0.4.1",
-  "sortablejs":"https://esm.sh/sortablejs@1",
-  "qrcode-generator":"https://esm.sh/qrcode-generator@1.4.4",
-  "@automerge/automerge":"https://esm.sh/@automerge/automerge@^2.2.5?target=es2022",
-  "https://esm.sh/@automerge/automerge-repo@1.2.1/es2022/slim.mjs":"./slim-shim.js",
-  "https://esm.sh/fast-sha256@^1.3.0?target=es2022":"./sha256-shim.js"
-}}
-</script>
-<style>
-:root{
-  --bg:#1b1d2e; --card:#262a40; --fg:#e8e8f0; --muted:#8a8ea5;
-  --accent:#f9a826; --danger:#e94560; --ok:#4ecca3;
-}
-*{box-sizing:border-box}
-[v-cloak]{display:none !important}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;line-height:1.4;min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}
-button{font:inherit;cursor:pointer;border:0;border-radius:6px;padding:12px 20px;background:var(--accent);color:#111;font-weight:600}
-button.secondary{background:var(--card);color:var(--fg)}
-button.cta,button.primary{background:var(--accent);color:#111}
-button:disabled{opacity:.4;cursor:not-allowed}
-input,textarea{font:inherit;background:var(--card);color:var(--fg);border:1px solid #333;border-radius:6px;padding:10px;width:100%}
-label{display:block;margin-bottom:12px;font-size:.9rem;color:var(--muted)}
-label input{margin-top:4px}
-fieldset{border:1px solid #333;border-radius:6px;padding:10px 12px;margin:12px 0}
-legend{color:var(--muted);font-size:.85rem;padding:0 6px}
-.row{display:flex;gap:6px;margin-bottom:6px}
-.row input{flex:1}
-.add-row{background:transparent;color:var(--accent);padding:6px;font-weight:500}
-h1,h2,h3{font-family:system-ui,sans-serif}
-.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty-state .emoji{font-size:3rem;margin-bottom:12px}
-.empty-state h1{font-size:1.4rem;margin:0 0 8px 0;color:var(--fg)}
-.empty-state p{font-size:.95rem;line-height:1.5;margin-bottom:24px}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:100}
-.modal.open{display:flex}
-.modal-panel{background:var(--bg);border-radius:12px;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow:auto}
-.modal-panel h2{margin-top:0}
-.modal-actions{display:flex;gap:10px;margin-top:16px}
-.modal-actions button{flex:1}
-.pass-screen{text-align:center;padding:60px 20px}
-.pass-screen h2{font-size:1.4rem;margin-bottom:8px}
-.pass-screen .counter{margin-top:40px;color:var(--muted);font-size:.85rem}
-.pass-screen .all-voted{margin:20px 0}
-.ballot-screen{padding:20px}
-.ballot-screen h2{margin:0 0 4px 0}
-.ballot-screen .hint{color:var(--muted);font-size:.85rem;margin-bottom:16px}
-.ranking{list-style:none;padding:0;margin:0 0 20px 0}
-.rank-item{display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--card);border-radius:8px;margin-bottom:8px;touch-action:none;cursor:grab}
-.rank-item.sortable-ghost{opacity:.4}
-.rank-item .grip{color:var(--muted);font-size:1.2rem}
-.rank-item .rank{font-weight:700;color:var(--accent);min-width:1.2em}
-.rank-item .name{flex:1}
-.ballot-actions{display:flex;gap:12px}
-.ballot-actions button{flex:1}
-#tallyScreen{padding:20px}
-.tally-kind{color:var(--muted);font-size:.9rem}
-.winner-card{background:var(--card);padding:24px;border-radius:12px;text-align:center;margin:16px 0;border:2px solid var(--ok)}
-.winner-label{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.winner-name{font-size:2rem;font-weight:800;margin-top:6px}
-.pairwise{width:100%;border-collapse:collapse;margin:12px 0}
-.pairwise th,.pairwise td{padding:6px 10px;text-align:center;border:1px solid #333}
-.pairwise td.self{background:#1a1a2a;color:var(--muted)}
-.pairwise td.wins{color:var(--ok);font-weight:700}
-.smith-note{background:var(--card);padding:12px 16px;border-radius:8px;margin-top:16px}
-.smith-note .seed{color:var(--muted);font-size:.8rem;margin-top:8px}
-.share-bar{display:flex;gap:8px;justify-content:center;align-items:center;padding:12px 20px;flex-wrap:wrap}
-.share-bar button{padding:8px 14px;font-size:.9rem}
-.share-toast{color:var(--ok);font-size:.85rem;padding:4px 8px}
-.qr-modal .modal-panel{text-align:center}
-#qrHolder{margin:16px auto;display:inline-block;background:#fff;padding:10px;border-radius:8px}
-#qrHolder svg{display:block;max-width:260px;height:auto}
-.qr-url{font-family:monospace;font-size:.75rem;color:var(--muted);word-break:break-all;margin:12px 0}
-</style>
-</head>
-<body v-scope>
-
-<div class="empty-state" id="emptyState" v-show="!scrutin" v-cloak>
-  <div class="emoji">&#x1f5f3;</div>
-  <h1>Scrutin de Condorcet</h1>
-  <p>Aucun scrutin en cours.</p>
-  <button class="cta" id="btnOpenCreate" @click="openCreate()">Créer un scrutin</button>
-</div>
-<div class="modal" id="createModal" :class="{open: ui.createOpen}" v-cloak>
-  <div class="modal-panel">
-    <h2>Nouveau scrutin</h2>
-
-    <label>Titre
-      <input type="text" id="createTitle" v-model="ui.form.title"
-             placeholder="Quel film ce soir&nbsp;?">
-    </label>
-
-    <fieldset>
-      <legend>Candidats</legend>
-      <template v-for="(c, i) in ui.form.candidates" :key="'c'+i">
-        <div class="row">
-          <input type="text" :value="c" @input="ui.form.candidates[i] = $event.target.value"
-                 :placeholder="'Candidat ' + (i+1)">
-          <button type="button" @click="ui.form.candidates.splice(i, 1)"
-                  v-show="ui.form.candidates.length > 2" aria-label="Retirer">&times;</button>
-        </div>
-      </template>
-      <button type="button" class="add-row" @click="ui.form.candidates.push('')">+ Candidat</button>
-    </fieldset>
-
-    <fieldset>
-      <legend>Votants</legend>
-      <template v-for="(v, i) in ui.form.voters" :key="'v'+i">
-        <div class="row">
-          <input type="text" :value="v" @input="ui.form.voters[i] = $event.target.value"
-                 :placeholder="'Votant ' + (i+1)">
-          <button type="button" @click="ui.form.voters.splice(i, 1)"
-                  v-show="ui.form.voters.length > 1" aria-label="Retirer">&times;</button>
-        </div>
-      </template>
-      <button type="button" class="add-row" @click="ui.form.voters.push('')">+ Votant</button>
-    </fieldset>
-
-    <fieldset>
-      <legend>Mode</legend>
-      <label><input type="radio" name="mode" value="shared-device" v-model="ui.form.mode">
-        Appareil partagé (tour de rôle)</label>
-      <label><input type="radio" name="mode" value="per-device" v-model="ui.form.mode" disabled>
-        Un appareil par personne <em>(sync à venir)</em></label>
-    </fieldset>
-
-    <div class="modal-actions">
-      <button class="secondary" @click="ui.createOpen = false">Annuler</button>
-      <button class="primary" id="btnConfirmCreate"
-              :disabled="!canCreate"
-              @click="createScrutin()">Créer</button>
-    </div>
-  </div>
-</div>
-<div class="share-bar" v-show="scrutin && !scrutin.closed && stage === 'pass'" v-cloak>
-  <button class="secondary" id="btnShare" @click="shareScrutin()" title="Partager">
-    🔗 Partager
-  </button>
-  <button class="secondary" id="btnQR" @click="openQR()" title="QR code">
-    ▦ QR
-  </button>
-  <span class="share-toast" v-show="ui.shareToast" v-text="ui.shareToast"></span>
-</div>
-<div id="voteFlow" v-show="scrutin && !scrutin.closed" v-cloak>
-
-  <!-- Écran-tampon : rien de secret visible -->
-  <div class="pass-screen" v-show="stage === 'pass'">
-    <h2 v-show="nextVoter">Au tour de <span v-text="nextVoter"></span></h2>
-    <p v-show="nextVoter">Passe l'appareil à cette personne.</p>
-    <button class="primary" id="btnTakePhone" v-show="nextVoter"
-            @click="startBallot()">
-      Je suis <span v-text="nextVoter"></span>
-    </button>
-    <div v-show="!nextVoter" class="all-voted">
-      <p>Tout le monde a voté.</p>
-      <button class="primary" id="btnClose" @click="close()">Dépouiller</button>
-    </div>
-    <p class="counter">
-      <span v-text="ballotsCount"></span> / <span v-text="rosterCount"></span> bulletins
-    </p>
-  </div>
-
-  <!-- Écran de classement -->
-  <div class="ballot-screen" v-show="stage === 'ballot'">
-    <h2>Ton classement, <span v-text="currentVoter"></span></h2>
-    <p class="hint">Glisse pour ordonner du plus préféré (en haut) au moins préféré.</p>
-    <ol class="ranking" id="ranking" ref="ranking" @vue:mounted="attachSortable($el)">
-      <template v-for="(c, i) in ui.ranking" :key="c">
-        <li class="rank-item" :data-candidate="c">
-          <span class="grip">&#x2807;</span>
-          <span class="rank" v-text="i + 1"></span>
-          <span class="name" v-text="c"></span>
-        </li>
-      </template>
-    </ol>
-    <div class="ballot-actions">
-      <button class="secondary" @click="cancelBallot()">Annuler</button>
-      <button class="primary" id="btnSubmit" @click="submitBallot()">Envoyer mon bulletin</button>
-    </div>
-  </div>
-
-</div>
-<div id="tallyScreen" v-show="scrutin && scrutin.closed" v-cloak>
-  <h2>Résultat</h2>
-  <template v-if="tally">
-    <div>
-      <p class="tally-kind" v-text="tallyExplanation"></p>
-      <div class="winner-card">
-        <div class="winner-label">Vainqueur</div>
-        <div class="winner-name" v-text="tally.winner"></div>
-      </div>
-
-      <h3>Matrice des duels</h3>
-      <table class="pairwise">
-        <thead>
-          <tr>
-            <th></th>
-            <template v-for="c in scrutin.candidates" :key="'h'+c">
-              <th v-text="c"></th>
-            </template>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-for="a in scrutin.candidates" :key="'r'+a">
-            <tr>
-              <th v-text="a"></th>
-              <template v-for="b in scrutin.candidates" :key="'c'+a+b">
-                <td :class="{self: a === b, wins: a !== b && tally.pairwise[a][b] > tally.pairwise[b][a]}"
-                    v-text="a === b ? '—' : tally.pairwise[a][b]"></td>
-              </template>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-
-      <template v-if="tally.kind === 'random-smith'">
-        <div class="smith-note">
-          <h3>Aucun vainqueur strict --- Smith set</h3>
-          <p>Pas de candidat ne bat tous les autres en duel : il y a un
-          cycle. Le Smith set est le plus petit ensemble dominant. On y
-          tire au sort avec une graine reproductible calculée sur les
-          bulletins clos.</p>
-          <ul>
-            <template v-for="c in tally.smith" :key="'s'+c">
-              <li v-text="c"></li>
-            </template>
-          </ul>
-          <p class="seed">Graine : <code v-text="tally.seedShort"></code></p>
-        </div>
-      </template>
-    </div>
-  </template>
-</div>
-<div class="modal qr-modal" :class="{open: ui.qrOpen}" v-cloak @click.self="ui.qrOpen = false">
-  <div class="modal-panel">
-    <h2>Rejoindre ce scrutin</h2>
-    <div id="qrHolder" v-html="ui.qrSvg"></div>
-    <p class="qr-url" v-text="ui.shareUrl"></p>
-    <button class="secondary" @click="ui.qrOpen = false">Fermer</button>
-  </div>
-</div>
-
-<script type="module">
-import { createApp } from 'petite-vue';
-import Sortable from 'sortablejs';
-import qrcode from 'qrcode-generator';
-window.qrcode = qrcode;
-window.Sortable = Sortable;
-
-import * as Automerge from '@automerge/automerge';
-import { Repo } from 'https://esm.sh/@automerge/automerge-repo@1.2.1/dist/Repo';
-import { isValidAutomergeUrl } from 'https://esm.sh/@automerge/automerge-repo@1.2.1/dist/AutomergeUrl';
-import { IndexedDBStorageAdapter } from 'https://esm.sh/@automerge/automerge-repo-storage-indexeddb@1';
-import { BrowserWebSocketClientAdapter } from 'https://esm.sh/@automerge/automerge-repo-network-websocket@1/dist/BrowserWebSocketClientAdapter';
-
-const WASM_URL = 'https://esm.sh/@automerge/automerge@2.2.9/dist/automerge.wasm';
-
-async function initAutomerge(){
-  await Automerge.initializeWasm(fetch(WASM_URL));
-}
-
-async function makeRepo(){
-  const params = new URLSearchParams(location.search);
-  const fromParam = params.get('sync_url');
-  if(fromParam){
-    localStorage.setItem('condorcet.sync_url', fromParam);
-    const clean = new URL(location);
-    clean.searchParams.delete('sync_url');
-    history.replaceState(null, '', clean);
-  }
-  const syncUrl = localStorage.getItem('condorcet.sync_url');
-  const network = syncUrl ? [new BrowserWebSocketClientAdapter(syncUrl)] : [];
-  return new Repo({
-    storage: new IndexedDBStorageAdapter('condorcet'),
-    network,
-  });
-}
-
-async function loadInitialHandle(repo){
-  const urlParam = new URLSearchParams(location.search).get('doc');
-  if(!urlParam || !isValidAutomergeUrl(urlParam)) return null;
-  const handle = repo.find(urlParam);
-  // On attend au plus 3s pour que le handle soit résolu (typiquement
-  // depuis IndexedDB en quelques ms ; plus long si via WebSocket). Si
-  // ça dépasse on rend la main : le store s'abonne à =change= et se
-  // remplit quand le doc arrive, sans bloquer =data-app-ready=.
-  await Promise.race([
-    handle.whenReady(['ready', 'unavailable']).catch(() => {}),
-    new Promise(r => setTimeout(r, 3000)),
-  ]);
-  return handle;
-}
-
-function pairwiseMatrix(candidates, ballots){
-  const m = {};
-  for(const a of candidates){
-    m[a] = {};
-    for(const b of candidates) if(b !== a) m[a][b] = 0;
-  }
-  for(const ballot of ballots){
-    const pos = {};
-    ballot.ranking.forEach((c, i) => { pos[c] = i; });
-    for(let i = 0; i < candidates.length; i++){
-      for(let j = i+1; j < candidates.length; j++){
-        const a = candidates[i], b = candidates[j];
-        if(a in pos && b in pos){
-          if(pos[a] < pos[b]) m[a][b]++;
-          else m[b][a]++;
+      <meta name="theme-color" content="#1b1d2e">
+      <title>Condorcet</title>
+      <script type="importmap">
+        {"imports":{
+            "petite-vue":"https://esm.sh/petite-vue@0.4.1",
+            "sortablejs":"https://esm.sh/sortablejs@1",
+            "qrcode-generator":"https://esm.sh/qrcode-generator@1.4.4",
+            "@automerge/automerge":"https://esm.sh/@automerge/automerge@^2.2.5?target=es2022",
+            "https://esm.sh/@automerge/automerge-repo@1.2.1/es2022/slim.mjs":"./slim-shim.js",
+            "https://esm.sh/fast-sha256@^1.3.0?target=es2022":"./sha256-shim.js"
+        }}
+      </script>
+      <style>
+        :root{
+            --bg:#1b1d2e; --card:#262a40; --fg:#e8e8f0; --muted:#8a8ea5;
+            --accent:#f9a826; --danger:#e94560; --ok:#4ecca3;
         }
-      }
+        *{box-sizing:border-box}
+        [v-cloak]{display:none !important}
+        body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;line-height:1.4;min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}
+        button{font:inherit;cursor:pointer;border:0;border-radius:6px;padding:12px 20px;background:var(--accent);color:#111;font-weight:600}
+        button.secondary{background:var(--card);color:var(--fg)}
+        button.cta,button.primary{background:var(--accent);color:#111}
+        button:disabled{opacity:.4;cursor:not-allowed}
+        input,textarea{font:inherit;background:var(--card);color:var(--fg);border:1px solid #333;border-radius:6px;padding:10px;width:100%}
+        label{display:block;margin-bottom:12px;font-size:.9rem;color:var(--muted)}
+        label input{margin-top:4px}
+        fieldset{border:1px solid #333;border-radius:6px;padding:10px 12px;margin:12px 0}
+        legend{color:var(--muted);font-size:.85rem;padding:0 6px}
+        .row{display:flex;gap:6px;margin-bottom:6px}
+        .row input{flex:1}
+        .add-row{background:transparent;color:var(--accent);padding:6px;font-weight:500}
+        h1,h2,h3{font-family:system-ui,sans-serif}
+        .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+        .empty-state .emoji{font-size:3rem;margin-bottom:12px}
+        .empty-state h1{font-size:1.4rem;margin:0 0 8px 0;color:var(--fg)}
+        .empty-state p{font-size:.95rem;line-height:1.5;margin-bottom:24px}
+        .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:100}
+        .modal.open{display:flex}
+        .modal-panel{background:var(--bg);border-radius:12px;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow:auto}
+        .modal-panel h2{margin-top:0}
+        .modal-actions{display:flex;gap:10px;margin-top:16px}
+        .modal-actions button{flex:1}
+        .pass-screen{text-align:center;padding:60px 20px}
+        .pass-screen h2{font-size:1.4rem;margin-bottom:8px}
+        .pass-screen .counter{margin-top:40px;color:var(--muted);font-size:.85rem}
+        .pass-screen .all-voted{margin:20px 0}
+        .ballot-screen{padding:20px}
+        .ballot-screen h2{margin:0 0 4px 0}
+        .ballot-screen .hint{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+        .ranking{list-style:none;padding:0;margin:0 0 20px 0}
+        .rank-item{display:flex;align-items:center;gap:12px;padding:14px 12px;background:var(--card);border-radius:8px;margin-bottom:8px;touch-action:none;cursor:grab}
+        .rank-item.sortable-ghost{opacity:.4}
+        .rank-item .grip{color:var(--muted);font-size:1.2rem}
+        .rank-item .rank{font-weight:700;color:var(--accent);min-width:1.2em}
+        .rank-item .name{flex:1}
+        .ballot-actions{display:flex;gap:12px}
+        .ballot-actions button{flex:1}
+        .identity-screen,.waiting-screen{text-align:center;padding:40px 20px}
+        .identity-screen h2,.waiting-screen h2{font-size:1.3rem;margin:0 0 8px 0}
+        .identity-screen .hint{color:var(--muted);font-size:.9rem;margin-bottom:20px}
+        .identity-list{list-style:none;padding:0;margin:0 0 20px 0}
+        .identity-list li{margin-bottom:8px}
+        .identity-pick{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);color:var(--fg)}
+        .identity-pick .status{color:var(--muted);font-size:.85rem;font-weight:400}
+        .identity-pick:disabled .name{color:var(--muted)}
+        .waiting-screen .counter{margin:16px 0 8px 0;color:var(--muted);font-size:.85rem}
+        .voters-list{list-style:none;padding:0;margin:8px auto 0 auto;text-align:left;max-width:260px}
+        .voters-list li{display:flex;justify-content:space-between;padding:6px 12px;border-radius:6px;color:var(--muted)}
+        .voters-list li.voted{color:var(--fg)}
+        .voters-list .check{color:var(--ok);font-weight:700}
+        .close-bar{text-align:center;padding:20px;border-top:1px solid #333;margin-top:20px}
+        .close-bar p{margin:0 0 12px 0;color:var(--muted)}
+        .add-voter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 20px;border-top:1px solid #333;margin-top:12px}
+        .add-voter-bar input{flex:1;min-width:140px}
+        .add-voter-bar button{padding:10px 14px;font-size:.9rem}
+        .add-voter-bar .error{color:var(--danger);font-size:.85rem;margin:6px 0 0 0;flex-basis:100%;text-align:center}
+        #tallyScreen{padding:20px}
+        .tally-kind{color:var(--muted);font-size:.9rem}
+        .winner-card{background:var(--card);padding:24px;border-radius:12px;text-align:center;margin:16px 0;border:2px solid var(--ok)}
+        .winner-label{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+        .winner-name{font-size:2rem;font-weight:800;margin-top:6px}
+        .pairwise{width:100%;border-collapse:collapse;margin:12px 0}
+        .pairwise th,.pairwise td{padding:6px 10px;text-align:center;border:1px solid #333}
+        .pairwise td.self{background:#1a1a2a;color:var(--muted)}
+        .pairwise td.wins{color:var(--ok);font-weight:700}
+        .smith-note{background:var(--card);padding:12px 16px;border-radius:8px;margin-top:16px}
+        .smith-note .seed{color:var(--muted);font-size:.8rem;margin-top:8px}
+        .share-bar{display:flex;gap:8px;justify-content:center;align-items:center;padding:12px 20px;flex-wrap:wrap}
+        .share-bar button{padding:8px 14px;font-size:.9rem}
+        .share-toast{color:var(--ok);font-size:.85rem;padding:4px 8px}
+        .qr-modal .modal-panel{text-align:center}
+        #qrHolder{margin:16px auto;display:inline-block;background:#fff;padding:10px;border-radius:8px}
+        #qrHolder svg{display:block;max-width:260px;height:auto}
+        .qr-url{font-family:monospace;font-size:.75rem;color:var(--muted);word-break:break-all;margin:12px 0}
+      </style>
+  </head>
+  <body v-scope>
+
+    <div class="empty-state" id="emptyState" v-show="!scrutin" v-cloak>
+      <div class="emoji">&#x1f5f3;</div>
+      <h1>Scrutin de Condorcet</h1>
+      <p>Aucun scrutin en cours.</p>
+      <button class="cta" id="btnOpenCreate" @click="openCreate()">Créer un scrutin</button>
+    </div>
+      <div class="modal" id="createModal" :class="{open: ui.createOpen}" v-cloak>
+        <div class="modal-panel">
+          <h2>Nouveau scrutin</h2>
+
+          <label>Titre
+            <input type="text" id="createTitle" v-model="ui.form.title"
+                   placeholder="Quel film ce soir&nbsp;?">
+          </label>
+
+          <fieldset>
+            <legend>Candidats</legend>
+            <template v-for="(c, i) in ui.form.candidates" :key="'c'+i">
+              <div class="row">
+                <input type="text" :value="c" @input="ui.form.candidates[i] = $event.target.value"
+                       :placeholder="'Candidat ' + (i+1)">
+                <button type="button" @click="ui.form.candidates.splice(i, 1)"
+                        v-show="ui.form.candidates.length > 2" aria-label="Retirer">&times;</button>
+              </div>
+            </template>
+            <button type="button" class="add-row" @click="ui.form.candidates.push('')">+ Candidat</button>
+          </fieldset>
+
+          <fieldset>
+            <legend>Votants</legend>
+            <template v-for="(v, i) in ui.form.voters" :key="'v'+i">
+              <div class="row">
+                <input type="text" :value="v" @input="ui.form.voters[i] = $event.target.value"
+                       :placeholder="'Votant ' + (i+1)">
+                <button type="button" @click="ui.form.voters.splice(i, 1)"
+                        v-show="ui.form.voters.length > 1" aria-label="Retirer">&times;</button>
+              </div>
+            </template>
+            <button type="button" class="add-row" @click="ui.form.voters.push('')">+ Votant</button>
+          </fieldset>
+
+          <fieldset>
+            <legend>Mode</legend>
+            <label><input type="radio" name="mode" value="shared-device" v-model="ui.form.mode">
+              Appareil partagé (tour de rôle)</label>
+            <label><input type="radio" name="mode" value="per-device" v-model="ui.form.mode">
+              Un appareil par personne</label>
+          </fieldset>
+
+          <div class="modal-actions">
+            <button class="secondary" @click="ui.createOpen = false">Annuler</button>
+            <button class="primary" id="btnConfirmCreate"
+                    :disabled="!canCreate"
+                    @click="createScrutin()">Créer</button>
+          </div>
+        </div>
+      </div>
+        <div class="share-bar" v-show="scrutin && !scrutin.closed && stage !== 'ballot'" v-cloak>
+          <button class="secondary" id="btnShare" @click="shareScrutin()" title="Partager">
+            🔗 Partager
+          </button>
+          <button class="secondary" id="btnQR" @click="openQR()" title="QR code">
+            ▦ QR
+          </button>
+          <span class="share-toast" v-show="ui.shareToast" v-text="ui.shareToast"></span>
+        </div>
+          <div class="close-bar"
+               v-show="scrutin && !scrutin.closed && allVoted && stage !== 'ballot'"
+               v-cloak>
+            <p>Tout le monde a voté.</p>
+            <button class="primary" id="btnClose" @click="close()">Dépouiller</button>
+          </div>
+            <div id="voteFlow" v-show="scrutin && !scrutin.closed" v-cloak>
+
+              <!-- Écran-tampon : rien de secret visible -->
+              <div class="pass-screen" v-show="stage === 'pass'">
+                <h2 v-show="nextVoter">Au tour de <span v-text="nextVoter"></span></h2>
+                <p v-show="nextVoter">Passe l'appareil à cette personne.</p>
+                <button class="primary" id="btnTakePhone" v-show="nextVoter"
+                        @click="startBallot()">
+                  Je suis <span v-text="nextVoter"></span>
+                </button>
+                <p class="counter">
+                  <span v-text="ballotsCount"></span> / <span v-text="rosterCount"></span> bulletins
+                </p>
+              </div>
+
+              <!-- Écran de classement -->
+              <div class="ballot-screen" v-show="stage === 'ballot'">
+                <h2>Ton classement, <span v-text="currentVoter"></span></h2>
+                <p class="hint">Glisse pour ordonner du plus préféré (en haut) au moins préféré.</p>
+                <ol class="ranking" id="ranking" ref="ranking" @vue:mounted="attachSortable($el)">
+                  <template v-for="(c, i) in ui.ranking" :key="c + ':' + currentVoter">
+                    <li class="rank-item" :data-candidate="c">
+                      <span class="grip">&#x2807;</span>
+                      <span class="rank" v-text="i + 1"></span>
+                      <span class="name" v-text="c"></span>
+                    </li>
+                  </template>
+                </ol>
+                <div class="ballot-actions">
+                  <button class="secondary" @click="cancelBallot()">Annuler</button>
+                  <button class="primary" id="btnSubmit" @click="submitBallot()">Envoyer mon bulletin</button>
+                </div>
+              </div>
+
+            </div>
+              <div class="identity-screen"
+                   v-show="scrutin && !scrutin.closed && scrutin.mode === 'per-device' && stage === 'identify'"
+                   v-cloak>
+                <div v-show="nextVoter">
+                  <h2>Qui es-tu&nbsp;?</h2>
+                  <p class="hint">Choisis ton nom pour commencer à voter.</p>
+                  <ul class="identity-list">
+                    <template v-for="v in scrutin.voters" :key="'i'+v">
+                      <li>
+                        <button class="identity-pick" @click="chooseIdentity(v)"
+                                :disabled="hasBallotFor(v)">
+                          <span class="name" v-text="v"></span>
+                          <span class="status" v-show="hasBallotFor(v)">a voté</span>
+                        </button>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+                <p class="counter">
+                  <span v-text="ballotsCount"></span> / <span v-text="rosterCount"></span> bulletins
+                </p>
+              </div>
+                <div class="waiting-screen"
+                     v-show="scrutin && !scrutin.closed && scrutin.mode === 'per-device' && stage === 'waiting'"
+                     v-cloak>
+                  <h2>Merci, <span v-text="identity"></span>.</h2>
+                  <p v-show="nextVoter">Ton bulletin est enregistré. En attente des autres…</p>
+                  <p class="counter">
+                    <span v-text="ballotsCount"></span> / <span v-text="rosterCount"></span> bulletins
+                  </p>
+                  <ul class="voters-list">
+                    <template v-for="v in scrutin.voters" :key="'w'+v">
+                      <li :class="{voted: hasBallotFor(v)}">
+                        <span v-text="v"></span>
+                        <span class="check" v-show="hasBallotFor(v)">✓</span>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+                  <div id="tallyScreen" v-show="scrutin && scrutin.closed" v-cloak>
+                    <h2>Résultat</h2>
+                    <template v-if="tally">
+                      <div>
+                        <p class="tally-kind" v-text="tallyExplanation"></p>
+                        <div class="winner-card">
+                          <div class="winner-label">Vainqueur</div>
+                          <div class="winner-name" v-text="tally.winner"></div>
+                        </div>
+
+                        <h3>Matrice des duels</h3>
+                        <table class="pairwise">
+                          <thead>
+                            <tr>
+                              <th></th>
+                              <template v-for="c in scrutin.candidates" :key="'h'+c">
+                                <th v-text="c"></th>
+                              </template>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template v-for="a in scrutin.candidates" :key="'r'+a">
+                              <tr>
+                                <th v-text="a"></th>
+                                <template v-for="b in scrutin.candidates" :key="'c'+a+b">
+                                  <td :class="{self: a === b, wins: a !== b && tally.pairwise[a][b] > tally.pairwise[b][a]}"
+                                      v-text="a === b ? '—' : tally.pairwise[a][b]"></td>
+                                </template>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+
+                        <template v-if="tally.kind === 'random-smith'">
+                          <div class="smith-note">
+                            <h3>Aucun vainqueur strict --- Smith set</h3>
+                            <p>Pas de candidat ne bat tous les autres en duel : il y a un
+                              cycle. Le Smith set est le plus petit ensemble dominant. On y
+                              tire au sort avec une graine reproductible calculée sur les
+                              bulletins clos.</p>
+                            <ul>
+                              <template v-for="c in tally.smith" :key="'s'+c">
+                                <li v-text="c"></li>
+                              </template>
+                            </ul>
+                            <p class="seed">Graine : <code v-text="tally.seedShort"></code></p>
+                          </div>
+                        </template>
+                      </div>
+                    </template>
+                  </div>
+                    <div class="add-voter-bar"
+                         v-show="scrutin && stage !== 'ballot'"
+                         v-cloak>
+                      <input type="text" v-model="ui.newVoter"
+                             placeholder="Ajouter un votant…"
+                             @keyup.enter="addVoter()">
+                      <button class="secondary" id="btnAddVoter"
+                              @click="addVoter()" :disabled="!ui.newVoter.trim()">
+                        + Ajouter
+                      </button>
+                      <p class="error" v-show="ui.addVoterError" v-text="ui.addVoterError"></p>
+                    </div>
+                      <div class="modal qr-modal" :class="{open: ui.qrOpen}" v-cloak @click.self="ui.qrOpen = false">
+                        <div class="modal-panel">
+                          <h2>Rejoindre ce scrutin</h2>
+                          <div id="qrHolder" v-html="ui.qrSvg"></div>
+                          <p class="qr-url" v-text="ui.shareUrl"></p>
+                          <button class="secondary" @click="ui.qrOpen = false">Fermer</button>
+                        </div>
+                      </div>
+
+                        <script type="module">
+                          import { createApp, reactive } from 'petite-vue';
+                          import Sortable from 'sortablejs';
+                          import qrcode from 'qrcode-generator';
+                          window.qrcode = qrcode;
+                          window.Sortable = Sortable;
+
+    import * as Automerge from '@automerge/automerge';
+    import { Repo } from 'https://esm.sh/@automerge/automerge-repo@1.2.1/dist/Repo';
+    import { isValidAutomergeUrl } from 'https://esm.sh/@automerge/automerge-repo@1.2.1/dist/AutomergeUrl';
+    import { IndexedDBStorageAdapter } from 'https://esm.sh/@automerge/automerge-repo-storage-indexeddb@1';
+    import { BrowserWebSocketClientAdapter } from 'https://esm.sh/@automerge/automerge-repo-network-websocket@1/dist/BrowserWebSocketClientAdapter';
+
+    const WASM_URL = 'https://esm.sh/@automerge/automerge@2.2.9/dist/automerge.wasm';
+
+    async function initAutomerge(){
+        await Automerge.initializeWasm(fetch(WASM_URL));
     }
-  }
-  return m;
-}
 
-function condorcetWinner(candidates, m){
-  for(const c of candidates){
-    const beatsAll = candidates.every(o => o === c || m[c][o] > m[o][c]);
-    if(beatsAll) return c;
-  }
-  return null;
-}
-
-function smithSet(candidates, m){
-  // Plus petit ensemble S tel que chaque membre de S bat tout non-membre.
-  // On part de l'ensemble complet et on éjecte quiconque est battu par
-  // un extérieur qui ne le bat pas en retour.
-  let smith = new Set(candidates);
-  let changed = true;
-  while(changed){
-    changed = false;
-    for(const c of Array.from(smith)){
-      const outsiders = candidates.filter(o => !smith.has(o));
-      const beatenByOutside = outsiders.some(o => m[o][c] > m[c][o]);
-      if(beatenByOutside){ smith.delete(c); changed = true; }
+    async function makeRepo(){
+        const params = new URLSearchParams(location.search);
+        const fromParam = params.get('sync_url');
+        if(fromParam){
+            localStorage.setItem('condorcet.sync_url', fromParam);
+            const clean = new URL(location);
+            clean.searchParams.delete('sync_url');
+            history.replaceState(null, '', clean);
+        }
+        const syncUrl = localStorage.getItem('condorcet.sync_url');
+        const network = syncUrl ? [new BrowserWebSocketClientAdapter(syncUrl)] : [];
+        return new Repo({
+            storage: new IndexedDBStorageAdapter('condorcet'),
+            network,
+        });
     }
-  }
-  return Array.from(smith).sort();
-}
 
-async function seedFromBallots(ballots){
-  const normalised = ballots
-    .map(b => ({voter: b.voter, ranking: b.ranking}))
-    .sort((a, b) => a.voter.localeCompare(b.voter));
-  const payload = JSON.stringify(normalised);
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
-  return new Uint8Array(buf);
-}
-
-function mulberry32(seed){
-  let a = seed >>> 0;
-  return function(){
-    a |= 0; a = a + 0x6D2B79F5 | 0;
-    let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-async function computeTally(scrutin){
-  const m = pairwiseMatrix(scrutin.candidates, scrutin.ballots);
-  const w = condorcetWinner(scrutin.candidates, m);
-  if(w) return { kind: 'condorcet', winner: w, pairwise: m };
-  const smith = smithSet(scrutin.candidates, m);
-  const seedBytes = await seedFromBallots(scrutin.ballots);
-  const seedInt = new DataView(seedBytes.buffer).getUint32(0);
-  const rng = mulberry32(seedInt);
-  const pick = smith[Math.floor(rng() * smith.length)];
-  const seedShort = Array.from(seedBytes.slice(0, 4))
-    .map(b => b.toString(16).padStart(2, '0')).join('');
-  return { kind: 'random-smith', winner: pick, smith, pairwise: m, seedShort };
-}
-
-function shuffled(arr){
-  const a = arr.slice();
-  for(let i = a.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// Le repo et le handle vivent hors du store réactif : petite-vue
-// enveloppe le data dans un Proxy, ce qui casse les private fields (#)
-// utilisés par la classe Repo ("Receiver must be an instance of ...").
-// On garde un handle non-réactif côté module, et on n'expose au store
-// qu'un snapshot du doc (déjà plain JSON).
-let _repo = null;
-let _handle = null;
-let _sortable = null;
-
-const voteStore = {
-  scrutin: null,
-  tally: null,
-  stage: 'pass',       // 'pass' | 'ballot'
-  currentVoter: null,
-  ui: {
-    createOpen: false,
-    form: {
-      title: '',
-      candidates: ['', ''],
-      voters: [''],
-      mode: 'shared-device',
-    },
-    ranking: [],
-    qrOpen: false,
-    qrSvg: '',
-    shareUrl: '',
-    shareToast: '',
-  },
-
-  // derived (petite-vue : getters sur l'objet data, évalués à chaque accès).
-  // Les getters ne doivent PAS retourner de Set/Map : la reactivité de
-  // petite-vue tente de les proxifier et échoue ("non-object as target").
-  get rosterCount(){ return this.scrutin ? this.scrutin.voters.length : 0; },
-  get ballotsCount(){ return this.scrutin ? this.scrutin.ballots.length : 0; },
-  get nextVoter(){
-    if(!this.scrutin) return null;
-    const voted = {};
-    for(const b of this.scrutin.ballots) voted[b.voter] = true;
-    return this.scrutin.voters.find(v => !voted[v]) || null;
-  },
-  get canCreate(){
-    const f = this.ui.form;
-    const cs = f.candidates.map(s => s.trim()).filter(Boolean);
-    const vs = f.voters.map(s => s.trim()).filter(Boolean);
-    return f.title.trim() && cs.length >= 2 && vs.length >= 1;
-  },
-  get tallyExplanation(){
-    if(!this.tally) return '';
-    if(this.tally.kind === 'condorcet')
-      return 'Vainqueur de Condorcet strict : bat tous les autres en duel.';
-    return 'Aucun vainqueur de Condorcet : cycle détecté. Tirage au sort reproductible dans le Smith set.';
-  },
-
-  // actions
-  openCreate(){ this.ui.createOpen = true; },
-
-  currentShareUrl(){
-    return location.origin + location.pathname + location.search;
-  },
-
-  async shareScrutin(){
-    const url = this.currentShareUrl();
-    const title = (this.scrutin && this.scrutin.title) || 'Scrutin';
-    if(navigator.share){
-      try { await navigator.share({ title, url }); return; }
-      catch(e){ /* annulé par l'utilisateur ou pas supporté → fallback clipboard */ }
+    async function loadInitialHandle(repo){
+        const urlParam = new URLSearchParams(location.search).get('doc');
+        if(!urlParam || !isValidAutomergeUrl(urlParam)) return null;
+        const handle = repo.find(urlParam);
+        await Promise.race([
+            handle.whenReady(['ready', 'unavailable']).catch(() => {}),
+            new Promise(r => setTimeout(r, 3000)),
+        ]);
+        return handle;
     }
-    try {
-      await navigator.clipboard.writeText(url);
-      this.ui.shareToast = 'Lien copié';
-      setTimeout(() => { this.ui.shareToast = ''; }, 2000);
-    } catch(e){
-      this.ui.shareToast = 'Copie impossible';
-      setTimeout(() => { this.ui.shareToast = ''; }, 2000);
+
+    function pairwiseMatrix(candidates, ballots){
+        const m = {};
+        for(const a of candidates){
+            m[a] = {};
+            for(const b of candidates) if(b !== a) m[a][b] = 0;
+        }
+        for(const ballot of ballots){
+            const pos = {};
+            ballot.ranking.forEach((c, i) => { pos[c] = i; });
+            for(let i = 0; i < candidates.length; i++){
+                for(let j = i+1; j < candidates.length; j++){
+                    const a = candidates[i], b = candidates[j];
+                    if(a in pos && b in pos){
+                        if(pos[a] < pos[b]) m[a][b]++;
+                        else m[b][a]++;
+                    }
+                }
+            }
+        }
+        return m;
     }
-  },
 
-  openQR(){
-    const url = this.currentShareUrl();
-    const qr = window.qrcode(0, 'M');
-    qr.addData(url);
-    qr.make();
-    this.ui.qrSvg = qr.createSvgTag({ cellSize: 6, margin: 2 });
-    this.ui.shareUrl = url;
-    this.ui.qrOpen = true;
-  },
+    function condorcetWinner(candidates, m){
+        for(const c of candidates){
+            const beatsAll = candidates.every(o => o === c || m[c][o] > m[o][c]);
+            if(beatsAll) return c;
+        }
+        return null;
+    }
 
-  change(fn){
-    _handle.change(fn);
-    this.scrutin = _handle.docSync();
-  },
+    function smithSet(candidates, m){
+        let smith = new Set(candidates);
+        let changed = true;
+        while(changed){
+            changed = false;
+            for(const c of Array.from(smith)){
+                const outsiders = candidates.filter(o => !smith.has(o));
+                const beatenByOutside = outsiders.some(o => m[o][c] > m[c][o]);
+                if(beatenByOutside){ smith.delete(c); changed = true; }
+            }
+        }
+        return Array.from(smith).sort();
+    }
 
-  createScrutin(){
-    const f = this.ui.form;
-    const candidates = f.candidates.map(s => s.trim()).filter(Boolean);
-    const voters = f.voters.map(s => s.trim()).filter(Boolean);
-    const handle = _repo.create({
-      title: f.title.trim(),
-      candidates,
-      voters,
-      ballots: [],
-      closed: false,
-      mode: f.mode,
-      method: 'condorcet-random-smith',
-      createdAt: Date.now(),
+    async function seedFromBallots(ballots){
+        const normalised = ballots
+              .map(b => ({voter: b.voter, ranking: b.ranking}))
+              .sort((a, b) => a.voter.localeCompare(b.voter));
+        const payload = JSON.stringify(normalised);
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+        return new Uint8Array(buf);
+    }
+
+    function mulberry32(seed){
+        let a = seed >>> 0;
+        return function(){
+            a |= 0; a = a + 0x6D2B79F5 | 0;
+            let t = Math.imul(a ^ a >>> 15, 1 | a);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+    }
+
+    async function computeTally(scrutin){
+        const m = pairwiseMatrix(scrutin.candidates, scrutin.ballots);
+        const w = condorcetWinner(scrutin.candidates, m);
+        if(w) return { kind: 'condorcet', winner: w, pairwise: m };
+        const smith = smithSet(scrutin.candidates, m);
+        const seedBytes = await seedFromBallots(scrutin.ballots);
+        const seedInt = new DataView(seedBytes.buffer).getUint32(0);
+        const rng = mulberry32(seedInt);
+        const pick = smith[Math.floor(rng() * smith.length)];
+        const seedShort = Array.from(seedBytes.slice(0, 4))
+              .map(b => b.toString(16).padStart(2, '0')).join('');
+        return { kind: 'random-smith', winner: pick, smith, pairwise: m, seedShort };
+    }
+
+    function cloneDoc(doc){
+        return doc ? JSON.parse(JSON.stringify(doc)) : doc;
+    }
+
+    let _repo = null;
+    let _handle = null;
+
+    const voteStore = {
+        scrutin: null,
+        tally: null,
+        stage: 'pass',       // 'pass' | 'ballot' | 'identify' | 'waiting'
+        allVoted: false,
+        ui: {},
+
+        get rosterCount(){ return this.scrutin ? this.scrutin.voters.length : 0; },
+        get ballotsCount(){ return this.scrutin ? this.scrutin.ballots.length : 0; },
+        get nextVoter(){
+            if(!this.scrutin) return null;
+            const voted = {};
+            for(const b of this.scrutin.ballots) voted[b.voter] = true;
+            return this.scrutin.voters.find(v => !voted[v]) || null;
+        },
+
+        change(fn){
+            _handle.change(fn);
+            this.scrutin = cloneDoc(_handle.docSync());
+            this.syncFlags();
+        },
+
+        syncFlags(){
+            const s = this.scrutin;
+            this.allVoted = !!s && s.ballots.length >= s.voters.length;
+        },
+
+        attach(handle){
+            _handle = handle;
+            const doc = handle.docSync();
+            if(doc){
+                this.scrutin = cloneDoc(doc);
+                this.syncFlags();
+                if(doc.closed) computeTally(doc).then(t => { this.tally = t; });
+                this.initStage(doc);
+            } else {
+                this.stage = 'pass';
+            }
+            handle.on('change', ev => {
+                this.scrutin = cloneDoc(ev.doc);
+                this.syncFlags();
+                if(ev.doc.closed && !this.tally){
+                    computeTally(ev.doc).then(t => { this.tally = t; });
+                }
+            });
+        },
+
+        initStage(doc){
+            if(doc.mode === 'per-device') this.initStagePerDevice(doc);
+            else this.stage = 'pass';
+        },
+    };
+
+    Object.assign(voteStore.ui, {
+        createOpen: false,
+        form: {
+            title: '',
+            candidates: ['', ''],
+            voters: [''],
+            mode: 'shared-device',
+        },
     });
-    history.replaceState(null, '', '?doc=' + handle.url);
-    this.ui.createOpen = false;
-    this.attach(handle);
-  },
 
-  attach(handle){
-    _handle = handle;
-    // Peut être undefined si le handle n'est pas encore =ready= (pas
-    // encore remonté depuis IndexedDB ou via la sync). Le listener
-    // =change= ci-dessous remplira =this.scrutin= quand ça arrive.
-    const doc = handle.docSync();
-    if(doc){
-      this.scrutin = doc;
-      if(doc.closed) computeTally(doc).then(t => { this.tally = t; });
+    Object.defineProperty(voteStore, 'canCreate', {
+        enumerable: true, configurable: true,
+        get(){
+            const f = this.ui.form;
+            const cs = f.candidates.map(s => s.trim()).filter(Boolean);
+            const vs = f.voters.map(s => s.trim()).filter(Boolean);
+            return f.title.trim() && cs.length >= 2 && vs.length >= 1;
+        },
+    });
+
+    Object.assign(voteStore, {
+        openCreate(){ this.ui.createOpen = true; },
+
+        createScrutin(){
+            const f = this.ui.form;
+            const candidates = f.candidates.map(s => s.trim()).filter(Boolean);
+            const voters = f.voters.map(s => s.trim()).filter(Boolean);
+            const handle = _repo.create({
+                title: f.title.trim(),
+                candidates,
+                voters,
+                ballots: [],
+                closed: false,
+                mode: f.mode,
+                method: 'condorcet-random-smith',
+                createdAt: Date.now(),
+            });
+            history.replaceState(null, '', '?doc=' + handle.url);
+            this.ui.createOpen = false;
+            this.attach(handle);
+        },
+    });
+
+    Object.assign(voteStore.ui, {
+        qrOpen: false,
+        qrSvg: '',
+        shareUrl: '',
+        shareToast: '',
+    });
+
+    Object.assign(voteStore, {
+        currentShareUrl(){
+            return location.origin + location.pathname + location.search;
+        },
+
+        async shareScrutin(){
+            const url = this.currentShareUrl();
+            const title = (this.scrutin && this.scrutin.title) || 'Scrutin';
+            if(navigator.share){
+                try { await navigator.share({ title, url }); return; }
+                catch(e){ /* annulé ou non supporté → fallback clipboard */ }
+            }
+            try {
+                await navigator.clipboard.writeText(url);
+                this.ui.shareToast = 'Lien copié';
+                setTimeout(() => { this.ui.shareToast = ''; }, 2000);
+            } catch(e){
+                this.ui.shareToast = 'Copie impossible';
+                setTimeout(() => { this.ui.shareToast = ''; }, 2000);
+            }
+        },
+
+        openQR(){
+            const url = this.currentShareUrl();
+            const qr = window.qrcode(0, 'M');
+            qr.addData(url);
+            qr.make();
+            this.ui.qrSvg = qr.createSvgTag({ cellSize: 6, margin: 2 });
+            this.ui.shareUrl = url;
+            this.ui.qrOpen = true;
+        },
+    });
+
+    function shuffled(arr){
+        const a = arr.slice();
+        for(let i = a.length - 1; i > 0; i--){
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
     }
-    handle.on('change', ev => {
-      this.scrutin = ev.doc;
-      if(ev.doc.closed && !this.tally){
-        computeTally(ev.doc).then(t => { this.tally = t; });
-      }
+
+    let _sortable = null;
+
+    Object.assign(voteStore.ui, { ranking: [] });
+
+    Object.assign(voteStore, {
+        currentVoter: null,
+
+        startBallot(voter){
+            this.currentVoter = voter || this.nextVoter;
+            this.ui.ranking = shuffled(this.scrutin.candidates);
+            this.stage = 'ballot';
+        },
+
+        cancelBallot(){
+            this.currentVoter = null;
+            this.ui.ranking = [];
+            if(this.scrutin && this.scrutin.mode === 'per-device'){
+                this.identity = null;
+                localStorage.removeItem(this.identityKey());
+                this.stage = 'identify';
+            } else {
+                this.stage = 'pass';
+            }
+        },
+
+        submitBallot(){
+            const ranking = this.ui.ranking.slice();
+            const voter = this.currentVoter;
+            this.change(d => {
+                const existing = d.ballots.findIndex(b => b.voter === voter);
+                const ballot = { voter, ranking, at: Date.now() };
+                if(existing >= 0) d.ballots[existing] = ballot;
+                else d.ballots.push(ballot);
+            });
+            this.currentVoter = null;
+            this.ui.ranking = [];
+            this.stage = this.scrutin.mode === 'per-device' ? 'waiting' : 'pass';
+        },
+
+        attachSortable(el){
+            if(_sortable){ _sortable.destroy(); _sortable = null; }
+            const store = this;
+            _sortable = window.Sortable.create(el, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                handle: '.rank-item',
+                onEnd(evt){
+                    const newOrder = store.ui.ranking.slice();
+                    const [moved] = newOrder.splice(evt.oldIndex, 1);
+                    newOrder.splice(evt.newIndex, 0, moved);
+                    store.ui.ranking = newOrder;
+                },
+            });
+        },
     });
-    this.stage = 'pass';
-  },
 
-  startBallot(){
-    this.currentVoter = this.nextVoter;
-    this.ui.ranking = shuffled(this.scrutin.candidates);
-    this.stage = 'ballot';
-  },
+    Object.assign(voteStore, {
+        identity: null,  // le votant attaché à CE navigateur
 
-  cancelBallot(){
-    this.currentVoter = null;
-    this.ui.ranking = [];
-    this.stage = 'pass';
-  },
+        identityKey(){ return 'condorcet.identity.' + _handle.url; },
 
-  submitBallot(){
-    const ranking = this.ui.ranking.slice();
-    const voter = this.currentVoter;
-    this.change(d => {
-      const existing = d.ballots.findIndex(b => b.voter === voter);
-      const ballot = { voter, ranking, at: Date.now() };
-      if(existing >= 0) d.ballots[existing] = ballot;
-      else d.ballots.push(ballot);
+        // Parametré → une méthode, pas un getter.
+        hasBallotFor(name){
+            return !!this.scrutin && this.scrutin.ballots.some(b => b.voter === name);
+        },
+
+        initStagePerDevice(doc){
+            const stored = localStorage.getItem(this.identityKey());
+            if(stored && doc.voters.includes(stored)){
+                this.identity = stored;
+                if(doc.ballots.some(b => b.voter === stored)){
+                    this.stage = 'waiting';
+                } else {
+                    this.startBallot(stored);
+                }
+            } else {
+                this.stage = 'identify';
+            }
+        },
+
+        chooseIdentity(name){
+            this.identity = name;
+            localStorage.setItem(this.identityKey(), name);
+            if(this.hasBallotFor(name)) this.stage = 'waiting';
+            else this.startBallot(name);
+        },
     });
-    this.cancelBallot();
-  },
 
-  async close(){
-    this.change(d => { d.closed = true; });
-    this.tally = await computeTally(this.scrutin);
-  },
-
-  attachSortable(el){
-    if(_sortable){ _sortable.destroy(); _sortable = null; }
-    const store = this;
-    _sortable = window.Sortable.create(el, {
-      animation: 150,
-      ghostClass: 'sortable-ghost',
-      handle: '.rank-item',
-      onEnd(){
-        const newOrder = Array.from(el.querySelectorAll('.rank-item'))
-          .map(li => li.getAttribute('data-candidate'));
-        store.ui.ranking = newOrder;
-      },
+    Object.defineProperty(voteStore, 'tallyExplanation', {
+        enumerable: true, configurable: true,
+        get(){
+            if(!this.tally) return '';
+            if(this.tally.kind === 'condorcet')
+                return 'Vainqueur de Condorcet strict : bat tous les autres en duel.';
+            return 'Aucun vainqueur de Condorcet : cycle détecté. Tirage au sort reproductible dans le Smith set.';
+        },
     });
-  },
-};
 
-window.__voteStore = voteStore;
+    Object.assign(voteStore, {
+        async close(){
+            this.change(d => { d.closed = true; });
+            this.tally = await computeTally(this.scrutin);
+        },
+    });
 
-// Hook de test : force un ranking sans passer par le drag-and-drop.
-window.testForceRanking = function(order){
-  voteStore.ui.ranking = order.slice();
-};
+    Object.assign(voteStore.ui, {
+        newVoter: '',
+        addVoterError: '',
+    });
 
-(async function init(){
-  await initAutomerge();
-  _repo = await makeRepo();
-  const handle = await loadInitialHandle(_repo);
-  if(handle) voteStore.attach(handle);
-  createApp(voteStore).mount('body');
-  document.body.setAttribute('data-app-ready', '1');
-})();
-</script>
+    Object.assign(voteStore, {
+        addVoter(){
+            this.ui.addVoterError = '';
+            const name = (this.ui.newVoter || '').trim();
+            if(!name){ this.ui.addVoterError = 'Nom requis'; return; }
+            if(this.scrutin.voters.includes(name)){
+                this.ui.addVoterError = 'Ce nom est déjà dans la liste';
+                return;
+            }
+            const wasIdentifying = this.scrutin.mode === 'per-device' && this.stage === 'identify';
+            this.change(d => {
+                d.voters.push(name);
+                if(d.closed) d.closed = false;
+            });
+            this.tally = null;
+            this.ui.newVoter = '';
+            if(wasIdentifying) this.chooseIdentity(name);
+        },
+    });
 
-</body>
+    const reactiveStore = reactive(voteStore);
+    window.__voteStore = reactiveStore;
+
+    // Hook de test : force un ranking sans passer par le drag-and-drop.
+    window.testForceRanking = function(order){
+        reactiveStore.ui.ranking = order.slice();
+    };
+
+    (async function init(){
+        await initAutomerge();
+        _repo = await makeRepo();
+        const handle = await loadInitialHandle(_repo);
+        if(handle) reactiveStore.attach(handle);
+        createApp(reactiveStore).mount('body');
+        document.body.setAttribute('data-app-ready', '1');
+    })();
+                        </script>
+
+  </body>
 </html>
 <!-- No heading:1 ends here -->
