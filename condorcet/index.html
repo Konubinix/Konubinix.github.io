@@ -1,4 +1,4 @@
-<!-- [[id:33913178-24ce-4f1b-8548-4c9be2a4420c::+BEGIN_SRC mhtml :results verbatim :exports none :noweb yes :tangle ~/perso/org-publish/github/condorcet/index.html][No heading:1]] -->
+<!-- [[id:0f4cdb73-75ed-4193-a094-f70881e0b968::+BEGIN_SRC mhtml :results verbatim :exports none :noweb yes :mkdir yes :tangle ~/perso/org-publish/github/condorcet/index.html][No heading:1]] -->
 <!DOCTYPE html>
 <html lang="fr">
   <head>
@@ -143,56 +143,51 @@
       <div class="modal" id="createModal" :class="{open: ui.createOpen}" v-cloak>
         <div class="modal-panel">
           <h2>Nouveau scrutin</h2>
+        <label>Titre
+          <input type="text" id="createTitle" v-model="ui.form.title"
+                 placeholder="Quel film ce soir&nbsp;?">
+        </label>
+        <fieldset>
+          <legend>Candidats</legend>
+          <template v-for="(c, i) in ui.form.candidates" :key="'c'+i">
+            <div class="row">
+              <input type="text" :value="c" @input="ui.form.candidates[i] = $event.target.value"
+                     :placeholder="'Candidat ' + (i+1)">
+              <button type="button" @click="ui.form.candidates.splice(i, 1)"
+                      v-show="ui.form.candidates.length > 2" aria-label="Retirer">&times;</button>
+            </div>
+          </template>
+          <button type="button" class="add-row" @click="ui.form.candidates.push('')">+ Candidat</button>
+        </fieldset>
+        <fieldset>
+          <legend>Votants</legend>
+          <template v-for="(v, i) in ui.form.voters" :key="'v'+i">
+            <div class="row">
+              <input type="text" :value="v" @input="ui.form.voters[i] = $event.target.value"
+                     :placeholder="'Votant ' + (i+1)">
+              <button type="button" @click="ui.form.voters.splice(i, 1)"
+                      v-show="ui.form.voters.length > 1" aria-label="Retirer">&times;</button>
+            </div>
+          </template>
+          <button type="button" class="add-row" @click="ui.form.voters.push('')">+ Votant</button>
+        </fieldset>
+        <fieldset>
+          <legend>Mode</legend>
+          <label><input type="radio" name="mode" value="shared-device" v-model="ui.form.mode">
+            Appareil partagé (tour de rôle)</label>
+          <label><input type="radio" name="mode" value="per-device" v-model="ui.form.mode">
+            Un appareil par personne</label>
+        </fieldset>
+            <p class="error create-error" v-show="createError" v-text="createError"></p>
 
-          <label>Titre
-            <input type="text" id="createTitle" v-model="ui.form.title"
-                   placeholder="Quel film ce soir&nbsp;?">
-          </label>
-
-          <fieldset>
-            <legend>Candidats</legend>
-            <template v-for="(c, i) in ui.form.candidates" :key="'c'+i">
-              <div class="row">
-                <input type="text" :value="c" @input="ui.form.candidates[i] = $event.target.value"
-                       :placeholder="'Candidat ' + (i+1)">
-                <button type="button" @click="ui.form.candidates.splice(i, 1)"
-                        v-show="ui.form.candidates.length > 2" aria-label="Retirer">&times;</button>
-              </div>
-            </template>
-            <button type="button" class="add-row" @click="ui.form.candidates.push('')">+ Candidat</button>
-          </fieldset>
-
-          <fieldset>
-            <legend>Votants</legend>
-            <template v-for="(v, i) in ui.form.voters" :key="'v'+i">
-              <div class="row">
-                <input type="text" :value="v" @input="ui.form.voters[i] = $event.target.value"
-                       :placeholder="'Votant ' + (i+1)">
-                <button type="button" @click="ui.form.voters.splice(i, 1)"
-                        v-show="ui.form.voters.length > 1" aria-label="Retirer">&times;</button>
-              </div>
-            </template>
-            <button type="button" class="add-row" @click="ui.form.voters.push('')">+ Votant</button>
-          </fieldset>
-
-          <fieldset>
-            <legend>Mode</legend>
-            <label><input type="radio" name="mode" value="shared-device" v-model="ui.form.mode">
-              Appareil partagé (tour de rôle)</label>
-            <label><input type="radio" name="mode" value="per-device" v-model="ui.form.mode">
-              Un appareil par personne</label>
-          </fieldset>
-
-          <p class="error create-error" v-show="createError" v-text="createError"></p>
-
-          <div class="modal-actions">
-            <button class="secondary" @click="ui.createOpen = false">Annuler</button>
-            <button class="primary" id="btnConfirmCreate"
-                    :disabled="!canCreate"
-                    @click="createScrutin()">Créer</button>
+            <div class="modal-actions">
+              <button class="secondary" @click="ui.createOpen = false">Annuler</button>
+              <button class="primary" id="btnConfirmCreate"
+                      :disabled="!canCreate"
+                      @click="createScrutin()">Créer</button>
+            </div>
           </div>
         </div>
-      </div>
         <div class="share-bar" v-show="scrutin && stage !== 'ballot'" v-cloak>
           <button class="secondary" id="btnShare" @click="shareScrutin()" title="Partager">
             🔗 Partager
