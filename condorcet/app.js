@@ -183,10 +183,14 @@ const voteStore = {
 Object.assign(voteStore.ui, {
     createOpen: false,
     form: {
-        <<js-create-title-init>>
-        <<js-create-candidates-init>>
-        <<js-create-voters-init>>
-        <<js-create-mode-init>>
+        // Dans ui.form.title
+        title: '',
+        // Dans ui.form.candidates (voir js-create-init pour le contexte global)
+        candidates: ['', ''],
+        // Dans ui.form.voters
+        voters: [''],
+        // Dans ui.form.mode
+        mode: 'shared-device',
     },
 });
 
@@ -213,8 +217,25 @@ Object.defineProperty(voteStore, 'canCreate', {
 });
 
 Object.assign(voteStore, {
-    <<js-open-create>>
-    <<js-create-scrutin-method>>
+    openCreate(){ this.ui.createOpen = true; },
+    createScrutin(){
+        const f = this.ui.form;
+        const candidates = f.candidates.map(s => s.trim()).filter(Boolean);
+        const voters = f.voters.map(s => s.trim()).filter(Boolean);
+        const handle = _repo.create({
+            title: f.title.trim(),
+            candidates,
+            voters,
+            ballots: [],
+            closed: false,
+            mode: f.mode,
+            method: 'condorcet-random-smith',
+            createdAt: Date.now(),
+        });
+        history.replaceState(null, '', '?doc=' + handle.url);
+        this.ui.createOpen = false;
+        this.attach(handle);
+    },
 });
 
 Object.assign(voteStore.ui, {
