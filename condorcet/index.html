@@ -15,6 +15,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
 
+      <!-- Surcharge le viewport du bloc partagé : on veut permettre le pinch-zoom
+           sur les photos des candidats (utile pour les enfants). -->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
       <meta name="theme-color" content="#1b1d2e">
       <title>Condorcet</title>
       <style>
@@ -123,6 +126,27 @@
         .smith-note{background:var(--card);padding:12px 16px;border-radius:8px;margin-top:16px}
         .smith-note .seed{color:var(--muted);font-size:.8rem;margin-top:8px}
         .new-vote{display:block;width:100%;margin-top:24px}
+        .tally-animate{text-align:center;margin:12px 0}
+        .tally-animate > button{padding:8px 14px;font-size:.9rem}
+        .anim-transport{display:inline-flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;background:var(--card);padding:6px 10px;border-radius:999px}
+        .anim-transport button.icon{background:transparent;color:var(--fg);padding:6px 10px;font-size:1rem;border-radius:999px}
+        .anim-transport button.icon:disabled{opacity:.3}
+        .anim-transport button.anim-speed{font-size:.8rem;font-weight:600;min-width:2.4em;padding:6px 8px}
+        .anim-counter{color:var(--muted);font-size:.85rem;padding:0 6px}
+        .anim-legend{color:var(--muted);font-size:.9rem;margin:10px 0 0 0;min-height:1.3em}
+        @keyframes pair-flash{
+            0%{background:rgba(249,168,38,0)}
+            40%{background:rgba(249,168,38,.65)}
+            100%{background:rgba(249,168,38,.22)}
+        }
+        .pairwise td.pair-current{background:rgba(249,168,38,.22);animation:pair-flash .5s ease}
+        .anim-breakdown{list-style:none;padding:0;margin:8px auto 0 auto;max-width:320px;text-align:left}
+        .anim-breakdown li{display:flex;gap:8px;align-items:center;padding:4px 10px;border-radius:6px;color:var(--muted);opacity:.4;transition:opacity .3s,background .3s}
+        .anim-breakdown li.processed{opacity:1;color:var(--fg)}
+        .anim-breakdown li.current{background:rgba(249,168,38,.18)}
+        .anim-breakdown .voter{flex:1;font-weight:500}
+        .anim-breakdown .arrow{color:var(--muted)}
+        .anim-breakdown .pref{font-weight:700}
         .share-bar{display:flex;gap:8px;justify-content:center;align-items:center;padding:12px 20px;flex-wrap:wrap}
         .share-bar button{padding:8px 14px;font-size:.9rem}
         .share-toast{color:var(--ok);font-size:.85rem;padding:4px 8px}
@@ -130,6 +154,12 @@
         #qrHolder{margin:16px auto;display:inline-block;background:#fff;padding:10px;border-radius:8px}
         #qrHolder svg{display:block;max-width:260px;height:auto}
         .qr-url{font-family:monospace;font-size:.75rem;color:var(--muted);word-break:break-all;margin:12px 0}
+        .candidate-row{align-items:center}
+        .candidate-thumb{width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid #333;flex-shrink:0}
+        .candidate-pic{display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--fg);padding:8px 10px;border-radius:6px;cursor:pointer;font-size:1.1rem;line-height:1}
+        .candidate-pic input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+        .reorder-image{width:64px;height:64px;object-fit:cover;border-radius:8px;margin:0 8px;flex-shrink:0}
+        .winner-image{display:block;width:140px;height:140px;object-fit:cover;border-radius:12px;margin:10px auto 6px auto;border:2px solid var(--ok)}
       </style>
   </head>
   <body v-scope>
@@ -150,14 +180,22 @@
         <fieldset>
           <legend>Candidats</legend>
           <template v-for="(c, i) in ui.form.candidates" :key="'c'+i">
-            <div class="row">
+            <div class="row candidate-row">
+              <img class="candidate-thumb" v-show="ui.form.candidateImages[i]"
+                   :src="ui.form.candidateImages[i]" alt="">
               <input type="text" :value="c" @input="ui.form.candidates[i] = $event.target.value"
                      :placeholder="'Candidat ' + (i+1)">
-              <button type="button" @click="ui.form.candidates.splice(i, 1)"
+              <label class="candidate-pic" :title="ui.form.candidateImages[i] ? 'Changer la photo' : 'Ajouter une photo'">
+                &#x1F4F7;
+                <input type="file" accept="image/*" capture="environment"
+                       @change="setCandidateImage(i, $event.target.files[0])">
+              </label>
+              <button type="button" @click="ui.form.candidates.splice(i, 1); ui.form.candidateImages.splice(i, 1)"
                       v-show="ui.form.candidates.length > 2" aria-label="Retirer">&times;</button>
             </div>
           </template>
-          <button type="button" class="add-row" @click="ui.form.candidates.push('')">+ Candidat</button>
+          <button type="button" class="add-row"
+                  @click="ui.form.candidates.push(''); ui.form.candidateImages.push('')">+ Candidat</button>
         </fieldset>
         <fieldset>
           <legend>Votants</legend>
@@ -226,9 +264,12 @@
                     @vue:mounted="bindRankReorder($el)">
                   <template v-for="(c, i) in ui.ranking" :key="c">
                     <li class="reorder-item" :data-idx="i" :data-candidate="c">
-                      <span class="reorder-grip" aria-label="Drag to reorder">&#x283F;</span>
+                      <span class="reorder-grip" aria-label="Glisser pour réordonner">&#x283F;</span>
                       <span class="reorder-rank" v-text="i + 1"></span>
+                      <img class="reorder-image" v-show="scrutin.candidateImages && scrutin.candidateImages[c]"
+                           :src="scrutin.candidateImages && scrutin.candidateImages[c]" alt="">
                       <span class="reorder-name" v-text="c"></span>
+                      <span class="reorder-grip" aria-label="Glisser pour réordonner">&#x283F;</span>
                     </li>
                   </template>
                 </ol>
@@ -285,6 +326,8 @@
                         <p class="tally-kind" v-text="tallyExplanation"></p>
                         <div class="winner-card">
                           <div class="winner-label">Vainqueur</div>
+                          <img class="winner-image" v-show="scrutin.candidateImages && scrutin.candidateImages[tally.winner]"
+                               :src="scrutin.candidateImages && scrutin.candidateImages[tally.winner]" alt="">
                           <div class="winner-name" v-text="tally.winner"></div>
                         </div>
 
@@ -303,13 +346,50 @@
                               <tr>
                                 <th v-text="a"></th>
                                 <template v-for="b in scrutin.candidates" :key="'c'+a+b">
-                                  <td :class="{self: a === b, wins: a !== b && tally.pairwise[a][b] > tally.pairwise[b][a]}"
+                                  <td :class="{self: a === b, wins: a !== b && tally.pairwise[a][b] > tally.pairwise[b][a], 'pair-current': pairCurrent(a, b)}"
                                       v-text="a === b ? '—' : tally.pairwise[a][b]"></td>
                                 </template>
                               </tr>
                             </template>
                           </tbody>
                         </table>
+
+                        <div class="tally-animate">
+                          <button class="secondary" id="btnAnimate"
+                                  v-show="!ui.anim.active" @click="animateStart()">
+                            &#x25B6; Animer
+                          </button>
+                          <div class="anim-transport" v-show="ui.anim.active">
+                            <button class="icon" id="btnAnimPrev"
+                                    :disabled="ui.anim.step === 0"
+                                    title="Précédent" @click="animatePrev()">&#x23EE;</button>
+                            <button class="icon" id="btnAnimToggle"
+                                    :title="ui.anim.timer ? 'Pause' : 'Lecture'"
+                                    @click="animateToggle()">
+                              <span v-show="!ui.anim.timer">&#x25B6;</span>
+                              <span v-show="ui.anim.timer">&#x23F8;</span>
+                            </button>
+                            <button class="icon" id="btnAnimNext"
+                                    :disabled="ui.anim.step >= ui.anim.total - 1"
+                                    title="Suivant" @click="animateNext()">&#x23ED;</button>
+                            <span class="anim-counter" v-text="animCounterText"></span>
+                            <button class="icon anim-speed" id="btnAnimSpeed"
+                                    title="Vitesse" @click="animateCycleSpeed()"
+                                    v-text="ui.anim.speed + 'x'"></button>
+                            <button class="icon" id="btnAnimStop"
+                                    title="Fermer" @click="animateStop()">&#x2715;</button>
+                          </div>
+                          <p class="anim-legend" v-show="ui.anim.legend" v-text="ui.anim.legend"></p>
+                          <ul class="anim-breakdown" v-show="ui.anim.active && ui.anim.breakdown.length" v-cloak>
+                            <template v-for="row in ui.anim.breakdown" :key="row.voter">
+                              <li :class="{processed: row.processed, current: row.current}">
+                                <span class="voter" v-text="row.voter"></span>
+                                <span class="arrow">&#x2192;</span>
+                                <span class="pref" v-text="row.prefers || '—'"></span>
+                              </li>
+                            </template>
+                          </ul>
+                        </div>
 
                         <button class="primary new-vote" id="btnNewVote" @click="newVote()">Nouveau vote</button>
 

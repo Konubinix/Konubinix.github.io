@@ -43,12 +43,51 @@
         <h1>How to Do Literate Programming</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/braindump/">Braindump</a></span></p>
         <h2 id="4f83033c-08a6-47ca-bd6e-26f2d45d7bc6">Prose is the primary artifact</h2>
-<p>A literate program is first and foremost a piece of writing. You can read
-it from start to finish, skipping all code blocks, and still fully
-understand the problem, the solution, and the reasoning behind it. Code
-blocks are inline translations of specific sentences in the prose — they
-are inserted in the middle of the text without breaking its flow.</p>
+<p>A literate program is first and foremost a piece of writing. The prose
+carries the full reasoning — problem, solution, and motivation. Code
+blocks are inline translations of specific sentences in the prose; they
+render the technical form of what the prose already stated.</p>
 <p>Prose is richer than code: the <strong>why</strong> is never translated.</p>
+<p>Sanity check: mentally remove all code blocks. The remaining text must form
+a coherent and complete narrative. If a gap appears, either a paragraph is
+missing, or an existing paragraph was only paraphrasing a block rather than
+advancing the reasoning — and needs to be rewritten accordingly. This is
+the weaving: code and prose are interleaved, not inserted side-by-side.
+Tests give a binary signal, but prose coherence doesn&rsquo;t — a neutral agent
+reading the prose-only version and assessing whether the narrative
+fulfills the stated need provides a stronger signal than code-level tests
+alone.</p>
+<h2 id="3b7e1c42-9f5d-4a86-b2c1-6e8a0d5f3b9c">The reading flow is sacred</h2>
+<p>The reader should glide through the prose uninterrupted, glancing at a
+code block whenever they want to see how a sentence is concretely coded.
+Everything else — detours, meta-commentary, secondary justifications — is
+noise and must be removed. If something is valuable but breaks the flow,
+move it to an annex and link to it from the prose.</p>
+<p>A block that cannot be taken in at a glance breaks the flow just as surely
+as a detour. Around 30 lines is a reasonable ceiling; past that, the
+reader loses the thread between the sentence that motivated the block and
+the code that is supposed to translate it. The fix is almost always to
+split the block along the seams the prose already has — each responsibility
+that was introduced as a distinct idea becomes its own block, with a
+sentence of motivation just before. The noweb composition reassembles the
+pieces at tangle time. A block that resists splitting signals that the
+prose itself has collapsed several ideas into one — expand the prose
+first, and the block will split naturally.</p>
+<p>Not every short conversational line is noise, though. A single sentence
+like &ldquo;let&rsquo;s see what this gives&rdquo; just before a block that produces
+something visible — an image, an exported model, a plot — synchronizes the
+prose with the reader&rsquo;s impatience to leave abstraction and see a concrete
+result. It does not interrupt the flow; it paces it. The test is whether
+the line names something the reader is already feeling: if it does, keep
+it; if it explains, justifies, or lingers, it has crossed into
+meta-commentary and must go.</p>
+<h2 id="7d4e9a2b-8c1f-4e63-b5a8-3f9c2d1e4a7b">Code blocks are not repeated in the export</h2>
+<p>A direct consequence of the reading flow principle: a code block appears
+in the export only when the prose talks about it. Re-showing a block that
+the reader has already seen, just because the next block depends on it,
+adds nothing to the reading and becomes noise. The dependency is resolved
+at tangle time, invisibly to the reader. Repetition is only justified
+when seeing the surrounding code genuinely helps the reading.</p>
 <h2 id="56d9f0e9-1ca4-493c-a91b-c221058b4a29">Prose states the what, the how, and the why</h2>
 <p>Every code block is motivated by what precedes it in the prose:</p>
 <ul>
@@ -58,12 +97,15 @@ are inserted in the middle of the text without breaking its flow.</p>
 </ul>
 <p>No block should exist unless the prose has made it necessary. If you find
 yourself adding a block without the prose having led to it, a piece of
-reasoning is missing.</p>
-<h2 id="0b01782a-131e-4e5f-b4df-9b2a198dbcb1">Natural order: test before code</h2>
-<p>When the prose asserts a behavior, the test comes first — it is the
-translation of the what. The code follows — it is the translation of the
-how. This order reflects the way we address another human being. LP brings human
-communication to the center of coding.</p>
+reasoning is missing. The inverse also holds: prose that paraphrases the
+block — restating what the code does — is duplication, not justification.
+Prose states the problem or need, never a readback of the code.</p>
+<p>The ordering falls out of this split: the test (the <strong>what</strong>) comes before
+the code (the <strong>how</strong>), because that is how we talk to each other — we
+state the desired behavior first, then the technique used to achieve it.
+A test that stands apart as a separate paragraph, not flowing from an
+explicit assertion in the prose, is a sign that a sentence is missing
+from the narrative.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;a duplicate in the list would make the tally incoherent,
 </span></span><span style="display:flex;"><span>        so we block creation and display an error message&#34;
 </span></span><span style="display:flex;"><span>
@@ -76,43 +118,27 @@ translator&rsquo;s note: &ldquo;we want X, but in code this is written as Y beca
 <p>This is not code description — it is an explanation of the gap between
 intent and form. These asides should be rare and clearly identifiable as
 such (e.g. introduced by &ldquo;In practice,&rdquo; or &ldquo;Under the hood,&rdquo;).</p>
+<p>When an aside grows beyond its role — explaining more than the
+translation gap — it is better moved to an annex to avoid breaking the
+reading flow. The prose then points to it with a short link, e.g. &ldquo;in
+order to understand X, see annex&rdquo; (with a link).</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;we want the getters to behave as real properties&#34;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  Under the hood, this means using defineProperty rather than Object.assign,
 </span></span><span style="display:flex;"><span>  which does not copy accessors.
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  [code — translates this technical constraint]
-</span></span></code></pre></div><h2 id="2b5c3e1f-7a8d-4c2e-9d1a-5f3c6e8b9a0d">Measuring prose quality</h2>
-<p>The main difficulty in literate programming is assessing prose quality.
-Tests give a binary signal—pass or fail. But prose quality is harder to
-measure: you need a reader who can assess whether the narrative is coherent
-and actually fulfills the stated need. A neutral agent reading prose-only
-(with all blocks removed) and assessing coherence may provide a stronger
-signal than code-level tests alone.</p>
-<h2 id="aa74a3d3-47de-4647-9248-7b8ac451ae81">Prose must be readable without the blocks</h2>
-<p>Sanity check: mentally remove all code blocks. The remaining text must form
-a coherent and complete narrative. If a gap appears, either a paragraph is
-missing, or an existing paragraph was only describing a block rather than
-advancing the reasoning — and needs to be rewritten accordingly. This is the
-weaving: code and prose are interleaved, not inserted side-by-side.</p>
-<h2 id="28cd3ec4-c422-4b37-b37f-f2d82e0ed124">What to avoid</h2>
-<ul>
-<li>Prose that paraphrases the code. There is prose about the code, but prose
-states the need or problem, not a restatement of what the code does.</li>
-<li>A block with no motivation in the preceding prose.</li>
-<li>A standalone &ldquo;test paragraph&rdquo; separated from the main narrative: if a
-behavior is worth testing, it is worth stating in the narrative, and the
-test follows naturally.</li>
-<li>A hack added to fix a bug discovered mid-narrative without refactoring the
-prose itself back to coherence. Simply adding a test and explanatory
-paragraph around the mitigation does not restore the narrative. The entire
-prose section must be rewritten so that it reads as if the issue never
-existed — not as a narrative that fixes something, but as a narrative that
-was always correct.</li>
-</ul>
+</span></span></code></pre></div><h2 id="5c8e1a2f-3b4d-4e9a-a7c6-8d1f9e2b4c7a">Rewrite, don&rsquo;t patch</h2>
+<p>When a bug or oversight surfaces during implementation, the temptation is
+to add a test and an explanatory paragraph describing the mitigation.
+This does not restore the narrative — it leaves a visible scar. Instead,
+rewrite the affected prose section so it reads as if the issue never
+existed: not a narrative that fixes something, but a narrative that was
+always correct. The final artifact should betray no trace of the
+debugging path that led to it.</p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/4a7f2e91-c3d8-4b05-a1e7-8f3d6c9b2e47?title=how_to_do_literate_programming">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 22 Apr 2026</time></aside>
+	  <aside class="date"><time>Last updated: 24 Apr 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 22 Apr 2026</time></aside>
     </div>
   </div>

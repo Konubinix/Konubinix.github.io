@@ -183,13 +183,10 @@ const voteStore = {
 Object.assign(voteStore.ui, {
     createOpen: false,
     form: {
-        // Dans ui.form.title
         title: '',
-        // Dans ui.form.candidates (voir js-create-init pour le contexte global)
         candidates: ['', ''],
-        // Dans ui.form.voters
+        candidateImages: ['', ''],
         voters: [''],
-        // Dans ui.form.mode
         mode: 'shared-device',
     },
 });
@@ -220,11 +217,19 @@ Object.assign(voteStore, {
     openCreate(){ this.ui.createOpen = true; },
     createScrutin(){
         const f = this.ui.form;
-        const candidates = f.candidates.map(s => s.trim()).filter(Boolean);
+        const candidateImages = {};
+        const candidates = [];
+        f.candidates.forEach((raw, i) => {
+            const name = raw.trim();
+            if(!name) return;
+            candidates.push(name);
+            if(f.candidateImages[i]) candidateImages[name] = f.candidateImages[i];
+        });
         const voters = f.voters.map(s => s.trim()).filter(Boolean);
         const handle = _repo.create({
             title: f.title.trim(),
             candidates,
+            candidateImages,
             voters,
             ballots: [],
             closed: false,
@@ -235,6 +240,44 @@ Object.assign(voteStore, {
         history.replaceState(null, '', '?doc=' + handle.url);
         this.ui.createOpen = false;
         this.attach(handle);
+    },
+});
+
+const IMAGE_MAX_DIM = 512;
+const IMAGE_QUALITY = 0.75;
+
+function compressImageToDataUrl(file){
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error);
+        reader.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('image load failed'));
+            img.onload = () => {
+                const scale = Math.min(1, IMAGE_MAX_DIM / Math.max(img.width, img.height));
+                const w = Math.round(img.width * scale);
+                const h = Math.round(img.height * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+Object.assign(voteStore, {
+    async setCandidateImage(i, file){
+        if(!file) return;
+        try {
+            const dataUrl = await compressImageToDataUrl(file);
+            this.ui.form.candidateImages[i] = dataUrl;
+        } catch(e){
+            console.error('compression image candidat', e);
+        }
     },
 });
 
@@ -388,6 +431,190 @@ Object.assign(voteStore, {
         // Le doc reste persisté en IndexedDB et accessible via son URL ;
         // c'est juste cet onglet qui revient à zéro.
         location.href = location.pathname;
+    },
+});
+
+Object.assign(voteStore.ui, {
+    anim: { active: false, step: 0, total: 0, pairs: [], ballots: [],
+            full: null, timer: null, legend: '', breakdown: [],
+            pairIdx: 0, ballotIdx: 0, speed: 1, _lastPair: -1 },
+});
+
+Object.defineProperty(voteStore, 'animCounterText', {
+    enumerable: true, configurable: true,
+    get(){
+        const a = this.ui.anim;
+        if(!a.active || !a.pairs.length) return '';
+        return `Duel ${a.pairIdx+1}/${a.pairs.length}` +
+               ` · Bulletin ${a.ballotIdx+1}/${a.ballots.length}`;
+    },
+});
+
+Object.assign(voteStore, {
+    pairCurrent(a, b){
+        if(!this.ui.anim.active || a === b) return false;
+        const cur = this.ui.anim.pairs[this.ui.anim.pairIdx];
+        if(!cur) return false;
+        return (a === cur[0] && b === cur[1]) || (a === cur[1] && b === cur[0]);
+    },
+
+    _ballotPref(ballot, a, b){
+        const pa = ballot.ranking.indexOf(a);
+        const pb = ballot.ranking.indexOf(b);
+        if(pa === -1 || pb === -1) return null;
+        return pa < pb ? a : b;
+    },
+});
+
+Object.assign(voteStore, {
+    _animPartial(pairIdx, ballotIdx){
+        const cs = this.scrutin.candidates;
+        const m = {};
+        for(const a of cs){
+            m[a] = {};
+            for(const b of cs) if(b !== a) m[a][b] = '…';
+        }
+        for(let k = 0; k < pairIdx; k++){
+            const [a, b] = this.ui.anim.pairs[k];
+            m[a][b] = this.ui.anim.full[a][b];
+            m[b][a] = this.ui.anim.full[b][a];
+        }
+        const [a, b] = this.ui.anim.pairs[pairIdx];
+        let xa = 0, xb = 0;
+        for(let i = 0; i <= ballotIdx; i++){
+            const pref = this._ballotPref(this.ui.anim.ballots[i], a, b);
+            if(pref === a) xa++;
+            else if(pref === b) xb++;
+        }
+        m[a][b] = xa;
+        m[b][a] = xb;
+        return m;
+    },
+
+    _animRender(){
+        const B = this.ui.anim.ballots.length;
+        const s = this.ui.anim.step;
+        const p = Math.floor(s / B);
+        const bi = s % B;
+        const samePair = this.ui.anim._lastPair === p;
+        this.ui.anim._lastPair = p;
+        this.ui.anim.pairIdx = p;
+        this.ui.anim.ballotIdx = bi;
+        this.tally.pairwise = this._animPartial(p, bi);
+        const [a, b] = this.ui.anim.pairs[p];
+        const ballot = this.ui.anim.ballots[bi];
+        this.ui.anim.legend = `Duel ${a} vs ${b} — bulletin de ${ballot.voter}`;
+        const breakdown = [];
+        for(let i = 0; i < B; i++){
+            const bal = this.ui.anim.ballots[i];
+            breakdown.push({
+                voter: bal.voter,
+                prefers: this._ballotPref(bal, a, b),
+                processed: i <= bi,
+                current: i === bi,
+            });
+        }
+        this.ui.anim.breakdown = breakdown;
+        if(samePair) this._animValueFlash();
+    },
+
+    _animValueFlash(){
+        requestAnimationFrame(() => {
+            document.querySelectorAll('.pairwise td.pair-current').forEach(el => {
+                el.animate([
+                    { backgroundColor: 'rgba(249,168,38,.6)' },
+                    { backgroundColor: 'rgba(249,168,38,.22)' },
+                ], { duration: 400, easing: 'ease-out' });
+            });
+        });
+    },
+});
+
+Object.assign(voteStore, {
+    animateStart(){
+        if(!this.tally || this.ui.anim.active) return;
+        const cs = this.scrutin.candidates;
+        const pairs = [];
+        for(let i = 0; i < cs.length; i++)
+            for(let j = i+1; j < cs.length; j++)
+                pairs.push([cs[i], cs[j]]);
+        const ballots = this.scrutin.ballots.slice();
+        if(pairs.length === 0 || ballots.length === 0) return;
+        this.ui.anim.full = this.tally.pairwise;
+        this.ui.anim.pairs = pairs;
+        this.ui.anim.ballots = ballots;
+        this.ui.anim.total = pairs.length * ballots.length;
+        this.ui.anim.step = 0;
+        this.ui.anim.active = true;
+        this.ui.anim._lastPair = -1;
+        this._animRender();
+    },
+
+    animatePlay(){
+        if(this.ui.anim.timer) return;
+        const interval = 1500 / this.ui.anim.speed;
+        this.ui.anim.timer = setInterval(() => {
+            if(this.ui.anim.step >= this.ui.anim.total - 1){
+                this.animatePause();
+                return;
+            }
+            this.ui.anim.step++;
+            this._animRender();
+        }, interval);
+    },
+
+    animatePause(){
+        if(this.ui.anim.timer){
+            clearInterval(this.ui.anim.timer);
+            this.ui.anim.timer = null;
+        }
+    },
+
+    animateToggle(){
+        if(this.ui.anim.timer){ this.animatePause(); return; }
+        if(this.ui.anim.step >= this.ui.anim.total - 1){
+            this.ui.anim.step = 0;
+            this._animRender();
+        }
+        this.animatePlay();
+    },
+
+    animateNext(){
+        if(this.ui.anim.step >= this.ui.anim.total - 1) return;
+        this.animatePause();
+        this.ui.anim.step++;
+        this._animRender();
+    },
+
+    animatePrev(){
+        if(this.ui.anim.step <= 0) return;
+        this.animatePause();
+        this.ui.anim.step--;
+        this._animRender();
+    },
+
+    animateCycleSpeed(){
+        const speeds = [1, 2, 0.5];
+        const i = speeds.indexOf(this.ui.anim.speed);
+        this.ui.anim.speed = speeds[(i + 1) % speeds.length];
+        if(this.ui.anim.timer){
+            this.animatePause();
+            this.animatePlay();
+        }
+    },
+
+    animateStop(){
+        this.animatePause();
+        if(this.ui.anim.full) this.tally.pairwise = this.ui.anim.full;
+        this.ui.anim.active = false;
+        this.ui.anim.legend = '';
+        this.ui.anim.pairs = [];
+        this.ui.anim.ballots = [];
+        this.ui.anim.breakdown = [];
+        this.ui.anim.step = 0;
+        this.ui.anim.total = 0;
+        this.ui.anim.full = null;
+        this.ui.anim._lastPair = -1;
     },
 });
 
