@@ -282,9 +282,6 @@ Object.assign(voteStore, {
 });
 
 Object.assign(voteStore.ui, {
-    qrOpen: false,
-    qrSvg: '',
-    shareUrl: '',
     shareToast: '',
 });
 
@@ -309,7 +306,15 @@ Object.assign(voteStore, {
             setTimeout(() => { this.ui.shareToast = ''; }, 2000);
         }
     },
+});
 
+Object.assign(voteStore.ui, {
+    qrOpen: false,
+    qrSvg: '',
+    shareUrl: '',
+});
+
+Object.assign(voteStore, {
     openQR(){
         const url = this.currentShareUrl();
         const qr = window.qrcode(0, 'M');
