@@ -42,14 +42,81 @@
 		<p class="lead">
         <h1>Scrutin De Condorcet Randomisé Entre Amis</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/braindump/">Braindump</a></span></p>
-        <style>.ox-hugo-toc .heading { display: none; }</style>
+        <div class="ox-hugo-toc toc">
+<div class="heading">Table des matières</div>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0000-4000-8000-000000000000">Pitch et contraintes</a>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0000-4000-8000-000000000001">Les deux modes d&rsquo;utilisation</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0000-4000-8000-000000000002">Secret du bulletin</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0000-4000-8000-000000000003">Bibliothèques externes</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#c0d07c0c-0005-4000-8000-000000000000">Fondations de base (Ouvrir, créer, partager)</a>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0011-4000-8000-000000000000">Ouvrir l&rsquo;app</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0012-4000-8000-000000000000">Créer un scrutin</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0015-4000-8000-000000000000">Partager le scrutin (lien et QR)</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0018-4000-8000-000000000000">Photos de candidats</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0017-4000-8000-000000000000">Ajouter un votant en cours de route</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#c0d07c0c-0006-4000-8000-000000000000">Départager : les duels de Condorcet</a>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0014-4000-8000-000000000000">Dépouiller</a>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0014-4000-8000-000000000001">Rejouer le dépouillement</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="internal-link" href="#c0d07c0c-0007-4000-8000-000000000000">Voter à l&rsquo;aveugle : le secret du bulletin</a>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0013-4000-8000-000000000000">Voter en mode appareil partagé</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#c0d07c0c-0008-4000-8000-000000000000">Chacun sur son téléphone : le mode per-device</a>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0016-4000-8000-000000000000">Voter en mode un appareil par personne</a>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0016-4000-8000-000000000003">Bouton Dépouiller partagé</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="internal-link" href="#c0d07c0c-0020-4000-8000-000000000000">Plumbing</a>
+<ul>
+<li><a class="internal-link" href="#c0d07c0c-0021-4000-8000-000000000000">Schéma du document Automerge</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0022-4000-8000-000000000000">Repo Automerge, persistance IndexedDB, sync optionnel</a>
+<ul>
+<li><a class="internal-link" href="#plumbing-rspack-bundle">Bundler avec rspack</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#automergesync-server">Serveur de sync automergesync</a>
+<ul>
+<li><a class="internal-link" href="#sync-indicator">Indicateur de connexion</a></li>
+<li><a class="internal-link" href="#fixture-docker-sync">Fixture Docker pour tests de sync</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#c0d07c0c-0024-4000-8000-000000000000">Store petite-vue &mdash; unique source de vérité réactive</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0025-4000-8000-000000000000">Initialisation au chargement</a></li>
+<li><a class="internal-link" href="#c0d07c0c-0026-4000-8000-000000000000">Bases visuelles</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>tl;dr: <a target="_blank" href="https://sam.konubinix.eu/condorcet/">https://sam.konubinix.eu/condorcet/</a></p>
+<style>.ox-hugo-toc .heading { display: none; }</style>
 <h2 id="c0d07c0c-0000-4000-8000-000000000000">Pitch et contraintes</h2>
 <p>Voter à la majorité paraît simple, mais dès qu&rsquo;il y a plus de deux
 options la majorité se perd dans les paradoxes. Le <a class="internal-link" href="/braindump/posts/condorcet_method/">scrutin de
 Condorcet</a> répare ça en regardant <strong>chaque duel</strong> entre candidats. Quand
 il n&rsquo;y a pas de vainqueur net (un cycle), on départage par un tirage
-au sort dans le Smith set &mdash; reproductible, parce que la graine est
-le hash des bulletins clos, pas un appel serveur.</p>
+au sort dans le Smith set (la short-list des candidats encore en
+course après élimination des dominés) &mdash; reproductible, parce que
+la graine est le hash des bulletins clos, pas un appel serveur.</p>
 <p>Cette app est un outil de vote <strong>entre amis</strong>. Ce n&rsquo;est pas un système
 officiel : on peut bidouiller le bulletin du copain en inspectant
 IndexedDB. Ça suffit pour un apéro ou un choix de film en famille, et
@@ -1952,7 +2019,7 @@ l&rsquo;écrasement accidentel du bulletin d&rsquo;un ami sur un appareil partag
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">h2</span><span style="color:#1f2328">&gt;</span>Qui es-tu<span style="color:#6639ba">&amp;nbsp;</span>?<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">h2</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">p</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;hint&#34;</span><span style="color:#1f2328">&gt;</span>Choisis ton nom pour commencer à voter.<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">p</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">ul</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;identity-list&#34;</span><span style="color:#1f2328">&gt;</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">template</span> <span style="color:#1f2328">v-for</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;v in scrutin.voters&#34;</span> <span style="color:#1f2328">:key</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#39;i&#39;+v&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">template</span> <span style="color:#1f2328">v-for</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;v in (scrutin ? scrutin.voters : [])&#34;</span> <span style="color:#1f2328">:key</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#39;i&#39;+v&#34;</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">li</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>          <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">button</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;identity-pick&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">click</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;chooseIdentity(v)&#34;</span>
 </span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">:disabled</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;hasBallotFor(v)&#34;</span><span style="color:#1f2328">&gt;</span>
@@ -1977,7 +2044,7 @@ l&rsquo;écrasement accidentel du bulletin d&rsquo;un ami sur un appareil partag
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">span</span> <span style="color:#1f2328">v-text</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;ballotsCount&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">span</span><span style="color:#1f2328">&gt;</span> / <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">span</span> <span style="color:#1f2328">v-text</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;rosterCount&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">span</span><span style="color:#1f2328">&gt;</span> bulletins
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">p</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">ul</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;voters-list&#34;</span><span style="color:#1f2328">&gt;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">template</span> <span style="color:#1f2328">v-for</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;v in scrutin.voters&#34;</span> <span style="color:#1f2328">:key</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#39;w&#39;+v&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">template</span> <span style="color:#1f2328">v-for</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;v in (scrutin ? scrutin.voters : [])&#34;</span> <span style="color:#1f2328">:key</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#39;w&#39;+v&#34;</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">li</span> <span style="color:#1f2328">:class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;{voted: hasBallotFor(v)}&#34;</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">span</span> <span style="color:#1f2328">v-text</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;v&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">span</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">span</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;check&#34;</span> <span style="color:#1f2328">v-show</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;hasBallotFor(v)&#34;</span><span style="color:#1f2328">&gt;</span>✓<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">span</span><span style="color:#1f2328">&gt;</span>
@@ -2153,6 +2220,13 @@ cause d&rsquo;un doc lent à arriver. Le chargement initial attend au plus
 ce délai, l&rsquo;app devient interactive sans attendre, et le store se
 remplira quand le doc arrivera via l&rsquo;événement <code>change</code>. Le serveur de
 sync est décrit dans <a class="internal-link" href="#automergesync-server">Serveur de sync automergesync</a>.</p>
+<p>Quand la sync est armée, l&rsquo;état de la liaison avec le serveur n&rsquo;est pas
+un détail interne : l&rsquo;utilisateur a besoin de savoir si son bulletin
+partira vraiment ou restera en local (cf. <a class="internal-link" href="#sync-indicator">Indicateur de
+connexion</a>). <code>makeRepo</code> prend donc un callback que l&rsquo;adapter alimente
+via les événements <code>peer-candidate</code> et <code>peer-disconnected</code> du protocole
+NetworkAdapter — câblés dès la création de l&rsquo;adapter pour que la
+première transition soit captée même si l&rsquo;UI s&rsquo;abonne tard.</p>
 <p><a id="code-snippet--js-repo-setup"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#0550ae">*</span> <span style="color:#1f2328">as</span> <span style="color:#1f2328">Automerge</span> <span style="color:#1f2328">from</span> <span style="color:#0a3069">&#39;@automerge/automerge&#39;</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">Repo</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">isValidAutomergeUrl</span> <span style="color:#1f2328">}</span> <span style="color:#1f2328">from</span> <span style="color:#0a3069">&#39;@automerge/automerge-repo&#39;</span><span style="color:#1f2328">;</span>
@@ -2167,7 +2241,7 @@ sync est décrit dans <a class="internal-link" href="#automergesync-server">Serv
 </span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>    <span style="color:#57606a">// =initializeWasm= à appeler.
 </span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span><span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">function</span> <span style="color:#1f2328">makeRepo</span><span style="color:#1f2328">(){</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">function</span> <span style="color:#1f2328">makeRepo</span><span style="color:#1f2328">(</span><span style="color:#1f2328">onSync</span><span style="color:#1f2328">){</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">params</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">URLSearchParams</span><span style="color:#1f2328">(</span><span style="color:#1f2328">location</span><span style="color:#1f2328">.</span><span style="color:#1f2328">search</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">fromParam</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">params</span><span style="color:#1f2328">.</span><span style="color:#1f2328">get</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;sync_url&#39;</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">fromParam</span><span style="color:#1f2328">){</span>
@@ -2177,10 +2251,18 @@ sync est décrit dans <a class="internal-link" href="#automergesync-server">Serv
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">history</span><span style="color:#1f2328">.</span><span style="color:#1f2328">replaceState</span><span style="color:#1f2328">(</span><span style="color:#cf222e">null</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">clean</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">syncUrl</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">localStorage</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getItem</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;condorcet.sync_url&#39;</span><span style="color:#1f2328">);</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">network</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">syncUrl</span> <span style="color:#0550ae">?</span> <span style="color:#1f2328">[</span><span style="color:#cf222e">new</span> <span style="color:#1f2328">BrowserWebSocketClientAdapter</span><span style="color:#1f2328">(</span><span style="color:#1f2328">syncUrl</span><span style="color:#1f2328">)]</span> <span style="color:#0550ae">:</span> <span style="color:#1f2328">[];</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">let</span> <span style="color:#1f2328">adapter</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">syncUrl</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">adapter</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">BrowserWebSocketClientAdapter</span><span style="color:#1f2328">(</span><span style="color:#1f2328">syncUrl</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">adapter</span><span style="color:#1f2328">.</span><span style="color:#1f2328">on</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;peer-candidate&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">onSync</span><span style="color:#0550ae">?</span><span style="color:#1f2328">.(</span><span style="color:#0a3069">&#39;connected&#39;</span><span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">adapter</span><span style="color:#1f2328">.</span><span style="color:#1f2328">on</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;peer-disconnected&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">onSync</span><span style="color:#0550ae">?</span><span style="color:#1f2328">.(</span><span style="color:#0a3069">&#39;disconnected&#39;</span><span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">onSync</span><span style="color:#0550ae">?</span><span style="color:#1f2328">.(</span><span style="color:#0a3069">&#39;connecting&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span> <span style="color:#cf222e">else</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">onSync</span><span style="color:#0550ae">?</span><span style="color:#1f2328">.(</span><span style="color:#0a3069">&#39;off&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">Repo</span><span style="color:#1f2328">({</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">storage</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">IndexedDBStorageAdapter</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;condorcet&#39;</span><span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">network</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">network</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">adapter</span> <span style="color:#0550ae">?</span> <span style="color:#1f2328">[</span><span style="color:#1f2328">adapter</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">:</span> <span style="color:#1f2328">[],</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">});</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>
@@ -2283,6 +2365,54 @@ visit suffit pour que les visites suivantes synchent automatiquement.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> ballots <span style="color:#0550ae">and</span> <span style="color:#0a3069">&#34;Alice&#34;</span> <span style="color:#0550ae">in</span> ballots<span style="color:#1f2328">,</span> \
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;B sans sync_url n&#39;a pas reçu le bulletin : </span><span style="color:#0a3069">{</span>ballots<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: sync_url memorized&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h4 id="sync-indicator">Indicateur de connexion</h4>
+<p>Une fois la sync armée, l&rsquo;utilisateur doit pouvoir <strong>voir</strong> en un coup
+d&rsquo;œil si son téléphone est en lien avec le serveur. Sans ça, un
+bulletin qui tarde à apparaître chez l&rsquo;autre laisse le doute : retard
+réseau, socket coupée, serveur absent ? Une pastille discrète en haut
+à droite, lue à la volée, tranche ce doute sans solliciter l&rsquo;attention
+quand tout va bien.</p>
+<p>Trois états visuels : orange pulsant pendant la connexion, vert une
+fois le serveur atteint, rouge si la socket se coupe. En l&rsquo;absence de
+<code>sync_url</code> armé (<code>off</code>) la pastille reste cachée — afficher un voyant
+là où rien ne se synchronise inquiéterait pour rien.</p>
+<p>La pastille traduit fidèlement le champ <code>syncStatus</code> du store, lui-même
+alimenté par le callback de <code>makeRepo</code> via les transitions
+<code>peer-candidate</code> / <code>peer-disconnected</code> de l&rsquo;adapter (cf. <a class="internal-link" href="#c0d07c0c-0022-4000-8000-000000000000">Repo Automerge</a>).
+Une fois le serveur atteint au moins une fois, la pastille passe au
+vert ; le test ci-dessous fige cette garantie de bout en bout.</p>
+<p><a id="code-snippet--test-sync-indicator"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_sync_indicator</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;L&#39;indicateur passe à &#39;connected&#39; (pastille verte) après handshake serveur.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    sync_url <span style="color:#0550ae">=</span> require_sync_server<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;sync indicator&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> sync_url<span style="color:#1f2328">:</span> <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>BASE_URL<span style="color:#0a3069">}</span><span style="color:#0a3069">?sync_url=</span><span style="color:#0a3069">{</span>sync_url<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> timeout<span style="color:#0550ae">=</span><span style="color:#0550ae">15000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_selector<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-app-ready]&#34;</span><span style="color:#1f2328">,</span> timeout<span style="color:#0550ae">=</span><span style="color:#0550ae">15000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    wait_for<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#cf222e">lambda</span><span style="color:#1f2328">:</span> page<span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;window.__voteStore.syncStatus&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;connected&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>locator<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.sync-indicator.sync-connected&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>is_visible<span style="color:#1f2328">(),</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;pastille verte attendue après handshake&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: sync indicator&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>Le markup expose la classe <code>sync-&lt;status&gt;</code> pour que le CSS pilote
+couleur et animation, et <code>syncStatusLabel</code> en <code>title</code> pour le tooltip
+de bureau. <code>pointer-events:none</code> empêche la pastille d&rsquo;intercepter un
+tap dans la zone du haut.</p>
+<p><a id="code-snippet--ui-sync-indicator"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;sync-indicator&#34;</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#1f2328">v-show</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;syncStatus !== &#39;off&#39;&#34;</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#1f2328">:class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#39;sync-&#39;+syncStatus&#34;</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#1f2328">:title</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;syncStatusLabel&#34;</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#1f2328">v-cloak</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">span</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;dot&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">span</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">span</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;label&#34;</span> <span style="color:#1f2328">v-text</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;syncStatusLabel&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">span</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span></code></pre></div><p><a id="code-snippet--css-sync-indicator"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-css" data-lang="css"><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">sync-indicator</span><span style="color:#1f2328">{</span><span style="color:#cf222e">position</span><span style="color:#1f2328">:</span><span style="color:#cf222e">fixed</span><span style="color:#1f2328">;</span><span style="color:#cf222e">top</span><span style="color:#1f2328">:</span><span style="color:#6639ba">calc</span><span style="color:#1f2328">(</span><span style="color:#6639ba">env</span><span style="color:#1f2328">(</span>safe<span style="color:#0550ae">-</span>area<span style="color:#0550ae">-</span><span style="color:#cf222e">inset</span><span style="color:#0550ae">-</span><span style="color:#cf222e">top</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">+</span> <span style="color:#0550ae">8</span><span style="color:#cf222e">px</span><span style="color:#1f2328">);</span><span style="color:#cf222e">right</span><span style="color:#1f2328">:</span><span style="color:#0550ae">8</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">display</span><span style="color:#1f2328">:</span><span style="color:#cf222e">flex</span><span style="color:#1f2328">;</span><span style="color:#cf222e">align-items</span><span style="color:#1f2328">:</span><span style="color:#cf222e">center</span><span style="color:#1f2328">;</span><span style="color:#cf222e">gap</span><span style="color:#1f2328">:</span><span style="color:#0550ae">6</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">padding</span><span style="color:#1f2328">:</span><span style="color:#0550ae">4</span><span style="color:#cf222e">px</span> <span style="color:#0550ae">8</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">rgba</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">.35</span><span style="color:#1f2328">);</span><span style="color:#cf222e">border-radius</span><span style="color:#1f2328">:</span><span style="color:#0550ae">12</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">font-size</span><span style="color:#1f2328">:</span><span style="color:#0550ae">.72</span><span style="color:#cf222e">rem</span><span style="color:#1f2328">;</span><span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>muted<span style="color:#1f2328">);</span>pointer-events<span style="color:#1f2328">:</span><span style="color:#cf222e">none</span><span style="color:#1f2328">;</span><span style="color:#cf222e">z-index</span><span style="color:#1f2328">:</span><span style="color:#0550ae">50</span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">sync-indicator</span> <span style="color:#1f2328">.</span><span style="color:#1f2328">dot</span><span style="color:#1f2328">{</span><span style="color:#cf222e">width</span><span style="color:#1f2328">:</span><span style="color:#0550ae">8</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">height</span><span style="color:#1f2328">:</span><span style="color:#0550ae">8</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">border-radius</span><span style="color:#1f2328">:</span><span style="color:#0550ae">50</span><span style="color:#cf222e">%</span><span style="color:#1f2328">;</span><span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>muted<span style="color:#1f2328">)}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">sync-indicator</span><span style="color:#1f2328">.</span><span style="color:#1f2328">sync-connecting</span> <span style="color:#1f2328">.</span><span style="color:#1f2328">dot</span><span style="color:#1f2328">{</span><span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>accent<span style="color:#1f2328">);</span><span style="color:#cf222e">animation</span><span style="color:#1f2328">:</span>sync-pulse <span style="color:#0550ae">1</span><span style="color:#cf222e">s</span> <span style="color:#cf222e">ease-in-out</span> <span style="color:#cf222e">infinite</span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">sync-indicator</span><span style="color:#1f2328">.</span><span style="color:#1f2328">sync-connected</span> <span style="color:#1f2328">.</span><span style="color:#1f2328">dot</span><span style="color:#1f2328">{</span><span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>ok<span style="color:#1f2328">)}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">sync-indicator</span><span style="color:#1f2328">.</span><span style="color:#1f2328">sync-disconnected</span> <span style="color:#1f2328">.</span><span style="color:#1f2328">dot</span><span style="color:#1f2328">{</span><span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>danger<span style="color:#1f2328">)}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">@</span><span style="color:#cf222e">keyframes</span> <span style="color:#0550ae">sync-pulse</span><span style="color:#1f2328">{</span><span style="color:#0550ae">0</span><span style="color:#0550ae">%,</span><span style="color:#0550ae">100</span><span style="color:#0550ae">%</span><span style="color:#1f2328">{</span><span style="color:#cf222e">opacity</span><span style="color:#1f2328">:</span><span style="color:#0550ae">1</span><span style="color:#1f2328">}</span><span style="color:#0550ae">50</span><span style="color:#0550ae">%</span><span style="color:#1f2328">{</span><span style="color:#cf222e">opacity</span><span style="color:#1f2328">:</span><span style="color:#0550ae">.3</span><span style="color:#1f2328">}}</span>
 </span></span></code></pre></div><h4 id="fixture-docker-sync">Fixture Docker pour tests de sync</h4>
 <p>La fixture démarre un container à partir de l&rsquo;image prod au premier
 test qui en a besoin (cache partagé entre tests) et l&rsquo;arrête via
@@ -2404,6 +2534,18 @@ target&rdquo;).</p>
 <p>À l&rsquo;attache, le doc peut ne pas encore être disponible (IndexedDB ou
 WebSocket en transit). Le store doit rester utilisable dans cet état ;
 le listener de changements prend le relais dès que le doc arrive.</p>
+<p>Corollaire côté templates : <code>v-show</code> ne court-circuite <strong>pas</strong> l&rsquo;évaluation
+réactive des sous-effects. Un <code>v-for</code>&ldquo;v in scrutin.voters&rdquo;= dans un
+parent <code>v-show</code>&ldquo;scrutin &amp;&amp; &hellip;&quot;= jette quand même au boot tant que
+<code>scrutin</code> est null. Les <code>v-for</code> qui descendent dans <code>scrutin</code> se
+protègent donc avec un fallback explicite (<code>v-for</code>&ldquo;v in (scrutin ?
+scrutin.voters : [])&quot;<code>) plutôt que de compter sur le =v-show</code> du
+parent.</p>
+<p>Le statut de la liaison sync vit ici aussi, comme champ scalaire plat
+<code>syncStatus</code> (&lsquo;off&rsquo;, &lsquo;connecting&rsquo;, &lsquo;connected&rsquo;, &lsquo;disconnected&rsquo;) alimenté
+par le callback de <code>makeRepo</code> (cf. <a class="internal-link" href="#sync-indicator">Indicateur de connexion</a>). Pas
+besoin de getter en profondeur — c&rsquo;est un scalaire, la réactivité de
+petite-vue le suit naturellement.</p>
 <p><a id="code-snippet--js-vote-store"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">cloneDoc</span><span style="color:#1f2328">(</span><span style="color:#1f2328">doc</span><span style="color:#1f2328">){</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">doc</span> <span style="color:#0550ae">?</span> <span style="color:#1f2328">JSON</span><span style="color:#1f2328">.</span><span style="color:#1f2328">parse</span><span style="color:#1f2328">(</span><span style="color:#1f2328">JSON</span><span style="color:#1f2328">.</span><span style="color:#1f2328">stringify</span><span style="color:#1f2328">(</span><span style="color:#1f2328">doc</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">:</span> <span style="color:#1f2328">doc</span><span style="color:#1f2328">;</span>
@@ -2417,7 +2559,8 @@ le listener de changements prend le relais dès que le doc arrive.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">tally</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">stage</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;pass&#39;</span><span style="color:#1f2328">,</span>       <span style="color:#57606a">// &#39;pass&#39; | &#39;ballot&#39; | &#39;identify&#39; | &#39;waiting&#39;
 </span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>    <span style="color:#1f2328">allVoted</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">false</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">ui</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">{},</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">syncStatus</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;off&#39;</span><span style="color:#1f2328">,</span>   <span style="color:#57606a">// &#39;off&#39; | &#39;connecting&#39; | &#39;connected&#39; | &#39;disconnected&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>    <span style="color:#1f2328">ui</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">{},</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">get</span> <span style="color:#1f2328">rosterCount</span><span style="color:#1f2328">(){</span> <span style="color:#cf222e">return</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">scrutin</span> <span style="color:#0550ae">?</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">scrutin</span><span style="color:#1f2328">.</span><span style="color:#1f2328">voters</span><span style="color:#1f2328">.</span><span style="color:#1f2328">length</span> <span style="color:#0550ae">:</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">get</span> <span style="color:#1f2328">ballotsCount</span><span style="color:#1f2328">(){</span> <span style="color:#cf222e">return</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">scrutin</span> <span style="color:#0550ae">?</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">scrutin</span><span style="color:#1f2328">.</span><span style="color:#1f2328">ballots</span><span style="color:#1f2328">.</span><span style="color:#1f2328">length</span> <span style="color:#0550ae">:</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">},</span>
@@ -2426,6 +2569,13 @@ le listener de changements prend le relais dès que le doc arrive.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">const</span> <span style="color:#1f2328">voted</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">{};</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span><span style="color:#1f2328">(</span><span style="color:#cf222e">const</span> <span style="color:#1f2328">b</span> <span style="color:#cf222e">of</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">scrutin</span><span style="color:#1f2328">.</span><span style="color:#1f2328">ballots</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">voted</span><span style="color:#1f2328">[</span><span style="color:#1f2328">b</span><span style="color:#1f2328">.</span><span style="color:#1f2328">voter</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">scrutin</span><span style="color:#1f2328">.</span><span style="color:#1f2328">voters</span><span style="color:#1f2328">.</span><span style="color:#1f2328">find</span><span style="color:#1f2328">(</span><span style="color:#1f2328">v</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#0550ae">!</span><span style="color:#1f2328">voted</span><span style="color:#1f2328">[</span><span style="color:#1f2328">v</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">||</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">get</span> <span style="color:#1f2328">syncStatusLabel</span><span style="color:#1f2328">(){</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#1f2328">({</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">connecting</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;Connexion au serveur…&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">connected</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;Synchronisé&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">disconnected</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;Hors ligne&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">})[</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">syncStatus</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">||</span> <span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">change</span><span style="color:#1f2328">(</span><span style="color:#1f2328">fn</span><span style="color:#1f2328">){</span>
@@ -2482,7 +2632,7 @@ arrive <strong>après</strong> le mount et que la winner-card refuse d&rsquo;app
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#cf222e">async</span> <span style="color:#cf222e">function</span> <span style="color:#1f2328">init</span><span style="color:#1f2328">(){</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">await</span> <span style="color:#1f2328">initAutomerge</span><span style="color:#1f2328">();</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">_repo</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> <span style="color:#1f2328">makeRepo</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">_repo</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> <span style="color:#1f2328">makeRepo</span><span style="color:#1f2328">(</span><span style="color:#1f2328">s</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">reactiveStore</span><span style="color:#1f2328">.</span><span style="color:#1f2328">syncStatus</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">s</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">});</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">handle</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> <span style="color:#1f2328">loadInitialHandle</span><span style="color:#1f2328">(</span><span style="color:#1f2328">_repo</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">handle</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">reactiveStore</span><span style="color:#1f2328">.</span><span style="color:#1f2328">attach</span><span style="color:#1f2328">(</span><span style="color:#1f2328">handle</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">createApp</span><span style="color:#1f2328">(</span><span style="color:#1f2328">reactiveStore</span><span style="color:#1f2328">).</span><span style="color:#1f2328">mount</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;body&#39;</span><span style="color:#1f2328">);</span>
@@ -2527,7 +2677,7 @@ avec <code>maximum-scale=5.0</code> &mdash; la dernière rendue l&rsquo;emporte.
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">create-error</span><span style="color:#1f2328">{</span><span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>danger<span style="color:#1f2328">);</span><span style="color:#cf222e">font-size</span><span style="color:#1f2328">:</span><span style="color:#0550ae">.85</span><span style="color:#cf222e">rem</span><span style="color:#1f2328">;</span><span style="color:#cf222e">margin</span><span style="color:#1f2328">:</span><span style="color:#0550ae">8</span><span style="color:#cf222e">px</span> <span style="color:#0550ae">0</span> <span style="color:#0550ae">0</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span><span style="color:#cf222e">text-align</span><span style="color:#1f2328">:</span><span style="color:#cf222e">center</span><span style="color:#1f2328">}</span>
 </span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/0f4cdb73-75ed-4193-a094-f70881e0b968?title=scrutin_de_condorcet_randomise_entre_amis">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 24 Apr 2026</time></aside>
+	  <aside class="date"><time>Last updated: 25 Apr 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 18 Apr 2026</time></aside>
     </div>
   </div>

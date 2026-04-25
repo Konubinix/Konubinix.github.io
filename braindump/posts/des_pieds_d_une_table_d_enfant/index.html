@@ -54,9 +54,7 @@
 <ul>
 <li><a class="internal-link" href="#a2d94780-8ea8-44dc-b2da-8e36dd1a8daf">formes de base</a></li>
 <li><a class="internal-link" href="#d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f7a">repères de hauteur</a></li>
-<li><a class="internal-link" href="#c8c2c168-3020-482d-958e-649cbb38eb87">vue assemblée</a></li>
-<li><a class="internal-link" href="#ece9528e-94ee-4217-a833-d58f49cbff43">vue éclatée</a></li>
-<li><a class="internal-link" href="#8b21beed-c33e-48b3-b86e-cb40bc57dac3">vue transparente avec cavité visible</a></li>
+<li><a class="internal-link" href="#8b21beed-c33e-48b3-b86e-cb40bc57dac3">rendu 3D</a></li>
 </ul>
 </li>
 <li><a class="internal-link" href="#ef2e9dbb-efb3-46a3-8dba-ad98f9424950">l&rsquo;impression</a>
@@ -136,10 +134,6 @@ d&rsquo;arc ou de proportions sont détectées au plus tôt.</p>
 <h2 id="c2d3e4f5-a6b7-8c9d-0e1f-2a3b4c5d6e7f">manchon pour le grand pied</h2>
 <p>Le grand pied touche le sol et donne la hauteur actuelle H=360mm.
 Ce manchon l&rsquo;allonge de 60mm verticaux pour atteindre H=420mm.</p>
-<p>Le pied est incliné à 21° par rapport à la verticale : une rehausse
-verticale de 60mm correspond à une longueur axiale plus grande, car
-c&rsquo;est la projection de l&rsquo;axe du pied sur la verticale qui donne la
-hauteur gagnée.</p>
 <p>Trois constantes caractérisent l&rsquo;emboîtement : le jeu, l&rsquo;épaisseur de paroi, et la
 profondeur d&rsquo;insertion.</p>
 <p>Le jeu (<code>clearance = 0.5 mm</code>) par côté donne 1 mm au total. Une buse de 0.8 mm fournit
@@ -161,9 +155,8 @@ portion utile du pied — à ajuster par essai si l&rsquo;emboîtement réel s&r
 </span></span><span style="display:flex;"><span>wall <span style="color:#0550ae">=</span> <span style="color:#0550ae">3.0</span>            <span style="color:#57606a"># épaisseur paroi du manchon (mm)</span>
 </span></span><span style="display:flex;"><span>insertion_depth <span style="color:#0550ae">=</span> <span style="color:#0550ae">20</span>  <span style="color:#57606a"># profondeur d&#39;insertion du pied au-dessus du demi-cylindre (mm)</span>
 </span></span></code></pre></div><p>Les trois cotes se lisent d&rsquo;un coup sur une coupe latérale du manchon enfilé sur le
-pied : <code>clearance</code> et <code>wall</code> sont perpendiculaires à l&rsquo;axe, <code>insertion_depth</code> court le
-long de l&rsquo;axe.</p>
-<figure><img src="https://ipfs.konubinix.eu/p/bafkreibc66a2ejk3ltvz63um65dzinwpm4nq23vbalpguk43nwczpzk57q?trois_cotes.png">
+pied.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreigl47k7bixpxzk3mvgaofqrr2x3gsorwxtfxhaoqmrrgw35fhizbi?trois_cotes.png">
 </figure>
 
 <p>Les dimensions de jeu et de paroi forment un contrat : le jeu doit être assez grand
@@ -188,9 +181,10 @@ paroi).</p>
 </span></span><span style="display:flex;"><span>    Box<span style="color:#1f2328">(</span>cavity_width<span style="color:#1f2328">,</span> cavity_thickness<span style="color:#1f2328">,</span> insertion_depth<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>        align<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>Align<span style="color:#0550ae">.</span>CENTER<span style="color:#1f2328">,</span> Align<span style="color:#0550ae">.</span>CENTER<span style="color:#1f2328">,</span> Align<span style="color:#0550ae">.</span>MIN<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    extrude<span style="color:#1f2328">(</span>profil_demi_cylindre<span style="color:#1f2328">(</span>cavity_R<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>sketch<span style="color:#1f2328">,</span> amount<span style="color:#0550ae">=</span>cavity_thickness <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> both<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p>La carcasse externe du manchon enveloppe cette cavité avec une paroi de 3 mm. Sa
-section reprend celle du pied majorée du jeu et de la paroi, et sa longueur axiale
-somme la profondeur d&rsquo;insertion et l&rsquo;extension au-delà du demi-cylindre du pied.</p>
+</span></span></code></pre></div><p>La carcasse externe enveloppe la cavité d&rsquo;une paroi de 3 mm. Sa longueur axiale
+somme l&rsquo;insertion du pied et une extension qui produit la rehausse : le pied étant
+incliné à 21°, une rehausse verticale de <code>target_raise</code> demande une extension axiale
+<code>target_raise / cos(21°)</code>.</p>
 <p><a id="code-snippet--manchon-dims"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>cavity_width <span style="color:#0550ae">=</span> width <span style="color:#0550ae">+</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> clearance
 </span></span><span style="display:flex;"><span>cavity_thickness <span style="color:#0550ae">=</span> thickness <span style="color:#0550ae">+</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> clearance
@@ -212,23 +206,20 @@ la carcasse du manchon :</p>
 <figure><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiavh7jurlwogm435ug4mwk7hhk7u2y4ky3rm4y2dl3qequ673tqfy?cavity_positioning.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreiavh7jurlwogm435ug4mwk7hhk7u2y4ky3rm4y2dl3qequ673tqfy?cavity_positioning.png"></a>
 </figure>
 
-<p>Une fois le manchon fabriqué, il se pose incliné sur le sol — c&rsquo;est là que la
-rehausse cible (verticale) et la longueur axiale du manchon se relient par la
-trigonométrie. Une seconde coupe, vue depuis l&rsquo;extérieur de la table, matérialise
-ce lien : la partie <code>extension</code> du manchon (au-delà de la zone d&rsquo;insertion du pied)
-a une longueur axiale <code>extension_length</code> ; projetée sur la verticale par un cosinus,
-elle vaut exactement les <code>target_raise</code> millimètres de rehausse recherchés. Le sol
-est en bas, le sommet du pavé en haut ; la différence de hauteur entre les deux
-plans pointillés rouges et gris donne la preuve visuelle que <code>extension_length × cos(21°) = target_raise</code>.</p>
+<p>Une seconde coupe, vue depuis l&rsquo;extérieur de la table avec le manchon posé incliné
+sur le sol, rend la relation <code>extension_length × cos(21°) = target_raise</code> visible :
+le sol est en bas, le sommet du pavé en haut ; la différence de hauteur entre les
+deux plans pointillés rouges et gris matérialise la rehausse.</p>
 <figure><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiewjhjqzbfglgvhhqvxla2ratyzf5efjfute5id42jdhbqqugagqy?vertical_projection.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreiewjhjqzbfglgvhhqvxla2ratyzf5efjfute5id42jdhbqqugagqy?vertical_projection.png"></a>
 </figure>
 
+<p>On applique donc la translation <code>manchon_length − insertion_depth</code> calculée plus haut.</p>
 <p><a id="code-snippet--cavity-positioning"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>cavity_positioned <span style="color:#0550ae">=</span> Pos<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> manchon_length <span style="color:#0550ae">-</span> insertion_depth<span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> cavity_part<span style="color:#0550ae">.</span>part
 </span></span></code></pre></div><p>La carcasse extérieure se construit alors autour de cette cavité. Les arêtes vives
-seront rugueuses au toucher et risquent de se briser en impression : on les arrondit
-avec un rayon de 1.5 mm — perceptible au toucher sans fragiliser la paroi de 3 mm —
-sur les arêtes extérieures et la base du manchon.</p>
+sont désagréables sous la main d&rsquo;un enfant : on les arrondit d&rsquo;un rayon de 1.5 mm —
+perceptible au toucher sans fragiliser la paroi de 3 mm — sur les arêtes extérieures
+et la base du manchon.</p>
 <p><a id="code-snippet--manchon-shell"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">with</span> BuildPart<span style="color:#1f2328">()</span> <span style="color:#cf222e">as</span> manchon<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>    Box<span style="color:#1f2328">(</span>manchon_width<span style="color:#1f2328">,</span> manchon_thickness<span style="color:#1f2328">,</span> manchon_length<span style="color:#1f2328">,</span>
@@ -249,25 +240,25 @@ sur les arêtes extérieures et la base du manchon.</p>
 <a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeigcfxhifxxezwh5cgxfyjj5ts73b7ofyyk4ucxxvjdn5zivw5tg74?manchon_grand_pied.stl"><i class="fas fa-download"></i></a>
 <h2 id="d3e4f5a6-b7c8-9d0e-1f2a-3b4c5d6e7f8a">manchon pour le petit pied</h2>
 <p>Le petit pied est suspendu à 28mm du sol quand le grand pied repose
-à plat. Son manchon doit donc compenser ces 28mm en plus des 60mm
-de rehausse, soit 88mm verticaux au total.</p>
-<p>On exécute exactement le même code, mais cette fois avec un <code>target_raise</code> un
-peu plus grand.</p>
+à plat. Son manchon doit donc compenser ces 28mm en plus des 60mm de
+rehausse : la rehausse <code>target_raise</code> est majorée de <code>foot_gap</code>.</p>
 <p><a id="code-snippet--manchon-petit-params"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>target_raise <span style="color:#0550ae">=</span> target_height <span style="color:#0550ae">-</span> current_height <span style="color:#0550ae">+</span> foot_gap
-</span></span></code></pre></div><p>Regardons ce que ça donne :</p>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeifn2jlumlb54jo7lgd2a3aggc7fp4ghczkg24v55ukvm3pen7xvhq?manchon_petit_pied.stl" style="border:0;width:100%;height:500px;"></iframe>
+</span></span></code></pre></div><iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeifn2jlumlb54jo7lgd2a3aggc7fp4ghczkg24v55ukvm3pen7xvhq?manchon_petit_pied.stl" style="border:0;width:100%;height:500px;"></iframe>
 <a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeifn2jlumlb54jo7lgd2a3aggc7fp4ghczkg24v55ukvm3pen7xvhq?manchon_petit_pied.stl"><i class="fas fa-download"></i></a>
 <h2 id="e4f5a6b7-c8d9-0e1f-2a3b-4c5d6e7f8a9b">assemblage complet</h2>
-<p>Avant d&rsquo;envoyer un fichier à l&rsquo;imprimante, on doit s&rsquo;assurer que l&rsquo;assemblage est
-cohérent. Trois invariants tombent directement des cotes choisies : les pieds
-atteignent bien les 420 mm de hauteur cible, la table repose de niveau sur ses quatre
-pieds, et les deux côtés asymétriques sont correctement compensés.</p>
+<p>Avant d&rsquo;envoyer un fichier à l&rsquo;imprimante, on vérifie la cohérence de l&rsquo;assemblage.
+Trois invariants tombent des cotes choisies : la <strong>hauteur cible</strong> — les pieds
+atteignent les 420 mm visés ; le <strong>niveau</strong> — la table repose d&rsquo;aplomb sur ses quatre
+pieds ; la <strong>compensation asymétrique</strong> — l&rsquo;écart <code>foot_gap</code> entre les deux côtés est
+absorbé par l&rsquo;allongement axial du manchon petit.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hauteur cible, niveau, compensation asymétrique — invariants ok
 </span></span></code></pre></div><p>Reste l&rsquo;emboîtement manchon/pied — les faces de contact ne se lisent qu&rsquo;en volume, pas
-aux chiffres. Trois vues complémentaires le rendent lisible sans impression réelle :
-assemblée pour vérifier les hauteurs finales, éclatée pour vérifier l&rsquo;emboîtement sans
-occlusion, transparente pour vérifier que la cavité n&rsquo;a pas été rongée accidentellement.</p>
+aux chiffres. Une vue 3D avec les manchons rendus semi-transparents et les cavités
+colorées en orange opaque rend l&rsquo;intérieur lisible sans impression réelle : on vérifie
+d&rsquo;un coup d&rsquo;œil que chaque pied s&rsquo;engage dans sa cavité, que les hauteurs finales
+tombent pile, et que la cavité n&rsquo;a pas été rongée accidentellement par une opération
+booléenne.</p>
 <p>Les cotes de la table (écartement des pieds, longueur du plateau) déterminent le
 positionnement dans le repère monde.</p>
 <p><a id="code-snippet--table-params"></a></p>
@@ -276,18 +267,7 @@ positionnement dans le repère monde.</p>
 </span></span><span style="display:flex;"><span>foot_spacing <span style="color:#0550ae">=</span> <span style="color:#0550ae">450</span>    <span style="color:#57606a"># mm, écartement avant/arrière entre les deux pieds d&#39;un même côté (Y, à mesurer)</span>
 </span></span></code></pre></div><p>Les cavités d&rsquo;emboîtement apparaissent systématiquement en orange opaque — repère
 visuel pour qu&rsquo;elles ressortent au milieu du bleu des manchons dans les trois vues.</p>
-<p><a id="code-snippet--assembly-imports"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">math</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">warnings</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">build123d</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">_b123d</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">build123d</span> <span style="color:#cf222e">import</span> <span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>    Align<span style="color:#1f2328">,</span> Box<span style="color:#1f2328">,</span> BuildLine<span style="color:#1f2328">,</span> BuildPart<span style="color:#1f2328">,</span> BuildSketch<span style="color:#1f2328">,</span> Color<span style="color:#1f2328">,</span> Compound<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>    Locations<span style="color:#1f2328">,</span> Mode<span style="color:#1f2328">,</span> Plane<span style="color:#1f2328">,</span> Pos<span style="color:#1f2328">,</span> RadiusArc<span style="color:#1f2328">,</span> Line<span style="color:#1f2328">,</span> Rot<span style="color:#1f2328">,</span> add<span style="color:#1f2328">,</span> extrude<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>    export_gltf<span style="color:#1f2328">,</span> fillet<span style="color:#1f2328">,</span> make_face<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>warnings<span style="color:#0550ae">.</span>filterwarnings<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;ignore&#34;</span><span style="color:#1f2328">,</span> message<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Unknown Compound type&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>COLOR_CAVITE <span style="color:#0550ae">=</span> Color<span style="color:#1f2328">(</span><span style="color:#0550ae">1.0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.5</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">)</span>  <span style="color:#57606a"># orange opaque pour visualiser les cavités d&#39;emboîtement</span>
-</span></span></code></pre></div><h3 id="a2d94780-8ea8-44dc-b2da-8e36dd1a8daf">formes de base</h3>
+<h3 id="a2d94780-8ea8-44dc-b2da-8e36dd1a8daf">formes de base</h3>
 <p>Tous les pieds ont la même forme : seules leur position et orientation dans le monde
 diffèrent. On construit donc cette forme une seule fois et on la réutilise.</p>
 <p>Les pieds modélisés s&rsquo;étendent théoriquement jusqu&rsquo;au plateau et même au-delà. Or la
@@ -327,20 +307,17 @@ occupera une fois imprimé et emboîté.</p>
 à la fois les 60 mm de rehausse commune et ces 28 mm supplémentaires — 88 mm au total.
 La rotation est la symétrique de celle du grand pied : inclinaison inverse.</p>
 <p>Le plateau est la pièce de référence : c&rsquo;est lui qui matérialise la hauteur cible.
-<code>target_height</code> désigne la distance sol → dessous du plateau (même convention que
-<code>current_height</code>) : c&rsquo;est la hauteur utile, celle à laquelle les pieds viennent buter
-sous le bois. Le plateau est donc posé avec son dessous à z = target_height ; son
-dessus se retrouve à z = target_height + épaisseur.</p>
+Il est posé avec son dessous à z = <code>target_height</code> — la face où les pieds viennent
+buter — et son dessus se retrouve à z = <code>target_height</code> + épaisseur.</p>
 <p><a id="code-snippet--assembly-plateau-shape"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>plateau <span style="color:#0550ae">=</span> Pos<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> target_height<span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> Box<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>    plateau_length<span style="color:#1f2328">,</span> table_width <span style="color:#0550ae">+</span> <span style="color:#0550ae">40</span><span style="color:#1f2328">,</span> thickness<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    align<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>Align<span style="color:#0550ae">.</span>CENTER<span style="color:#1f2328">,</span> Align<span style="color:#0550ae">.</span>CENTER<span style="color:#1f2328">,</span> Align<span style="color:#0550ae">.</span>MIN<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>plateau<span style="color:#0550ae">.</span>label <span style="color:#0550ae">=</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;plateau (dessous à z=</span><span style="color:#0a3069">{</span>target_height<span style="color:#0a3069">}</span><span style="color:#0a3069">mm, hauteur cible)&#34;</span>
 </span></span><span style="display:flex;"><span>plateau<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> Color<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;wheat&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p>Les trois vues placent toutes les quatre pieds aux mêmes coordonnées mondiales ;
-seule la pièce attachée (manchon seul, manchon décalé, manchon + cavité visible)
-change d&rsquo;une vue à l&rsquo;autre. On factorise donc le placement et le tronquage du pied
-par le plateau dans un helper appelé depuis chaque vue.</p>
+</span></span></code></pre></div><p>Les quatre pieds occupent des positions symétriques en X (grand/petit) et en Y
+(avant/arrière). On factorise le placement et le tronquage du pied par le plateau
+dans un helper appelé depuis la boucle.</p>
 <p><a id="code-snippet--assembly-place-pied"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">placed_pied</span><span style="color:#1f2328">(</span>side<span style="color:#1f2328">,</span> y<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> side <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;grand&#34;</span><span style="color:#1f2328">:</span>
@@ -352,18 +329,6 @@ par le plateau dans un helper appelé depuis chaque vue.</p>
 </span></span><span style="display:flex;"><span>    coupe <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>world <span style="color:#0550ae">*</span> pied<span style="color:#1f2328">)</span> <span style="color:#0550ae">-</span> cutting_box_positioned
 </span></span><span style="display:flex;"><span>    coupe<span style="color:#0550ae">.</span>label<span style="color:#1f2328">,</span> coupe<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> label<span style="color:#1f2328">,</span> color
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> world<span style="color:#1f2328">,</span> coupe
-</span></span></code></pre></div><p>La boucle sur les quatre positions se factorise de la même manière — elle itère
-sur les deux côtés × deux positions, appelle <code>placed_pied</code>, et laisse chaque vue
-composer ses enfants via un lambda qui reçoit <code>world</code>, <code>manchon</code>, <code>side</code> et le
-pied tronqué.</p>
-<p><a id="code-snippet--assembly-foot-loop"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">for_each_foot</span><span style="color:#1f2328">(</span>compose<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    children <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> y <span style="color:#0550ae">in</span> <span style="color:#1f2328">[</span>foot_spacing <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">-</span>foot_spacing <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">]:</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> side<span style="color:#1f2328">,</span> manchon <span style="color:#0550ae">in</span> <span style="color:#1f2328">[(</span><span style="color:#0a3069">&#34;grand&#34;</span><span style="color:#1f2328">,</span> manchon_grand<span style="color:#1f2328">),</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;petit&#34;</span><span style="color:#1f2328">,</span> manchon_petit<span style="color:#1f2328">)]:</span>
-</span></span><span style="display:flex;"><span>            world<span style="color:#1f2328">,</span> pied_coupe <span style="color:#0550ae">=</span> placed_pied<span style="color:#1f2328">(</span>side<span style="color:#1f2328">,</span> y<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            children <span style="color:#0550ae">+=</span> compose<span style="color:#1f2328">(</span>world<span style="color:#1f2328">,</span> manchon<span style="color:#1f2328">,</span> side<span style="color:#1f2328">,</span> pied_coupe<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> children
 </span></span></code></pre></div><h3 id="d4e5f6a7-b8c9-4d0e-8f1a-2b3c4d5e6f7a">repères de hauteur</h3>
 <p>Un assemblage qui <strong>a l&rsquo;air</strong> correct peut masquer une erreur de quelques millimètres
 — et à 420 mm de haut, l&rsquo;œil ne détecte pas un écart de 5 mm. On adjoint donc à
@@ -412,69 +377,41 @@ pied trahit exactement les 60 mm de rehausse.</p>
 </span></span><span style="display:flex;"><span>regle_nouvelle<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> Color<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;mediumseagreen&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>children<span style="color:#0550ae">.</span>extend<span style="color:#1f2328">([</span>sol_reel<span style="color:#1f2328">,</span> sol_avant<span style="color:#1f2328">,</span> regle_ancienne<span style="color:#1f2328">,</span> regle_nouvelle<span style="color:#1f2328">])</span>
-</span></span></code></pre></div><h3 id="c8c2c168-3020-482d-958e-649cbb38eb87">vue assemblée</h3>
-<p>Chaque côté porte deux pieds — un à l&rsquo;avant, un à l&rsquo;arrière, symétriquement répartis
-sur la longueur de la table. Dans la vue assemblée, les manchons sont opaques :
-steelblue pour le grand, cornflowerblue pour le petit. À chaque position, on ajoute
-un manchon et le pied tronqué.</p>
-<p><a id="code-snippet--assembly-colors-plain"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>manchon_grand<span style="color:#0550ae">.</span>label <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;manchon grand pied (rehausse 60mm, côté X+)&#34;</span>
-</span></span><span style="display:flex;"><span>manchon_grand<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> Color<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;steelblue&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>manchon_petit<span style="color:#0550ae">.</span>label <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;manchon petit pied (rehausse 88mm, côté X−)&#34;</span>
-</span></span><span style="display:flex;"><span>manchon_petit<span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> Color<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;cornflowerblue&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p><a id="code-snippet--assembly-4-pieds"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>children <span style="color:#0550ae">=</span> for_each_foot<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">lambda</span> world<span style="color:#1f2328">,</span> manchon<span style="color:#1f2328">,</span> side<span style="color:#1f2328">,</span> pied_coupe<span style="color:#1f2328">:</span> <span style="color:#1f2328">[</span>world <span style="color:#0550ae">*</span> manchon<span style="color:#1f2328">,</span> pied_coupe<span style="color:#1f2328">])</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeigjveimx34tkawplfztxo4c2l3c5ntkzgb3klcqpibrqlg2shuegq?assemblage_table.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeigjveimx34tkawplfztxo4c2l3c5ntkzgb3klcqpibrqlg2shuegq?assemblage_table.glb"><i class="fas fa-download"></i></a></p>
-<h3 id="ece9528e-94ee-4217-a833-d58f49cbff43">vue éclatée</h3>
-<p>Dans la vue assemblée, le manchon enveloppe entièrement le pied — on ne peut pas voir
-l&rsquo;intérieur. La vue éclatée écarte les manchons et les pieds pour que l&rsquo;alignement de
-la cavité soit visible : il faut que chaque pied s&rsquo;engage dans sa cavité sans
-contrainte, sans jeu ni serrage excessif.</p>
-<p>Le décalage d&rsquo;éclatement doit suivre l&rsquo;axe du pied, pas l&rsquo;axe Z du monde — sinon le
-manchon s&rsquo;éloigne du pied en sens inverse de celui où il s&rsquo;enfile. Pour écarter le
-manchon dans la bonne direction, on applique le décalage en Z <strong>local</strong> avant la
-rotation mondiale.</p>
-<p><a id="code-snippet--assembly-4-pieds-eclate"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>explode_offset <span style="color:#0550ae">=</span> <span style="color:#0550ae">80</span>
-</span></span><span style="display:flex;"><span>children <span style="color:#0550ae">=</span> for_each_foot<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">lambda</span> world<span style="color:#1f2328">,</span> manchon<span style="color:#1f2328">,</span> side<span style="color:#1f2328">,</span> pied_coupe<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[</span>world <span style="color:#0550ae">*</span> Pos<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">-</span>explode_offset<span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> manchon<span style="color:#1f2328">,</span> pied_coupe<span style="color:#1f2328">])</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeifnu4x6g6jt2e7r7sbna7kznrsydfk6xfhmjmg3simunjzcgykwv4?assemblage_table_eclate.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeifnu4x6g6jt2e7r7sbna7kznrsydfk6xfhmjmg3simunjzcgykwv4?assemblage_table_eclate.glb"><i class="fas fa-download"></i></a></p>
-<h3 id="8b21beed-c33e-48b3-b86e-cb40bc57dac3">vue transparente avec cavité visible</h3>
-<p>La vue transparente rend les manchons semi-opaque (alpha 0.3) pour voir à travers,
-mais le backface culling du rendu 3D cache les faces intérieures — la cavité ne
-serait pas visible. On l&rsquo;affiche donc explicitement en orange opaque (alpha 0.8)
-positionnée au fond du manchon, là où le pied vient s&rsquo;emboîter.</p>
+</span></span></code></pre></div><h3 id="8b21beed-c33e-48b3-b86e-cb40bc57dac3">rendu 3D</h3>
+<p>On rend les manchons semi-opaques (alpha 0.3) pour voir à travers, mais le backface
+culling du rendu 3D cache alors les faces intérieures — la cavité ne serait pas
+visible. On l&rsquo;affiche donc explicitement en orange opaque (alpha 0.8) positionnée au
+fond du manchon, là où le pied vient s&rsquo;emboîter.</p>
 <p>Cette vue vérifie les cotes d&rsquo;emboîtement avant impression : le pied doit s&rsquo;engager
 sans jeu excessif ni serrage. La cavité en orange se distingue du bleu du manchon,
-rendant les faces de contact lisibles malgré la transparence. Le setup des deux côtés
-est déjà fait — seuls changent les couleurs des manchons (semi-transparentes) et
-l&rsquo;activation des cavités.</p>
-<p>La cavité est décalée dans son repère local du même montant que le pied, pour être
-positionnée à l&rsquo;entrée du manchon — là où le pied vient s&rsquo;emboîter. À chaque position,
-on ajoute donc un troisième enfant : la cavité orange positionnée au fond du manchon.</p>
-<p><a id="code-snippet--assembly-4-pieds-transparent"></a></p>
+rendant les faces de contact lisibles malgré la transparence.</p>
+<p>Chaque côté affiche sa cavité orange à l&rsquo;endroit exact où le pied vient s&rsquo;emboîter
+dans le manchon, pour rendre l&rsquo;intérieur lisible sans impression réelle.</p>
+<p><a id="code-snippet--assembly-children"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>cavity_by_side <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;grand&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">(</span>cavity_grand<span style="color:#1f2328">,</span> manchon_length_grand <span style="color:#0550ae">-</span> insertion_depth_grand<span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;petit&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">(</span>cavity_petit<span style="color:#1f2328">,</span> manchon_length_petit <span style="color:#0550ae">-</span> insertion_depth_petit<span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
-</span></span><span style="display:flex;"><span>children <span style="color:#0550ae">=</span> for_each_foot<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">lambda</span> world<span style="color:#1f2328">,</span> manchon<span style="color:#1f2328">,</span> side<span style="color:#1f2328">,</span> pied_coupe<span style="color:#1f2328">:</span> <span style="color:#1f2328">[</span>
-</span></span><span style="display:flex;"><span>        world <span style="color:#0550ae">*</span> manchon<span style="color:#1f2328">,</span> pied_coupe<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>        world <span style="color:#0550ae">*</span> Pos<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> cavity_by_side<span style="color:#1f2328">[</span>side<span style="color:#1f2328">][</span><span style="color:#0550ae">1</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">*</span> cavity_by_side<span style="color:#1f2328">[</span>side<span style="color:#1f2328">][</span><span style="color:#0550ae">0</span><span style="color:#1f2328">],</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">])</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeiguuj7ghhdk6z4orrmgmtmcbpbdfdk3m7e5cwktbbitgubc2imuxq?assemblage_table_transparent.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeiguuj7ghhdk6z4orrmgmtmcbpbdfdk3m7e5cwktbbitgubc2imuxq?assemblage_table_transparent.glb"><i class="fas fa-download"></i></a></p>
+</span></span><span style="display:flex;"><span>children <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> y <span style="color:#0550ae">in</span> <span style="color:#1f2328">[</span>foot_spacing <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">-</span>foot_spacing <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">]:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> side<span style="color:#1f2328">,</span> manchon <span style="color:#0550ae">in</span> <span style="color:#1f2328">[(</span><span style="color:#0a3069">&#34;grand&#34;</span><span style="color:#1f2328">,</span> manchon_grand<span style="color:#1f2328">),</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;petit&#34;</span><span style="color:#1f2328">,</span> manchon_petit<span style="color:#1f2328">)]:</span>
+</span></span><span style="display:flex;"><span>        world<span style="color:#1f2328">,</span> pied_coupe <span style="color:#0550ae">=</span> placed_pied<span style="color:#1f2328">(</span>side<span style="color:#1f2328">,</span> y<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        cavity<span style="color:#1f2328">,</span> offset <span style="color:#0550ae">=</span> cavity_by_side<span style="color:#1f2328">[</span>side<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        children <span style="color:#0550ae">+=</span> <span style="color:#1f2328">[</span>world <span style="color:#0550ae">*</span> manchon<span style="color:#1f2328">,</span> pied_coupe<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                     world <span style="color:#0550ae">*</span> Pos<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> offset<span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> cavity<span style="color:#1f2328">]</span>
+</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeiguuj7ghhdk6z4orrmgmtmcbpbdfdk3m7e5cwktbbitgubc2imuxq?assemblage_table.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeiguuj7ghhdk6z4orrmgmtmcbpbdfdk3m7e5cwktbbitgubc2imuxq?assemblage_table.glb"><i class="fas fa-download"></i></a></p>
 <h2 id="ef2e9dbb-efb3-46a3-8dba-ad98f9424950">l&rsquo;impression</h2>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicmckgdcjxub2yn6kz3lahcoyoenrsckenoaqaebvwllevquxhaea?filename=manchon_petit_pied.3mf">manchon_petit_pied.3mf</a></p>
-<p>Bambu Lab A1 mini<sup id="fnref:6"><a class="internal-link" href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>, buse 0.8 mm déjà montée. Combinaison
-bed-slinger + grosse buse : les extrusions épaisses masquent le ringing
-en Y<sup id="fnref:7"><a class="internal-link" href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>, et l&rsquo;adhésion inter-couche reste excellente en haute flow
-(tests Prusa 0.4 vs 0.6 : +25.6 % d&rsquo;impact sur la grosse<sup id="fnref:8"><a class="internal-link" href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup>).
-On garde la 0.8.</p>
+<p>Bambu Lab A1 mini<sup id="fnref:6"><a class="internal-link" href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>, buse 0.8 mm déjà montée. Deux propriétés
+de cette combinaison servent la pièce.</p>
+<p>L&rsquo;A1 mini est une bed-slinger : son plateau oscille en
+Y<sup id="fnref:7"><a class="internal-link" href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup> pendant l&rsquo;impression et marque normalement les parois
+d&rsquo;ondulations visibles — le ringing. Les extrusions épaisses d&rsquo;une grosse
+buse absorbent ces vibrations et masquent le ringing<sup id="fnref:8"><a class="internal-link" href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup>.</p>
+<p>L&rsquo;adhésion inter-couche tient aussi à haut débit : tests Prusa 0.4 vs
+0.6 mm, la grosse encaisse +25.6 % d&rsquo;impact sur pièce testée en
+choc<sup id="fnref:9"><a class="internal-link" href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup>.</p>
 <p>Manchons verticaux, axe aligné Z, <strong>petit bout en haut</strong> : face rectangulaire
 (ouverture de la cavité, anneau ~620 mm², paroi 3 mm autour du 81×16) sur le
 plateau, calotte ogivale en haut. Premier contact propre, et la calotte se
@@ -482,33 +419,29 @@ referme au fur et à mesure de la montée Z — dôme auto-porté, pas de suppor
 L&rsquo;horizontal serait plus solide (fibres parallèles à la charge) mais
 exigerait des supports sous la surface ogivale — dégradation du fini sur
 une pièce de précision d&rsquo;emboîtement.</p>
-<p>Le même manchon vu dans les deux postures rend le compromis évident : à gauche debout,
-les couches se déposent à plat, la calotte se referme doucement en haut sans appui ; à
-droite couché, la surface ogivale surplombe le vide et réclame un peigne de supports.</p>
-<figure><img src="https://ipfs.konubinix.eu/p/bafkreicvn6xphnanwk53bwzjgbnorwdtjqbtja4wghaurtivqopqjwq5pq?orientation_impression.png">
-</figure>
-
-<p>Le bed-slinger oscille en Y<sup id="fnref:9"><a class="internal-link" href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup> : grande face (87 mm) parallèle à X,
-épaisseur (22 mm) selon Y — bras de levier minimal sur l&rsquo;axe qui vibre. Hauteur totale
+<p>Vu l&rsquo;oscillation en Y, la grande face (87 mm) s&rsquo;aligne parallèle à X,
+l&rsquo;épaisseur (22 mm) selon Y — bras de levier minimal sur l&rsquo;axe qui vibre. Hauteur totale
 128 mm (grand), 158 mm (petit) ; on additionne <code>manchon_length</code> et
 <code>manchon_R</code>, la calotte s&rsquo;ajoutant au pavé. Le petit frôle la limite
 verticale (180 mm<sup id="fnref1:6"><a class="internal-link" href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>) sur base étroite en Y : brim 5-8 mm
 obligatoire<sup id="fnref:10"><a class="internal-link" href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>.</p>
-<p>Choix structurels : layer 0.4 mm (pas 0.6 extra draft, fini trop grossier
-sur 114 mm — 0.4 = 50 % du diamètre de buse, point d&rsquo;équilibre classique
-qualité/vitesse[fn:layer-height-0.8]) ; 4 wall loops (3.2 mm continu pour la paroi modélisée à 3 mm) ;
-4 top/bottom (1.6 mm pleins — le slicer place les top-shells au plafond de
-la cavité, exactement la zone de compression en usage) ; 15 % gyroïde (vs
-4 % en horizontal : ici l&rsquo;infill travaille contre les vibrations pendant le
-print et contre le fléchissement latéral en usage ; gyroïde isotrope, pas
-de direction faible<sup id="fnref:11"><a class="internal-link" href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup>). Valeurs concrètes à punch dans
-le slicer : voir <code>paramètres slicer</code> plus bas.</p>
-<p>Au jeu nominal de 0.5 mm par côté (voir <code>manchon-commun-params</code>), la
-précision FDM ±0.2-0.3 mm donne un emboîtement réel entre 0.2 (serré
-fonctionnel) et 0.8 mm (acceptable). On ne monte pas à 0.7 préventivement :
-pieds inclinés à 21°, la gravité tire déjà, et 0.7 + tolérance atteindrait
-1 mm par côté, soit 2 mm de flottement total — incompatible avec un
-emboîtement incliné stable.</p>
+<p>Quatre paramètres process charpentent la pièce.</p>
+<p><strong>Layer 0.4 mm.</strong> C&rsquo;est 50 % du diamètre de buse, le point d&rsquo;équilibre
+classique qualité/vitesse[fn:layer-height-0.8]. Monter en 0.6 « extra
+draft » donnerait un fini trop grossier sur les 114 mm de hauteur.</p>
+<p><strong>4 wall loops.</strong> 0.8 × 4 = 3.2 mm continu, qui couvre pile la paroi de
+3 mm modélisée en CAO.</p>
+<p><strong>4 top/bottom shell layers.</strong> 1.6 mm pleins. Le slicer dépose les
+top-shells au plafond de la cavité — exactement la zone qui se comprime
+en usage quand le pied appuie depuis le haut.</p>
+<p><strong>15 % gyroïde.</strong> Plus dense que les 4 % d&rsquo;une pièce horizontale : ici
+l&rsquo;infill travaille contre les vibrations pendant le print et contre le
+fléchissement latéral en usage. Le gyroïde est isotrope, pas de direction
+faible<sup id="fnref:11"><a class="internal-link" href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup>.</p>
+<p>Au jeu nominal de 0.5 mm par côté, la précision FDM ±0.2-0.3 mm donne un
+emboîtement réel entre 0.2 et 0.8 mm — d&rsquo;où la nécessité d&rsquo;un test
+préalable plutôt qu&rsquo;une marge préventive à 0.7, qui cumulerait 1 mm par
+côté avec les tolérances et deviendrait trop lâche pour l&rsquo;inclinaison à 21°.</p>
 <p>Stratégie : imprimer <strong>un seul grand</strong> d&rsquo;abord, tester sur le vrai pied. Le
 grand valide aussi le petit (même géométrie de cavité, seule l&rsquo;extension
 diffère). Trois cas :</p>
@@ -522,19 +455,19 @@ diffère). Trois cas :</p>
 à 21° : cisaillement interlaminaire dans l&rsquo;axe faible du FDM<sup id="fnref:12"><a class="internal-link" href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup>.
 La compression verticale via les top-shells passe sans effort ; la tenue
 dépend de la soudure entre couches. Par ordre d&rsquo;importance.</p>
-<p><strong>Flux volumétrique.</strong> Levier principal.
-<code>volumetric_flow = layer_height × line_width × speed</code><sup id="fnref:13"><a class="internal-link" href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup>.
-À 0.8 × 0.4 × 120 mm/s : ~38 mm³/s, probablement au-dessus du hotend A1
-mini en PLA (l&rsquo;upgrade E3D ObXidian annonce +70 %, soit un stock ~26 mm³/s
-en pointe ; Ellis donne ~15 mm³/s comme référence typique)<sup id="fnref:14"><a class="internal-link" href="#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>.
-Sous-extrusion invisible à l&rsquo;œil, mais couches mal
-fusionnées<sup id="fnref:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>. Deux routes. (a) Calibrer le MVS
-(test Orca/Bambu Studio) puis plafonner paroi externe à 60-65 mm/s et
-internes à 80-90 mm/s. (b) Garder le preset MVS (Generic PLA A1M =
-12 mm³/s, très conservateur<sup id="fnref:16"><a class="internal-link" href="#fn:16" class="footnote-ref" role="doc-noteref">16</a></sup>) et laisser Bambu
-auto-cap les vitesses<sup id="fnref:17"><a class="internal-link" href="#fn:17" class="footnote-ref" role="doc-noteref">17</a></sup> : à 0.8 × 0.4, le cap tombe à
-~37 mm/s — plus strict que (a), print plus lent mais risque sous-extrusion
-éliminé par construction. On retient (b) pour la simplicité.</p>
+<p><strong>Flux volumétrique.</strong> Levier principal. La formule
+<code>volumetric_flow = layer_height × line_width × speed</code><sup id="fnref:13"><a class="internal-link" href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup>
+donne le débit matière que le hotend doit fournir.</p>
+<p>À 0.8 × 0.4 × 120 mm/s (vitesse typique de paroi externe), on atteint
+~38 mm³/s — probablement au-dessus du hotend A1 mini en PLA. L&rsquo;upgrade
+E3D ObXidian annonce +70 % et monte à ~26 mm³/s en pointe ; Ellis donne
+~15 mm³/s comme référence typique<sup id="fnref:14"><a class="internal-link" href="#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>. Dépasser ces
+limites produit une sous-extrusion invisible à l&rsquo;œil mais aux couches
+mal fusionnées<sup id="fnref:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.</p>
+<p>Le remède est structurel : on s&rsquo;appuie sur le preset MVS très conservateur
+(Generic PLA A1M = 12 mm³/s<sup id="fnref:16"><a class="internal-link" href="#fn:16" class="footnote-ref" role="doc-noteref">16</a></sup>) qui auto-cap les
+vitesses<sup id="fnref:17"><a class="internal-link" href="#fn:17" class="footnote-ref" role="doc-noteref">17</a></sup>. À 0.8 × 0.4, le cap tombe à ~37 mm/s — print
+plus lent qu&rsquo;optimal, mais risque sous-extrusion éliminé par construction.</p>
 <p><strong>Température haute.</strong> +5 à +10 °C vs preset sur <code>Other layers</code> uniquement
 (Generic PLA A1M 220 → 225-230 ; PETG preset+10). Grosse buse = plus de
 matière à chauffer, et la température pilote directement l&rsquo;adhésion
@@ -559,8 +492,7 @@ la précédente<sup id="fnref1:4"><a class="internal-link" href="#fn:4" class="f
 au-dessus de 0.4 mm pour gagner du temps — on réduirait les couches pleines
 des top-shells au plafond de la cavité, exactement la zone de compression.</p>
 <h3 id="465027db-a730-4716-af9c-b915a6e773d1">paramètres slicer</h3>
-<p>Récap avec les noms exacts Bambu Studio. Le &ldquo;pourquoi&rdquo; est dans les deux
-sections précédentes.</p>
+<p>Les paramètres, par onglet Bambu Studio.</p>
 <p>Process profile — onglet <strong>Quality</strong> :</p>
 <ul>
 <li><code>Layer height</code> : 0.4 mm</li>
@@ -611,9 +543,7 @@ pas d&rsquo;overhangs, parois épaisses, pas de fine détails) :</p>
 <li>abri des courants d&rsquo;air (A1 mini ouverte)</li>
 </ul>
 <h2 id="c3d4e5f6-a7b8-4c9d-8e0f-1a2b3c4d5e6f">annexe : imports</h2>
-<p>Les exports STL des manchons reposent sur un même ensemble de primitives build123d.
-Le bloc est isolé ici plutôt qu&rsquo;en tête de section : il n&rsquo;apporte rien à la narrative,
-mais les pipelines <code>generate-manchon-*-stl</code> le réfèrent en noweb.</p>
+<p>Les exports STL des manchons reposent sur un même ensemble de primitives build123d.</p>
 <p><a id="code-snippet--manchon-stl-imports"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">math</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">build123d</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">_b123d</span>
@@ -640,7 +570,7 @@ translation ensuite.</p>
 <p>Trois vignettes côte à côte suivent le point de contact : brut dans le repère local,
 après rotation seule (encore sous le sol), puis après rotation + translation — il
 atterrit exactement au sol.</p>
-<figure><img src="https://ipfs.konubinix.eu/p/bafkreiec7f6uvc73czjp6bmpqavsbjglpalfche6p5k7dnkau3y3ktiulm?correction_trig.png">
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreifm47ofz5txsxipug5d436arl3o7kkcnhu2qz47ya2gtzo3s6qvr4?correction_trig.png">
 </figure>
 
 <h2 id="permalink"><a class="internal-link" href="/braindump/ccb83966-f0e5-4f4f-88a2-3ef095e9784d?title=des_pieds_d_une_table_d_enfant">Permalink</a></h2>
@@ -700,8 +630,8 @@ atterrit exactement au sol.</p>
 &#160;<a class="internal-link" href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
 <li id="fn:7">
 <blockquote>
-<p>Ringing is caused by mechanical vibrations in the printer due to quick changes of the printing direction.</p>
-<p>&mdash; Klipper documentation, &ldquo;Resonance Compensation&rdquo; — <a target="_blank" href="https://www.klipper3d.org/Resonance_Compensation.html">https://www.klipper3d.org/Resonance_Compensation.html</a></p>
+<p>the vibrations were mostly being caused by the Y carriage of the bed as it was being moved back and forth […] any movement involving the Y axis is a real problem</p>
+<p>&mdash; Desi Quintans, &ldquo;Diagnosing and fixing ringing versus vibration artefacts&rdquo; — <a target="_blank" href="https://www.desiquintans.com/ringing">https://www.desiquintans.com/ringing</a></p>
 </blockquote>
 <!--quoteend-->
 <blockquote>
@@ -711,19 +641,19 @@ atterrit exactement au sol.</p>
 &#160;<a class="internal-link" href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
 <li id="fn:8">
 <blockquote>
-<p>An impact resistance test revealed that the objects printed with the 0.6mm nozzle absorbed up to 25.6 % energy more than those printed with a 0.4mm nozzle.</p>
-<p>&mdash; Prusa Blog, &ldquo;Everything about nozzles with a different diameter&rdquo; — <a target="_blank" href="https://blog.prusa3d.com/everything-about-nozzles-with-a-different-diameter_8344/">https://blog.prusa3d.com/everything-about-nozzles-with-a-different-diameter_8344/</a></p>
-</blockquote>
-&#160;<a class="internal-link" href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
-<li id="fn:9">
-<blockquote>
-<p>the vibrations were mostly being caused by the Y carriage of the bed as it was being moved back and forth […] any movement involving the Y axis is a real problem</p>
-<p>&mdash; Desi Quintans, &ldquo;Diagnosing and fixing ringing versus vibration artefacts&rdquo; — <a target="_blank" href="https://www.desiquintans.com/ringing">https://www.desiquintans.com/ringing</a></p>
+<p>Ringing is caused by mechanical vibrations in the printer due to quick changes of the printing direction.</p>
+<p>&mdash; Klipper documentation, &ldquo;Resonance Compensation&rdquo; — <a target="_blank" href="https://www.klipper3d.org/Resonance_Compensation.html">https://www.klipper3d.org/Resonance_Compensation.html</a></p>
 </blockquote>
 <!--quoteend-->
 <blockquote>
 <p>EI shaper may be more suited for bed slinger printers (if the resonance frequency and resulting smoothing allows): as more filament is deposited on the moving bed, the mass of the bed increases and the resonance frequency will decrease.</p>
 <p>&mdash; Klipper documentation, &ldquo;Resonance Compensation&rdquo; — <a target="_blank" href="https://www.klipper3d.org/Resonance_Compensation.html">https://www.klipper3d.org/Resonance_Compensation.html</a></p>
+</blockquote>
+&#160;<a class="internal-link" href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:9">
+<blockquote>
+<p>An impact resistance test revealed that the objects printed with the 0.6mm nozzle absorbed up to 25.6 % energy more than those printed with a 0.4mm nozzle.</p>
+<p>&mdash; Prusa Blog, &ldquo;Everything about nozzles with a different diameter&rdquo; — <a target="_blank" href="https://blog.prusa3d.com/everything-about-nozzles-with-a-different-diameter_8344/">https://blog.prusa3d.com/everything-about-nozzles-with-a-different-diameter_8344/</a></p>
 </blockquote>
 &#160;<a class="internal-link" href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
 <li id="fn:10">

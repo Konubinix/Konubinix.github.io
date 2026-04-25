@@ -15,7 +15,7 @@ async function initAutomerge(){
     // =initializeWasm= à appeler.
 }
 
-async function makeRepo(){
+async function makeRepo(onSync){
     const params = new URLSearchParams(location.search);
     const fromParam = params.get('sync_url');
     if(fromParam){
@@ -25,10 +25,18 @@ async function makeRepo(){
         history.replaceState(null, '', clean);
     }
     const syncUrl = localStorage.getItem('condorcet.sync_url');
-    const network = syncUrl ? [new BrowserWebSocketClientAdapter(syncUrl)] : [];
+    let adapter = null;
+    if(syncUrl){
+        adapter = new BrowserWebSocketClientAdapter(syncUrl);
+        adapter.on('peer-candidate', () => onSync?.('connected'));
+        adapter.on('peer-disconnected', () => onSync?.('disconnected'));
+        onSync?.('connecting');
+    } else {
+        onSync?.('off');
+    }
     return new Repo({
         storage: new IndexedDBStorageAdapter('condorcet'),
-        network,
+        network: adapter ? [adapter] : [],
     });
 }
 
@@ -132,6 +140,7 @@ const voteStore = {
     tally: null,
     stage: 'pass',       // 'pass' | 'ballot' | 'identify' | 'waiting'
     allVoted: false,
+    syncStatus: 'off',   // 'off' | 'connecting' | 'connected' | 'disconnected'
     ui: {},
 
     get rosterCount(){ return this.scrutin ? this.scrutin.voters.length : 0; },
@@ -141,6 +150,13 @@ const voteStore = {
         const voted = {};
         for(const b of this.scrutin.ballots) voted[b.voter] = true;
         return this.scrutin.voters.find(v => !voted[v]) || null;
+    },
+    get syncStatusLabel(){
+        return ({
+            connecting: 'Connexion au serveur…',
+            connected: 'Synchronisé',
+            disconnected: 'Hors ligne',
+        })[this.syncStatus] || '';
     },
 
     change(fn){
@@ -784,7 +800,7 @@ window.testForceRanking = function(order){
 
 (async function init(){
     await initAutomerge();
-    _repo = await makeRepo();
+    _repo = await makeRepo(s => { reactiveStore.syncStatus = s; });
     const handle = await loadInitialHandle(_repo);
     if(handle) reactiveStore.attach(handle);
     createApp(reactiveStore).mount('body');

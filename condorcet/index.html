@@ -41,6 +41,12 @@
         .row input{flex:1}
         .add-row{background:transparent;color:var(--accent);padding:6px;font-weight:500}
         h1,h2,h3{font-family:system-ui,sans-serif}
+        .sync-indicator{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:8px;display:flex;align-items:center;gap:6px;padding:4px 8px;background:rgba(0,0,0,.35);border-radius:12px;font-size:.72rem;color:var(--muted);pointer-events:none;z-index:50}
+        .sync-indicator .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+        .sync-indicator.sync-connecting .dot{background:var(--accent);animation:sync-pulse 1s ease-in-out infinite}
+        .sync-indicator.sync-connected .dot{background:var(--ok)}
+        .sync-indicator.sync-disconnected .dot{background:var(--danger)}
+        @keyframes sync-pulse{0%,100%{opacity:1}50%{opacity:.3}}
         .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
         .empty-state .emoji{font-size:3rem;margin-bottom:12px}
         .empty-state h1{font-size:1.4rem;margin:0 0 8px 0;color:var(--fg)}
@@ -163,6 +169,14 @@
       </style>
   </head>
   <body v-scope>
+    <div class="sync-indicator"
+         v-show="syncStatus !== 'off'"
+         :class="'sync-'+syncStatus"
+         :title="syncStatusLabel"
+         v-cloak>
+      <span class="dot"></span>
+      <span class="label" v-text="syncStatusLabel"></span>
+    </div>
 
     <div class="empty-state" id="emptyState" v-show="!scrutin" v-cloak>
       <div class="emoji">&#x1f5f3;</div>
@@ -287,7 +301,7 @@
                   <h2>Qui es-tu&nbsp;?</h2>
                   <p class="hint">Choisis ton nom pour commencer à voter.</p>
                   <ul class="identity-list">
-                    <template v-for="v in scrutin.voters" :key="'i'+v">
+                    <template v-for="v in (scrutin ? scrutin.voters : [])" :key="'i'+v">
                       <li>
                         <button class="identity-pick" @click="chooseIdentity(v)"
                                 :disabled="hasBallotFor(v)">
@@ -311,7 +325,7 @@
                     <span v-text="ballotsCount"></span> / <span v-text="rosterCount"></span> bulletins
                   </p>
                   <ul class="voters-list">
-                    <template v-for="v in scrutin.voters" :key="'w'+v">
+                    <template v-for="v in (scrutin ? scrutin.voters : [])" :key="'w'+v">
                       <li :class="{voted: hasBallotFor(v)}">
                         <span v-text="v"></span>
                         <span class="check" v-show="hasBallotFor(v)">✓</span>
