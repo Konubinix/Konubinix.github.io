@@ -71,6 +71,8 @@ noise and must be removed. If something is valuable but breaks the flow —
 a technical derivation, a self-contained construction whose result the
 narrative will consume — move it to an annex and link to it from the main
 narrative at the moment its result is used.</p>
+<p>Put a lot of links. If the reader wants to follow a concept referred to and
+described somewhere else, per must be able to simply click and go there.</p>
 <p>A block that cannot be taken in at a glance breaks the flow just as surely
 as a detour. Around 30 lines is a reasonable ceiling; past that, the
 reader loses the thread between the sentence that motivated the block and
@@ -87,8 +89,8 @@ something visible — an image, an exported model, a plot — synchronizes the
 prose with the reader&rsquo;s impatience to leave abstraction and see a concrete
 result. It does not interrupt the flow; it paces it. The test is whether
 the line names something the reader is already feeling: if it does, keep
-it; if it explains, justifies, or lingers, it has crossed into
-meta-commentary and must go.</p>
+it. If it instead introduces new content, it is no longer a pacing line
+but a regular paragraph in disguise — expand it or cut it.</p>
 <h2 id="7d4e9a2b-8c1f-4e63-b5a8-3f9c2d1e4a7b">Code blocks are not repeated in the export</h2>
 <p>A direct consequence of the reading flow principle: a code block appears
 in the export only when the prose talks about it. Re-showing a block that
@@ -107,17 +109,26 @@ when seeing the surrounding code genuinely helps the reading.</p>
 yourself adding a block without the prose having led to it, a piece of
 reasoning is missing. The inverse also holds: prose that paraphrases the
 block — restating what the code does — is duplication, not justification.
-Prose states the problem or need, never a readback of the code.</p>
+Prose states the problem or need, not a readback of the code. The exception
+is the translation aside (see below): when the gap between intent and form
+is wide enough that a short readback is what bridges it, the readback
+earns its place.</p>
 <p>The rule applies to the reading — not to the source. A document&rsquo;s
 tangle scaffolding lives invisibly, usually in <code>:noexport:</code> sections
 or marked <code>:exports none</code>. These blocks need no motivating prose
 because they are not read; they exist only to make tangling work.</p>
-<p>Each named symbol earns its own introduction. A block that defines
-five functions calls for five sentences leading into it; without
-them, four of those functions emerge in silence — invisible to the
-reader of the narrative, unmotivated for the reader of the code.
-To introduce is to name: a paragraph that explains the concept
-without naming the function leaves the function silent.</p>
+<p>How prose and code are sliced against each other is arbitrary: one
+block per symbol, several symbols per block, several blocks per
+symbol — all are legitimate. The only criterion is the reading flow.
+If the reader pauses on a function and asks &ldquo;wait, what is this for?
+I was reading about something abstract and I don&rsquo;t see the
+connection,&rdquo; the slicing has failed. Boilerplate — every getter and
+setter of a Java bean, say — does not earn a sentence each; that
+would drown the reader in motivation no one needed. Conversely, a
+block dropping several unrelated functions under a single vague
+paragraph leaves the reader unmoored, and calls either for more
+sentences or for splitting the block. The fix is whichever restores
+the flow.</p>
 <p>Vocabulary follows the same rule. The states a field can take, the
 thresholds that govern behavior, the constants that pace the system
 are named in prose, not in a type comment listing valid values, a
@@ -128,8 +139,11 @@ state the desired behavior first, then the technique used to achieve it.
 A test that stands apart as a separate paragraph, not flowing from an
 explicit assertion in the prose, is a sign that a sentence is missing
 from the narrative.</p>
-<p>One test, one <strong>what</strong>. A test asserting several <strong>whats</strong> is several
-tests fused, the prose seams between them lost.</p>
+<p>Tests can be fused for that allows factoring the fixtures and make them run
+faster. But they must be fused only if we can prove that one does not impact
+the other. Also, the way they appear in the document MUST NOT be fused. One
+test is one <strong>what</strong>. A test block asserting several <strong>whats</strong> breaks the prose
+flow.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;a duplicate in the list would make the tally incoherent,
 </span></span><span style="display:flex;"><span>        so we block creation and display an error message&#34;
 </span></span><span style="display:flex;"><span>
@@ -146,6 +160,17 @@ such (e.g. introduced by &ldquo;In practice,&rdquo; or &ldquo;Under the hood,&rd
 translation gap — it is better moved to an annex to avoid breaking the
 reading flow. The prose then points to it with a short link, e.g. &ldquo;in
 order to understand X, see annex&rdquo; (with a link).</p>
+<p>Feeling the need for an aside is also a diagnostic. Sometimes it
+reflects a genuine gap between what human language and code can
+express — that is what the aside is for. But it can also reveal that
+the code itself is poorly organized: the surprising shape that
+needs a translator&rsquo;s note may simply be the wrong shape. The
+structure of the code is not bound to the structure of the prose —
+noweb reassembles the pieces at tangle time, so the code can be
+carved along its own joints. A poorly written block is never
+excused by the fact that the prose happened to flow in another
+direction; in that case, refactor the code rather than paper over
+it with an aside.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;we want the getters to behave as real properties&#34;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  Under the hood, this means using defineProperty rather than Object.assign,
@@ -153,13 +178,16 @@ order to understand X, see annex&rdquo; (with a link).</p>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  [code — translates this technical constraint]
 </span></span></code></pre></div><h2 id="5c8e1a2f-3b4d-4e9a-a7c6-8d1f9e2b4c7a">Rewrite, don&rsquo;t patch</h2>
-<p>When a bug or oversight surfaces during implementation, the temptation is
-to add a test and an explanatory paragraph describing the mitigation.
-This does not restore the narrative — it leaves a visible scar. Instead,
-rewrite the affected prose section so it reads as if the issue never
-existed: not a narrative that fixes something, but a narrative that was
-always correct. The final artifact should betray no trace of the
-debugging path that led to it.</p>
+<p>When something forces the document to change — a bug, an oversight,
+a change of mind, a breaking change in an upstream library, a
+refactor that obsoletes an earlier choice — the temptation is to
+add a test and an explanatory paragraph describing the mitigation.
+This does not restore the narrative — it leaves a visible scar.
+Instead, rewrite the affected prose section so it reads as if the
+issue never existed: not a narrative that fixes something, but a
+narrative that was always correct. The reading flow is sacred, and
+a scar interrupts it just as surely as a detour does — the final
+artifact should betray no trace of the path that led to it.</p>
 <p>The scar is <strong>retrospective</strong> — a trace of a revision already applied, a
 debate already settled. Prospective language is different: honest framing
 of a value still to validate empirically, of an explicit test plan, or of
@@ -179,14 +207,17 @@ An empty body, a one-armed conditional, a vestigial helper: each
 is a fragment whose work now lives elsewhere. The artifact reads
 as if neither prose nor code remembered the revision.</p>
 <h2 id="ec3a8d71-92f4-4b86-a517-6e5d9c8f3a21">Suggested prompt</h2>
-<p>An audit against these principles takes the form of a table:
-every observation cited by file and line, classified under the
-principle it tests. The conclusion follows from the table; it is
-not stated alongside it. An uncited verdict is a guess; a cited
-verdict has done the reading.</p>
+<p>To audit a document against these principles, build a table. Each
+row is one observation: the file and line it comes from, a short
+description of what was seen, and the principle it concerns. The
+conclusion of the audit is whatever the table shows once it is
+complete — it is not written in advance and then defended. A
+verdict that does not point back to specific lines is a guess; if
+you cannot fill the table, you have not read the document closely
+enough to judge it.</p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/4a7f2e91-c3d8-4b05-a1e7-8f3d6c9b2e47?title=how_to_do_literate_programming">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 24 Apr 2026</time></aside>
+	  <aside class="date"><time>Last updated: 26 Apr 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 22 Apr 2026</time></aside>
     </div>
   </div>

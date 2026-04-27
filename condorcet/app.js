@@ -207,15 +207,19 @@ Object.assign(voteStore.ui, {
     },
 });
 
-Object.defineProperty(voteStore, 'createError', {
+Object.defineProperty(voteStore, 'candidatesError', {
     enumerable: true, configurable: true,
     get(){
-        const f = this.ui.form;
-        const cs = f.candidates.map(s => s.trim()).filter(Boolean);
-        const vs = f.voters.map(s => s.trim()).filter(Boolean);
-        if(new Set(cs).size !== cs.length) return 'Doublons dans les candidats.';
-        if(new Set(vs).size !== vs.length) return 'Doublons dans les votants.';
-        return '';
+        const cs = this.ui.form.candidates.map(s => s.trim()).filter(Boolean);
+        return new Set(cs).size !== cs.length ? 'Doublons dans les candidats.' : '';
+    },
+});
+
+Object.defineProperty(voteStore, 'votersError', {
+    enumerable: true, configurable: true,
+    get(){
+        const vs = this.ui.form.voters.map(s => s.trim()).filter(Boolean);
+        return new Set(vs).size !== vs.length ? 'Doublons dans les votants.' : '';
     },
 });
 
@@ -225,12 +229,34 @@ Object.defineProperty(voteStore, 'canCreate', {
         const f = this.ui.form;
         const cs = f.candidates.map(s => s.trim()).filter(Boolean);
         const vs = f.voters.map(s => s.trim()).filter(Boolean);
-        return f.title.trim() && cs.length >= 2 && vs.length >= 1 && !this.createError;
+        return f.title.trim() && cs.length >= 2 && vs.length >= 1
+            && !this.candidatesError && !this.votersError;
+    },
+});
+
+const DRAFT_KEY = 'condorcet.form-draft';
+
+Object.assign(voteStore, {
+    saveFormDraft(){
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(this.ui.form));
+        } catch(e) {}
+    },
+
+    restoreFormDraft(){
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if(raw) Object.assign(this.ui.form, JSON.parse(raw));
+        } catch(e) {}
+    },
+
+    clearFormDraft(){
+        localStorage.removeItem(DRAFT_KEY);
     },
 });
 
 Object.assign(voteStore, {
-    openCreate(){ this.ui.createOpen = true; },
+    openCreate(){ this.restoreFormDraft(); this.ui.createOpen = true; },
     createScrutin(){
         const f = this.ui.form;
         const candidateImages = {};
@@ -254,6 +280,7 @@ Object.assign(voteStore, {
             createdAt: Date.now(),
         });
         history.replaceState(null, '', '?doc=' + handle.url);
+        this.clearFormDraft();
         this.ui.createOpen = false;
         this.attach(handle);
     },
@@ -291,6 +318,7 @@ Object.assign(voteStore, {
         try {
             const dataUrl = await compressImageToDataUrl(file);
             this.ui.form.candidateImages[i] = dataUrl;
+            this.saveFormDraft();
         } catch(e){
             console.error('compression image candidat', e);
         }

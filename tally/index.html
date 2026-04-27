@@ -1525,69 +1525,69 @@ var _rendering = false;
 var _scheduleRender;
 
 function setupSync(persistence, ydoc, onReady, scheduleRenderFn) {
-  _scheduleRender = scheduleRenderFn || function() {
-    if (_rendering) return;
-    _rendering = true;
-    requestAnimationFrame(function() { _rendering = false; onReady(); });
-  };
+    _scheduleRender = scheduleRenderFn || function() {
+        if (_rendering) return;
+        _rendering = true;
+        requestAnimationFrame(function() { _rendering = false; onReady(); });
+    };
 
-  // Re-render on any non-local Yjs update (including IndexedDB sync)
-  ydoc.on('update', function(update, origin) {
-    if (origin === null) return;
-    _scheduleRender();
-  });
+    // Re-render on any non-local Yjs update (including IndexedDB sync)
+    ydoc.on('update', function(update, origin) {
+        if (origin === null) return;
+        _scheduleRender();
+    });
 
-  // WebSocket — connect only after IndexedDB synced, retry on denial
-  var _wsRetryTimer = null;
-  function connectWs() {
-    try {
-      if (wsProvider) return;
-      var params = new URLSearchParams(location.search);
-      var paramWsUrl = params.get('websocket_url');
-      if (paramWsUrl) {
-        localStorage.setItem('websocket_url', paramWsUrl);
-        var cleanUrl = new URL(location);
-        cleanUrl.searchParams.delete('websocket_url');
-        history.replaceState(null, '', cleanUrl);
-      }
-      var wsUrl = paramWsUrl || localStorage.getItem('websocket_url');
-      if (!wsUrl) return;
-      var wsEverConnected = false;
-      wsProvider = new WebsocketProvider(wsUrl, _roomName, ydoc);
-      var syncBtn = document.getElementById('syncDot');
-      wsProvider.on('status', function(e) {
-        if (e.status === 'connected') {
-          wsEverConnected = true;
-          if (_wsRetryTimer) { clearInterval(_wsRetryTimer); _wsRetryTimer = null; }
-        }
-        var state = e.status === 'connected' ? 'connected' : 'offline';
-        document.body.setAttribute('data-ws', state);
-        if (syncBtn) syncBtn.title = state === 'connected' ? 'Synced' : 'Offline';
-      });
-      wsProvider.on('connection-close', function(e) {
-        if (!wsEverConnected) {
-          document.body.setAttribute('data-ws', 'denied');
-          if (syncBtn) syncBtn.title = 'Not authorized';
-          wsProvider.destroy();
-          wsProvider = null;
-          if (!_wsRetryTimer) {
-            _wsRetryTimer = setInterval(connectWs, 10000);
-          }
-        }
-      });
-    } catch(e) { console.warn('WebSocket setup failed:', e); }
-  }
+    // WebSocket — connect only after IndexedDB synced, retry on denial
+    var _wsRetryTimer = null;
+    function connectWs() {
+        try {
+            if (wsProvider) return;
+            var params = new URLSearchParams(location.search);
+            var paramWsUrl = params.get('websocket_url');
+            if (paramWsUrl) {
+                localStorage.setItem('websocket_url', paramWsUrl);
+                var cleanUrl = new URL(location);
+                cleanUrl.searchParams.delete('websocket_url');
+                history.replaceState(null, '', cleanUrl);
+            }
+            var wsUrl = paramWsUrl || localStorage.getItem('websocket_url');
+            if (!wsUrl) return;
+            var wsEverConnected = false;
+            wsProvider = new WebsocketProvider(wsUrl, _roomName, ydoc);
+            var syncBtn = document.getElementById('syncDot');
+            wsProvider.on('status', function(e) {
+                if (e.status === 'connected') {
+                    wsEverConnected = true;
+                    if (_wsRetryTimer) { clearInterval(_wsRetryTimer); _wsRetryTimer = null; }
+                }
+                var state = e.status === 'connected' ? 'connected' : 'offline';
+                document.body.setAttribute('data-ws', state);
+                if (syncBtn) syncBtn.title = state === 'connected' ? 'Synced' : 'Offline';
+            });
+            wsProvider.on('connection-close', function(e) {
+                if (!wsEverConnected) {
+                    document.body.setAttribute('data-ws', 'denied');
+                    if (syncBtn) syncBtn.title = 'Not authorized';
+                    wsProvider.destroy();
+                    wsProvider = null;
+                    if (!_wsRetryTimer) {
+                        _wsRetryTimer = setInterval(connectWs, 10000);
+                    }
+                }
+            });
+        } catch(e) { console.warn('WebSocket setup failed:', e); }
+    }
 
-  function init() {
-    onReady();
-    document.body.setAttribute('data-ready', 'true');
-  }
+    function init() {
+        onReady();
+        document.body.setAttribute('data-ready', 'true');
+    }
 
-  persistence.once('synced', connectWs);
-  persistence.once('synced', function() { setTimeout(init, 0); });
-  if (persistence.synced) { connectWs(); setTimeout(init, 0); }
+    persistence.once('synced', connectWs);
+    persistence.once('synced', function() { setTimeout(init, 0); });
+    if (persistence.synced) { connectWs(); setTimeout(init, 0); }
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
 }
 
 // ── Wake Lock ──
