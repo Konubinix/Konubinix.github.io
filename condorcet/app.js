@@ -200,6 +200,7 @@ const voteStore = {
         if(doc){
             this.scrutin = cloneDoc(doc);
             this.syncFlags();
+            this.recordScrutin(handle.url, doc.title);
             if(doc.closed) computeTally(doc).then(t => { this.tally = t; });
             this.initStage(doc);
         } else {
@@ -219,6 +220,38 @@ const voteStore = {
         else this.stage = 'identify';
     },
 };
+
+const PAST_KEY = 'condorcet.past-scrutins';
+
+function loadPastScrutins(){
+    try {
+        const raw = localStorage.getItem(PAST_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return arr.sort((a, b) => b.at - a.at);
+    } catch(e){ return []; }
+}
+
+function savePastScrutins(arr){
+    try { localStorage.setItem(PAST_KEY, JSON.stringify(arr)); } catch(e) {}
+}
+
+Object.assign(voteStore, {
+    pastScrutins: [],
+
+    recordScrutin(url, title){
+        const arr = (this.pastScrutins || []).filter(s => s.url !== url);
+        arr.push({ url, title: title || '', at: Date.now() });
+        arr.sort((a, b) => b.at - a.at);
+        this.pastScrutins = arr;
+        savePastScrutins(arr);
+    },
+
+    forgetScrutin(url){
+        const arr = (this.pastScrutins || []).filter(s => s.url !== url);
+        this.pastScrutins = arr;
+        savePastScrutins(arr);
+    },
+});
 
 function initialForm(){
     return {
@@ -295,6 +328,11 @@ Object.assign(voteStore, {
     },
 
     cancelCreate(){
+        this._doCancelCreate();
+        if(history.state && history.state.overlay === 'create') history.back();
+    },
+
+    _doCancelCreate(){
         this.clearFormDraft();
         Object.assign(this.ui.form, initialForm());
         this.ui.importUrl = '';
@@ -377,7 +415,11 @@ Object.assign(voteStore, {
 });
 
 Object.assign(voteStore, {
-    openCreate(){ this.restoreFormDraft(); this.ui.createOpen = true; },
+    openCreate(){
+        this.restoreFormDraft();
+        this.ui.createOpen = true;
+        pushOverlay('create');
+    },
     async createScrutin(){
         const repo = await ensureRepo(this);
         const f = this.ui.form;
@@ -507,6 +549,16 @@ Object.assign(voteStore, {
         this.ui.qrSvg = qr.createSvgTag({ cellSize: 6, margin: 2 });
         this.ui.shareUrl = url;
         this.ui.qrOpen = true;
+        pushOverlay('qr');
+    },
+
+    closeQR(){
+        this._doCloseQR();
+        if(history.state && history.state.overlay === 'qr') history.back();
+    },
+
+    _doCloseQR(){
+        this.ui.qrOpen = false;
     },
 });
 
@@ -564,16 +616,18 @@ Object.assign(voteStore, {
 
     startBallot(voter){
         this.currentVoter = voter || this.nextVoter;
-        const partial = this.scrutin.mode === 'shared-device'
-            ? loadPartial(this.currentVoter, this.scrutin.candidates) : null;
+        const partial = loadPartial(this.currentVoter, this.scrutin.candidates);
         this.ui.ranking = partial || shuffled(this.scrutin.candidates);
         this.stage = 'ballot';
+        pushOverlay('ballot');
     },
 
     cancelBallot(){
-        if(this.scrutin && this.scrutin.mode === 'shared-device' && this.currentVoter){
-            savePartial(this.currentVoter, this.ui.ranking);
-        }
+        this._doCancelBallot();
+        if(history.state && history.state.overlay === 'ballot') history.back();
+    },
+
+    _doCancelBallot(){
         this.currentVoter = null;
         this.ui.ranking = [];
         if(this.scrutin && this.scrutin.mode === 'per-device'){
@@ -592,10 +646,11 @@ Object.assign(voteStore, {
             if(existing >= 0) d.ballots[existing] = ballot;
             else d.ballots.push(ballot);
         });
-        if(this.scrutin && this.scrutin.mode === 'shared-device') clearPartial(voter);
+        clearPartial(voter);
         this.currentVoter = null;
         this.ui.ranking = [];
         this.stage = this.scrutin.mode === 'per-device' ? 'waiting' : 'identify';
+        if(history.state && history.state.overlay === 'ballot') history.back();
     },
 
     bindRankReorder(ol){
@@ -605,6 +660,7 @@ Object.assign(voteStore, {
             const [moved] = order.splice(e.detail.from, 1);
             order.splice(e.detail.to, 0, moved);
             store.ui.ranking = order;
+            if(store.currentVoter) savePartial(store.currentVoter, order);
         });
     },
 });
@@ -873,6 +929,17 @@ Object.assign(voteStore, {
     },
 });
 
+function pushOverlay(name){
+    history.pushState({ overlay: name }, '');
+}
+
+function syncOverlaysFromHistory(store){
+    const overlay = history.state && history.state.overlay;
+    if(store.ui.qrOpen && overlay !== 'qr') store._doCloseQR();
+    if(store.ui.createOpen && overlay !== 'create') store._doCancelCreate();
+    if(store.stage === 'ballot' && overlay !== 'ballot') store._doCancelBallot();
+}
+
 // ── Drag-and-drop reorder engine (framework-agnostic) ──
 // Binds once on document. Handles any =.reorder-list= with =.reorder-item=
 // children and a =.reorder-grip= handle on each item. Fires
@@ -1001,11 +1068,14 @@ Object.assign(voteStore, {
 
 const reactiveStore = reactive(voteStore);
 window.__voteStore = reactiveStore;
+reactiveStore.pastScrutins = loadPastScrutins();
 
 // Hook de test : force un ranking sans passer par le drag-and-drop.
 window.testForceRanking = function(order){
     reactiveStore.ui.ranking = order.slice();
 };
+
+window.addEventListener('popstate', () => syncOverlaysFromHistory(reactiveStore));
 
 (async function init(){
     const urlParam = new URLSearchParams(location.search).get('doc');
