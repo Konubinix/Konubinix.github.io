@@ -1,7 +1,7 @@
 const CACHES = [
     { pattern: /\.wasm$|\.bundle\.js$/,
       name:    'condorcet-vendor-6ab8c43' },
-    { name:    'condorcet-app-4e0d565' },
+    { name:    'condorcet-app-129d5ce' },
 ];
 const ASSETS = ['./', './index.html'];
 

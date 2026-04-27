@@ -937,6 +937,20 @@ Object.assign(voteStore, {
     },
 });
 
+Object.assign(voteStore, {
+    removeVoter(name){
+        const vIdx = this.scrutin.voters.indexOf(name);
+        const bIdx = this.scrutin.ballots.findIndex(b => b.voter === name);
+        this.change(d => {
+            d.voters.splice(vIdx, 1);
+            if(bIdx >= 0) d.ballots.splice(bIdx, 1);
+            if(d.drafts && d.drafts[name]) delete d.drafts[name];
+            if(d.closed) d.closed = false;
+        });
+        this.tally = null;
+    },
+});
+
 function pushOverlay(name){
     history.pushState({ overlay: name }, '');
 }
@@ -1030,16 +1044,14 @@ function syncOverlaysFromHistory(store){
         dragging = {
             list: list, curIdx: idx,
             clone: clone, dropLine: dropLine, offsetY: clientY - rect.top,
+            clientY: clientY, scrollRaf: 0,
         };
         markPlaceholder();
         updateDropLine(clientY);
         e.preventDefault();
     }
 
-    function onMove(e) {
-        if (!dragging) return;
-        e.preventDefault();
-        var clientY = e.clientY;
+    function applyPointerY(clientY) {
         dragging.clone.style.top = (clientY - dragging.offsetY) + 'px';
         updateDropLine(clientY);
         var items = dragging.list.querySelectorAll('.reorder-item');
@@ -1056,8 +1068,33 @@ function syncOverlaysFromHistory(store){
         }
     }
 
+    function autoScrollTick() {
+        if (!dragging) return;
+        var margin = 80;
+        var y = dragging.clientY;
+        var dy = 0;
+        if (y < margin) dy = -Math.ceil((margin - y) / 6);
+        else if (y > window.innerHeight - margin)
+            dy = Math.ceil((y - (window.innerHeight - margin)) / 6);
+        if (dy) {
+            window.scrollBy(0, dy);
+            applyPointerY(y);
+        }
+        dragging.scrollRaf = requestAnimationFrame(autoScrollTick);
+    }
+
+    function onMove(e) {
+        if (!dragging) return;
+        e.preventDefault();
+        dragging.clientY = e.clientY;
+        applyPointerY(e.clientY);
+        if (!dragging.scrollRaf)
+            dragging.scrollRaf = requestAnimationFrame(autoScrollTick);
+    }
+
     function onEnd() {
         if (!dragging) return;
+        if (dragging.scrollRaf) cancelAnimationFrame(dragging.scrollRaf);
         dragging.clone.remove();
         dragging.dropLine.remove();
         dragging.list.querySelectorAll('.drag-placeholder').forEach(function(el) {

@@ -116,10 +116,11 @@
         .identity-screen h2,.waiting-screen h2{font-size:1.3rem;margin:0 0 8px 0}
         .identity-screen .hint{color:var(--muted);font-size:.9rem;margin-bottom:20px}
         .identity-list{list-style:none;padding:0;margin:0 0 20px 0}
-        .identity-list li{margin-bottom:8px}
-        .identity-pick{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);color:var(--fg)}
+        .identity-list li{display:flex;gap:6px;margin-bottom:8px}
+        .identity-pick{flex:1;text-align:left;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);color:var(--fg)}
         .identity-pick .status{color:var(--muted);font-size:.85rem;font-weight:400}
         .identity-pick:disabled .name{color:var(--muted)}
+        .identity-remove{flex-shrink:0;padding:0 14px;background:var(--card);border-radius:6px;color:var(--muted);font-size:1.2rem;line-height:1}
         .waiting-screen .counter{margin:16px 0 8px 0;color:var(--muted);font-size:.85rem}
         .voters-list{list-style:none;padding:0;margin:8px auto 0 auto;text-align:left;max-width:260px}
         .voters-list li{display:flex;justify-content:space-between;padding:6px 12px;border-radius:6px;color:var(--muted)}
@@ -127,7 +128,7 @@
         .voters-list .check{color:var(--ok);font-weight:700}
         .close-bar{text-align:center;padding:20px;border-top:1px solid #333;margin-top:20px}
         .close-bar p{margin:0 0 12px 0;color:var(--muted)}
-        .menu-bar{padding:8px 12px}
+        .menu-bar{padding:8px 12px 8px 80px}
         .menu-bar .menu-link{padding:6px 12px;font-size:.85rem;background:transparent;color:var(--muted);font-weight:500}
         .add-voter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 20px;border-top:1px solid #333;margin-top:12px}
         .add-voter-bar input{flex:1;min-width:140px}
@@ -186,7 +187,7 @@
       </style>
   </head>
   <body v-scope>
-    <span class="build-tag" title="Build">4e0d565</span>
+    <span class="build-tag" title="Build">129d5ce</span>
     <div class="sync-indicator"
          v-show="syncStatus !== 'off'"
          :class="'sync-'+syncStatus"
@@ -333,23 +334,25 @@
 
             </div>
               <div class="identity-screen"
-                   v-show="scrutin && !scrutin.closed && stage === 'identify'"
+                   v-show="scrutin && stage === 'identify'"
                    v-cloak>
-                <div v-show="nextVoter">
-                  <h2>Qui es-tu&nbsp;?</h2>
-                  <p class="hint">Choisis ton nom pour commencer à voter.</p>
-                  <ul class="identity-list">
-                    <template v-for="v in (scrutin ? scrutin.voters : [])" :key="'i'+v">
-                      <li>
-                        <button class="identity-pick" @click="chooseIdentity(v)"
-                                :disabled="hasBallotFor(v)">
-                          <span class="name" v-text="v"></span>
-                          <span class="status" v-show="hasBallotFor(v)">a voté</span>
-                        </button>
-                      </li>
-                    </template>
-                  </ul>
-                </div>
+                <h2 v-show="nextVoter">Qui es-tu&nbsp;?</h2>
+                <p class="hint" v-show="nextVoter">Choisis ton nom pour commencer à voter.</p>
+                <ul class="identity-list">
+                  <template v-for="v in (scrutin ? scrutin.voters : [])" :key="'i'+v">
+                    <li>
+                      <button class="identity-pick" @click="chooseIdentity(v)"
+                              :disabled="hasBallotFor(v)">
+                        <span class="name" v-text="v"></span>
+                        <span class="status" v-show="hasBallotFor(v)">a voté</span>
+                      </button>
+                      <button class="identity-remove" type="button"
+                              @click="removeVoter(v)"
+                              v-show="scrutin.voters.length > 1"
+                              aria-label="Retirer ce votant">&times;</button>
+                    </li>
+                  </template>
+                </ul>
                 <p class="counter">
                   <span v-text="ballotsCount"></span> / <span v-text="rosterCount"></span> bulletins
                 </p>
