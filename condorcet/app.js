@@ -273,7 +273,51 @@ Object.assign(voteStore, {
     cancelCreate(){
         this.clearFormDraft();
         Object.assign(this.ui.form, initialForm());
+        this.ui.importUrl = '';
+        this.ui.importError = '';
         this.ui.createOpen = false;
+    },
+});
+
+Object.assign(voteStore.ui, {
+    importUrl: '',
+    importError: '',
+});
+
+Object.assign(voteStore, {
+    async importFromUrl(){
+        this.ui.importError = '';
+        const raw = (this.ui.importUrl || '').trim();
+        if(!raw) return;
+        let url = raw;
+        if(/^https?:\/\//.test(raw)){
+            try {
+                url = new URL(raw).searchParams.get('doc') || '';
+            } catch(e){ this.ui.importError = 'URL invalide'; return; }
+        }
+        if(!isValidAutomergeUrl(url)){
+            this.ui.importError = 'Pas un lien automerge:';
+            return;
+        }
+        try {
+            const handle = _repo.find(url);
+            await handle.whenReady(['ready', 'unavailable']);
+            const doc = handle.docSync();
+            if(!doc){ this.ui.importError = 'Doc introuvable'; return; }
+            const cands = [...(doc.candidates || [])];
+            Object.assign(this.ui.form, {
+                title: doc.title || '',
+                candidates: cands.length ? cands : ['', ''],
+                candidateImages: cands.map(c =>
+                    (doc.candidateImages && doc.candidateImages[c]) || ''),
+                voters: doc.voters && doc.voters.length ? [...doc.voters] : [''],
+                mode: doc.mode || 'shared-device',
+            });
+            this.saveFormDraft();
+            this.ui.importUrl = '';
+        } catch(e){
+            this.ui.importError = 'Erreur : ' + e.message;
+        }
     },
 });
 
