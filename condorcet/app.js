@@ -323,6 +323,19 @@ Object.assign(voteStore, {
             console.error('compression image candidat', e);
         }
     },
+
+    handleCandidatePaste(i, ev){
+        const items = ev.clipboardData && ev.clipboardData.items;
+        if(!items) return;
+        for(const item of items){
+            if(item.kind === 'file' && item.type.startsWith('image/')){
+                ev.preventDefault();
+                const file = item.getAsFile();
+                if(file) this.setCandidateImage(i, file);
+                return;
+            }
+        }
+    },
 });
 
 Object.assign(voteStore.ui, {
@@ -476,9 +489,21 @@ Object.assign(voteStore, {
     },
 
     newVote(){
-        // Repart sur l'empty-state : on strip =?doc=...= et on recharge.
-        // Le doc reste persisté en IndexedDB et accessible via son URL ;
-        // c'est juste cet onglet qui revient à zéro.
+        location.href = location.pathname;
+    },
+
+    redoScrutin(){
+        const s = this.scrutin;
+        const draft = {
+            title: s.title,
+            candidates: [...s.candidates],
+            candidateImages: s.candidates.map(c =>
+                (s.candidateImages && s.candidateImages[c]) || ''),
+            voters: [...s.voters],
+            mode: s.mode,
+        };
+        try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch(e) {}
+        try { localStorage.setItem('condorcet.auto-open-create', '1'); } catch(e) {}
         location.href = location.pathname;
     },
 });
@@ -833,4 +858,8 @@ window.testForceRanking = function(order){
     if(handle) reactiveStore.attach(handle);
     createApp(reactiveStore).mount('body');
     document.body.setAttribute('data-app-ready', '1');
+    if(!handle && localStorage.getItem('condorcet.auto-open-create')){
+        localStorage.removeItem('condorcet.auto-open-create');
+        reactiveStore.openCreate();
+    }
 })();
