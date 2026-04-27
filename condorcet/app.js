@@ -255,6 +255,35 @@ Object.assign(voteStore, {
     },
 });
 
+function focusFormField(prefix, idx){
+    document.querySelector(
+        `#createModal input[placeholder="${prefix} ${idx + 1}"]`)?.focus();
+}
+
+Object.assign(voteStore, {
+    onCandidateTab(i, e){
+        if(e.shiftKey) return;
+        const arr = this.ui.form.candidates;
+        const isLast = i >= arr.length - 1;
+        if(isLast && arr[i].trim() === '') return;
+        e.preventDefault();
+        if(isLast){
+            arr.push('');
+            this.ui.form.candidateImages.push('');
+        }
+        requestAnimationFrame(() => focusFormField('Candidat', i + 1));
+    },
+    onVoterTab(i, e){
+        if(e.shiftKey) return;
+        const arr = this.ui.form.voters;
+        const isLast = i >= arr.length - 1;
+        if(isLast && arr[i].trim() === '') return;
+        e.preventDefault();
+        if(isLast) arr.push('');
+        requestAnimationFrame(() => focusFormField('Votant', i + 1));
+    },
+});
+
 Object.assign(voteStore, {
     openCreate(){ this.restoreFormDraft(); this.ui.createOpen = true; },
     createScrutin(){
