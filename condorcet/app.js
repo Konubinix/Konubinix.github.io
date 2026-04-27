@@ -138,7 +138,7 @@ let _handle = null;
 const voteStore = {
     scrutin: null,
     tally: null,
-    stage: 'pass',       // 'pass' | 'ballot' | 'identify' | 'waiting'
+    stage: 'identify',   // 'identify' | 'ballot' | 'waiting'
     allVoted: false,
     syncStatus: 'off',   // 'off' | 'connecting' | 'connected' | 'disconnected'
     ui: {},
@@ -179,7 +179,7 @@ const voteStore = {
             if(doc.closed) computeTally(doc).then(t => { this.tally = t; });
             this.initStage(doc);
         } else {
-            this.stage = 'pass';
+            this.stage = 'identify';
         }
         handle.on('change', ev => {
             this.scrutin = cloneDoc(ev.doc);
@@ -192,19 +192,23 @@ const voteStore = {
 
     initStage(doc){
         if(doc.mode === 'per-device') this.initStagePerDevice(doc);
-        else this.stage = 'pass';
+        else this.stage = 'identify';
     },
 };
 
-Object.assign(voteStore.ui, {
-    createOpen: false,
-    form: {
+function initialForm(){
+    return {
         title: '',
         candidates: ['', ''],
         candidateImages: ['', ''],
         voters: [''],
         mode: 'shared-device',
-    },
+    };
+}
+
+Object.assign(voteStore.ui, {
+    createOpen: false,
+    form: initialForm(),
 });
 
 Object.defineProperty(voteStore, 'candidatesError', {
@@ -236,6 +240,18 @@ Object.defineProperty(voteStore, 'canCreate', {
 
 const DRAFT_KEY = 'condorcet.form-draft';
 
+function hasNonEmptyDraft(){
+    try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if(!raw) return false;
+        const d = JSON.parse(raw);
+        if(d.title && d.title.trim()) return true;
+        if((d.candidates || []).some(c => c && c.trim())) return true;
+        if((d.voters || []).some(v => v && v.trim())) return true;
+        return false;
+    } catch(e){ return false; }
+}
+
 Object.assign(voteStore, {
     saveFormDraft(){
         try {
@@ -252,6 +268,12 @@ Object.assign(voteStore, {
 
     clearFormDraft(){
         localStorage.removeItem(DRAFT_KEY);
+    },
+
+    cancelCreate(){
+        this.clearFormDraft();
+        Object.assign(this.ui.form, initialForm());
+        this.ui.createOpen = false;
     },
 });
 
@@ -365,6 +387,11 @@ Object.assign(voteStore, {
             }
         }
     },
+
+    removeCandidateImage(i){
+        this.ui.form.candidateImages[i] = '';
+        this.saveFormDraft();
+    },
 });
 
 Object.assign(voteStore.ui, {
@@ -426,6 +453,20 @@ Object.assign(voteStore.ui, { ranking: [] });
 Object.assign(voteStore, {
     currentVoter: null,
 
+    // Parametré → une méthode, pas un getter.
+    hasBallotFor(name){
+        return !!this.scrutin && this.scrutin.ballots.some(b => b.voter === name);
+    },
+
+    chooseIdentity(name){
+        if(this.scrutin.mode === 'per-device'){
+            this.identity = name;
+            localStorage.setItem(this.identityKey(), name);
+            if(this.hasBallotFor(name)){ this.stage = 'waiting'; return; }
+        }
+        this.startBallot(name);
+    },
+
     startBallot(voter){
         this.currentVoter = voter || this.nextVoter;
         this.ui.ranking = shuffled(this.scrutin.candidates);
@@ -438,10 +479,8 @@ Object.assign(voteStore, {
         if(this.scrutin && this.scrutin.mode === 'per-device'){
             this.identity = null;
             localStorage.removeItem(this.identityKey());
-            this.stage = 'identify';
-        } else {
-            this.stage = 'pass';
         }
+        this.stage = 'identify';
     },
 
     submitBallot(){
@@ -455,7 +494,7 @@ Object.assign(voteStore, {
         });
         this.currentVoter = null;
         this.ui.ranking = [];
-        this.stage = this.scrutin.mode === 'per-device' ? 'waiting' : 'pass';
+        this.stage = this.scrutin.mode === 'per-device' ? 'waiting' : 'identify';
     },
 
     bindRankReorder(ol){
@@ -474,11 +513,6 @@ Object.assign(voteStore, {
 
     identityKey(){ return 'condorcet.identity.' + _handle.url; },
 
-    // Parametré → une méthode, pas un getter.
-    hasBallotFor(name){
-        return !!this.scrutin && this.scrutin.ballots.some(b => b.voter === name);
-    },
-
     initStagePerDevice(doc){
         const stored = localStorage.getItem(this.identityKey());
         if(stored && doc.voters.includes(stored)){
@@ -491,13 +525,6 @@ Object.assign(voteStore, {
         } else {
             this.stage = 'identify';
         }
-    },
-
-    chooseIdentity(name){
-        this.identity = name;
-        localStorage.setItem(this.identityKey(), name);
-        if(this.hasBallotFor(name)) this.stage = 'waiting';
-        else this.startBallot(name);
     },
 });
 
@@ -532,7 +559,6 @@ Object.assign(voteStore, {
             mode: s.mode,
         };
         try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch(e) {}
-        try { localStorage.setItem('condorcet.auto-open-create', '1'); } catch(e) {}
         location.href = location.pathname;
     },
 });
@@ -887,8 +913,5 @@ window.testForceRanking = function(order){
     if(handle) reactiveStore.attach(handle);
     createApp(reactiveStore).mount('body');
     document.body.setAttribute('data-app-ready', '1');
-    if(!handle && localStorage.getItem('condorcet.auto-open-create')){
-        localStorage.removeItem('condorcet.auto-open-create');
-        reactiveStore.openCreate();
-    }
+    if(!handle && hasNonEmptyDraft()) reactiveStore.openCreate();
 })();

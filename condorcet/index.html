@@ -58,10 +58,6 @@
         .modal-actions{display:flex;gap:10px;margin-top:16px}
         .modal-actions button{flex:1}
         .create-error{color:var(--danger);font-size:.85rem;margin:8px 0 0 0;text-align:center}
-        .pass-screen{text-align:center;padding:60px 20px}
-        .pass-screen h2{font-size:1.4rem;margin-bottom:8px}
-        .pass-screen .counter{margin-top:40px;color:var(--muted);font-size:.85rem}
-        .pass-screen .all-voted{margin:20px 0}
         .ballot-screen{padding:20px}
         .ballot-screen h2{margin:0 0 4px 0}
         .ballot-screen .hint{color:var(--muted);font-size:.85rem;margin-bottom:16px}
@@ -162,7 +158,9 @@
         #qrHolder svg{display:block;max-width:260px;height:auto}
         .qr-url{font-family:monospace;font-size:.75rem;color:var(--muted);word-break:break-all;margin:12px 0}
         .candidate-row{align-items:center}
+        .candidate-thumb-wrap{position:relative;display:inline-flex;flex-shrink:0}
         .candidate-thumb{width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid #333;flex-shrink:0}
+        .candidate-thumb-remove{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:9px;background:var(--danger);color:#fff;font-size:.75rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
         .candidate-pic{display:inline-flex;align-items:center;justify-content:center;background:var(--card);color:var(--fg);padding:8px 10px;border-radius:6px;cursor:pointer;font-size:1.1rem;line-height:1}
         .candidate-pic input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
         .reorder-image{width:64px;height:64px;object-fit:cover;border-radius:8px;margin:0 8px;flex-shrink:0}
@@ -198,8 +196,11 @@
           <legend>Candidats</legend>
           <template v-for="(c, i) in ui.form.candidates" :key="'c'+i">
             <div class="row candidate-row">
-              <img class="candidate-thumb" v-show="ui.form.candidateImages[i]"
-                   :src="ui.form.candidateImages[i]" alt="">
+              <span class="candidate-thumb-wrap" v-show="ui.form.candidateImages[i]">
+                <img class="candidate-thumb" :src="ui.form.candidateImages[i]" alt="">
+                <button type="button" class="candidate-thumb-remove"
+                        @click="removeCandidateImage(i)" aria-label="Retirer la photo">&times;</button>
+              </span>
               <input type="text" :value="c" @input="ui.form.candidates[i] = $event.target.value"
                      @paste="handleCandidatePaste(i, $event)"
                      @keydown.tab="onCandidateTab(i, $event)"
@@ -234,12 +235,12 @@
         <fieldset>
           <legend>Mode</legend>
           <label><input type="radio" name="mode" value="shared-device" v-model="ui.form.mode">
-            Appareil partagé (tour de rôle)</label>
+            Appareil partagé</label>
           <label><input type="radio" name="mode" value="per-device" v-model="ui.form.mode">
             Un appareil par personne</label>
         </fieldset>
             <div class="modal-actions">
-              <button class="secondary" @click="ui.createOpen = false">Annuler</button>
+              <button class="secondary" @click="cancelCreate()">Annuler</button>
               <button class="primary" id="btnConfirmCreate"
                       :disabled="!canCreate"
                       @click="createScrutin()">Créer</button>
@@ -262,19 +263,6 @@
             <button class="primary" id="btnClose" @click="close()">Dépouiller</button>
           </div>
             <div id="voteFlow" v-show="scrutin && !scrutin.closed" v-cloak>
-
-              <!-- Écran-tampon : rien de secret visible -->
-              <div class="pass-screen" v-show="stage === 'pass'">
-                <h2 v-show="nextVoter">Au tour de <span v-text="nextVoter"></span></h2>
-                <p v-show="nextVoter">Passe l'appareil à cette personne.</p>
-                <button class="primary" id="btnTakePhone" v-show="nextVoter"
-                        @click="startBallot()">
-                  Je suis <span v-text="nextVoter"></span>
-                </button>
-                <p class="counter">
-                  <span v-text="ballotsCount"></span> / <span v-text="rosterCount"></span> bulletins
-                </p>
-              </div>
 
               <!-- Écran de classement -->
               <div class="ballot-screen" v-show="stage === 'ballot'">
@@ -301,7 +289,7 @@
 
             </div>
               <div class="identity-screen"
-                   v-show="scrutin && !scrutin.closed && scrutin.mode === 'per-device' && stage === 'identify'"
+                   v-show="scrutin && !scrutin.closed && stage === 'identify'"
                    v-cloak>
                 <div v-show="nextVoter">
                   <h2>Qui es-tu&nbsp;?</h2>
