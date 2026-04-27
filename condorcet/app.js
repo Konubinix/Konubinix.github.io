@@ -563,6 +563,12 @@ Object.assign(voteStore, {
     },
 });
 
+Object.assign(voteStore, {
+    goToMenu(){
+        location.search = '';
+    },
+});
+
 function shuffled(arr){
     const a = arr.slice();
     for(let i = a.length - 1; i > 0; i--){
