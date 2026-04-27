@@ -492,6 +492,30 @@ function shuffled(arr){
     return a;
 }
 
+function partialKey(voter){
+    return 'condorcet.partial.' + _handle.url + '.' + voter;
+}
+
+function loadPartial(voter, candidates){
+    try {
+        const raw = localStorage.getItem(partialKey(voter));
+        if(!raw) return null;
+        const order = JSON.parse(raw);
+        if(!Array.isArray(order) || order.length !== candidates.length) return null;
+        const cs = new Set(candidates);
+        if(!order.every(c => cs.has(c)) || new Set(order).size !== order.length) return null;
+        return order;
+    } catch(e){ return null; }
+}
+
+function savePartial(voter, order){
+    try { localStorage.setItem(partialKey(voter), JSON.stringify(order)); } catch(e) {}
+}
+
+function clearPartial(voter){
+    localStorage.removeItem(partialKey(voter));
+}
+
 Object.assign(voteStore.ui, { ranking: [] });
 
 Object.assign(voteStore, {
@@ -513,11 +537,16 @@ Object.assign(voteStore, {
 
     startBallot(voter){
         this.currentVoter = voter || this.nextVoter;
-        this.ui.ranking = shuffled(this.scrutin.candidates);
+        const partial = this.scrutin.mode === 'shared-device'
+            ? loadPartial(this.currentVoter, this.scrutin.candidates) : null;
+        this.ui.ranking = partial || shuffled(this.scrutin.candidates);
         this.stage = 'ballot';
     },
 
     cancelBallot(){
+        if(this.scrutin && this.scrutin.mode === 'shared-device' && this.currentVoter){
+            savePartial(this.currentVoter, this.ui.ranking);
+        }
         this.currentVoter = null;
         this.ui.ranking = [];
         if(this.scrutin && this.scrutin.mode === 'per-device'){
@@ -536,6 +565,7 @@ Object.assign(voteStore, {
             if(existing >= 0) d.ballots[existing] = ballot;
             else d.ballots.push(ballot);
         });
+        if(this.scrutin && this.scrutin.mode === 'shared-device') clearPartial(voter);
         this.currentVoter = null;
         this.ui.ranking = [];
         this.stage = this.scrutin.mode === 'per-device' ? 'waiting' : 'identify';
