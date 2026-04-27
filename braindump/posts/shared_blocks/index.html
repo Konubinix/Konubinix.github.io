@@ -54,7 +54,104 @@ embeds it in an iframe.  Use with <code>#+call: shared_blocks.org:deploy()</code
 <h2 id="pwa-meta">PWA meta tags</h2>
 <p>Generic PWA meta tags: charset, purge escape hatch, viewport, and manifest
 link.  Callers add their own <code>&lt;title&gt;</code> and <code>&lt;meta name</code>&ldquo;theme-color&rdquo;&gt;=.</p>
-<h2 id="sync-setup">Sync infrastructure</h2>
+<h2 id="service-worker">Service worker (cache-first + write-through)</h2>
+<p>Cache strategy that lets a returning visitor open the app
+without re-downloading assets, and keeps it usable offline.
+The handlers assume two consumer-defined constants:</p>
+<ul>
+<li><code>CACHES</code> (array of <code>{name, pattern?}</code>) &mdash; one or more cache
+storage buckets, evaluated in order: the first whose
+<code>pattern</code> matches the request URL wins.  The <strong>last</strong> entry
+should omit <code>pattern</code> &mdash; it is the default that catches
+everything else.  Splitting into multiple buckets lets the
+consumer invalidate them independently: bump the app cache
+on every deploy via a source-hash, and the vendor cache
+only when dependency versions change.  With a single entry
+the SW behaves like a one-cache setup.</li>
+<li><code>ASSETS</code> (array of URLs) &mdash; the shell precached at install
+into the <strong>default</strong> (last) cache.  Keep it minimal: anything
+the app fetches at runtime is cached on the way through
+(write-through on the first miss), so precaching only
+matters for offline cold-start.</li>
+</ul>
+<p>Three event listeners:</p>
+<ul>
+<li>install opens the default cache, precaches <code>ASSETS</code>, then
+<code>skipWaiting()</code> so the new SW activates immediately rather
+than waiting for every tab to close.</li>
+<li>activate drops any cache whose name is not in <code>CACHES</code> and
+calls <code>clients.claim()</code> so the SW takes control on first
+install instead of waiting for the next navigation.  Bumping
+a cache name in <code>CACHES</code> triggers eviction of the old one on
+next activate.</li>
+<li>fetch splits two regimes.  Navigations (HTML) are
+network-first with cache fallback: a live visit gets the
+latest HTML, an offline visit gets the cached shell.
+Everything else (JS, WASM, images, &hellip;) is cache-first with
+write-through, scoped to the cache picked by the consumer&rsquo;s
+pattern: the first miss fills the bucket, the next request
+short-circuits the network.  Offline use after the first
+online visit just works.</li>
+</ul>
+<p>Consumers tangle a <code>sw.js</code> block that declares <code>CACHES</code> and
+<code>ASSETS</code> then noweb-includes <code>sw-handlers-ex</code>, and pair it with
+<code>sw-register-ex</code> in the HTML <code>&lt;head&gt;</code> to register the worker.
+The register block skips <code>localhost</code> and <code>127.0.0.1</code> because in
+dev/test rebuilds happen often and a stale cache on <code>bundle.js</code>
+or a WASM blob would mask any change ; the <code>?purge</code> escape
+hatch from <a class="internal-link" href="#pwa-meta">PWA meta tags</a> remains the manual override.</p>
+<p><a id="code-snippet--sw-handlers"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">cacheNameFor</span><span style="color:#1f2328">(</span><span style="color:#1f2328">request</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">url</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">URL</span><span style="color:#1f2328">(</span><span style="color:#1f2328">request</span><span style="color:#1f2328">.</span><span style="color:#1f2328">url</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span><span style="color:#1f2328">(</span><span style="color:#cf222e">const</span> <span style="color:#1f2328">c</span> <span style="color:#cf222e">of</span> <span style="color:#1f2328">CACHES</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#1f2328">c</span><span style="color:#1f2328">.</span><span style="color:#1f2328">pattern</span> <span style="color:#0550ae">||</span> <span style="color:#1f2328">c</span><span style="color:#1f2328">.</span><span style="color:#1f2328">pattern</span><span style="color:#1f2328">.</span><span style="color:#1f2328">test</span><span style="color:#1f2328">(</span><span style="color:#1f2328">url</span><span style="color:#1f2328">.</span><span style="color:#1f2328">pathname</span><span style="color:#1f2328">))</span> <span style="color:#cf222e">return</span> <span style="color:#1f2328">c</span><span style="color:#1f2328">.</span><span style="color:#1f2328">name</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">CACHES</span><span style="color:#1f2328">[</span><span style="color:#1f2328">CACHES</span><span style="color:#1f2328">.</span><span style="color:#1f2328">length</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">].</span><span style="color:#1f2328">name</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">self</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;install&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">e</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">defaultCache</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">CACHES</span><span style="color:#1f2328">[</span><span style="color:#1f2328">CACHES</span><span style="color:#1f2328">.</span><span style="color:#1f2328">length</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">].</span><span style="color:#1f2328">name</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">waitUntil</span><span style="color:#1f2328">(</span><span style="color:#1f2328">caches</span><span style="color:#1f2328">.</span><span style="color:#1f2328">open</span><span style="color:#1f2328">(</span><span style="color:#1f2328">defaultCache</span><span style="color:#1f2328">).</span><span style="color:#1f2328">then</span><span style="color:#1f2328">(</span><span style="color:#1f2328">c</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">c</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addAll</span><span style="color:#1f2328">(</span><span style="color:#1f2328">ASSETS</span><span style="color:#1f2328">)));</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">self</span><span style="color:#1f2328">.</span><span style="color:#1f2328">skipWaiting</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">self</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;activate&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">e</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">valid</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">Set</span><span style="color:#1f2328">(</span><span style="color:#1f2328">CACHES</span><span style="color:#1f2328">.</span><span style="color:#1f2328">map</span><span style="color:#1f2328">(</span><span style="color:#1f2328">c</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">c</span><span style="color:#1f2328">.</span><span style="color:#1f2328">name</span><span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">waitUntil</span><span style="color:#1f2328">(</span><span style="color:#1f2328">caches</span><span style="color:#1f2328">.</span><span style="color:#1f2328">keys</span><span style="color:#1f2328">().</span><span style="color:#1f2328">then</span><span style="color:#1f2328">(</span><span style="color:#1f2328">keys</span> <span style="color:#1f2328">=&gt;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">Promise</span><span style="color:#1f2328">.</span><span style="color:#1f2328">all</span><span style="color:#1f2328">(</span><span style="color:#1f2328">keys</span><span style="color:#1f2328">.</span><span style="color:#1f2328">filter</span><span style="color:#1f2328">(</span><span style="color:#1f2328">k</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#0550ae">!</span><span style="color:#1f2328">valid</span><span style="color:#1f2328">.</span><span style="color:#1f2328">has</span><span style="color:#1f2328">(</span><span style="color:#1f2328">k</span><span style="color:#1f2328">)).</span><span style="color:#1f2328">map</span><span style="color:#1f2328">(</span><span style="color:#1f2328">k</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">caches</span><span style="color:#1f2328">.</span><span style="color:#cf222e">delete</span><span style="color:#1f2328">(</span><span style="color:#1f2328">k</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">self</span><span style="color:#1f2328">.</span><span style="color:#1f2328">clients</span><span style="color:#1f2328">.</span><span style="color:#1f2328">claim</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">self</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;fetch&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">e</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">name</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">cacheNameFor</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">.</span><span style="color:#1f2328">mode</span> <span style="color:#0550ae">===</span> <span style="color:#0a3069">&#39;navigate&#39;</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">respondWith</span><span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">fetch</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">.</span><span style="color:#1f2328">then</span><span style="color:#1f2328">(</span><span style="color:#1f2328">r</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">caches</span><span style="color:#1f2328">.</span><span style="color:#1f2328">open</span><span style="color:#1f2328">(</span><span style="color:#1f2328">name</span><span style="color:#1f2328">).</span><span style="color:#1f2328">then</span><span style="color:#1f2328">(</span><span style="color:#1f2328">c</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">c</span><span style="color:#1f2328">.</span><span style="color:#1f2328">put</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">r</span><span style="color:#1f2328">.</span><span style="color:#1f2328">clone</span><span style="color:#1f2328">());</span> <span style="color:#cf222e">return</span> <span style="color:#1f2328">r</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">}))</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">.</span><span style="color:#cf222e">catch</span><span style="color:#1f2328">(()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">caches</span><span style="color:#1f2328">.</span><span style="color:#1f2328">match</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span> <span style="color:#cf222e">else</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">respondWith</span><span style="color:#1f2328">(</span><span style="color:#1f2328">caches</span><span style="color:#1f2328">.</span><span style="color:#1f2328">open</span><span style="color:#1f2328">(</span><span style="color:#1f2328">name</span><span style="color:#1f2328">).</span><span style="color:#1f2328">then</span><span style="color:#1f2328">(</span><span style="color:#1f2328">c</span> <span style="color:#1f2328">=&gt;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">c</span><span style="color:#1f2328">.</span><span style="color:#1f2328">match</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">).</span><span style="color:#1f2328">then</span><span style="color:#1f2328">(</span><span style="color:#1f2328">cached</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">cached</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span> <span style="color:#1f2328">cached</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> <span style="color:#1f2328">fetch</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">).</span><span style="color:#1f2328">then</span><span style="color:#1f2328">(</span><span style="color:#1f2328">net</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">net</span><span style="color:#1f2328">.</span><span style="color:#1f2328">ok</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">c</span><span style="color:#1f2328">.</span><span style="color:#1f2328">put</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">net</span><span style="color:#1f2328">.</span><span style="color:#1f2328">clone</span><span style="color:#1f2328">());</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">return</span> <span style="color:#1f2328">net</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">});</span>
+</span></span></code></pre></div><p><a id="code-snippet--sw-register"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">script</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;serviceWorker&#39;</span> <span style="color:#cf222e">in</span> <span style="color:#1f2328">navigator</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#1f2328">location</span><span style="color:#1f2328">.</span><span style="color:#1f2328">hostname</span> <span style="color:#0550ae">!==</span> <span style="color:#0a3069">&#39;localhost&#39;</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#1f2328">location</span><span style="color:#1f2328">.</span><span style="color:#1f2328">hostname</span> <span style="color:#0550ae">!==</span> <span style="color:#0a3069">&#39;127.0.0.1&#39;</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">navigator</span><span style="color:#1f2328">.</span><span style="color:#1f2328">serviceWorker</span><span style="color:#1f2328">.</span><span style="color:#1f2328">register</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;sw.js&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#1f2328">updateViaCache</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;none&#39;</span><span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">script</span><span style="color:#1f2328">&gt;</span>
+</span></span></code></pre></div><h2 id="sync-setup">Sync infrastructure</h2>
 <p>Shared Yjs WebSocket connection, remote-change rendering, and init logic.
 Each app calls <code>setupSync(persistence, ydoc, onReady)</code> where <code>onReady</code> is
 the app-specific first-render function.</p>

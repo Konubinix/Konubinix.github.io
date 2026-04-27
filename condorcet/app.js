@@ -2,20 +2,33 @@ import { createApp, reactive } from 'petite-vue';
 import qrcode from 'qrcode-generator';
 window.qrcode = qrcode;
 
-import * as Automerge from '@automerge/automerge';
-import { Repo, isValidAutomergeUrl } from '@automerge/automerge-repo';
-import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb';
-import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket';
-
-async function initAutomerge(){
-    // Avec rspack + =experiments.asyncWebAssembly=, l'entrée
-    // =fullfat_bundler= d'Automerge se câble toute seule : =import * from
-    // "*.wasm"= produit un module JS dont les exports sont les fonctions
-    // wasm-bindgen, le WASM est instancié à l'import. Pas de
-    // =initializeWasm= à appeler.
+// Modules Automerge chargés dynamiquement à la première demande.
+// Avec rspack + =experiments.asyncWebAssembly=, l'entrée
+// =fullfat_bundler= se câble toute seule : =import * from "*.wasm"=
+// produit un module JS dont les exports sont les fonctions
+// wasm-bindgen, le WASM est instancié à l'import dynamique.
+let _automergePromise = null;
+function loadAutomerge(){
+    if(!_automergePromise){
+        _automergePromise = (async () => {
+            const [repoMod, idbMod, wsMod] = await Promise.all([
+                import('@automerge/automerge-repo'),
+                import('@automerge/automerge-repo-storage-indexeddb'),
+                import('@automerge/automerge-repo-network-websocket'),
+            ]);
+            return {
+                Repo: repoMod.Repo,
+                isValidAutomergeUrl: repoMod.isValidAutomergeUrl,
+                IndexedDBStorageAdapter: idbMod.IndexedDBStorageAdapter,
+                BrowserWebSocketClientAdapter: wsMod.BrowserWebSocketClientAdapter,
+            };
+        })();
+    }
+    return _automergePromise;
 }
 
 async function makeRepo(onSync){
+    const am = await loadAutomerge();
     const params = new URLSearchParams(location.search);
     const fromParam = params.get('sync_url');
     if(fromParam){
@@ -27,22 +40,32 @@ async function makeRepo(onSync){
     const syncUrl = localStorage.getItem('condorcet.sync_url');
     let adapter = null;
     if(syncUrl){
-        adapter = new BrowserWebSocketClientAdapter(syncUrl);
+        adapter = new am.BrowserWebSocketClientAdapter(syncUrl);
         adapter.on('peer-candidate', () => onSync?.('connected'));
         adapter.on('peer-disconnected', () => onSync?.('disconnected'));
         onSync?.('connecting');
     } else {
         onSync?.('off');
     }
-    return new Repo({
-        storage: new IndexedDBStorageAdapter('condorcet'),
+    return new am.Repo({
+        storage: new am.IndexedDBStorageAdapter('condorcet'),
         network: adapter ? [adapter] : [],
     });
 }
 
+let _repoPromise = null;
+function ensureRepo(reactiveStore){
+    if(!_repoPromise){
+        _repoPromise = makeRepo(s => { reactiveStore.syncStatus = s; })
+            .then(repo => { _repo = repo; return repo; });
+    }
+    return _repoPromise;
+}
+
 async function loadInitialHandle(repo){
+    const am = await loadAutomerge();
     const urlParam = new URLSearchParams(location.search).get('doc');
-    if(!urlParam || !isValidAutomergeUrl(urlParam)) return null;
+    if(!urlParam || !am.isValidAutomergeUrl(urlParam)) return null;
     const handle = repo.find(urlParam);
     await Promise.race([
         handle.whenReady(['ready', 'unavailable']).catch(() => {}),
@@ -141,6 +164,7 @@ const voteStore = {
     stage: 'identify',   // 'identify' | 'ballot' | 'waiting'
     allVoted: false,
     syncStatus: 'off',   // 'off' | 'connecting' | 'connected' | 'disconnected'
+    loadingDoc: false,   // true tant qu'on attend la résolution d'un =?doc=...= (cf. init lazy)
     ui: {},
 
     get rosterCount(){ return this.scrutin ? this.scrutin.voters.length : 0; },
@@ -295,12 +319,14 @@ Object.assign(voteStore, {
                 url = new URL(raw).searchParams.get('doc') || '';
             } catch(e){ this.ui.importError = 'URL invalide'; return; }
         }
-        if(!isValidAutomergeUrl(url)){
+        const am = await loadAutomerge();
+        if(!am.isValidAutomergeUrl(url)){
             this.ui.importError = 'Pas un lien automerge:';
             return;
         }
         try {
-            const handle = _repo.find(url);
+            const repo = await ensureRepo(this);
+            const handle = repo.find(url);
             await handle.whenReady(['ready', 'unavailable']);
             const doc = handle.docSync();
             if(!doc){ this.ui.importError = 'Doc introuvable'; return; }
@@ -352,7 +378,8 @@ Object.assign(voteStore, {
 
 Object.assign(voteStore, {
     openCreate(){ this.restoreFormDraft(); this.ui.createOpen = true; },
-    createScrutin(){
+    async createScrutin(){
+        const repo = await ensureRepo(this);
         const f = this.ui.form;
         const candidateImages = {};
         const candidates = [];
@@ -363,7 +390,7 @@ Object.assign(voteStore, {
             if(f.candidateImages[i]) candidateImages[name] = f.candidateImages[i];
         });
         const voters = f.voters.map(s => s.trim()).filter(Boolean);
-        const handle = _repo.create({
+        const handle = repo.create({
             title: f.title.trim(),
             candidates,
             candidateImages,
@@ -981,11 +1008,22 @@ window.testForceRanking = function(order){
 };
 
 (async function init(){
-    await initAutomerge();
-    _repo = await makeRepo(s => { reactiveStore.syncStatus = s; });
-    const handle = await loadInitialHandle(_repo);
-    if(handle) reactiveStore.attach(handle);
+    const urlParam = new URLSearchParams(location.search).get('doc');
+    reactiveStore.loadingDoc = !!urlParam;
+
     createApp(reactiveStore).mount('body');
+
+    if(urlParam){
+        const repo = await ensureRepo(reactiveStore);
+        const handle = await loadInitialHandle(repo);
+        if(handle) reactiveStore.attach(handle);
+        reactiveStore.loadingDoc = false;
+    } else {
+        // Préchauffe Automerge en tâche de fond pour que le clic
+        // sur =Créer= ne paie pas le téléchargement.
+        ensureRepo(reactiveStore).catch(() => {});
+        if(hasNonEmptyDraft()) reactiveStore.openCreate();
+    }
+
     document.body.setAttribute('data-app-ready', '1');
-    if(!handle && hasNonEmptyDraft()) reactiveStore.openCreate();
 })();
