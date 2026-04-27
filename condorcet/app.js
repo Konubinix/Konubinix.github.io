@@ -438,6 +438,7 @@ Object.assign(voteStore, {
             candidateImages,
             voters,
             ballots: [],
+            drafts: {},
             closed: false,
             mode: f.mode,
             method: 'condorcet-random-smith',
@@ -571,30 +572,6 @@ function shuffled(arr){
     return a;
 }
 
-function partialKey(voter){
-    return 'condorcet.partial.' + _handle.url + '.' + voter;
-}
-
-function loadPartial(voter, candidates){
-    try {
-        const raw = localStorage.getItem(partialKey(voter));
-        if(!raw) return null;
-        const order = JSON.parse(raw);
-        if(!Array.isArray(order) || order.length !== candidates.length) return null;
-        const cs = new Set(candidates);
-        if(!order.every(c => cs.has(c)) || new Set(order).size !== order.length) return null;
-        return order;
-    } catch(e){ return null; }
-}
-
-function savePartial(voter, order){
-    try { localStorage.setItem(partialKey(voter), JSON.stringify(order)); } catch(e) {}
-}
-
-function clearPartial(voter){
-    localStorage.removeItem(partialKey(voter));
-}
-
 Object.assign(voteStore.ui, { ranking: [] });
 
 Object.assign(voteStore, {
@@ -603,6 +580,31 @@ Object.assign(voteStore, {
     // Parametré → une méthode, pas un getter.
     hasBallotFor(name){
         return !!this.scrutin && this.scrutin.ballots.some(b => b.voter === name);
+    },
+
+    loadPartial(voter){
+        const drafts = (this.scrutin && this.scrutin.drafts) || {};
+        const draft = drafts[voter];
+        if(!draft) return null;
+        const order = draft.ranking;
+        const candidates = this.scrutin.candidates;
+        if(!Array.isArray(order) || order.length !== candidates.length) return null;
+        const cs = new Set(candidates);
+        if(!order.every(c => cs.has(c)) || new Set(order).size !== order.length) return null;
+        return order;
+    },
+
+    savePartial(voter, ranking){
+        this.change(d => {
+            if(!d.drafts) d.drafts = {};
+            d.drafts[voter] = { ranking, at: Date.now() };
+        });
+    },
+
+    clearPartial(voter){
+        this.change(d => {
+            if(d.drafts && d.drafts[voter]) delete d.drafts[voter];
+        });
     },
 
     chooseIdentity(name){
@@ -616,8 +618,8 @@ Object.assign(voteStore, {
 
     startBallot(voter){
         this.currentVoter = voter || this.nextVoter;
-        const partial = loadPartial(this.currentVoter, this.scrutin.candidates);
-        this.ui.ranking = partial || shuffled(this.scrutin.candidates);
+        this.ui.ranking = this.loadPartial(this.currentVoter)
+            || shuffled(this.scrutin.candidates);
         this.stage = 'ballot';
         pushOverlay('ballot');
     },
@@ -645,8 +647,8 @@ Object.assign(voteStore, {
             const ballot = { voter, ranking, at: Date.now() };
             if(existing >= 0) d.ballots[existing] = ballot;
             else d.ballots.push(ballot);
+            if(d.drafts && d.drafts[voter]) delete d.drafts[voter];
         });
-        clearPartial(voter);
         this.currentVoter = null;
         this.ui.ranking = [];
         this.stage = this.scrutin.mode === 'per-device' ? 'waiting' : 'identify';
@@ -660,7 +662,7 @@ Object.assign(voteStore, {
             const [moved] = order.splice(e.detail.from, 1);
             order.splice(e.detail.to, 0, moved);
             store.ui.ranking = order;
-            if(store.currentVoter) savePartial(store.currentVoter, order);
+            if(store.currentVoter) store.savePartial(store.currentVoter, order);
         });
     },
 });
