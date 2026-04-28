@@ -247,6 +247,7 @@ Object.assign(voteStore, {
     },
 
     forgetScrutin(url){
+        if(!confirm("Retirer ce scrutin de la liste ? Le doc reste dans IndexedDB.")) return;
         const arr = (this.pastScrutins || []).filter(s => s.url !== url);
         this.pastScrutins = arr;
         savePastScrutins(arr);
@@ -342,6 +343,7 @@ Object.assign(voteStore, {
     },
 
     cancelCreate(){
+        if(hasNonEmptyDraft() && !confirm("Annuler ? Le brouillon (titre, candidats, votants) sera effacé.")) return;
         this._doCancelCreate();
         if(history.state && history.state.overlay === 'create') history.back();
     },
@@ -517,6 +519,7 @@ Object.assign(voteStore, {
     },
 
     removeCandidateImage(i){
+        if(!confirm('Retirer cette photo ?')) return;
         this.ui.form.candidateImages[i] = '';
         this.saveFormDraft();
     },
@@ -963,6 +966,7 @@ Object.assign(voteStore, {
 
 Object.assign(voteStore, {
     removeVoter(name){
+        if(!confirm(`Retirer ${name} ? Son bulletin et son brouillon seront effacés.`)) return;
         const vIdx = this.scrutin.voters.indexOf(name);
         const bIdx = this.scrutin.ballots.findIndex(b => b.voter === name);
         this.change(d => {

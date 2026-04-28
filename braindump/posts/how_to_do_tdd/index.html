@@ -43,16 +43,22 @@
         <h1>How to Do Test-Driven Development</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/braindump/">Braindump</a></span></p>
         <h2 id="4c4bbc32-7ef5-4bdf-9e74-9343426e0a82">The cycle is the unit of change</h2>
-<p>Each change moves through a fixed sequence: baseline run, failing test
-written, minimum code to green, whole-suite verify, refactor code,
-refactor tests, whole-suite verify again. The rhythm is not decoration:
-each step exists because the previous one is provably insufficient.
-Skipping any of them leaves a gap the next regression will fall into.</p>
-<p>The baseline is the truth-anchor. Without it, a failure observed later
-cannot be attributed to the change in flight — it might have been red
-before you started, and the new test is fighting an older bug. Knowing
-the suite was green at the start of the cycle is what makes every
-later step interpretable.</p>
+<p>Each change moves through a fixed sequence: whole-suite baseline run,
+failing test written, minimum code to green, whole-suite verify,
+refactor code, refactor tests, whole-suite verify again. The rhythm
+is not decoration: each step exists because the previous one is
+provably insufficient. Skipping any of them leaves a gap the next
+regression will fall into.</p>
+<p>The baseline is the truth-anchor, and only the <strong>whole</strong> suite anchors
+it. A subset baseline — only the tests &ldquo;near&rdquo; the change — proves
+only that subset was green; it says nothing about pre-existing reds
+elsewhere. When the post-change run lights one of those up, you cannot
+tell whether your change broke it or whether it was already broken
+before you started, and the cycle&rsquo;s interpretability is gone. Worse,
+a subset baseline gives the false comfort of green when the codebase
+is in fact already red — the kind of comfort that makes later
+regressions hard to date. The whole-suite baseline rules out both:
+every red observed after this point was caused by the change in flight.</p>
 <p>Among the suite, a subset encodes product-level invariants —
 properties that, if violated, invalidate the product itself,
 regardless of where the current change is. They run on every cycle.
@@ -84,14 +90,24 @@ guards in the current change.</p>
 <h2 id="83d8e51e-231e-474f-94be-956516d45490">The whole suite is the contract</h2>
 <p>A change is verified only when the <strong>whole</strong> suite is green. The new
 test going green proves the new behaviour exists; it says nothing
-about what the change broke elsewhere. Implicit dependencies between
-modules — shared state, cached values, ordering assumptions — only
-surface when every test runs.</p>
-<p>This is why the cycle has two whole-suite verifications, not one. The
-first catches behaviour breakage from the new code. The second
-catches breakage introduced by refactoring (of either code or tests),
-which is a distinct risk: a green-to-green refactor can still flip a
-subtle ordering, a fixture, or a shared helper.</p>
+about what the change broke elsewhere. A subset run — even a
+carefully-chosen one — is not a verification: implicit dependencies
+between modules (shared state, cached values, ordering assumptions)
+only surface when every test runs, and the test you didn&rsquo;t include
+is exactly the one most likely to catch the regression you didn&rsquo;t
+predict. Confidence scoped to a subset is, by construction, scoped
+to the regressions you already imagined; the value of the suite is
+the ones you didn&rsquo;t.</p>
+<p>This is why the cycle has three whole-suite runs, not two and never
+one. The baseline pins the truth-anchor (see <a class="internal-link" href="#4c4bbc32-7ef5-4bdf-9e74-9343426e0a82">The cycle is the
+unit of change</a>). The post-change verify catches behaviour breakage
+from the new code. The post-refactor verify catches breakage
+introduced by structural change (of either code or tests), which is
+a distinct risk: a green-to-green refactor can still flip a subtle
+ordering, a fixture, or a shared helper. None of the three is
+substitutable by a faster subset, because the regressions each
+guards against are unknown ahead of time — that is what makes them
+regressions and not anticipated cases.</p>
 <h2 id="dfaf96a8-c545-458f-9302-019001f96735">Refactor lives under green</h2>
 <p>Structural change runs under a green suite. Behaviour is held fixed
 by the tests; structure is what is allowed to move. Mixing behaviour
