@@ -312,12 +312,6 @@ tfoot td:first-child{z-index:4;background:var(--surface)}
     font-family:inherit;font-size:inherit;
 }
 .drag-clone .reorder-grip{color:#fff}
-.drag-drop-line{
-    position:absolute;left:0;right:0;height:3px;
-    background:var(--accent);border-radius:2px;
-    pointer-events:none;z-index:100;
-    transition:top .1s ease;
-}
 .reorder-grip{
     display:grid;place-items:center;width:36px;height:36px;
     cursor:grab;touch-action:none;color:var(--muted);font-size:1.2rem;
@@ -866,28 +860,9 @@ document.addEventListener('reorder:move', function(e) {
 
     function markPlaceholder() {
         var items = dragging.list.querySelectorAll('.reorder-item');
-        items.forEach(function(el, i) {
-            el.classList.toggle('drag-placeholder', i === dragging.curIdx);
+        items.forEach(function(el) {
+            el.classList.toggle('drag-placeholder', el === dragging.itemEl);
         });
-    }
-
-    function updateDropLine(clientY) {
-        var items = dragging.list.querySelectorAll('.reorder-item');
-        var listRect = dragging.list.getBoundingClientRect();
-        var lineY = null;
-        for (var i = 0; i < items.length; i++) {
-            var rect = items[i].getBoundingClientRect();
-            var mid = rect.top + rect.height / 2;
-            if (clientY < mid) {
-                lineY = rect.top - listRect.top - 1;
-                break;
-            }
-        }
-        if (lineY === null) {
-            var last = items[items.length - 1].getBoundingClientRect();
-            lineY = last.bottom - listRect.top + 2;
-        }
-        dragging.dropLine.style.top = lineY + 'px';
     }
 
     function stripFrameworkAttrs(root) {
@@ -911,6 +886,7 @@ document.addEventListener('reorder:move', function(e) {
         if (!list || !item) return;
         var idx = parseInt(item.dataset.idx, 10);
         var rect = item.getBoundingClientRect();
+        var clientX = e.clientX;
         var clientY = e.clientY;
 
         var clone = document.createElement('div');
@@ -922,29 +898,24 @@ document.addEventListener('reorder:move', function(e) {
         clone.style.top = rect.top + 'px';
         document.body.appendChild(clone);
 
-        var dropLine = document.createElement('div');
-        dropLine.className = 'drag-drop-line';
-        list.appendChild(dropLine);
-
         dragging = {
-            list: list, curIdx: idx,
-            clone: clone, dropLine: dropLine, offsetY: clientY - rect.top,
+            list: list, curIdx: idx, itemEl: item, clone: clone,
+            offsetX: clientX - rect.left, offsetY: clientY - rect.top,
+            clientX: clientX, clientY: clientY, scrollRaf: 0,
         };
         markPlaceholder();
-        updateDropLine(clientY);
         e.preventDefault();
     }
 
-    function onMove(e) {
-        if (!dragging) return;
-        e.preventDefault();
-        var clientY = e.clientY;
+    function applyPointer(clientX, clientY) {
+        dragging.clone.style.left = (clientX - dragging.offsetX) + 'px';
         dragging.clone.style.top = (clientY - dragging.offsetY) + 'px';
-        updateDropLine(clientY);
         var items = dragging.list.querySelectorAll('.reorder-item');
         for (var i = 0; i < items.length; i++) {
+            if (i === dragging.curIdx) continue;
             var rect = items[i].getBoundingClientRect();
-            if (clientY >= rect.top && clientY <= rect.bottom && i !== dragging.curIdx) {
+            if (clientX >= rect.left && clientX <= rect.right &&
+                clientY >= rect.top  && clientY <= rect.bottom) {
                 fireMove(dragging.list, dragging.curIdx, i);
                 dragging.curIdx = i;
                 markPlaceholder();
@@ -955,10 +926,35 @@ document.addEventListener('reorder:move', function(e) {
         }
     }
 
+    function autoScrollTick() {
+        if (!dragging) return;
+        var margin = 80;
+        var y = dragging.clientY;
+        var dy = 0;
+        if (y < margin) dy = -Math.ceil((margin - y) / 6);
+        else if (y > window.innerHeight - margin)
+            dy = Math.ceil((y - (window.innerHeight - margin)) / 6);
+        if (dy) {
+            window.scrollBy(0, dy);
+            applyPointer(dragging.clientX, y);
+        }
+        dragging.scrollRaf = requestAnimationFrame(autoScrollTick);
+    }
+
+    function onMove(e) {
+        if (!dragging) return;
+        e.preventDefault();
+        dragging.clientX = e.clientX;
+        dragging.clientY = e.clientY;
+        applyPointer(e.clientX, e.clientY);
+        if (!dragging.scrollRaf)
+            dragging.scrollRaf = requestAnimationFrame(autoScrollTick);
+    }
+
     function onEnd() {
         if (!dragging) return;
+        if (dragging.scrollRaf) cancelAnimationFrame(dragging.scrollRaf);
         dragging.clone.remove();
-        dragging.dropLine.remove();
         dragging.list.querySelectorAll('.drag-placeholder').forEach(function(el) {
             el.classList.remove('drag-placeholder');
         });

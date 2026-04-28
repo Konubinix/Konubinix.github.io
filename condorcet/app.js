@@ -268,20 +268,34 @@ Object.assign(voteStore.ui, {
     form: initialForm(),
 });
 
+function _findDuplicates(items){
+    const counts = {};
+    items.forEach(s => {
+        const t = s.trim();
+        if(!t) return;
+        counts[t] = (counts[t] || 0) + 1;
+    });
+    return Object.keys(counts).filter(k => counts[k] > 1);
+}
+
+Object.defineProperty(voteStore, 'duplicateCandidates', {
+    enumerable: true, configurable: true,
+    get(){ return _findDuplicates(this.ui.form.candidates); },
+});
+
+Object.defineProperty(voteStore, 'duplicateVoters', {
+    enumerable: true, configurable: true,
+    get(){ return _findDuplicates(this.ui.form.voters); },
+});
+
 Object.defineProperty(voteStore, 'candidatesError', {
     enumerable: true, configurable: true,
-    get(){
-        const cs = this.ui.form.candidates.map(s => s.trim()).filter(Boolean);
-        return new Set(cs).size !== cs.length ? 'Doublons dans les candidats.' : '';
-    },
+    get(){ return this.duplicateCandidates.length > 0 ? 'Doublons dans les candidats.' : ''; },
 });
 
 Object.defineProperty(voteStore, 'votersError', {
     enumerable: true, configurable: true,
-    get(){
-        const vs = this.ui.form.voters.map(s => s.trim()).filter(Boolean);
-        return new Set(vs).size !== vs.length ? 'Doublons dans les votants.' : '';
-    },
+    get(){ return this.duplicateVoters.length > 0 ? 'Doublons dans les votants.' : ''; },
 });
 
 Object.defineProperty(voteStore, 'canCreate', {
@@ -578,7 +592,17 @@ function shuffled(arr){
     return a;
 }
 
-Object.assign(voteStore.ui, { ranking: [] });
+Object.assign(voteStore.ui, {
+    ranking: [],
+    ballotLayout: localStorage.getItem('condorcet.ballot-layout') || 'grid',
+});
+
+Object.assign(voteStore, {
+    toggleBallotLayout(){
+        this.ui.ballotLayout = this.ui.ballotLayout === 'grid' ? 'column' : 'grid';
+        localStorage.setItem('condorcet.ballot-layout', this.ui.ballotLayout);
+    },
+});
 
 Object.assign(voteStore, {
     currentVoter: null,
@@ -981,28 +1005,9 @@ function syncOverlaysFromHistory(store){
 
     function markPlaceholder() {
         var items = dragging.list.querySelectorAll('.reorder-item');
-        items.forEach(function(el, i) {
-            el.classList.toggle('drag-placeholder', i === dragging.curIdx);
+        items.forEach(function(el) {
+            el.classList.toggle('drag-placeholder', el === dragging.itemEl);
         });
-    }
-
-    function updateDropLine(clientY) {
-        var items = dragging.list.querySelectorAll('.reorder-item');
-        var listRect = dragging.list.getBoundingClientRect();
-        var lineY = null;
-        for (var i = 0; i < items.length; i++) {
-            var rect = items[i].getBoundingClientRect();
-            var mid = rect.top + rect.height / 2;
-            if (clientY < mid) {
-                lineY = rect.top - listRect.top - 1;
-                break;
-            }
-        }
-        if (lineY === null) {
-            var last = items[items.length - 1].getBoundingClientRect();
-            lineY = last.bottom - listRect.top + 2;
-        }
-        dragging.dropLine.style.top = lineY + 'px';
     }
 
     function stripFrameworkAttrs(root) {
@@ -1026,6 +1031,7 @@ function syncOverlaysFromHistory(store){
         if (!list || !item) return;
         var idx = parseInt(item.dataset.idx, 10);
         var rect = item.getBoundingClientRect();
+        var clientX = e.clientX;
         var clientY = e.clientY;
 
         var clone = document.createElement('div');
@@ -1037,27 +1043,24 @@ function syncOverlaysFromHistory(store){
         clone.style.top = rect.top + 'px';
         document.body.appendChild(clone);
 
-        var dropLine = document.createElement('div');
-        dropLine.className = 'drag-drop-line';
-        list.appendChild(dropLine);
-
         dragging = {
-            list: list, curIdx: idx,
-            clone: clone, dropLine: dropLine, offsetY: clientY - rect.top,
-            clientY: clientY, scrollRaf: 0,
+            list: list, curIdx: idx, itemEl: item, clone: clone,
+            offsetX: clientX - rect.left, offsetY: clientY - rect.top,
+            clientX: clientX, clientY: clientY, scrollRaf: 0,
         };
         markPlaceholder();
-        updateDropLine(clientY);
         e.preventDefault();
     }
 
-    function applyPointerY(clientY) {
+    function applyPointer(clientX, clientY) {
+        dragging.clone.style.left = (clientX - dragging.offsetX) + 'px';
         dragging.clone.style.top = (clientY - dragging.offsetY) + 'px';
-        updateDropLine(clientY);
         var items = dragging.list.querySelectorAll('.reorder-item');
         for (var i = 0; i < items.length; i++) {
+            if (i === dragging.curIdx) continue;
             var rect = items[i].getBoundingClientRect();
-            if (clientY >= rect.top && clientY <= rect.bottom && i !== dragging.curIdx) {
+            if (clientX >= rect.left && clientX <= rect.right &&
+                clientY >= rect.top  && clientY <= rect.bottom) {
                 fireMove(dragging.list, dragging.curIdx, i);
                 dragging.curIdx = i;
                 markPlaceholder();
@@ -1078,7 +1081,7 @@ function syncOverlaysFromHistory(store){
             dy = Math.ceil((y - (window.innerHeight - margin)) / 6);
         if (dy) {
             window.scrollBy(0, dy);
-            applyPointerY(y);
+            applyPointer(dragging.clientX, y);
         }
         dragging.scrollRaf = requestAnimationFrame(autoScrollTick);
     }
@@ -1086,8 +1089,9 @@ function syncOverlaysFromHistory(store){
     function onMove(e) {
         if (!dragging) return;
         e.preventDefault();
+        dragging.clientX = e.clientX;
         dragging.clientY = e.clientY;
-        applyPointerY(e.clientY);
+        applyPointer(e.clientX, e.clientY);
         if (!dragging.scrollRaf)
             dragging.scrollRaf = requestAnimationFrame(autoScrollTick);
     }
@@ -1096,7 +1100,6 @@ function syncOverlaysFromHistory(store){
         if (!dragging) return;
         if (dragging.scrollRaf) cancelAnimationFrame(dragging.scrollRaf);
         dragging.clone.remove();
-        dragging.dropLine.remove();
         dragging.list.querySelectorAll('.drag-placeholder').forEach(function(el) {
             el.classList.remove('drag-placeholder');
         });

@@ -73,10 +73,19 @@
         .modal-actions{display:flex;gap:10px;margin-top:16px}
         .modal-actions button{flex:1}
         .create-error{color:var(--danger);font-size:.85rem;margin:8px 0 0 0;text-align:center}
+        input.is-duplicate{border-color:var(--danger);color:var(--danger)}
         .ballot-screen{padding:20px}
         .ballot-screen h2{margin:0 0 4px 0}
         .ballot-screen .hint{color:var(--muted);font-size:.85rem;margin-bottom:16px}
         .ranking{list-style:none;padding:0}
+        .ballot-toolbar{display:flex;justify-content:flex-end;margin-bottom:8px}
+        .layout-toggle{background:transparent;color:var(--muted);padding:6px 10px;border:1px solid #333;border-radius:6px;display:inline-flex;align-items:center}
+        .layout-toggle:hover{color:var(--fg);background:rgba(255,255,255,.05)}
+        .layout-toggle svg{display:block}
+        .ballot-screen .reorder-list{flex-direction:row;flex-wrap:wrap}
+        .ballot-screen .reorder-item{flex:1 1 280px;min-width:0}
+        .ballot-screen .reorder-list.layout-column{flex-direction:column;flex-wrap:nowrap}
+        .ballot-screen .reorder-list.layout-column .reorder-item{flex:0 0 auto}
         .ballot-actions{display:flex;gap:12px;margin-top:20px}
         .ballot-actions button{flex:1}
         .reorder-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;position:relative}
@@ -98,12 +107,6 @@
             font-family:inherit;font-size:inherit;
         }
         .drag-clone .reorder-grip{color:#fff}
-        .drag-drop-line{
-            position:absolute;left:0;right:0;height:3px;
-            background:var(--accent);border-radius:2px;
-            pointer-events:none;z-index:100;
-            transition:top .1s ease;
-        }
         .reorder-grip{
             display:grid;place-items:center;width:36px;height:36px;
             cursor:grab;touch-action:none;color:var(--muted);font-size:1.2rem;
@@ -229,7 +232,7 @@
           <legend>Candidats</legend>
           <template v-for="(c, i) in ui.form.candidates" :key="'c'+i">
             <div class="row candidate-row">
-              <span class="candidate-thumb-wrap" v-show="ui.form.candidateImages[i]">
+              <span class="candidate-thumb-wrap" v-if="ui.form.candidateImages[i]">
                 <img class="candidate-thumb" :src="ui.form.candidateImages[i]" alt="">
                 <button type="button" class="candidate-thumb-remove"
                         @click="removeCandidateImage(i)" aria-label="Retirer la photo">&times;</button>
@@ -237,6 +240,7 @@
               <input type="text" :value="c" @input="ui.form.candidates[i] = $event.target.value"
                      @paste="handleCandidatePaste(i, $event)"
                      @keydown.tab="onCandidateTab(i, $event)"
+                     :class="{'is-duplicate': c.trim() && duplicateCandidates.includes(c.trim())}"
                      :placeholder="'Candidat ' + (i+1)">
               <label class="candidate-pic" :title="ui.form.candidateImages[i] ? 'Changer la photo' : 'Ajouter une photo'">
                 &#x1F4F7;
@@ -257,6 +261,7 @@
             <div class="row">
               <input type="text" :value="v" @input="ui.form.voters[i] = $event.target.value"
                      @keydown.tab="onVoterTab(i, $event)"
+                     :class="{'is-duplicate': v.trim() && duplicateVoters.includes(v.trim())}"
                      :placeholder="'Votant ' + (i+1)">
               <button type="button" @click="ui.form.voters.splice(i, 1)"
                       v-show="ui.form.voters.length > 1" aria-label="Retirer">&times;</button>
@@ -313,14 +318,37 @@
               <div class="ballot-screen" v-show="stage === 'ballot'">
                 <h2>Ton classement, <span v-text="currentVoter"></span></h2>
                 <p class="hint">Glisse pour ordonner du plus préféré (en haut) au moins préféré.</p>
+                <div class="ballot-toolbar">
+                  <button type="button" class="layout-toggle" @click="toggleBallotLayout()"
+                          :aria-label="ui.ballotLayout === 'grid' ? 'Passer en colonne' : 'Passer en grille'"
+                          :title="ui.ballotLayout === 'grid' ? 'Passer en colonne' : 'Passer en grille'">
+                    <svg v-if="ui.ballotLayout === 'grid'" width="18" height="14" viewBox="0 0 18 14" fill="currentColor">
+                      <rect width="18" height="2" rx="1"/>
+                      <rect y="6" width="18" height="2" rx="1"/>
+                      <rect y="12" width="18" height="2" rx="1"/>
+                    </svg>
+                    <svg v-else width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                      <rect width="5" height="5" rx="1"/>
+                      <rect x="6.5" width="5" height="5" rx="1"/>
+                      <rect x="13" width="5" height="5" rx="1"/>
+                      <rect y="6.5" width="5" height="5" rx="1"/>
+                      <rect x="6.5" y="6.5" width="5" height="5" rx="1"/>
+                      <rect x="13" y="6.5" width="5" height="5" rx="1"/>
+                      <rect y="13" width="5" height="5" rx="1"/>
+                      <rect x="6.5" y="13" width="5" height="5" rx="1"/>
+                      <rect x="13" y="13" width="5" height="5" rx="1"/>
+                    </svg>
+                  </button>
+                </div>
                 <ol class="ranking reorder-list" id="ranking" data-reorder="ranking"
+                    :class="{'layout-column': ui.ballotLayout === 'column'}"
                     @vue:mounted="bindRankReorder($el)">
                   <template v-for="(c, i) in ui.ranking" :key="c">
                     <li class="reorder-item" :data-idx="i" :data-candidate="c">
                       <span class="reorder-grip" aria-label="Glisser pour réordonner">&#x283F;</span>
                       <span class="reorder-rank" v-text="i + 1"></span>
-                      <img class="reorder-image" v-show="scrutin.candidateImages && scrutin.candidateImages[c]"
-                           :src="scrutin.candidateImages && scrutin.candidateImages[c]" alt="">
+                      <img class="reorder-image" v-if="scrutin.candidateImages && scrutin.candidateImages[c]"
+                           :src="scrutin.candidateImages[c]" alt="">
                       <span class="reorder-name" v-text="c"></span>
                       <span class="reorder-grip" aria-label="Glisser pour réordonner">&#x283F;</span>
                     </li>
@@ -381,8 +409,8 @@
                         <p class="tally-kind" v-text="tallyExplanation"></p>
                         <div class="winner-card">
                           <div class="winner-label">Vainqueur</div>
-                          <img class="winner-image" v-show="scrutin.candidateImages && scrutin.candidateImages[tally.winner]"
-                               :src="scrutin.candidateImages && scrutin.candidateImages[tally.winner]" alt="">
+                          <img class="winner-image" v-if="scrutin.candidateImages && scrutin.candidateImages[tally.winner]"
+                               :src="scrutin.candidateImages[tally.winner]" alt="">
                           <div class="winner-name" v-text="tally.winner"></div>
                         </div>
 
