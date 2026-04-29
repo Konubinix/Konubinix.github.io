@@ -20,7 +20,7 @@ function loadAutomerge(){
                 Repo: repoMod.Repo,
                 isValidAutomergeUrl: repoMod.isValidAutomergeUrl,
                 IndexedDBStorageAdapter: idbMod.IndexedDBStorageAdapter,
-                BrowserWebSocketClientAdapter: wsMod.BrowserWebSocketClientAdapter,
+                WebSocketClientAdapter: wsMod.WebSocketClientAdapter,
             };
         })();
     }
@@ -40,7 +40,7 @@ async function makeRepo(onSync){
     const syncUrl = localStorage.getItem('condorcet.sync_url');
     let adapter = null;
     if(syncUrl){
-        adapter = new am.BrowserWebSocketClientAdapter(syncUrl);
+        adapter = new am.WebSocketClientAdapter(syncUrl);
         adapter.on('peer-candidate', () => onSync?.('connected'));
         adapter.on('peer-disconnected', () => onSync?.('disconnected'));
         onSync?.('connecting');
@@ -66,12 +66,7 @@ async function loadInitialHandle(repo){
     const am = await loadAutomerge();
     const urlParam = new URLSearchParams(location.search).get('doc');
     if(!urlParam || !am.isValidAutomergeUrl(urlParam)) return null;
-    const handle = repo.find(urlParam);
-    await Promise.race([
-        handle.whenReady(['ready', 'unavailable']).catch(() => {}),
-        new Promise(r => setTimeout(r, 3000)),
-    ]);
-    return handle;
+    return await repo.find(urlParam);
 }
 
 function pairwiseMatrix(candidates, ballots){
@@ -151,8 +146,26 @@ async function computeTally(scrutin){
     return { kind: 'random-smith', winner: pick, smith, pairwise: m, seedShort };
 }
 
+function dataUrlToBytes(dataUrl){
+    const b64 = dataUrl.split(',', 2)[1];
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+}
+function bytesToObjectUrl(bytes){
+    return URL.createObjectURL(new Blob([bytes], {type: 'image/jpeg'}));
+}
+function bytesToDataUrl(bytes){
+    let bin = '';
+    for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return 'data:image/jpeg;base64,' + btoa(bin);
+}
+
 function cloneDoc(doc){
-    return doc ? JSON.parse(JSON.stringify(doc)) : doc;
+    if(!doc) return doc;
+    const { candidateImages, ...rest } = doc;
+    return JSON.parse(JSON.stringify(rest));
 }
 
 let _repo = null;
@@ -160,6 +173,7 @@ let _handle = null;
 
 const voteStore = {
     scrutin: null,
+    candidateImageUrls: {},
     tally: null,
     stage: 'identify',   // 'identify' | 'ballot' | 'waiting'
     allVoted: false,
@@ -183,9 +197,22 @@ const voteStore = {
         })[this.syncStatus] || '';
     },
 
+    _refreshImageUrls(doc){
+        for(const u of Object.values(this.candidateImageUrls)) URL.revokeObjectURL(u);
+        const map = {};
+        if(doc && doc.candidateImages){
+            for(const [name, bytes] of Object.entries(doc.candidateImages)){
+                map[name] = bytesToObjectUrl(bytes);
+            }
+        }
+        this.candidateImageUrls = map;
+    },
+
     change(fn){
         _handle.change(fn);
-        this.scrutin = cloneDoc(_handle.docSync());
+        const doc = _handle.doc();
+        this.scrutin = cloneDoc(doc);
+        this._refreshImageUrls(doc);
         this.syncFlags();
     },
 
@@ -196,9 +223,10 @@ const voteStore = {
 
     attach(handle){
         _handle = handle;
-        const doc = handle.docSync();
+        const doc = handle.doc();
         if(doc){
             this.scrutin = cloneDoc(doc);
+            this._refreshImageUrls(doc);
             this.syncFlags();
             this.recordScrutin(handle.url, doc.title);
             if(doc.closed) computeTally(doc).then(t => { this.tally = t; });
@@ -208,6 +236,7 @@ const voteStore = {
         }
         handle.on('change', ev => {
             this.scrutin = cloneDoc(ev.doc);
+            this._refreshImageUrls(ev.doc);
             this.syncFlags();
             if(ev.doc.closed && !this.tally){
                 computeTally(ev.doc).then(t => { this.tally = t; });
@@ -380,16 +409,17 @@ Object.assign(voteStore, {
         }
         try {
             const repo = await ensureRepo(this);
-            const handle = repo.find(url);
-            await handle.whenReady(['ready', 'unavailable']);
-            const doc = handle.docSync();
+            const handle = await repo.find(url);
+            const doc = handle.doc();
             if(!doc){ this.ui.importError = 'Doc introuvable'; return; }
             const cands = [...(doc.candidates || [])];
             Object.assign(this.ui.form, {
                 title: doc.title || '',
                 candidates: cands.length ? cands : ['', ''],
-                candidateImages: cands.map(c =>
-                    (doc.candidateImages && doc.candidateImages[c]) || ''),
+                candidateImages: cands.map(c => {
+                    const bytes = doc.candidateImages && doc.candidateImages[c];
+                    return bytes ? bytesToDataUrl(bytes) : '';
+                }),
                 voters: doc.voters && doc.voters.length ? [...doc.voters] : [''],
                 mode: doc.mode || 'shared-device',
             });
@@ -445,7 +475,7 @@ Object.assign(voteStore, {
             const name = raw.trim();
             if(!name) return;
             candidates.push(name);
-            if(f.candidateImages[i]) candidateImages[name] = f.candidateImages[i];
+            if(f.candidateImages[i]) candidateImages[name] = dataUrlToBytes(f.candidateImages[i]);
         });
         const voters = f.voters.map(s => s.trim()).filter(Boolean);
         const handle = repo.create({
@@ -615,6 +645,20 @@ Object.assign(voteStore, {
         return !!this.scrutin && this.scrutin.ballots.some(b => b.voter === name);
     },
 
+    loadSubmitted(voter){
+        return this.scrutin?.ballots.find(b => b.voter === voter)?.ranking;
+    },
+
+    switchMode(){
+        const newMode = this.scrutin.mode === 'per-device' ? 'shared-device' : 'per-device';
+        this.change(d => { d.mode = newMode; });
+        if(newMode === 'shared-device' && this.stage === 'waiting'){
+            this.identity = null;
+            localStorage.removeItem(this.identityKey());
+            this.stage = 'identify';
+        }
+    },
+
     loadPartial(voter){
         const drafts = (this.scrutin && this.scrutin.drafts) || {};
         const draft = drafts[voter];
@@ -652,6 +696,7 @@ Object.assign(voteStore, {
     startBallot(voter){
         this.currentVoter = voter || this.nextVoter;
         this.ui.ranking = this.loadPartial(this.currentVoter)
+            || this.loadSubmitted(this.currentVoter)
             || shuffled(this.scrutin.candidates);
         this.stage = 'ballot';
         pushOverlay('ballot');
@@ -673,6 +718,7 @@ Object.assign(voteStore, {
     },
 
     submitBallot(){
+        if(!confirm("Tu valides ce classement ?")) return;
         const ranking = this.ui.ranking.slice();
         const voter = this.currentVoter;
         this.change(d => {
@@ -742,11 +788,14 @@ Object.assign(voteStore, {
 
     redoScrutin(){
         const s = this.scrutin;
+        const liveImages = (_handle && _handle.doc() && _handle.doc().candidateImages) || {};
         const draft = {
             title: s.title,
             candidates: [...s.candidates],
-            candidateImages: s.candidates.map(c =>
-                (s.candidateImages && s.candidateImages[c]) || ''),
+            candidateImages: s.candidates.map(c => {
+                const bytes = liveImages[c];
+                return bytes ? bytesToDataUrl(bytes) : '';
+            }),
             voters: [...s.voters],
             mode: s.mode,
         };

@@ -50,6 +50,10 @@
         .row input{flex:1}
         .add-row{background:transparent;color:var(--accent);padding:6px;font-weight:500}
         h1,h2,h3{font-family:system-ui,sans-serif}
+        #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9999}
+        body[data-app-ready] #loading{display:none}
+        .loading-ring{width:44px;height:44px;border:3px solid #333;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
         .sync-indicator{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:8px;display:flex;align-items:center;gap:6px;padding:4px 8px;background:rgba(0,0,0,.35);border-radius:12px;font-size:.72rem;color:var(--muted);pointer-events:none;z-index:50}
         .sync-indicator .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
         .sync-indicator.sync-connecting .dot{background:var(--accent);animation:sync-pulse 1s ease-in-out infinite}
@@ -86,7 +90,7 @@
         .ballot-screen .reorder-item{flex:1 1 280px;min-width:0}
         .ballot-screen .reorder-list.layout-column{flex-direction:column;flex-wrap:nowrap}
         .ballot-screen .reorder-list.layout-column .reorder-item{flex:0 0 auto}
-        .ballot-actions{display:flex;gap:12px;margin-top:20px}
+        .ballot-actions{display:flex;gap:12px;margin-top:40px;padding-top:20px;border-top:1px solid rgba(255,255,255,.12)}
         .ballot-actions button{flex:1}
         .reorder-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;position:relative}
         .reorder-item{
@@ -123,6 +127,10 @@
         .identity-pick{flex:1;text-align:left;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);color:var(--fg)}
         .identity-pick .status{color:var(--muted);font-size:.85rem;font-weight:400}
         .identity-pick:disabled .name{color:var(--muted)}
+        .identity-revote{flex-shrink:0;padding:0 12px;background:transparent;border:1px solid #555;border-radius:6px;color:var(--muted);font-size:.8rem}
+        .mode-toggle-bar{text-align:center;padding:8px 20px 16px}
+        .mode-toggle{background:none;border:none;color:var(--muted);font-size:.75rem;opacity:.5;cursor:pointer;text-decoration:underline}
+        .mode-toggle:hover{opacity:1}
         .identity-remove{flex-shrink:0;padding:0 14px;background:var(--card);border-radius:6px;color:var(--muted);font-size:1.2rem;line-height:1}
         .waiting-screen .counter{margin:16px 0 8px 0;color:var(--muted);font-size:.85rem}
         .voters-list{list-style:none;padding:0;margin:8px auto 0 auto;text-align:left;max-width:260px}
@@ -192,7 +200,8 @@
       </style>
   </head>
   <body v-scope>
-    <span class="build-tag" title="Build">de130c5</span>
+    <div id="loading"><div class="loading-ring"></div></div>
+    <span class="build-tag" title="Build">49081f9</span>
     <div class="sync-indicator"
          v-show="syncStatus !== 'off'"
          :class="'sync-'+syncStatus"
@@ -352,8 +361,8 @@
                     <li class="reorder-item" :data-idx="i" :data-candidate="c">
                       <span class="reorder-grip" aria-label="Glisser pour réordonner">&#x283F;</span>
                       <span class="reorder-rank" v-text="i + 1"></span>
-                      <img class="reorder-image" v-if="scrutin.candidateImages && scrutin.candidateImages[c]"
-                           :src="scrutin.candidateImages[c]" alt="">
+                      <img class="reorder-image" v-if="candidateImageUrls && candidateImageUrls[c]"
+                           :src="candidateImageUrls[c]" alt="">
                       <span class="reorder-name" v-text="c"></span>
                       <span class="reorder-grip" aria-label="Glisser pour réordonner">&#x283F;</span>
                     </li>
@@ -379,6 +388,9 @@
                         <span class="name" v-text="v"></span>
                         <span class="status" v-show="hasBallotFor(v)">a voté</span>
                       </button>
+                      <button class="identity-revote" type="button"
+                              @click="chooseIdentity(v)"
+                              v-show="hasBallotFor(v) && scrutin.mode !== 'per-device'">Modifier</button>
                       <button class="identity-remove" type="button"
                               @click="removeVoter(v)"
                               v-show="scrutin.voters.length > 1"
@@ -406,6 +418,7 @@
                       </li>
                     </template>
                   </ul>
+                  <button class="secondary" style="margin-top:20px" @click="startBallot(identity)">Modifier mon vote</button>
                 </div>
                   <div id="tallyScreen" v-show="scrutin && scrutin.closed" v-cloak>
                     <h2>Résultat</h2>
@@ -414,8 +427,8 @@
                         <p class="tally-kind" v-text="tallyExplanation"></p>
                         <div class="winner-card">
                           <div class="winner-label">Vainqueur</div>
-                          <img class="winner-image" v-if="scrutin.candidateImages && scrutin.candidateImages[tally.winner]"
-                               :src="scrutin.candidateImages[tally.winner]" alt="">
+                          <img class="winner-image" v-if="candidateImageUrls && candidateImageUrls[tally.winner]"
+                               :src="candidateImageUrls[tally.winner]" alt="">
                           <div class="winner-name" v-text="tally.winner"></div>
                         </div>
 
@@ -509,6 +522,11 @@
                         + Ajouter
                       </button>
                       <p class="error" v-show="ui.addVoterError" v-text="ui.addVoterError"></p>
+                    </div>
+                    <div class="mode-toggle-bar" v-show="scrutin && !scrutin.closed && stage !== 'ballot'" v-cloak>
+                      <button class="mode-toggle" @click="switchMode()"
+                              v-text="scrutin.mode === 'per-device' ? 'Passer à un téléphone commun' : 'Passer à un téléphone par personne'">
+                      </button>
                     </div>
                       <div class="modal qr-modal" :class="{open: ui.qrOpen}" v-cloak @click.self="closeQR()">
                         <div class="modal-panel">
