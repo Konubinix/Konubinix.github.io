@@ -181,6 +181,14 @@
         .anim-breakdown .voter{flex:1;font-weight:500}
         .anim-breakdown .arrow{color:var(--muted)}
         .anim-breakdown .pref{font-weight:700}
+        .plurality-panel{background:var(--card);padding:12px 16px;border-radius:8px;margin-top:16px}
+        .plurality-counts{list-style:none;padding:0;margin:8px 0;display:flex;flex-direction:column;gap:4px}
+        .plurality-counts li{display:flex;gap:8px;align-items:baseline}
+        .plurality-name{flex:1;font-weight:500}
+        .plurality-count{font-weight:700;color:var(--ok)}
+        .plurality-unit{color:var(--muted);font-size:.85rem}
+        .plurality-result{margin:8px 0 0 0}
+        .plurality-divergence{display:block;margin-top:6px;color:#f9a826;font-weight:600}
         .share-bar{display:flex;gap:8px;justify-content:center;align-items:center;padding:12px 20px;flex-wrap:wrap}
         .share-bar button{padding:8px 14px;font-size:.9rem}
         .share-toast{color:var(--ok);font-size:.85rem;padding:4px 8px}
@@ -201,7 +209,7 @@
   </head>
   <body v-scope>
     <div id="loading"><div class="loading-ring"></div></div>
-    <span class="build-tag" title="Build">49081f9</span>
+    <span class="build-tag" title="Build">9c72cd0</span>
     <div class="sync-indicator"
          v-show="syncStatus !== 'off'"
          :class="'sync-'+syncStatus"
@@ -376,7 +384,7 @@
 
             </div>
               <div class="identity-screen"
-                   v-show="scrutin && stage === 'identify'"
+                   v-show="scrutin && stage === 'identify' && !scrutin.closed"
                    v-cloak>
                 <h2 v-show="nextVoter">Qui es-tu&nbsp;?</h2>
                 <p class="hint" v-show="nextVoter">Choisis ton nom pour commencer à voter.</p>
@@ -490,6 +498,31 @@
                               </li>
                             </template>
                           </ul>
+                        </div>
+
+                        <div class="plurality-panel" v-if="plurality" v-cloak>
+                          <h3>Et si c'était un scrutin majoritaire ?</h3>
+                          <p>Chaque votant ne pèse que sur son premier choix, vainqueur = qui en a le plus.</p>
+                          <ul class="plurality-counts">
+                            <template v-for="c in scrutin.candidates" :key="'pl'+c">
+                              <li>
+                                <span class="plurality-name" v-text="c"></span>
+                                <span class="plurality-count" v-text="plurality.counts[c]"></span>
+                                <span class="plurality-unit">voix</span>
+                              </li>
+                            </template>
+                          </ul>
+                          <p class="plurality-result">
+                            <span v-if="plurality.winners.length === 1">
+                              Vainqueur à la pluralité : <strong class="plurality-winners" v-text="plurality.winners[0]"></strong>.
+                            </span>
+                            <span v-if="plurality.winners.length > 1">
+                              Ex æquo à la pluralité : <strong class="plurality-winners" v-text="plurality.winners.join(', ')"></strong>.
+                            </span>
+                            <span v-if="!plurality.winners.includes(tally.winner)" class="plurality-divergence">
+                              Différent du vainqueur du scrutin (<strong v-text="tally.winner"></strong>).
+                            </span>
+                          </p>
                         </div>
 
                         <button class="secondary redo-vote" id="btnRedoVote" @click="redoScrutin()">Refaire</button>

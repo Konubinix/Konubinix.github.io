@@ -57,13 +57,14 @@ most a one-liner annotating the line below.</p>
 <p>Sanity check: mentally remove all code blocks. The remaining text must form
 a coherent and complete narrative. If a gap appears, either a paragraph is
 missing, or an existing paragraph was only paraphrasing a block rather than
-advancing the reasoning — and needs to be rewritten accordingly. This is
-the weaving: code and prose are interleaved, not inserted side-by-side.
+advancing the reasoning. In either case, rewrite the section accordingly.
+This is what makes the document literate: code and prose are interleaved,
+not inserted side-by-side.
 Tests give a binary signal, but prose coherence doesn&rsquo;t — a neutral agent
 reading the prose-only version and assessing whether the narrative
 fulfills the stated need provides a stronger signal than code-level tests
 alone.</p>
-<h2 id="3b7e1c42-9f5d-4a86-b2c1-6e8a0d5f3b9c">The reading flow is sacred</h2>
+<h2 id="3b7e1c42-9f5d-4a86-b2c1-6e8a0d5f3b9c">The reader&rsquo;s flow is sacred</h2>
 <p>The reader should glide through the prose uninterrupted, glancing at a
 code block whenever they want to see how a sentence is concretely coded.
 Everything else — detours, meta-commentary, secondary justifications — is
@@ -71,8 +72,38 @@ noise and must be removed. If something is valuable but breaks the flow —
 a technical derivation, a self-contained construction whose result the
 narrative will consume — move it to an annex and link to it from the main
 narrative at the moment its result is used.</p>
+<p>Brevity serves flow. The longer a sentence, the more its message dilutes —
+human attention is narrow, and a convoluted clause already costs a glance
+back. Where an image, a diagram, or a bulleted breakdown carries the idea
+more directly than a paragraph, prefer it.</p>
+<p>Flow is more than absence of friction. The reader should feel the writer&rsquo;s
+thrill, pulled forward by the chain of reasoning, eager to find out how it
+resolves. Style matters: a document that is technically clear but emotionally
+flat loses readers as surely as one that breaks flow with detours.</p>
 <p>Put a lot of links. If the reader wants to follow a concept referred to and
 described somewhere else, per must be able to simply click and go there.</p>
+<p>A new term enters the document where the document has just laid out what
+motivates it — not earlier. Referring to a concept the reader has not yet
+met forces them to suspend reading, which breaks flow as surely as a detour.
+The fix is almost always reordering — introduce the grounding sentence
+first, then the term that names what was just established. When the
+structure constrains the sequence, defer the reference itself: name a more
+general concept the reader already has, and let the specific term arrive
+when its time comes.</p>
+<p>This applies everywhere the reader&rsquo;s eyes go — prose, comments, docstrings,
+function names, variable names, symbols, any identifier surfacing in any
+form. The reading flow doesn&rsquo;t care which fence a name sits behind; an
+ungrounded name breaks it wherever it appears.</p>
+<p>When the ungrounded name is a code-level term — a field, a function, a
+class — the forward-reference often hides a readback: the prose was
+reaching for the implementation when it should have been naming the need.
+Removing the term then fixes both at once.</p>
+<p>Content hidden from the published document — by tag, by build switch, by
+any mechanism that keeps it out of what the reader will read — does not
+exist for that reader. A reference surviving in the exported flow whose
+grounding lives only in hidden content stays ungrounded forever. Either
+move the grounding into the export, or remove the reference from the
+exported flow. Hiding is not a substitute for an annex.</p>
 <p>A block that cannot be taken in at a glance breaks the flow just as surely
 as a detour. Around 30 lines is a reasonable ceiling; past that, the
 reader loses the thread between the sentence that motivated the block and
@@ -83,16 +114,20 @@ sentence of motivation just before. The noweb composition reassembles the
 pieces at tangle time. A block that resists splitting signals that the
 prose itself has collapsed several ideas into one — expand the prose
 first, and the block will split naturally.</p>
-<p>Not every short conversational line is noise, though. A single sentence
-like &ldquo;let&rsquo;s see what this gives&rdquo; just before a block that produces
+<p>Not every short conversational line is noise — many are encouraged. A single
+sentence like &ldquo;let&rsquo;s see what this gives&rdquo; just before a block that produces
 something visible — an image, an exported model, a plot — synchronizes the
 prose with the reader&rsquo;s impatience to leave abstraction and see a concrete
 result. It does not interrupt the flow; it paces it. The test is whether
 the line names something the reader is already feeling: if it does, keep
 it. If it instead introduces new content, it is no longer a pacing line
 but a regular paragraph in disguise — expand it or cut it.</p>
+<p>More broadly, a document is a story, not a recitation. Stakes, a tension
+building toward a result, a payoff at the end — these are what carry
+rigorous content through. Substance without narrative rarely lands; style
+is what makes the logic count.</p>
 <h2 id="7d4e9a2b-8c1f-4e63-b5a8-3f9c2d1e4a7b">Code blocks are not repeated in the export</h2>
-<p>A direct consequence of the reading flow principle: a code block appears
+<p>A direct consequence of the reader&rsquo;s-flow principle: a code block appears
 in the export only when the prose talks about it. Re-showing a block that
 the reader has already seen, just because the next block depends on it,
 adds nothing to the reading and becomes noise. The dependency is resolved
@@ -101,9 +136,9 @@ when seeing the surrounding code genuinely helps the reading.</p>
 <h2 id="56d9f0e9-1ca4-493c-a91b-c221058b4a29">Prose states the what, the how, and the why</h2>
 <p>Every code block is motivated by what precedes it in the prose:</p>
 <ul>
+<li>The <strong>why</strong> (the reason for the choice) → stays in prose, untranslated</li>
 <li>The <strong>what</strong> (the desired behavior) → translated into a test</li>
 <li>The <strong>how</strong> (the chosen technical approach) → translated into code</li>
-<li>The <strong>why</strong> (the reason for the choice) → stays in prose, untranslated</li>
 </ul>
 <p>No block should exist unless the prose has made it necessary. If you find
 yourself adding a block without the prose having led to it, a piece of
@@ -139,12 +174,48 @@ state the desired behavior first, then the technique used to achieve it.
 A test that stands apart as a separate paragraph, not flowing from an
 explicit assertion in the prose, is a sign that a sentence is missing
 from the narrative.</p>
-<p>Tests can be fused for that allows factoring the fixtures and make them run
-faster. But they must be fused only if we can prove that one does not impact
-the other. Also, the way they appear in the document MUST NOT be fused. One
-test is one <strong>what</strong>. A test block asserting several <strong>whats</strong> breaks the prose
-flow.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;a duplicate in the list would make the tally incoherent,
+<p>Three rules govern test-and-prose weaving:</p>
+<ol>
+<li>
+<p><strong>Always split the blocks in the document.</strong> Each prose paragraph
+promises one <strong>what</strong>; the test block below it checks that promise. A
+test block checking several <strong>whats</strong> under a single paragraph breaks
+the prose flow — the reader cannot trace which sentence promised what
+the test is checking.</p>
+</li>
+<li>
+<p><strong>Always fuse the runtime when possible.</strong> A single function runs all
+the <strong>whats</strong> together, sharing fixture and state across steps, saving
+setup time.</p>
+</li>
+<li>
+<p><strong>&ldquo;Possible&rdquo; means you can prove the chaining doesn&rsquo;t dilute any test&rsquo;s
+check.</strong> Each prose paragraph has promised a behaviour; the test below
+it must still fail observably when that behaviour breaks, even after
+being chained behind earlier steps. When an earlier step happens to
+mask the failure mode a downstream test should catch, the test no
+longer checks what the prose promised — the runtime splits too.</p>
+</li>
+</ol>
+<p>The two layers compose via noweb: each <strong>what</strong> lives in its own visible
+block (with prose), all sharing <code>:noweb-ref test-X-body</code>. A hidden
+wrapper (<code>:exports none</code>) does <code>&lt;&lt;test-X-body&gt;&gt;</code> to recompose the body
+into a runtime function.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;row removal splices both arrays in lockstep&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  [block — :noweb-ref row-removal-body
+</span></span><span style="display:flex;"><span>     setup + modal-side assertions]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Prose: &#34;the post-splice state propagates through the doc to the ballot&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  [block — :noweb-ref row-removal-body
+</span></span><span style="display:flex;"><span>     click &#34;Créer&#34;, advance, bulletin-side assertions]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  [hidden wrapper — :noweb-ref tests :exports none
+</span></span><span style="display:flex;"><span>     @testcase
+</span></span><span style="display:flex;"><span>     def test_row_removal(page):
+</span></span><span style="display:flex;"><span>         &lt;&lt;row-removal-body&gt;&gt;]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;a duplicate in the list would make the tally incoherent,
 </span></span><span style="display:flex;"><span>        so we block creation and display an error message&#34;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  [test — translates &#34;we block and display a message&#34;]
@@ -158,7 +229,7 @@ intent and form. These asides should be rare and clearly identifiable as
 such (e.g. introduced by &ldquo;In practice,&rdquo; or &ldquo;Under the hood,&rdquo;).</p>
 <p>When an aside grows beyond its role — explaining more than the
 translation gap — it is better moved to an annex to avoid breaking the
-reading flow. The prose then points to it with a short link, e.g. &ldquo;in
+reader&rsquo;s flow. The prose then points to it with a short link, e.g. &ldquo;in
 order to understand X, see annex&rdquo; (with a link).</p>
 <p>Feeling the need for an aside is also a diagnostic. Sometimes it
 reflects a genuine gap between what human language and code can
@@ -185,7 +256,7 @@ add a test and an explanatory paragraph describing the mitigation.
 This does not restore the narrative — it leaves a visible scar.
 Instead, rewrite the affected prose section so it reads as if the
 issue never existed: not a narrative that fixes something, but a
-narrative that was always correct. The reading flow is sacred, and
+narrative that was always correct. The reader&rsquo;s flow is sacred, and
 a scar interrupts it just as surely as a detour does — the final
 artifact should betray no trace of the path that led to it.</p>
 <p>The scar is <strong>retrospective</strong> — a trace of a revision already applied, a
@@ -217,7 +288,7 @@ you cannot fill the table, you have not read the document closely
 enough to judge it.</p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/4a7f2e91-c3d8-4b05-a1e7-8f3d6c9b2e47?title=how_to_do_literate_programming">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 26 Apr 2026</time></aside>
+	  <aside class="date"><time>Last updated: 30 Apr 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 22 Apr 2026</time></aside>
     </div>
   </div>

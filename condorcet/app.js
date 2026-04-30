@@ -276,7 +276,7 @@ Object.assign(voteStore, {
     },
 
     forgetScrutin(url){
-        if(!confirm("Retirer ce scrutin de la liste ? Le doc reste dans IndexedDB.")) return;
+        if(!confirm("Retirer ce scrutin de la liste ? Le doc reste sur l'appareil.")) return;
         const arr = (this.pastScrutins || []).filter(s => s.url !== url);
         this.pastScrutins = arr;
         savePastScrutins(arr);
@@ -988,6 +988,26 @@ Object.assign(voteStore, {
     },
 });
 
+function pluralityResult(candidates, ballots){
+    const counts = {};
+    for(const c of candidates) counts[c] = 0;
+    for(const b of ballots){
+        const first = b.ranking[0];
+        if(first in counts) counts[first]++;
+    }
+    const top = Math.max(0, ...Object.values(counts));
+    const winners = candidates.filter(c => counts[c] === top);
+    return { counts, winners };
+}
+
+Object.defineProperty(voteStore, 'plurality', {
+    enumerable: true, configurable: true,
+    get(){
+        if(!this.scrutin || !this.tally) return null;
+        return pluralityResult(this.scrutin.candidates, this.scrutin.ballots);
+    },
+});
+
 Object.assign(voteStore.ui, {
     newVoter: '',
     addVoterError: '',
@@ -1168,13 +1188,7 @@ function syncOverlaysFromHistory(store){
 })();
 
 const reactiveStore = reactive(voteStore);
-window.__voteStore = reactiveStore;
 reactiveStore.pastScrutins = loadPastScrutins();
-
-// Hook de test : force un ranking sans passer par le drag-and-drop.
-window.testForceRanking = function(order){
-    reactiveStore.ui.ranking = order.slice();
-};
 
 window.addEventListener('popstate', () => syncOverlaysFromHistory(reactiveStore));
 
