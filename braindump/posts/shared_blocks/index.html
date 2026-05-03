@@ -279,10 +279,122 @@ manifest, say), a consumer can wrap the splice in a <code>let</code> that binds
 concatenated before hashing.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>(let ((build-hash-blocks &#39;(&#34;root&#34; &#34;manifest&#34; &#34;sw&#34;)))
 </span></span><span style="display:flex;"><span>  [[shared_blocks.org:build-hash-body-ex()]])
+</span></span></code></pre></div><h2 id="cadquery-helpers">CadQuery pipe and sleeve</h2>
+<p>Five helpers for building hollow stacked STLs in CadQuery.
+<code>pipe(workplane, height, inner_diameter, outer_diameter)</code> is the
+cylindrical primitive: a hollow cylinder sitting on the input
+workplane (not centered on it). <code>cone(workplane, height, inner_top, inner_bottom, outer_top, outer_bottom)</code> is the conical
+primitive: a hollow frustum whose bore and outer each interpolate
+linearly from the bottom values to the top values over <code>height</code>.
+<code>concat_pipe(workplane, **sections)</code> is the generic cylinder
+stacker — each kwarg&rsquo;s value is a <code>(height, inner_diameter, outer_diameter)</code> tuple, and the helper unions them bottom-to-top
+so each pipe rises from the top face of the previous one.
+<code>sleeve(workplane, *, female, junction_length, male)</code> is the
+sleeve-specific abstraction for adapters that bridge a <strong>male</strong>
+shaft (entered through the <strong>female</strong> end of the sleeve) and a
+<strong>female</strong> socket (entered by the <strong>male</strong> end). It builds three
+sections — male pipe at the bottom, female pipe at the top, and a
+conical junction between them whose outer and bore each
+interpolate linearly from the male&rsquo;s dimensions at the bottom to
+the female&rsquo;s at the top — so all four faces of the junction
+connect seamlessly to its neighbours, with no step. The smooth
+taper makes the assembly printable without supports.</p>
+<p><code>sleeve_tapered(workplane, *, female, junction_length, male, tolerance)</code> is the same shape but with the <strong>male</strong> and <strong>female</strong>
+sections turned into tapered cones rather than straight
+cylinders, to absorb 3D print imperfections. The cone narrows
+toward the entry end (so insertion starts loose) and widens
+toward the junction (so the fit gets snug as the pieces seat).
+Concretely, on each tapered end the dimension that does the
+fitting — the male&rsquo;s outer, the female&rsquo;s bore — equals the
+requested value <code>± tolerance</code>: bigger than requested at the
+junction-side face, smaller than requested at the entry-side
+face. The non-fitting dimension (the male&rsquo;s bore, the female&rsquo;s
+outer) stays constant, and the central junction is rebuilt to
+match the new male-top and female-bottom values so the four
+interfaces still meet without a step.</p>
+<p><a id="code-snippet--cadquery-sleeve"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">pipe</span><span style="color:#1f2328">(</span>workplane<span style="color:#1f2328">,</span> height<span style="color:#1f2328">,</span> inner_diameter<span style="color:#1f2328">,</span> outer_diameter<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        workplane<span style="color:#0550ae">.</span>cylinder<span style="color:#1f2328">(</span>height<span style="color:#0550ae">=</span>height<span style="color:#1f2328">,</span> radius<span style="color:#0550ae">=</span>outer_diameter <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                           centered<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">False</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0550ae">.</span>cut<span style="color:#1f2328">(</span>workplane<span style="color:#0550ae">.</span>cylinder<span style="color:#1f2328">(</span>height<span style="color:#0550ae">=</span>height<span style="color:#1f2328">,</span> radius<span style="color:#0550ae">=</span>inner_diameter <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                         centered<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">False</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">cone</span><span style="color:#1f2328">(</span>workplane<span style="color:#1f2328">,</span> height<span style="color:#1f2328">,</span> inner_top<span style="color:#1f2328">,</span> inner_bottom<span style="color:#1f2328">,</span> outer_top<span style="color:#1f2328">,</span> outer_bottom<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    outer <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        workplane<span style="color:#0550ae">.</span>circle<span style="color:#1f2328">(</span>outer_bottom <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">(</span>offset<span style="color:#0550ae">=</span>height<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0550ae">.</span>circle<span style="color:#1f2328">(</span>outer_top <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0550ae">.</span>loft<span style="color:#1f2328">(</span>combine<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    inner <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        workplane<span style="color:#0550ae">.</span>circle<span style="color:#1f2328">(</span>inner_bottom <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">(</span>offset<span style="color:#0550ae">=</span>height<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0550ae">.</span>circle<span style="color:#1f2328">(</span>inner_top <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0550ae">.</span>loft<span style="color:#1f2328">(</span>combine<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> outer<span style="color:#0550ae">.</span>cut<span style="color:#1f2328">(</span>inner<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">concat_pipe</span><span style="color:#1f2328">(</span>workplane<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>sections<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    current_workplane <span style="color:#0550ae">=</span> workplane
+</span></span><span style="display:flex;"><span>    parts <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> height<span style="color:#1f2328">,</span> inner_diameter<span style="color:#1f2328">,</span> outer_diameter <span style="color:#0550ae">in</span> sections<span style="color:#0550ae">.</span>values<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        part <span style="color:#0550ae">=</span> pipe<span style="color:#1f2328">(</span>current_workplane<span style="color:#1f2328">,</span> height<span style="color:#1f2328">,</span> inner_diameter<span style="color:#1f2328">,</span> outer_diameter<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        parts<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>part<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        current_workplane <span style="color:#0550ae">=</span> part<span style="color:#0550ae">.</span>faces<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;+Z&#39;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    combined <span style="color:#0550ae">=</span> parts<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> part <span style="color:#0550ae">in</span> parts<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]:</span>
+</span></span><span style="display:flex;"><span>        combined <span style="color:#0550ae">=</span> combined<span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>part<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> combined
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">sleeve</span><span style="color:#1f2328">(</span>workplane<span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span><span style="color:#1f2328">,</span> female<span style="color:#1f2328">,</span> junction_length<span style="color:#1f2328">,</span> male<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    female_length<span style="color:#1f2328">,</span> female_bore<span style="color:#1f2328">,</span> female_outer <span style="color:#0550ae">=</span> female
+</span></span><span style="display:flex;"><span>    male_length<span style="color:#1f2328">,</span> male_bore<span style="color:#1f2328">,</span> male_outer <span style="color:#0550ae">=</span> male
+</span></span><span style="display:flex;"><span>    male_pipe <span style="color:#0550ae">=</span> pipe<span style="color:#1f2328">(</span>workplane<span style="color:#1f2328">,</span> male_length<span style="color:#1f2328">,</span> male_bore<span style="color:#1f2328">,</span> male_outer<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    junction <span style="color:#0550ae">=</span> cone<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        male_pipe<span style="color:#0550ae">.</span>faces<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;+Z&#39;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">(),</span>
+</span></span><span style="display:flex;"><span>        junction_length<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>female_bore<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>male_bore<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>female_outer<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>male_outer<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    female_pipe <span style="color:#0550ae">=</span> pipe<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        junction<span style="color:#0550ae">.</span>faces<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;+Z&#39;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">(),</span>
+</span></span><span style="display:flex;"><span>        female_length<span style="color:#1f2328">,</span> female_bore<span style="color:#1f2328">,</span> female_outer<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> male_pipe<span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>junction<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>female_pipe<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">sleeve_tapered</span><span style="color:#1f2328">(</span>workplane<span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span><span style="color:#1f2328">,</span> female<span style="color:#1f2328">,</span> junction_length<span style="color:#1f2328">,</span> male<span style="color:#1f2328">,</span> tolerance<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    female_length<span style="color:#1f2328">,</span> female_bore<span style="color:#1f2328">,</span> female_outer <span style="color:#0550ae">=</span> female
+</span></span><span style="display:flex;"><span>    male_length<span style="color:#1f2328">,</span> male_bore<span style="color:#1f2328">,</span> male_outer <span style="color:#0550ae">=</span> male
+</span></span><span style="display:flex;"><span>    male_cone <span style="color:#0550ae">=</span> cone<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        workplane<span style="color:#1f2328">,</span> male_length<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>male_bore<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>male_bore<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">+</span> tolerance<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">-</span> tolerance<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    junction <span style="color:#0550ae">=</span> cone<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        male_cone<span style="color:#0550ae">.</span>faces<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;+Z&#39;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">(),</span>
+</span></span><span style="display:flex;"><span>        junction_length<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">-</span> tolerance<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>male_bore<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>female_outer<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">+</span> tolerance<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    female_cone <span style="color:#0550ae">=</span> cone<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        junction<span style="color:#0550ae">.</span>faces<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;+Z&#39;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">(),</span>
+</span></span><span style="display:flex;"><span>        female_length<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">+</span> tolerance<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">-</span> tolerance<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>female_outer<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>female_outer<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> male_cone<span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>junction<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>female_cone<span style="color:#1f2328">)</span>
 </span></span></code></pre></div><!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
+<li><a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/#c0d07c0c-0098-4000-8000-000000000098">Playwright tests</a></li>
 <li><a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/">scrutin de Condorcet randomisé entre amis</a></li>
+<li><a class="internal-link" href="/braindump/posts/cascade_overflow_ramp/#03aff5be-ca07-4b93-bdc3-2adab9cf6e9d">The adapter</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/f7a3c1d8-4e2b-4f89-9a1c-shared-blocks?title=shared_blocks">Permalink</a></h2>
 <div class="footnotes" role="doc-endnotes">
@@ -375,6 +487,11 @@ up to about 13 px/frame at the very edge), until the cursor leaves
 the margin or the drag ends.  The cursor&rsquo;s last known viewport
 position is re-applied each tick so the floating clone and the slot
 detection stay in sync as the page scrolls underneath.</p>
+<p>On touch, the hold that begins a drag is also the long-press that
+opens the OS menu — <code>Save image</code>, <code>Copy</code>, <code>Open in new tab</code> — popping
+mid-gesture, masking the list, and aborting the drag.  We suppress
+that menu on reorder rows so the gesture stays clean; the rest of
+the page keeps its normal contextmenu.</p>
 <p><a id="code-snippet--js-reorder-engine"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#57606a">// ── Drag-and-drop reorder engine (framework-agnostic) ──
 </span></span></span><span style="display:flex;"><span><span style="color:#57606a">// Binds once on document. Handles any =.reorder-list= with =.reorder-item=
@@ -502,12 +619,15 @@ detection stay in sync as the page scrolls underneath.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;pointermove&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">onMove</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;pointerup&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">onEnd</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;pointercancel&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">onEnd</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;contextmenu&#39;</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">function</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">target</span><span style="color:#1f2328">.</span><span style="color:#1f2328">closest</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;.reorder-item&#39;</span><span style="color:#1f2328">))</span> <span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">preventDefault</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">});</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">})();</span>
 </span></span></code></pre></div>&#160;<a class="internal-link" href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
 </ol>
 </div>
       </div>
-	  <aside class="date"><time>Last updated: 21 Apr 2026</time></aside>
+	  <aside class="date"><time>Last updated: 01 May 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 Mar 2026</time></aside>
     </div>
   </div>

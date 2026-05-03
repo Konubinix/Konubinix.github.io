@@ -802,6 +802,11 @@ Object.assign(voteStore, {
         try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch(e) {}
         location.href = location.pathname;
     },
+
+    editBallotAfterTally(){
+        this.change(d => { d.closed = false; });
+        this.tally = null;
+    },
 });
 
 Object.assign(voteStore.ui, {
@@ -1185,6 +1190,9 @@ function syncOverlaysFromHistory(store){
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onEnd);
     document.addEventListener('pointercancel', onEnd);
+    document.addEventListener('contextmenu', function(e) {
+        if (e.target.closest('.reorder-item')) e.preventDefault();
+    });
 })();
 
 const reactiveStore = reactive(voteStore);
