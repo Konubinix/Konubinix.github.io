@@ -311,7 +311,10 @@ junction-side face, smaller than requested at the entry-side
 face. The non-fitting dimension (the male&rsquo;s bore, the female&rsquo;s
 outer) stays constant, and the central junction is rebuilt to
 match the new male-top and female-bottom values so the four
-interfaces still meet without a step.</p>
+interfaces still meet without a step. <code>tolerance</code> can also be
+a <code>(female, male)</code> tuple to set each end&rsquo;s tolerance
+independently; passing <code>0</code> for one end collapses its cone back
+to a straight cylinder while leaving the other end tapered.</p>
 <p><a id="code-snippet--cadquery-sleeve"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">pipe</span><span style="color:#1f2328">(</span>workplane<span style="color:#1f2328">,</span> height<span style="color:#1f2328">,</span> inner_diameter<span style="color:#1f2328">,</span> outer_diameter<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">(</span>
@@ -371,30 +374,31 @@ interfaces still meet without a step.</p>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">sleeve_tapered</span><span style="color:#1f2328">(</span>workplane<span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span><span style="color:#1f2328">,</span> female<span style="color:#1f2328">,</span> junction_length<span style="color:#1f2328">,</span> male<span style="color:#1f2328">,</span> tolerance<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    female_length<span style="color:#1f2328">,</span> female_bore<span style="color:#1f2328">,</span> female_outer <span style="color:#0550ae">=</span> female
 </span></span><span style="display:flex;"><span>    male_length<span style="color:#1f2328">,</span> male_bore<span style="color:#1f2328">,</span> male_outer <span style="color:#0550ae">=</span> male
+</span></span><span style="display:flex;"><span>    female_tol<span style="color:#1f2328">,</span> male_tol <span style="color:#0550ae">=</span> tolerance <span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>tolerance<span style="color:#1f2328">,</span> <span style="color:#6639ba">tuple</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">else</span> <span style="color:#1f2328">(</span>tolerance<span style="color:#1f2328">,</span> tolerance<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    male_cone <span style="color:#0550ae">=</span> cone<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        workplane<span style="color:#1f2328">,</span> male_length<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>male_bore<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>male_bore<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">+</span> tolerance<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">-</span> tolerance<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">+</span> male_tol<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">-</span> male_tol<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    junction <span style="color:#0550ae">=</span> cone<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        male_cone<span style="color:#0550ae">.</span>faces<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;+Z&#39;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">(),</span>
 </span></span><span style="display:flex;"><span>        junction_length<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">-</span> tolerance<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>male_bore<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>female_outer<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">+</span> tolerance<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">-</span> female_tol<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>male_bore<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>female_outer<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>male_outer <span style="color:#0550ae">+</span> male_tol<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    female_cone <span style="color:#0550ae">=</span> cone<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        junction<span style="color:#0550ae">.</span>faces<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;+Z&#39;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>workplane<span style="color:#1f2328">(),</span>
 </span></span><span style="display:flex;"><span>        female_length<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">+</span> tolerance<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">-</span> tolerance<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        inner_top<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">+</span> female_tol<span style="color:#1f2328">,</span> inner_bottom<span style="color:#0550ae">=</span>female_bore <span style="color:#0550ae">-</span> female_tol<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>        outer_top<span style="color:#0550ae">=</span>female_outer<span style="color:#1f2328">,</span> outer_bottom<span style="color:#0550ae">=</span>female_outer<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> male_cone<span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>junction<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>female_cone<span style="color:#1f2328">)</span>
 </span></span></code></pre></div><!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
+<li><a class="internal-link" href="/braindump/posts/cascade_overflow_ramp/#03aff5be-ca07-4b93-bdc3-2adab9cf6e9d">Netto to Mieuxa adapter</a></li>
 <li><a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/#c0d07c0c-0098-4000-8000-000000000098">Playwright tests</a></li>
 <li><a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/">scrutin de Condorcet randomisé entre amis</a></li>
-<li><a class="internal-link" href="/braindump/posts/cascade_overflow_ramp/#03aff5be-ca07-4b93-bdc3-2adab9cf6e9d">The adapter</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/f7a3c1d8-4e2b-4f89-9a1c-shared-blocks?title=shared_blocks">Permalink</a></h2>
 <div class="footnotes" role="doc-endnotes">
