@@ -43,6 +43,93 @@
         <h1>Calculer Les Tâches À Faire Sur Une Voiture</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
         <p>calculer les tâches à faire sur une voiture</p>
+<h2 id="mode-emploi">comment ça marche</h2>
+<p>Cette note est une &ldquo;bibliothèque&rdquo; : elle définit un <em>bloc de calcul</em> python
+réutilisable, plus deux tableaux d&rsquo;exemple (<code>releves</code> et <code>seuils</code>) qui servent
+surtout à documenter le format attendu. Le vrai usage se fait dans les notes
+par-voiture, qui appellent ce bloc avec <em>leurs propres</em> données. Voir
+<a class="internal-link" href="/braindump/posts/exemple_de_suivi_d_entretien_d_une_voiture/">exemple de suivi d&rsquo;entretien d&rsquo;une voiture</a> pour un cas d&rsquo;usage complet.</p>
+<h3 id="idee">l&rsquo;idée générale</h3>
+<p>Pour entretenir une voiture, il faut suivre tout un tas d&rsquo;actions
+périodiques : pression des pneus, vidange, révision, remplacement de filtres,
+contrôle de liquide de frein, etc. Chacune a sa propre périodicité, exprimée
+soit en kilomètres, soit en durée, soit (le plus souvent) au premier des deux
+atteint.</p>
+<p>Plutôt que de tenir un calendrier manuel par action, je tiens un <em>journal</em> de
+relevés. À chaque relevé, je note la date, le kilométrage, et la liste des
+actions effectuées (ou simplement vérifiées) ce jour-là. À partir de ce
+journal et des seuils, le bloc python recalcule pour chaque action si elle
+est en retard (&ldquo;A FAIRE&rdquo;) ou encore valide (&ldquo;ok&rdquo;).</p>
+<h3 id="entrees">les deux tableaux d&rsquo;entrée</h3>
+<dl>
+<dt><code>releves</code></dt>
+<dd>le journal. Une ligne par observation, du plus récent au plus
+ancien. Les colonnes essentielles sont la date, le kilométrage, et la
+colonne <code>actions</code> qui liste, séparées par des virgules, les actions
+constatées ce jour-là. Les autres colonnes (<code>stamp</code>, <code>Diff Km</code>, <code>Nb jours</code>,
+<code>Km/J</code>) sont calculées automatiquement par les <code>#+TBLFM</code> associées et
+servent à se faire une idée de l&rsquo;usage.</dd>
+<dt><code>seuils</code></dt>
+<dd>la table des règles. Une ligne par action, avec un seuil en
+kilomètres (<code>seuilkm</code>) et/ou un seuil en durée (<code>seuiltmp</code>, exprimé sous la
+forme <code>1y</code>, <code>6m</code>, <code>4m</code>, <code>2y</code>, etc.). L&rsquo;un, l&rsquo;autre ou les deux peuvent être
+vides : si <code>seuilkm</code> est vide, on ne tient compte que du temps ; si
+<code>seuiltmp</code> est vide, on ne tient compte que des kilomètres.</dd>
+</dl>
+<h3 id="bloc-calcul">le bloc <code>calcul</code></h3>
+<p>Le bloc nommé <code>calcul</code> prend ces deux tableaux en paramètre et produit, pour
+chaque action de <code>seuils</code>, une ligne avec :</p>
+<ul>
+<li>le statut (<code>A FAIRE</code> si périmé, <code>ok</code> sinon),</li>
+<li>le nombre de kilomètres restant avant le prochain seuil km (<code>None</code> si pas
+applicable),</li>
+<li>le nombre de jours restant avant le prochain seuil temps (négatif si déjà
+dépassé),</li>
+<li>le commentaire de la dernière colonne de <code>seuils</code>.</li>
+</ul>
+<p>Le résultat est trié par statut, donc les &ldquo;A FAIRE&rdquo; remontent en haut.</p>
+<h3 id="reutilisation">comment réutiliser ça pour une voiture</h3>
+<p>Dans une note dédiée à une voiture, on définit ses <em>propres</em> tableaux nommés
+<code>releves</code> et <code>seuils</code>, puis on appelle le bloc partagé via <code>#+CALL</code> :</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-org" data-lang="org"><span style="display:flex;"><span><span style="color:#57606a">#+CALL</span><span style="color:#57606a">: calculer_les_taches_a_faire_sur_une_voiture.org:calcul(seuils=seuils, releves=releves)</span>
+</span></span></code></pre></div><p>Org-babel résout <code>seuils</code> et <code>releves</code> dans le contexte local de la note (les
+tableaux locaux), et exécute le bloc <code>calcul</code> défini ici. Le tableau de
+résultats est inséré sous une ligne <code>#+RESULTS:</code>.</p>
+<p>Concrètement, mettre à jour l&rsquo;état d&rsquo;entretien d&rsquo;une voiture revient à :</p>
+<ol>
+<li>ajouter une ligne en haut du tableau <code>releves</code> avec la date du jour, le
+kilométrage, et les actions faites/vérifiées ;</li>
+<li>recalculer les formules du tableau (<code>C-u C-c C-c</code> sur la ligne <code>#+TBLFM</code>)
+pour mettre à jour <code>stamp</code>, <code>Diff Km</code>, etc. ;</li>
+<li>évaluer le <code>#+CALL</code> pour régénérer le tableau de résultats ;</li>
+<li>lire ce qui est en &ldquo;A FAIRE&rdquo; et planifier les prochaines interventions.</li>
+</ol>
+<h3 id="seuils-par-voiture">le rôle des seuils par voiture</h3>
+<p>Les seuils ne sont pas universels : ils dépendent du modèle, du carnet
+d&rsquo;entretien constructeur, et des choix qu&rsquo;on assume. Par exemple :</p>
+<ul>
+<li>une thermique aura typiquement une longue liste : vidange, filtres à
+huile/air, bougies, courroie d&rsquo;accessoires, etc. ;</li>
+<li>une électrique aura une liste très réduite : pas de vidange ni de bougies,
+et certains contrôles fluides peuvent être espacés (par exemple <code>4y</code> au
+lieu de <code>1y</code> d&rsquo;origine, si on l&rsquo;assume après vérification).</li>
+</ul>
+<p>Autrement dit, le tableau <code>seuils</code> est l&rsquo;endroit où l&rsquo;on encode la <em>politique
+d&rsquo;entretien</em> qu&rsquo;on a décidé de suivre pour cette voiture-ci, en partant du
+carnet constructeur puis en adaptant.</p>
+<h3 id="benefices">ce qu&rsquo;on gagne</h3>
+<ul>
+<li>une <em>seule</em> source pour la logique de calcul : si je change la façon dont
+les seuils sont interprétés, ça profite à toutes les voitures ;</li>
+<li>un journal qui sert aussi d&rsquo;historique d&rsquo;entretien (date, kilométrage,
+consommation par jour, actions effectuées) ;</li>
+<li>une vision rapide de ce qui est en retard, sans rien à mémoriser ni à
+planifier soi-même.</li>
+</ul>
+<h2 id="reference">tableaux de référence</h2>
+<p>Les tableaux ci-dessous servent surtout d&rsquo;exemple et de gabarit pour copier
+dans une nouvelle note de voiture. Le bloc <code>calcul</code> juste après est celui
+qu&rsquo;on appelle depuis les autres notes.</p>
 <p><a id="table--releves"></a></p>
 <table>
   <thead>
@@ -314,7 +401,7 @@
           <th>PressionPneus</th>
           <th>A FAIRE</th>
           <th>None km</th>
-          <th>-900 days</th>
+          <th>-2857 days</th>
           <th>Ou avant tout déplacement important</th>
       </tr>
   </thead>
@@ -323,119 +410,126 @@
           <td>UsurePneus</td>
           <td>A FAIRE</td>
           <td>None km</td>
-          <td>-808 days</td>
+          <td>-2765 days</td>
           <td></td>
       </tr>
       <tr>
           <td>Feux</td>
           <td>A FAIRE</td>
           <td>None km</td>
-          <td>-747 days</td>
+          <td>-2704 days</td>
           <td>arrière, position, croisement, route, plaque arrière, clignotants avant, clignotants arrière, clignotants coté, arrière haut</td>
       </tr>
       <tr>
           <td>NiveauBattery</td>
           <td>A FAIRE</td>
           <td>None km</td>
-          <td>-747 days</td>
+          <td>-2704 days</td>
           <td></td>
       </tr>
       <tr>
           <td>ControlerHuileDA</td>
           <td>A FAIRE</td>
           <td>15000 km</td>
-          <td>-565 days</td>
+          <td>-2522 days</td>
           <td></td>
       </tr>
       <tr>
           <td>RevisionUniqueEurope</td>
           <td>A FAIRE</td>
           <td>20000 km</td>
-          <td>-565 days</td>
+          <td>-2522 days</td>
           <td></td>
       </tr>
       <tr>
           <td>RemplacementFiltreHabitacle</td>
           <td>A FAIRE</td>
           <td>20000 km</td>
-          <td>-565 days</td>
+          <td>-2522 days</td>
           <td></td>
       </tr>
       <tr>
           <td>RemplacementFiltreHuile</td>
           <td>A FAIRE</td>
           <td>20000 km</td>
-          <td>-565 days</td>
+          <td>-2522 days</td>
           <td></td>
       </tr>
       <tr>
           <td>VidangeHuile</td>
           <td>A FAIRE</td>
           <td>20000 km</td>
-          <td>-565 days</td>
+          <td>-2522 days</td>
           <td>ou à chaque intervention importante sur le moteur, avec remplacement du filtre à huile</td>
       </tr>
       <tr>
           <td>ControlerLiquideFrein</td>
           <td>A FAIRE</td>
           <td>45000 km</td>
-          <td>-565 days</td>
+          <td>-2522 days</td>
           <td></td>
       </tr>
       <tr>
           <td>ControlerLiquideRefroidissement</td>
           <td>A FAIRE</td>
           <td>None km</td>
-          <td>-565 days</td>
+          <td>-2522 days</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>RemplacementFiltreAir</td>
+          <td>A FAIRE</td>
+          <td>60000 km</td>
+          <td>-1426 days</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>RemplacementLiquideFrein</td>
+          <td>A FAIRE</td>
+          <td>120000 km</td>
+          <td>-1426 days</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>RemplacementLiquideRefroidissement</td>
+          <td>A FAIRE</td>
+          <td>None km</td>
+          <td>-695 days</td>
+          <td>préconisé tous les 6 ans (liquide bleu/vert) ou 10 ans (rouge/orange)</td>
+      </tr>
+      <tr>
+          <td>RemplacementCourroieAccessoireEtGalet</td>
+          <td>A FAIRE</td>
+          <td>120000 km</td>
+          <td>-695 days</td>
           <td></td>
       </tr>
       <tr>
           <td>CtrlOeilNuPlaquettesFrein</td>
           <td>A FAIRE</td>
           <td>10000 km</td>
-          <td>-565 days</td>
+          <td>-2522 days</td>
           <td></td>
       </tr>
       <tr>
           <td>CtrlLigneEchappement</td>
           <td>A FAIRE</td>
           <td>30000 km</td>
-          <td>-199 days</td>
+          <td>-2156 days</td>
           <td></td>
       </tr>
       <tr>
           <td>VerifNivHuileBoiteVitesses</td>
           <td>A FAIRE</td>
           <td>30000 km</td>
-          <td>-199 days</td>
+          <td>-2156 days</td>
           <td></td>
       </tr>
       <tr>
-          <td>RemplacementFiltreAir</td>
-          <td>ok</td>
-          <td>60000 km</td>
-          <td>531 days</td>
-          <td></td>
-      </tr>
-      <tr>
-          <td>RemplacementLiquideFrein</td>
-          <td>ok</td>
-          <td>120000 km</td>
-          <td>531 days</td>
-          <td></td>
-      </tr>
-      <tr>
-          <td>RemplacementLiquideRefroidissement</td>
-          <td>ok</td>
+          <td>ChangerEssuieGlaces</td>
+          <td>A FAIRE</td>
           <td>None km</td>
-          <td>1262 days</td>
-          <td>préconisé tous les 6 ans (liquide bleu/vert) ou 10 ans (rouge/orange)</td>
-      </tr>
-      <tr>
-          <td>RemplacementCourroieAccessoireEtGalet</td>
-          <td>ok</td>
-          <td>120000 km</td>
-          <td>1262 days</td>
+          <td>-1791 days</td>
           <td></td>
       </tr>
       <tr>
@@ -473,18 +567,16 @@
           <td>None</td>
           <td></td>
       </tr>
-      <tr>
-          <td>ChangerEssuieGlaces</td>
-          <td>ok</td>
-          <td>None km</td>
-          <td>166 days</td>
-          <td></td>
-      </tr>
   </tbody>
 </table>
+<!--more-->
+<h2 id="notes-pointant-ici">Notes pointant ici</h2>
+<ul>
+<li><a class="internal-link" href="/braindump/posts/exemple_de_suivi_d_entretien_d_une_voiture/">exemple de suivi d&rsquo;entretien d&rsquo;une voiture</a></li>
+</ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/82d27272-9ac9-4281-8527-8b2a5b7f1d85?title=calculer_les_taches_a_faire_sur_une_voiture">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 30 May 2023</time></aside>
+	  <aside class="date"><time>Last updated: 08 May 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 28 Dec 2020</time></aside>
     </div>
   </div>
