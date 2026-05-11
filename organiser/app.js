@@ -21,8 +21,6 @@ function renderBoxEl(id, idx, row, itemsById, itemMatches){
     const li = document.createElement('li');
     li.className = 'box reorder-item';
     li.setAttribute('data-box-id', id);
-    li.setAttribute('data-drop-target', '');
-    li.setAttribute('data-idx', idx);
 
     const photoBtn = document.createElement('button');
     photoBtn.type = 'button';
@@ -33,7 +31,8 @@ function renderBoxEl(id, idx, row, itemsById, itemMatches){
     photoImg.src = row.photo;
     photoImg.alt = '';
     photoBtn.append(photoImg);
-
+    li.append(photoBtn);
+    li.setAttribute('data-drop-target', '');
     const itemsList = document.createElement('ul');
     itemsList.className = 'items-in-box';
     const containedIds = Object.keys(itemsById).filter(iid =>
@@ -41,6 +40,8 @@ function renderBoxEl(id, idx, row, itemsById, itemMatches){
     for(const iid of containedIds){
         itemsList.append(renderItemEl(iid, itemsById[iid]));
     }
+    li.append(itemsList);
+    li.setAttribute('data-idx', idx);
 
     const grip = document.createElement('button');
     grip.type = 'button';
@@ -51,8 +52,7 @@ function renderBoxEl(id, idx, row, itemsById, itemMatches){
         + '<circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>'
         + '<circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>'
         + '</svg>';
-
-    li.append(photoBtn, itemsList, grip);
+    li.append(grip);
     return li;
 }
 
@@ -73,12 +73,11 @@ async function startSync(){
     }
     const syncUrl = localStorage.getItem('organiser.sync_url');
     if(!syncUrl){ setSyncStatus('off'); return; }
-    console.log('[sync] opening', syncUrl);
     setSyncStatus('connecting');
     const ws = new WebSocket(syncUrl);
-    ws.addEventListener('open', () => { console.log('[sync] open'); setSyncStatus('connected'); });
-    ws.addEventListener('close', e => { console.log('[sync] close', e.code, e.reason); setSyncStatus('disconnected'); });
-    ws.addEventListener('error', e => { console.log('[sync] error', e); setSyncStatus('disconnected'); });
+    ws.addEventListener('open', () => setSyncStatus('connected'));
+    ws.addEventListener('close', () => setSyncStatus('disconnected'));
+    ws.addEventListener('error', () => setSyncStatus('disconnected'));
     const sync = await createWsSynchronizer(store, ws);
     await sync.startSync();
 }
@@ -87,9 +86,6 @@ import { createMergeableStore } from 'tinybase';
 import { createIndexedDbPersister } from 'tinybase/persisters/persister-indexed-db';
 import { createWsSynchronizer } from 'tinybase/synchronizers/synchronizer-ws-client';
 
-// MergeableStore (not the plain Store) is what the WS synchronizer
-// requires — it carries the per-cell HLC timestamps that make
-// conflict-free merges possible across devices.
 const store = createMergeableStore();
 const persister = createIndexedDbPersister(store, 'organiser');
 
@@ -132,31 +128,27 @@ await persister.startAutoSave();
 document.body.setAttribute('data-app-ready', '1');
 startSync();
 
-let editingItemId = '';
-let pendingImage = '';
-
-function resetItemImagePreview(src){
-    const preview = document.querySelector('[data-item-image-preview]');
+function openForm(which){
+    const target = which ? document.querySelector(which) : null;
+    for(const el of document.querySelectorAll('.add-form')){
+        el.hidden = el !== target;
+    }
+}
+let editingBoxId = '';
+let pendingBoxPhoto = '';
+let pendingBoxPhotoName = '';
+function resetBoxPhotoPreview(src, name){
+    const preview = document.querySelector('[data-box-photo-preview]');
     if(src){
         preview.src = src;
+        preview.alt = name ? `Photo preview ${name}` : 'Photo preview';
         preview.hidden = false;
     } else {
         preview.hidden = true;
+        preview.alt = 'Photo preview';
         preview.removeAttribute('src');
     }
 }
-
-function itemNameExists(name, exceptId){
-    const items = store.getTable('items');
-    const lower = name.toLowerCase();
-    return Object.entries(items).some(([id, item]) =>
-        id !== exceptId && item.name.toLowerCase() === lower);
-}
-
-document.querySelector('#addItemName').addEventListener('input', () => {
-    document.querySelector('[data-item-name-error]').hidden = true;
-});
-
 async function fileToThumbnail(file){
     const url = URL.createObjectURL(file);
     try {
@@ -177,7 +169,71 @@ async function fileToThumbnail(file){
         URL.revokeObjectURL(url);
     }
 }
+document.querySelector('#addBoxPhoto').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file){
+        pendingBoxPhoto = '';
+        pendingBoxPhotoName = '';
+        resetBoxPhotoPreview('');
+        return;
+    }
+    pendingBoxPhoto = await fileToThumbnail(file);
+    pendingBoxPhotoName = file.name.replace(/\.[^.]+$/, '');
+    resetBoxPhotoPreview(pendingBoxPhoto, pendingBoxPhotoName);
+});
 
+document.querySelector('[data-open-add]').addEventListener('click', () => {
+    editingBoxId = '';
+    pendingBoxPhoto = '';
+    pendingBoxPhotoName = '';
+    document.querySelector('#addBoxPhoto').value = '';
+    resetBoxPhotoPreview('');
+    document.querySelector('[data-delete-box]').hidden = true;
+    openForm('[data-add-form]');
+});
+document.querySelector('[data-cancel-add]').addEventListener('click', () => {
+    editingBoxId = '';
+    document.querySelector('[data-add-form]').hidden = true;
+});
+document.querySelector('[data-add-form]').addEventListener('submit', e => {
+    e.preventDefault();
+    if(!pendingBoxPhoto) return;
+    const id = editingBoxId || crypto.randomUUID();
+    const existing = store.getRow('boxes', id);
+    const orders = Object.values(store.getTable('boxes')).map(r => r.order ?? 0);
+    const order = existing?.order ?? (orders.length ? Math.max(...orders) + 1 : 0);
+    store.setRow('boxes', id, {
+        photo: pendingBoxPhoto,
+        photoName: pendingBoxPhotoName,
+        order,
+    });
+    editingBoxId = '';
+    pendingBoxPhoto = '';
+    pendingBoxPhotoName = '';
+    document.querySelector('[data-add-form]').hidden = true;
+});
+
+let editingItemId = '';
+let pendingImage = '';
+function resetItemImagePreview(src){
+    const preview = document.querySelector('[data-item-image-preview]');
+    if(src){
+        preview.src = src;
+        preview.hidden = false;
+    } else {
+        preview.hidden = true;
+        preview.removeAttribute('src');
+    }
+}
+function itemNameExists(name, exceptId){
+    const items = store.getTable('items');
+    const lower = name.toLowerCase();
+    return Object.entries(items).some(([id, item]) =>
+        id !== exceptId && item.name.toLowerCase() === lower);
+}
+document.querySelector('#addItemName').addEventListener('input', () => {
+    document.querySelector('[data-item-name-error]').hidden = true;
+});
 document.querySelector('#addItemImage').addEventListener('change', async e => {
     const file = e.target.files[0];
     if(!file){
@@ -200,13 +256,11 @@ document.querySelector('[data-open-add-item]').addEventListener('click', () => {
     openForm('[data-add-item-form]');
     document.querySelector('#addItemName').focus();
 });
-
 document.querySelector('[data-cancel-add-item]').addEventListener('click', () => {
     editingItemId = '';
     pendingImage = '';
     document.querySelector('[data-add-item-form]').hidden = true;
 });
-
 document.querySelector('[data-add-item-form]').addEventListener('submit', e => {
     e.preventDefault();
     const name = document.querySelector('#addItemName').value.trim();
@@ -233,74 +287,6 @@ document.querySelector('[data-add-item-form]').addEventListener('submit', e => {
     document.querySelector('[data-add-item-form]').hidden = true;
 });
 
-function openForm(which){
-    const forms = ['[data-add-form]', '[data-add-item-form]'];
-    for(const sel of forms){
-        document.querySelector(sel).hidden = (sel !== which);
-    }
-}
-
-let editingBoxId = '';
-let pendingBoxPhoto = '';
-let pendingBoxPhotoName = '';
-
-function resetBoxPhotoPreview(src){
-    const preview = document.querySelector('[data-box-photo-preview]');
-    if(src){
-        preview.src = src;
-        preview.hidden = false;
-    } else {
-        preview.hidden = true;
-        preview.removeAttribute('src');
-    }
-}
-
-document.querySelector('#addBoxPhoto').addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if(!file){
-        pendingBoxPhoto = '';
-        pendingBoxPhotoName = '';
-        resetBoxPhotoPreview('');
-        return;
-    }
-    pendingBoxPhoto = await fileToThumbnail(file);
-    pendingBoxPhotoName = file.name.replace(/\.[^.]+$/, '');
-    resetBoxPhotoPreview(pendingBoxPhoto);
-});
-
-document.querySelector('[data-open-add]').addEventListener('click', () => {
-    editingBoxId = '';
-    pendingBoxPhoto = '';
-    pendingBoxPhotoName = '';
-    document.querySelector('#addBoxPhoto').value = '';
-    resetBoxPhotoPreview('');
-    document.querySelector('[data-delete-box]').hidden = true;
-    openForm('[data-add-form]');
-});
-
-document.querySelector('[data-cancel-add]').addEventListener('click', () => {
-    editingBoxId = '';
-    document.querySelector('[data-add-form]').hidden = true;
-});
-
-document.querySelector('[data-add-form]').addEventListener('submit', e => {
-    e.preventDefault();
-    if(!pendingBoxPhoto) return;
-    const id = editingBoxId || crypto.randomUUID();
-    const existing = store.getRow('boxes', id);
-    const orders = Object.values(store.getTable('boxes')).map(r => r.order ?? 0);
-    const order = existing?.order ?? (orders.length ? Math.max(...orders) + 1 : 0);
-    store.setRow('boxes', id, {
-        photo: pendingBoxPhoto,
-        photoName: pendingBoxPhotoName,
-        order,
-    });
-    editingBoxId = '';
-    pendingBoxPhoto = '';
-    pendingBoxPhotoName = '';
-    document.querySelector('[data-add-form]').hidden = true;
-});
-
 document.addEventListener('click', e => {
     if(e.target.closest('[data-draggable]')) return;
     if(e.target.closest('.reorder-grip')) return;
@@ -312,7 +298,7 @@ document.addEventListener('click', e => {
     pendingBoxPhoto = row.photo || '';
     pendingBoxPhotoName = row.photoName || '';
     document.querySelector('#addBoxPhoto').value = '';
-    resetBoxPhotoPreview(pendingBoxPhoto);
+    resetBoxPhotoPreview(pendingBoxPhoto, pendingBoxPhotoName);
     document.querySelector('[data-delete-box]').hidden = false;
     openForm('[data-add-form]');
 });
