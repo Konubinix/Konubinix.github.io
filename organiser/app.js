@@ -1,65 +1,153 @@
-function renderItemEl(id, item){
-    const li = document.createElement('li');
-    li.className = 'item';
-    li.setAttribute('data-item-id', id);
-    li.setAttribute('data-draggable', '');
-    if(item.image){
-        const img = document.createElement('img');
-        img.className = 'item-thumb';
-        img.src = item.image;
-        img.alt = item.name;
-        li.append(img);
-    }
-    const nameEl = document.createElement('span');
-    nameEl.className = 'item-name';
-    nameEl.textContent = item.name;
-    li.append(nameEl);
-    return li;
+function itemTemplate(id, item){
+    return html`
+      <li class="item" data-item-id=${id} data-draggable
+          @click=${() => openItemEdit(id, item)}>
+        ${item.image ? html`<img class="item-thumb" src=${item.image} alt=${item.name}>` : ''}
+        <span class="item-name">${item.name}</span>
+      </li>
+    `;
 }
 
-function renderBoxEl(id, idx, row, itemsById, itemMatches){
-    const li = document.createElement('li');
-    li.className = 'box reorder-item';
-    li.setAttribute('data-box-id', id);
+function boxTemplate(id, idx, row, itemsById, itemMatches){
+    return html`
+      <li
+        class="box reorder-item"
+        data-box-id=${id}
+        data-idx=${idx}
+        data-drop-target
+      >
+        <button type="button" class="box-photo"
+                aria-label="Box ${row.photoName}"
+                @click=${() => openBoxEdit(id, row)}>
+          <img class="box-photo-thumb" src=${row.photo} alt="">
+        </button>
 
-    const photoBtn = document.createElement('button');
-    photoBtn.type = 'button';
-    photoBtn.className = 'box-photo';
-    photoBtn.setAttribute('aria-label', `Box ${row.photoName}`);
-    const photoImg = document.createElement('img');
-    photoImg.className = 'box-photo-thumb';
-    photoImg.src = row.photo;
-    photoImg.alt = '';
-    photoBtn.append(photoImg);
-    li.append(photoBtn);
-    li.setAttribute('data-drop-target', '');
-    const itemsList = document.createElement('ul');
-    itemsList.className = 'items-in-box';
-    const containedIds = Object.keys(itemsById).filter(iid =>
-        itemsById[iid].boxId === id && itemMatches(itemsById[iid].name));
-    for(const iid of containedIds){
-        itemsList.append(renderItemEl(iid, itemsById[iid]));
-    }
-    li.append(itemsList);
-    li.setAttribute('data-idx', idx);
+        #+NAME: js-render-box-items
+        #+BEGIN_SRC html :noweb-ref render-box-items
+          <ul class="items-in-box">
+            ${Object.keys(itemsById)
+              .filter(iid => itemsById[iid].boxId === id && itemMatches(itemsById[iid].name))
+              .map(iid => itemTemplate(iid, itemsById[iid]))}
+          </ul>
+        <button type="button" class="reorder-grip" aria-label="Reorder ${row.photoName}">
+          <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">
+            <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
+            <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
+            <circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>
+          </svg>
+        </button>
+      </li>
+    `;
+}
 
-    const grip = document.createElement('button');
-    grip.type = 'button';
-    grip.className = 'reorder-grip';
-    grip.setAttribute('aria-label', `Reorder ${row.photoName}`);
-    grip.innerHTML = '<svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">'
-        + '<circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>'
-        + '<circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>'
-        + '<circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>'
-        + '</svg>';
-    li.append(grip);
-    return li;
+function emptyStateTemplate(){
+    const empty = !Object.keys(store.getTable('boxes')).length
+               && !Object.keys(store.getTable('items')).length;
+    if(!empty) return '';
+    return html`
+      <div class="empty-state">
+        <div class="emoji">&#x1f4e6;</div>
+        <h1>Organiser</h1>
+        <p>No boxes yet.</p>
+      </div>
+    `;
+}
+
+function boxFormTemplate(){
+    const {photo, photoName} = ui.boxForm;
+    return html`
+      <form class="add-form" @submit=${onBoxFormSubmit}>
+        <label>Photo
+          <input type="file" accept="image/*" capture="environment"
+                 @change=${onBoxPhotoChange}>
+        </label>
+        ${photo ? html`
+          <img class="box-photo-preview"
+               src=${photo}
+               alt=${photoName ? `Photo preview ${photoName}` : 'Photo preview'}>
+        ` : ''}
+        <div class="add-form-actions">
+          <button type="submit">Save</button>
+          <button type="button" @click=${closeForm}>Cancel</button>
+          ${ui.boxForm.editingId ? html`
+            <button type="button" class="danger" @click=${onBoxFormDelete}>Delete</button>
+          ` : ''}
+        </div>
+      </form>
+    `;
+}
+
+function boxesListTemplate(){
+    const rows = store.getTable('boxes');
+    const itemsById = store.getTable('items');
+    const queryB = ui.searchQuery.trim().toLowerCase();
+    const itemMatchesB = name => !queryB || name.toLowerCase().includes(queryB);
+    const sortedIds = Object.keys(rows).sort((a, b) =>
+        (rows[a].order ?? 0) - (rows[b].order ?? 0));
+    const ids = sortedIds.filter(id => {
+        if(!queryB) return true;
+        return Object.keys(itemsById).some(iid =>
+            itemsById[iid].boxId === id && itemMatchesB(itemsById[iid].name));
+    });
+    if(!ids.length) return '';
+    return html`
+      <ul class="boxes-list reorder-list" data-reorder="boxes" aria-label="Boxes">
+        ${ids.map((id, idx) =>
+            boxTemplate(id, idx, rows[id], itemsById, itemMatchesB))}
+      </ul>
+    `;
+}
+
+function itemFormTemplate(){
+    const {name, image, nameError} = ui.itemForm;
+    return html`
+      <form class="add-form" @submit=${onItemFormSubmit}>
+        <label>Item name
+          <input type="text" placeholder="e.g. 3mm screw" required
+                 .value=${name}
+                 @input=${onItemNameInput}>
+        </label>
+        ${ui.itemForm.nameError ? html`
+          <p class="form-error" role="alert">An item with this name already exists.</p>
+        ` : ''}
+        <label>Image
+          <input type="file" accept="image/*" capture="environment"
+                 @change=${onItemImageChange}>
+        </label>
+        ${image ? html`
+          <img class="item-image-preview" src=${image} alt="Image preview">
+        ` : ''}
+        <div class="add-form-actions">
+          <button type="submit">Save</button>
+          <button type="button" @click=${closeForm}>Cancel</button>
+          ${ui.itemForm.editingId ? html`
+            <button type="button" class="danger" @click=${onItemFormDelete}>Delete</button>
+          ` : ''}
+        </div>
+      </form>
+    `;
+}
+
+function unassignedSectionTemplate(){
+    const itemsTable = store.getTable('items');
+    const queryU = ui.searchQuery.trim().toLowerCase();
+    const unassignedIds = Object.keys(itemsTable).filter(id => {
+        if(itemsTable[id].boxId) return false;
+        return !queryU || itemsTable[id].name.toLowerCase().includes(queryU);
+    });
+    if(!unassignedIds.length) return '';
+    return html`
+      <section class="unassigned" data-drop-target>
+        <h2>Unassigned</h2>
+        <ul class="items-list">
+          ${unassignedIds.map(id => itemTemplate(id, itemsTable[id]))}
+        </ul>
+      </section>
+    `;
 }
 
 function setSyncStatus(s){
-    const el = document.querySelector('[data-sync-status]');
-    el.textContent = `Sync ${s}`;
-    el.dataset.status = s;
+    setUI({syncStatus: s});
 }
 
 async function startSync(){
@@ -82,73 +170,60 @@ async function startSync(){
     await sync.startSync();
 }
 
+const ui = {
+    formOpen: null,
+    boxForm: {photo: '', photoName: '', editingId: ''},
+    itemForm: {name: '', image: '', editingId: '', nameError: false},
+    searchQuery: '',
+    syncStatus: 'off',
+};
+
+function setUI(updates){
+    Object.assign(ui, updates);
+    renderApp();
+}
+
+const appRoot = document.getElementById('app');
+
+function appTemplate(){
+    return html`
+      <header class="app-bar">
+        <span class="sync-status" data-status=${ui.syncStatus} role="status">Sync ${ui.syncStatus}</span>
+        <div class="app-bar-actions">
+          <button type="button" @click=${openBoxForm}>Add a box</button>
+          <button type="button" @click=${openItemForm}>Add an item</button>
+        </div>
+        <input type="search" placeholder="Search…" aria-label="Search"
+               .value=${ui.searchQuery}
+               @input=${e => setUI({searchQuery: e.target.value})}>
+      </header>
+      ${ui.formOpen === 'box' ? boxFormTemplate() : ''}
+      ${ui.formOpen === 'item' ? itemFormTemplate() : ''}
+      ${emptyStateTemplate()}
+      ${boxesListTemplate()}
+      ${unassignedSectionTemplate()}
+    `;
+}
+
+function renderApp(){
+    renderLit(appTemplate(), appRoot);
+}
+
 import { createMergeableStore } from 'tinybase';
 import { createIndexedDbPersister } from 'tinybase/persisters/persister-indexed-db';
 import { createWsSynchronizer } from 'tinybase/synchronizers/synchronizer-ws-client';
+import { html, render as renderLit } from 'lit-html';
 
 const store = createMergeableStore();
 const persister = createIndexedDbPersister(store, 'organiser');
 
-function render(){
-  const noBoxes = !Object.keys(store.getTable('boxes')).length;
-  const noItems = !Object.keys(store.getTable('items')).length;
-  document.querySelector('[data-empty-state]').hidden = !(noBoxes && noItems);
-  const list = document.querySelector('[data-boxes-list]');
-  const rows = store.getTable('boxes');
-  const itemsById = store.getTable('items');
-  const queryB = (document.querySelector('[data-search]')?.value || '').trim().toLowerCase();
-  const itemMatchesB = name => !queryB || name.toLowerCase().includes(queryB);
-  const sortedIds = Object.keys(rows).sort((a, b) =>
-      (rows[a].order ?? 0) - (rows[b].order ?? 0));
-  const ids = sortedIds.filter(id => {
-      if(!queryB) return true;
-      return Object.keys(itemsById).some(iid =>
-          itemsById[iid].boxId === id && itemMatchesB(itemsById[iid].name));
-  });
-  list.hidden = !ids.length;
-  list.replaceChildren(...ids.map((id, idx) =>
-      renderBoxEl(id, idx, rows[id], itemsById, itemMatchesB)));
-  const unassignedSection = document.querySelector('[data-unassigned]');
-  const unassignedList = document.querySelector('[data-unassigned-items]');
-  const itemsTable = store.getTable('items');
-  const queryU = (document.querySelector('[data-search]')?.value || '').trim().toLowerCase();
-  const unassignedIds = Object.keys(itemsTable).filter(id => {
-      if(itemsTable[id].boxId) return false;
-      return !queryU || itemsTable[id].name.toLowerCase().includes(queryU);
-  });
-  unassignedSection.hidden = !unassignedIds.length;
-  unassignedList.replaceChildren(...unassignedIds.map(id =>
-      renderItemEl(id, itemsTable[id])));
-}
-
 await persister.startAutoLoad();
-store.addTablesListener(render);
-render();
+store.addTablesListener(renderApp);
+renderApp();
 await persister.startAutoSave();
 document.body.setAttribute('data-app-ready', '1');
 startSync();
 
-function openForm(which){
-    const target = which ? document.querySelector(which) : null;
-    for(const el of document.querySelectorAll('.add-form')){
-        el.hidden = el !== target;
-    }
-}
-let editingBoxId = '';
-let pendingBoxPhoto = '';
-let pendingBoxPhotoName = '';
-function resetBoxPhotoPreview(src, name){
-    const preview = document.querySelector('[data-box-photo-preview]');
-    if(src){
-        preview.src = src;
-        preview.alt = name ? `Photo preview ${name}` : 'Photo preview';
-        preview.hidden = false;
-    } else {
-        preview.hidden = true;
-        preview.alt = 'Photo preview';
-        preview.removeAttribute('src');
-    }
-}
 async function fileToThumbnail(file){
     const url = URL.createObjectURL(file);
     try {
@@ -169,177 +244,134 @@ async function fileToThumbnail(file){
         URL.revokeObjectURL(url);
     }
 }
-document.querySelector('#addBoxPhoto').addEventListener('change', async e => {
+async function onBoxPhotoChange(e){
     const file = e.target.files[0];
     if(!file){
-        pendingBoxPhoto = '';
-        pendingBoxPhotoName = '';
-        resetBoxPhotoPreview('');
+        setUI({boxForm: {...ui.boxForm, photo: '', photoName: ''}});
         return;
     }
-    pendingBoxPhoto = await fileToThumbnail(file);
-    pendingBoxPhotoName = file.name.replace(/\.[^.]+$/, '');
-    resetBoxPhotoPreview(pendingBoxPhoto, pendingBoxPhotoName);
-});
+    const photo = await fileToThumbnail(file);
+    const photoName = file.name.replace(/\.[^.]+$/, '');
+    setUI({boxForm: {...ui.boxForm, photo, photoName}});
+}
 
-document.querySelector('[data-open-add]').addEventListener('click', () => {
-    editingBoxId = '';
-    pendingBoxPhoto = '';
-    pendingBoxPhotoName = '';
-    document.querySelector('#addBoxPhoto').value = '';
-    resetBoxPhotoPreview('');
-    document.querySelector('[data-delete-box]').hidden = true;
-    openForm('[data-add-form]');
-});
-document.querySelector('[data-cancel-add]').addEventListener('click', () => {
-    editingBoxId = '';
-    document.querySelector('[data-add-form]').hidden = true;
-});
-document.querySelector('[data-add-form]').addEventListener('submit', e => {
+function openBoxForm(){
+    setUI({
+        formOpen: 'box',
+        boxForm: {photo: '', photoName: '', editingId: ''},
+    });
+}
+
+function closeForm(){
+    setUI({
+        formOpen: null,
+        boxForm: {photo: '', photoName: '', editingId: ''},
+        itemForm: {name: '', image: '', editingId: '', nameError: false},
+    });
+}
+function onBoxFormSubmit(e){
     e.preventDefault();
-    if(!pendingBoxPhoto) return;
-    const id = editingBoxId || crypto.randomUUID();
+    const {photo, photoName, editingId} = ui.boxForm;
+    if(!photo) return;
+    const id = editingId || crypto.randomUUID();
     const existing = store.getRow('boxes', id);
     const orders = Object.values(store.getTable('boxes')).map(r => r.order ?? 0);
     const order = existing?.order ?? (orders.length ? Math.max(...orders) + 1 : 0);
-    store.setRow('boxes', id, {
-        photo: pendingBoxPhoto,
-        photoName: pendingBoxPhotoName,
-        order,
-    });
-    editingBoxId = '';
-    pendingBoxPhoto = '';
-    pendingBoxPhotoName = '';
-    document.querySelector('[data-add-form]').hidden = true;
-});
-
-let editingItemId = '';
-let pendingImage = '';
-function resetItemImagePreview(src){
-    const preview = document.querySelector('[data-item-image-preview]');
-    if(src){
-        preview.src = src;
-        preview.hidden = false;
-    } else {
-        preview.hidden = true;
-        preview.removeAttribute('src');
-    }
+    store.setRow('boxes', id, {photo, photoName, order});
+    closeForm();
 }
+
 function itemNameExists(name, exceptId){
     const items = store.getTable('items');
     const lower = name.toLowerCase();
     return Object.entries(items).some(([id, item]) =>
         id !== exceptId && item.name.toLowerCase() === lower);
 }
-document.querySelector('#addItemName').addEventListener('input', () => {
-    document.querySelector('[data-item-name-error]').hidden = true;
-});
-document.querySelector('#addItemImage').addEventListener('change', async e => {
+function onItemNameInput(e){
+    setUI({itemForm: {...ui.itemForm, name: e.target.value, nameError: false}});
+}
+async function onItemImageChange(e){
     const file = e.target.files[0];
     if(!file){
-        pendingImage = '';
-        resetItemImagePreview('');
+        setUI({itemForm: {...ui.itemForm, image: ''}});
         return;
     }
-    pendingImage = await fileToThumbnail(file);
-    resetItemImagePreview(pendingImage);
-});
+    const image = await fileToThumbnail(file);
+    setUI({itemForm: {...ui.itemForm, image}});
+}
 
-document.querySelector('[data-open-add-item]').addEventListener('click', () => {
-    editingItemId = '';
-    pendingImage = '';
-    document.querySelector('#addItemName').value = '';
-    document.querySelector('#addItemImage').value = '';
-    resetItemImagePreview('');
-    document.querySelector('[data-item-name-error]').hidden = true;
-    document.querySelector('[data-delete-item]').hidden = true;
-    openForm('[data-add-item-form]');
-    document.querySelector('#addItemName').focus();
-});
-document.querySelector('[data-cancel-add-item]').addEventListener('click', () => {
-    editingItemId = '';
-    pendingImage = '';
-    document.querySelector('[data-add-item-form]').hidden = true;
-});
-document.querySelector('[data-add-item-form]').addEventListener('submit', e => {
+function openItemForm(){
+    setUI({
+        formOpen: 'item',
+        itemForm: {name: '', image: '', editingId: '', nameError: false},
+    });
+}
+function onItemFormSubmit(e){
     e.preventDefault();
-    const name = document.querySelector('#addItemName').value.trim();
+    const {name: raw, image, editingId} = ui.itemForm;
+    const name = raw.trim();
     if(!name) return;
-    if(itemNameExists(name, editingItemId)){
-        document.querySelector('[data-item-name-error]').hidden = false;
+    if(itemNameExists(name, editingId)){
+        setUI({itemForm: {...ui.itemForm, nameError: true}});
         return;
     }
-    if(editingItemId){
-        const existing = store.getRow('items', editingItemId);
-        store.setRow('items', editingItemId, {
-            name, image: pendingImage, boxId: existing?.boxId || '',
+    if(editingId){
+        const existing = store.getRow('items', editingId);
+        store.setRow('items', editingId, {
+            name, image, boxId: existing?.boxId || '',
         });
-        editingItemId = '';
     } else {
         store.setRow('items', crypto.randomUUID(), {
-            name, image: pendingImage, boxId: '',
+            name, image, boxId: '',
         });
     }
-    pendingImage = '';
-    document.querySelector('#addItemName').value = '';
-    document.querySelector('#addItemImage').value = '';
-    resetItemImagePreview('');
-    document.querySelector('[data-add-item-form]').hidden = true;
-});
+    closeForm();
+}
 
-document.addEventListener('click', e => {
-    if(e.target.closest('[data-draggable]')) return;
-    if(e.target.closest('.reorder-grip')) return;
-    const box = e.target.closest('[data-box-id]');
-    if(!box) return;
-    const row = store.getRow('boxes', box.dataset.boxId);
-    if(!row) return;
-    editingBoxId = box.dataset.boxId;
-    pendingBoxPhoto = row.photo || '';
-    pendingBoxPhotoName = row.photoName || '';
-    document.querySelector('#addBoxPhoto').value = '';
-    resetBoxPhotoPreview(pendingBoxPhoto, pendingBoxPhotoName);
-    document.querySelector('[data-delete-box]').hidden = false;
-    openForm('[data-add-form]');
-});
+function openBoxEdit(id, row){
+    setUI({
+        formOpen: 'box',
+        boxForm: {
+            photo: row.photo || '',
+            photoName: row.photoName || '',
+            editingId: id,
+        },
+    });
+}
 
-document.querySelector('[data-delete-box]').addEventListener('click', () => {
-    if(!editingBoxId) return;
+function onBoxFormDelete(){
+    const {editingId} = ui.boxForm;
+    if(!editingId) return;
     if(!confirm('Delete this box? Items inside go back to Unassigned.')) return;
     const items = store.getTable('items');
     for(const id of Object.keys(items)){
-        if(items[id].boxId === editingBoxId){
+        if(items[id].boxId === editingId){
             store.setCell('items', id, 'boxId', '');
         }
     }
-    store.delRow('boxes', editingBoxId);
-    editingBoxId = '';
-    document.querySelector('[data-add-form]').hidden = true;
-});
+    store.delRow('boxes', editingId);
+    closeForm();
+}
 
-document.addEventListener('click', e => {
-    const item = e.target.closest('[data-draggable]');
-    if(!item) return;
-    const row = store.getRow('items', item.dataset.itemId);
-    if(!row) return;
-    editingItemId = item.dataset.itemId;
-    pendingImage = row.image || '';
-    document.querySelector('#addItemName').value = row.name;
-    document.querySelector('#addItemImage').value = '';
-    resetItemImagePreview(pendingImage);
-    document.querySelector('[data-item-name-error]').hidden = true;
-    document.querySelector('[data-delete-item]').hidden = false;
-    openForm('[data-add-item-form]');
-    document.querySelector('#addItemName').focus();
-});
+function openItemEdit(id, item){
+    setUI({
+        formOpen: 'item',
+        itemForm: {
+            name: item.name || '',
+            image: item.image || '',
+            editingId: id,
+            nameError: false,
+        },
+    });
+}
 
-document.querySelector('[data-delete-item]').addEventListener('click', () => {
-    if(!editingItemId) return;
+function onItemFormDelete(){
+    const {editingId} = ui.itemForm;
+    if(!editingId) return;
     if(!confirm('Delete this item?')) return;
-    store.delRow('items', editingItemId);
-    editingItemId = '';
-    document.querySelector('[data-add-item-form]').hidden = true;
-});
+    store.delRow('items', editingId);
+    closeForm();
+}
 
 // ── Drop-zone drag engine (framework-agnostic) ──
 // Bound once on document. Anything matching =[data-draggable]= can be
@@ -579,5 +611,3 @@ document.addEventListener('reorder:move', e => {
         ordered.forEach((id, idx) => store.setCell('boxes', id, 'order', idx));
     });
 });
-
-document.querySelector('[data-search]').addEventListener('input', render);
