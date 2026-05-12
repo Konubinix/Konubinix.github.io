@@ -1,7 +1,8 @@
 function itemTemplate(id, item){
     return html`
       <li class="item" data-item-id=${id} data-draggable
-          @click=${() => openItemEdit(id, item)}>
+          style=${item.bgColor ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}` : ''}
+          @click=${(e) => openItemEdit(id, item, e)}>
         ${item.image ? html`<img class="item-thumb" src=${item.image} alt=${item.name}>` : ''}
         <span class="item-name">${item.name}</span>
       </li>
@@ -18,17 +19,15 @@ function boxTemplate(id, idx, row, itemsById, itemMatches){
       >
         <button type="button" class="box-photo"
                 aria-label="Box ${row.photoName}"
-                @click=${() => openBoxEdit(id, row)}>
+                @click=${(e) => openBoxEdit(id, row, e)}>
           <img class="box-photo-thumb" src=${row.photo} alt="">
         </button>
-
-        #+NAME: js-render-box-items
-        #+BEGIN_SRC html :noweb-ref render-box-items
-          <ul class="items-in-box">
-            ${Object.keys(itemsById)
-              .filter(iid => itemsById[iid].boxId === id && itemMatches(itemsById[iid].name))
-              .map(iid => itemTemplate(iid, itemsById[iid]))}
-          </ul>
+        <ul class="items-in-box">
+          ${Object.keys(itemsById)
+            .filter(iid => itemsById[iid].boxId === id && itemMatches(itemsById[iid].name))
+            .sort((a, b) => itemsById[a].name.localeCompare(itemsById[b].name))
+            .map(iid => itemTemplate(iid, itemsById[iid]))}
+        </ul>
         <button type="button" class="reorder-grip" aria-label="Reorder ${row.photoName}">
           <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">
             <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
@@ -117,6 +116,21 @@ function itemFormTemplate(){
         ${image ? html`
           <img class="item-image-preview" src=${image} alt="Image preview">
         ` : ''}
+        <label>Background colour
+          <input type="color" .value=${ui.itemForm.bgColor || '#000000'}
+                 @input=${e => setItemFormColour(e.target.value)}>
+        </label>
+        <div class="colour-swatches" role="group" aria-label="Recently used colours">
+          <button type="button" class="colour-swatch colour-none"
+                  aria-label="No colour"
+                  @click=${() => setItemFormColour('')}></button>
+          ${usedItemColours().map(c => html`
+            <button type="button" class="colour-swatch"
+                    style=${`background:${c}`}
+                    aria-label="Use colour ${c}"
+                    @click=${() => setItemFormColour(c)}></button>
+          `)}
+        </div>
         <div class="add-form-actions">
           <button type="submit">Save</button>
           <button type="button" @click=${closeForm}>Cancel</button>
@@ -131,10 +145,12 @@ function itemFormTemplate(){
 function unassignedSectionTemplate(){
     const itemsTable = store.getTable('items');
     const queryU = ui.searchQuery.trim().toLowerCase();
-    const unassignedIds = Object.keys(itemsTable).filter(id => {
-        if(itemsTable[id].boxId) return false;
-        return !queryU || itemsTable[id].name.toLowerCase().includes(queryU);
-    });
+    const unassignedIds = Object.keys(itemsTable)
+        .filter(id => {
+            if(itemsTable[id].boxId) return false;
+            return !queryU || itemsTable[id].name.toLowerCase().includes(queryU);
+        })
+        .sort((a, b) => itemsTable[a].name.localeCompare(itemsTable[b].name));
     if(!unassignedIds.length) return '';
     return html`
       <section class="unassigned" data-drop-target>
@@ -150,6 +166,14 @@ function setSyncStatus(s){
     setUI({syncStatus: s});
 }
 
+function openSocket(url){
+    return new Promise((resolve, reject) => {
+        const ws = new WebSocket(url);
+        ws.addEventListener('open', () => resolve(ws), {once: true});
+        ws.addEventListener('error', reject, {once: true});
+    });
+}
+
 async function startSync(){
     const params = new URLSearchParams(location.search);
     const fromParam = params.get('sync_url');
@@ -161,19 +185,29 @@ async function startSync(){
     }
     const syncUrl = localStorage.getItem('organiser.sync_url');
     if(!syncUrl){ setSyncStatus('off'); return; }
-    setSyncStatus('connecting');
-    const ws = new WebSocket(syncUrl);
-    ws.addEventListener('open', () => setSyncStatus('connected'));
-    ws.addEventListener('close', () => setSyncStatus('disconnected'));
-    ws.addEventListener('error', () => setSyncStatus('disconnected'));
-    const sync = await createWsSynchronizer(store, ws);
-    await sync.startSync();
+    let backoff = 0;
+    while(true){
+        if(backoff) await new Promise(r => setTimeout(r, backoff));
+        setSyncStatus('connecting');
+        try {
+            const ws = await openSocket(syncUrl);
+            setSyncStatus('connected');
+            backoff = 0;
+            const sync = await createWsSynchronizer(store, ws);
+            await sync.startSync();
+            await new Promise(resolve =>
+                ws.addEventListener('close', resolve, {once: true}));
+        } catch(_){}
+        setSyncStatus('disconnected');
+        backoff = Math.min(30000, backoff ? backoff * 2 : 1000);
+    }
 }
 
 const ui = {
     formOpen: null,
+    formAnchor: null,
     boxForm: {photo: '', photoName: '', editingId: ''},
-    itemForm: {name: '', image: '', editingId: '', nameError: false},
+    itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
     searchQuery: '',
     syncStatus: 'off',
 };
@@ -197,8 +231,8 @@ function appTemplate(){
                .value=${ui.searchQuery}
                @input=${e => setUI({searchQuery: e.target.value})}>
       </header>
-      ${ui.formOpen === 'box' ? boxFormTemplate() : ''}
-      ${ui.formOpen === 'item' ? itemFormTemplate() : ''}
+      ${ui.formOpen === 'box' ? modalShellTemplate(boxFormTemplate()) : ''}
+      ${ui.formOpen === 'item' ? modalShellTemplate(itemFormTemplate()) : ''}
       ${emptyStateTemplate()}
       ${boxesListTemplate()}
       ${unassignedSectionTemplate()}
@@ -221,9 +255,49 @@ await persister.startAutoLoad();
 store.addTablesListener(renderApp);
 renderApp();
 await persister.startAutoSave();
+let _persistSeq = 0;
+store.addTablesListener(async () => {
+    await persister.save();
+    document.body.setAttribute('data-persist-seq', String(++_persistSeq));
+});
 document.body.setAttribute('data-app-ready', '1');
 startSync();
 
+function anchorRect(event){
+    const el = event?.currentTarget;
+    if(!el?.getBoundingClientRect) return null;
+    const r = el.getBoundingClientRect();
+    return {top: r.top, left: r.left, bottom: r.bottom,
+            width: r.width, height: r.height};
+}
+function computeShellStyle(anchor){
+    const vp = {w: window.innerWidth, h: window.innerHeight};
+    const GAP = 8;
+    const FORM_WIDTH = Math.min(420, vp.w - 2 * GAP);
+    if(!anchor){
+        return `top:64px;left:50%;transform:translateX(-50%);` +
+               `width:${FORM_WIDTH}px;max-height:calc(100vh - 80px)`;
+    }
+    const left = Math.max(GAP, Math.min(anchor.left,
+                                        vp.w - FORM_WIDTH - GAP));
+    const placeAbove = anchor.top > vp.h * 0.5;
+    if(placeAbove){
+        return `bottom:${vp.h - anchor.top + GAP}px;left:${left}px;` +
+               `width:${FORM_WIDTH}px;` +
+               `max-height:${anchor.top - 2 * GAP}px`;
+    }
+    return `top:${anchor.bottom + GAP}px;left:${left}px;` +
+           `width:${FORM_WIDTH}px;` +
+           `max-height:${vp.h - anchor.bottom - 2 * GAP}px`;
+}
+function modalShellTemplate(form){
+    return html`
+      <div class="form-backdrop"></div>
+      <div class="form-shell" style=${computeShellStyle(ui.formAnchor)}>
+        ${form}
+      </div>
+    `;
+}
 async function fileToThumbnail(file){
     const url = URL.createObjectURL(file);
     try {
@@ -255,18 +329,20 @@ async function onBoxPhotoChange(e){
     setUI({boxForm: {...ui.boxForm, photo, photoName}});
 }
 
-function openBoxForm(){
+function openBoxForm(e){
     setUI({
         formOpen: 'box',
         boxForm: {photo: '', photoName: '', editingId: ''},
+        formAnchor: anchorRect(e),
     });
 }
 
 function closeForm(){
     setUI({
         formOpen: null,
+        formAnchor: null,
         boxForm: {photo: '', photoName: '', editingId: ''},
-        itemForm: {name: '', image: '', editingId: '', nameError: false},
+        itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
     });
 }
 function onBoxFormSubmit(e){
@@ -299,16 +375,38 @@ async function onItemImageChange(e){
     const image = await fileToThumbnail(file);
     setUI({itemForm: {...ui.itemForm, image}});
 }
+function readableForeground(hex){
+    const h = hex.replace('#', '');
+    const channel = i => {
+        const c = parseInt(h.substr(i, 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    const L = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+    return L > 0.179 ? '#111' : '#fff';
+}
+function usedItemColours(){
+    const items = store.getTable('items');
+    const seen = new Set();
+    for(const id of Object.keys(items)){
+        const c = (items[id].bgColor || '').toLowerCase();
+        if(c) seen.add(c);
+    }
+    return [...seen].sort();
+}
+function setItemFormColour(value){
+    setUI({itemForm: {...ui.itemForm, bgColor: value || ''}});
+}
 
-function openItemForm(){
+function openItemForm(e){
     setUI({
         formOpen: 'item',
-        itemForm: {name: '', image: '', editingId: '', nameError: false},
+        itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
+        formAnchor: anchorRect(e),
     });
 }
 function onItemFormSubmit(e){
     e.preventDefault();
-    const {name: raw, image, editingId} = ui.itemForm;
+    const {name: raw, image, bgColor, editingId} = ui.itemForm;
     const name = raw.trim();
     if(!name) return;
     if(itemNameExists(name, editingId)){
@@ -318,17 +416,17 @@ function onItemFormSubmit(e){
     if(editingId){
         const existing = store.getRow('items', editingId);
         store.setRow('items', editingId, {
-            name, image, boxId: existing?.boxId || '',
+            name, image, bgColor, boxId: existing?.boxId || '',
         });
     } else {
         store.setRow('items', crypto.randomUUID(), {
-            name, image, boxId: '',
+            name, image, bgColor, boxId: '',
         });
     }
     closeForm();
 }
 
-function openBoxEdit(id, row){
+function openBoxEdit(id, row, e){
     setUI({
         formOpen: 'box',
         boxForm: {
@@ -336,6 +434,7 @@ function openBoxEdit(id, row){
             photoName: row.photoName || '',
             editingId: id,
         },
+        formAnchor: anchorRect(e),
     });
 }
 
@@ -353,15 +452,17 @@ function onBoxFormDelete(){
     closeForm();
 }
 
-function openItemEdit(id, item){
+function openItemEdit(id, item, e){
     setUI({
         formOpen: 'item',
         itemForm: {
             name: item.name || '',
             image: item.image || '',
+            bgColor: item.bgColor || '',
             editingId: id,
             nameError: false,
         },
+        formAnchor: anchorRect(e),
     });
 }
 
