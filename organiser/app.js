@@ -1,8 +1,8 @@
 function itemTemplate(id, item){
     return html`
-      <li class="item" data-item-id=${id} data-draggable
+      <li class="item" data-item-id=${id} ?data-draggable=${ui.dragEnabled}
           style=${item.bgColor ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}` : ''}
-          @click=${(e) => openItemEdit(id, item, e)}>
+          @click=${() => openItemEdit(id, item)}>
         ${item.image ? html`<img class="item-thumb" src=${item.image} alt=${item.name}>` : ''}
         <span class="item-name">${item.name}</span>
       </li>
@@ -15,11 +15,11 @@ function boxTemplate(id, idx, row, itemsById, itemMatches){
         class="box reorder-item"
         data-box-id=${id}
         data-idx=${idx}
-        data-drop-target
+        ?data-drop-target=${ui.dragEnabled}
       >
         <button type="button" class="box-photo"
                 aria-label="Box ${row.photoName}"
-                @click=${(e) => openBoxEdit(id, row, e)}>
+                @click=${() => openBoxEdit(id, row)}>
           <img class="box-photo-thumb" src=${row.photo} alt="">
         </button>
         <ul class="items-in-box">
@@ -28,13 +28,15 @@ function boxTemplate(id, idx, row, itemsById, itemMatches){
             .sort((a, b) => itemsById[a].name.localeCompare(itemsById[b].name))
             .map(iid => itemTemplate(iid, itemsById[iid]))}
         </ul>
-        <button type="button" class="reorder-grip" aria-label="Reorder ${row.photoName}">
-          <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">
-            <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
-            <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
-            <circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>
-          </svg>
-        </button>
+        ${ui.dragEnabled ? html`
+          <button type="button" class="reorder-grip" aria-label="Reorder ${row.photoName}">
+            <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">
+              <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
+              <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
+              <circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>
+            </svg>
+          </button>
+        ` : ''}
       </li>
     `;
 }
@@ -153,13 +155,58 @@ function unassignedSectionTemplate(){
         .sort((a, b) => itemsTable[a].name.localeCompare(itemsTable[b].name));
     if(!unassignedIds.length) return '';
     return html`
-      <section class="unassigned" data-drop-target>
+      <section class="unassigned" ?data-drop-target=${ui.dragEnabled}>
         <h2>Unassigned</h2>
         <ul class="items-list">
           ${unassignedIds.map(id => itemTemplate(id, itemsTable[id]))}
         </ul>
       </section>
     `;
+}
+
+function allItemsTemplate(){
+    const itemsTable = store.getTable('items');
+    const queryAI = ui.searchQuery.trim().toLowerCase();
+    const ids = Object.keys(itemsTable)
+        .filter(id => !queryAI ||
+                      itemsTable[id].name.toLowerCase().includes(queryAI))
+        .sort((a, b) =>
+            itemsTable[a].name.localeCompare(itemsTable[b].name));
+    return html`
+      <section class="all-items" aria-label="All items">
+        ${ids.map(id => {
+            const item = itemsTable[id];
+            const style = item.bgColor
+                ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}`
+                : '';
+            return html`
+              <button type="button" class="all-items-chip"
+                      data-name=${item.name}
+                      aria-label=${item.name}
+                      style=${style}
+                      @click=${() => jumpToBox(item.boxId)}>
+              </button>
+            `;
+        })}
+      </section>
+    `;
+}
+
+function jumpToBox(boxId){
+    setUI({catalogOpen: false});
+    const sel = boxId
+        ? `li[data-box-id="${boxId}"]`
+        : '.unassigned';
+    const el = document.querySelector(sel);
+    if(!el) return;
+    el.scrollIntoView({behavior: 'smooth', block: 'center'});
+    el.classList.remove('spotlight');
+    // Force reflow so re-adding the class restarts the animation.
+    void el.offsetWidth;
+    el.classList.add('spotlight');
+    el.addEventListener('animationend',
+        () => el.classList.remove('spotlight'),
+        {once: true});
 }
 
 function setSyncStatus(s){
@@ -205,11 +252,13 @@ async function startSync(){
 
 const ui = {
     formOpen: null,
-    formAnchor: null,
     boxForm: {photo: '', photoName: '', editingId: ''},
-    itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
+    itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false, boxId: ''},
     searchQuery: '',
     syncStatus: 'off',
+    dragEnabled: false,
+    contextMenu: null,
+    catalogOpen: false,
 };
 
 function setUI(updates){
@@ -225,7 +274,8 @@ function appTemplate(){
         <span class="sync-status" data-status=${ui.syncStatus} role="status">Sync ${ui.syncStatus}</span>
         <div class="app-bar-actions">
           <button type="button" @click=${openBoxForm}>Add a box</button>
-          <button type="button" @click=${openItemForm}>Add an item</button>
+          <button type="button" @click=${() => openItemForm()}>Add an item</button>
+          <button type="button" @click=${() => setUI({catalogOpen: true})}>Catalog</button>
         </div>
         <input type="search" placeholder="Search…" aria-label="Search"
                .value=${ui.searchQuery}
@@ -233,9 +283,38 @@ function appTemplate(){
       </header>
       ${ui.formOpen === 'box' ? modalShellTemplate(boxFormTemplate()) : ''}
       ${ui.formOpen === 'item' ? modalShellTemplate(itemFormTemplate()) : ''}
+      ${ui.catalogOpen ? html`
+        <div class="modal-backdrop"
+             @click=${() => setUI({catalogOpen: false})}></div>
+        <div class="modal-shell catalog-shell" role="dialog" aria-label="Catalog">
+          <header class="catalog-header">
+            <h2>All items</h2>
+            <button type="button" class="catalog-close" aria-label="Close catalog"
+                    @click=${() => setUI({catalogOpen: false})}>×</button>
+          </header>
+          <div class="catalog-body">
+            ${allItemsTemplate()}
+          </div>
+        </div>
+      ` : ''}
       ${emptyStateTemplate()}
       ${boxesListTemplate()}
       ${unassignedSectionTemplate()}
+      ${ui.contextMenu ? html`
+        <div class="context-menu" role="menu"
+             style="left:${ui.contextMenu.x}px; top:${ui.contextMenu.y}px">
+          ${ui.contextMenu.boxId ? html`
+            <button type="button" role="menuitem"
+                    @click=${() => openItemForm({boxId: ui.contextMenu.boxId})}>
+              Add item here
+            </button>
+          ` : ''}
+          <button type="button" role="menuitem"
+                  @click=${() => setUI({dragEnabled: !ui.dragEnabled, contextMenu: null})}>
+            ${ui.dragEnabled ? 'Done' : 'Rearrange'}
+          </button>
+        </div>
+      ` : ''}
     `;
 }
 
@@ -263,37 +342,10 @@ store.addTablesListener(async () => {
 document.body.setAttribute('data-app-ready', '1');
 startSync();
 
-function anchorRect(event){
-    const el = event?.currentTarget;
-    if(!el?.getBoundingClientRect) return null;
-    const r = el.getBoundingClientRect();
-    return {top: r.top, left: r.left, bottom: r.bottom,
-            width: r.width, height: r.height};
-}
-function computeShellStyle(anchor){
-    const vp = {w: window.innerWidth, h: window.innerHeight};
-    const GAP = 8;
-    const FORM_WIDTH = Math.min(420, vp.w - 2 * GAP);
-    if(!anchor){
-        return `top:64px;left:50%;transform:translateX(-50%);` +
-               `width:${FORM_WIDTH}px;max-height:calc(100vh - 80px)`;
-    }
-    const left = Math.max(GAP, Math.min(anchor.left,
-                                        vp.w - FORM_WIDTH - GAP));
-    const placeAbove = anchor.top > vp.h * 0.5;
-    if(placeAbove){
-        return `bottom:${vp.h - anchor.top + GAP}px;left:${left}px;` +
-               `width:${FORM_WIDTH}px;` +
-               `max-height:${anchor.top - 2 * GAP}px`;
-    }
-    return `top:${anchor.bottom + GAP}px;left:${left}px;` +
-           `width:${FORM_WIDTH}px;` +
-           `max-height:${vp.h - anchor.bottom - 2 * GAP}px`;
-}
 function modalShellTemplate(form){
     return html`
-      <div class="form-backdrop"></div>
-      <div class="form-shell" style=${computeShellStyle(ui.formAnchor)}>
+      <div class="modal-backdrop"></div>
+      <div class="modal-shell">
         ${form}
       </div>
     `;
@@ -329,18 +381,16 @@ async function onBoxPhotoChange(e){
     setUI({boxForm: {...ui.boxForm, photo, photoName}});
 }
 
-function openBoxForm(e){
+function openBoxForm(){
     setUI({
         formOpen: 'box',
         boxForm: {photo: '', photoName: '', editingId: ''},
-        formAnchor: anchorRect(e),
     });
 }
 
 function closeForm(){
     setUI({
         formOpen: null,
-        formAnchor: null,
         boxForm: {photo: '', photoName: '', editingId: ''},
         itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
     });
@@ -397,16 +447,17 @@ function setItemFormColour(value){
     setUI({itemForm: {...ui.itemForm, bgColor: value || ''}});
 }
 
-function openItemForm(e){
+function openItemForm(opts = {}){
     setUI({
         formOpen: 'item',
-        itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
-        formAnchor: anchorRect(e),
+        itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false,
+                   boxId: opts.boxId || ''},
+        contextMenu: null,
     });
 }
 function onItemFormSubmit(e){
     e.preventDefault();
-    const {name: raw, image, bgColor, editingId} = ui.itemForm;
+    const {name: raw, image, bgColor, editingId, boxId} = ui.itemForm;
     const name = raw.trim();
     if(!name) return;
     if(itemNameExists(name, editingId)){
@@ -420,13 +471,13 @@ function onItemFormSubmit(e){
         });
     } else {
         store.setRow('items', crypto.randomUUID(), {
-            name, image, bgColor, boxId: '',
+            name, image, bgColor, boxId: boxId || '',
         });
     }
     closeForm();
 }
 
-function openBoxEdit(id, row, e){
+function openBoxEdit(id, row){
     setUI({
         formOpen: 'box',
         boxForm: {
@@ -434,7 +485,6 @@ function openBoxEdit(id, row, e){
             photoName: row.photoName || '',
             editingId: id,
         },
-        formAnchor: anchorRect(e),
     });
 }
 
@@ -452,7 +502,7 @@ function onBoxFormDelete(){
     closeForm();
 }
 
-function openItemEdit(id, item, e){
+function openItemEdit(id, item){
     setUI({
         formOpen: 'item',
         itemForm: {
@@ -462,7 +512,6 @@ function openItemEdit(id, item, e){
             editingId: id,
             nameError: false,
         },
-        formAnchor: anchorRect(e),
     });
 }
 
@@ -711,4 +760,25 @@ document.addEventListener('reorder:move', e => {
     store.transaction(() => {
         ordered.forEach((id, idx) => store.setCell('boxes', id, 'order', idx));
     });
+});
+
+document.addEventListener('contextmenu', e => {
+    if (e.target.closest('input, textarea, select, .context-menu')) return;
+    e.preventDefault();
+    // A chip carries its own identity; don't let it inherit its parent
+    // box's "add item here" entry.
+    const onChip = !!e.target.closest('[data-item-id]');
+    const boxEl = onChip ? null : e.target.closest('[data-box-id]');
+    setUI({contextMenu: {
+        x: e.clientX, y: e.clientY,
+        boxId: boxEl ? boxEl.dataset.boxId : null,
+    }});
+});
+document.addEventListener('click', e => {
+    if (!ui.contextMenu) return;
+    if (e.target.closest('.context-menu')) return;
+    setUI({contextMenu: null});
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && ui.contextMenu) setUI({contextMenu: null});
 });
