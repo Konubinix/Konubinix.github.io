@@ -99,6 +99,7 @@ dovetail exactly fills the gap between adjacent bumps on the facing wall, with
 </span></span><span style="display:flex;"><span>NOZZLE_SIZE <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.8</span>       <span style="color:#57606a"># mm, nozzle diameter (wall thickness in vase mode)</span>
 </span></span><span style="display:flex;"><span>STACK_HEIGHT <span style="color:#0550ae">=</span> <span style="color:#0550ae">3.0</span>      <span style="color:#57606a"># mm, height of the nesting lip at the bottom</span>
 </span></span><span style="display:flex;"><span>STACK_CLEARANCE <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.15</span>  <span style="color:#57606a"># mm, extra clearance for stacking fit</span>
+</span></span><span style="display:flex;"><span>LID_SNAP_INTERFERENCE <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.10</span>  <span style="color:#57606a"># mm, per-side interference at the lid&#39;s snap tip</span>
 </span></span></code></pre></div><h2 id="598fb3ec-7e07-473b-abcb-303339129dbc">Grid-aligned fingers</h2>
 <p>Secondary walls get 2 fingers per <code>GRID_UNIT</code> (at sub-cell positions 0.25 and
 0.75). Primary walls get 1 finger at the center (0.5) plus 1 at each grid-unit
@@ -228,43 +229,64 @@ secondary walls (back <code>+y</code>, right <code>+x</code>) place 2 bumps at p
 <p>The lid closes the bin while leaving the dovetail bumps accessible for
 side-by-side snapping. It is printed <strong>upside-down</strong> in vase mode (flange on the
 build plate), then flipped after printing.</p>
+<p>A plain inset lip would slide in with clearance and pop right back out under
+any disturbance — gravity helps the stacking lip but works against a lid. The
+lip must <strong>grip</strong> the bin along the insertion path. We shape it as a three-stage
+profile along Z: the flange tapers inward to a narrow <strong>neck</strong>, then back
+outward to a <strong>snap tip</strong> slightly larger than the bin&rsquo;s inner cavity. Pressing
+the lid in flexes the vase-mode walls just enough to admit the tip; once past
+the rim, the tip expands again and the neck seats at the rim. The oversized
+tip can no longer pull back through, and the lid locks in place.</p>
 <ul>
 <li><strong>Flange</strong> (Z=0 when printing, becomes top when flipped): full
 <code>outer_width × outer_depth</code>, sits flush with the bin&rsquo;s outer wall tops.</li>
-<li><strong>Lip</strong> (Z==STACK_HEIGHT= when printing, becomes bottom when flipped): inset by
-<code>NOZZLE_SIZE + STACK_CLEARANCE</code> per side — drops into the bin&rsquo;s inner cavity,
-same fit as the stacking lip.</li>
-<li>A <strong>loft</strong> connects the two sketches, giving a smooth taper that slices cleanly
-in vase mode.</li>
+<li><strong>Neck</strong> (Z=0.4·=STACK_HEIGHT=): <code>STACK_CLEARANCE</code> per side smaller than the
+cavity — clearance fit that guides insertion and gives the snap something
+to seat against.</li>
+<li><strong>Snap tip</strong> (Z==STACK_HEIGHT=, becomes bottom when flipped):
+<code>LID_SNAP_INTERFERENCE</code> per side <strong>larger</strong> than the cavity. Tune this by
+trial — too small and the lid pops, too large and pressing it in splits
+the bin wall.</li>
 </ul>
-<p>The flange does not extend beyond the bin&rsquo;s outer walls, so adjacent bins'
+<p>The neck-to-tip outward ramp is gentle (about 0.25 mm of growth over 1.8 mm
+of Z, around 8° from vertical), so vase mode prints it without supports. The
+flange does not extend beyond the bin&rsquo;s outer walls, so adjacent bins'
 dovetail bumps remain fully accessible.</p>
 <p><a id="code-snippet--make-lid"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">make_lid</span><span style="color:#1f2328">(</span>width_units<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> depth_units<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    outer_width <span style="color:#0550ae">=</span> width_units <span style="color:#0550ae">*</span> GRID_UNIT
 </span></span><span style="display:flex;"><span>    outer_depth <span style="color:#0550ae">=</span> depth_units <span style="color:#0550ae">*</span> GRID_UNIT
-</span></span><span style="display:flex;"><span>    inset <span style="color:#0550ae">=</span> NOZZLE_SIZE <span style="color:#0550ae">+</span> STACK_CLEARANCE
-</span></span><span style="display:flex;"><span>    lip_width <span style="color:#0550ae">=</span> outer_width <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> inset
-</span></span><span style="display:flex;"><span>    lip_depth <span style="color:#0550ae">=</span> outer_depth <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> inset
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># Printed upside-down: flange at Z=0 (build plate), lip at Z=STACK_HEIGHT</span>
+</span></span><span style="display:flex;"><span>    cavity_width <span style="color:#0550ae">=</span> outer_width <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> NOZZLE_SIZE
+</span></span><span style="display:flex;"><span>    cavity_depth <span style="color:#0550ae">=</span> outer_depth <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> NOZZLE_SIZE
+</span></span><span style="display:flex;"><span>    neck_width <span style="color:#0550ae">=</span> cavity_width <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> STACK_CLEARANCE
+</span></span><span style="display:flex;"><span>    neck_depth <span style="color:#0550ae">=</span> cavity_depth <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> STACK_CLEARANCE
+</span></span><span style="display:flex;"><span>    tip_width <span style="color:#0550ae">=</span> cavity_width <span style="color:#0550ae">+</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> LID_SNAP_INTERFERENCE
+</span></span><span style="display:flex;"><span>    tip_depth <span style="color:#0550ae">=</span> cavity_depth <span style="color:#0550ae">+</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> LID_SNAP_INTERFERENCE
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> BuildPart<span style="color:#1f2328">()</span> <span style="color:#cf222e">as</span> lid_part<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>outer_width<span style="color:#1f2328">,</span> outer_depth<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#0550ae">.</span>offset<span style="color:#1f2328">(</span>STACK_HEIGHT <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.4</span><span style="color:#1f2328">)):</span>
+</span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>neck_width<span style="color:#1f2328">,</span> neck_depth<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> BuildSketch<span style="color:#1f2328">(</span>Plane<span style="color:#0550ae">.</span>XY<span style="color:#0550ae">.</span>offset<span style="color:#1f2328">(</span>STACK_HEIGHT<span style="color:#1f2328">)):</span>
-</span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>lip_width<span style="color:#1f2328">,</span> lip_depth<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>tip_width<span style="color:#1f2328">,</span> tip_depth<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        loft<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> lid_part<span style="color:#0550ae">.</span>part
-</span></span></code></pre></div><h2 id="3c44654e-9edf-4cb0-948c-a1548e4143d8">Generating the STL</h2>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeifk5qqb7b6u7cm6j3dkfovbjwcrr3puxczl2o6zs55terhfamw2wi?bin.stl" style="border:0;width:100%;height:500px;"></iframe>
-<a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeifk5qqb7b6u7cm6j3dkfovbjwcrr3puxczl2o6zs55terhfamw2wi?bin.stl"><i class="fas fa-download"></i></a>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafkreifany467jprtzfcfevdcwrbbgb3nc3sel573lrriivzki2v7tmjta?bin_1x1x1.stl" style="border:0;width:100%;height:500px;"></iframe>
-<a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreifany467jprtzfcfevdcwrbbgb3nc3sel573lrriivzki2v7tmjta?bin_1x1x1.stl"><i class="fas fa-download"></i></a>
+</span></span></code></pre></div><h2 id="3c44654e-9edf-4cb0-948c-a1548e4143d8">Generating some STLs</h2>
 <figure><img src="https://ipfs.konubinix.eu/p/bafybeiegzqhg4hyar7tqk2nrssevgizulv2cr7533egsit3kkdpkau67fm?a.png">
 </figure>
 
+<p>I need a model to organize a bunch of hard drives</p>
+<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeibzrkqrsh2rfqrfedefus5bqupzgty4opfh4wvreqe6f5nbr5mmeu?bin_2x9x4.stl" style="border:0;width:100%;height:500px;"></iframe>
+<a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeibzrkqrsh2rfqrfedefus5bqupzgty4opfh4wvreqe6f5nbr5mmeu?bin_2x9x4.stl"><i class="fas fa-download"></i></a>
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeigimw3pjyn4szlpglbkarwufdzop6sjht4ipjpvyptz5neniprklq?a.png">
+</figure>
+
+<p>Now, a small block used as separator.</p>
+<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafkreifany467jprtzfcfevdcwrbbgb3nc3sel573lrriivzki2v7tmjta?bin_1x1x1.stl" style="border:0;width:100%;height:500px;"></iframe>
+<a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreifany467jprtzfcfevdcwrbbgb3nc3sel573lrriivzki2v7tmjta?bin_1x1x1.stl"><i class="fas fa-download"></i></a>
 <h2 id="8b4c9d2e-3f5a-6b7c-0d1e-2f3a4b5c6d7e">Generating the lid STL (wip, does not work for now)</h2>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafkreicgudvr3ltvmepx2lz6ydqgv54cvujncyap2bkdejtn7axpqcddw4?lid.stl" style="border:0;width:100%;height:500px;"></iframe>
-<a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicgudvr3ltvmepx2lz6ydqgv54cvujncyap2bkdejtn7axpqcddw4?lid.stl"><i class="fas fa-download"></i></a>
+<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafkreifa2fttmhuglb7hrfrrjob6nfywaw3mhnqrtnjb4tvjq7x4sdbzwy?lid_7x3.stl" style="border:0;width:100%;height:500px;"></iframe>
+<a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreifa2fttmhuglb7hrfrrjob6nfywaw3mhnqrtnjb4tvjq7x4sdbzwy?lid_7x3.stl"><i class="fas fa-download"></i></a>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>phone-stl <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">stl</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span></code></pre></div><!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
@@ -273,7 +295,7 @@ dovetail bumps remain fully accessible.</p>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/09e5cbd1-3745-45e6-b0e8-d52a8443ad55?title=modular_snap_together_bins">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 12 May 2026</time></aside>
+	  <aside class="date"><time>Last updated: 15 May 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Mar 2026</time></aside>
     </div>
   </div>
