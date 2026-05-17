@@ -45,6 +45,28 @@
         <p>some simple podcast tool, very specialized to my stack.</p>
 <p>For audiobooks, prefer using <a class="internal-link" href="/braindump/posts/voice_audiobook_player/">Voice Audiobook Player</a>, much more attractive (I
 think).</p>
+<p><strong>Caveat: sync stays off.</strong> Alpine + Yjs in this setup loses
+local data the moment sync is enabled — the server overwrites
+whatever the device had. The player runs single-device only.</p>
+<p><strong>The likely culprit.</strong> The initial-sync merge uses
+<code>_localChangeTs</code> as the local timestamp for LWW, but
+<code>_localChangeTs</code> lives only in memory — it resets to <code>{}</code> on
+every page load. The <code>$persist</code>-restored values come back with
+an effective local timestamp of 0, so any remote value with
+<code>ts &gt;</code> 0= wins, and a freshly-loaded device hands the server
+the whole &ldquo;yours wins&rdquo; verdict. Two ways out:</p>
+<ol>
+<li><strong>One-line fix:</strong> persist <code>_localChangeTs</code> alongside the data
+(<code>Alpine.$persist({}).as(&quot;_localChangeTs&quot;)</code>) so the LWW
+comparison survives a reload.</li>
+<li><strong>Cleaner refactor:</strong> drop the manual timestamp pre-merge
+entirely. Move each field into a Yjs YMap entry (the way
+<code>podcastLastMap</code> and <code>dirLastMap</code> already work), let
+Alpine observe the YMap and write through <code>ymap.set</code>, and
+let the CRDT handle concurrent edits without manual
+bookkeeping.</li>
+</ol>
+<!--listend-->
 <p><a id="code-snippet--root"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mhtml" data-lang="mhtml"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">html</span><span style="color:#1f2328">&gt;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">&lt;</span><span style="color:#0550ae">head</span><span style="color:#1f2328">&gt;</span>
@@ -282,7 +304,7 @@ uninterrupted audio/video playback).</p>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">_yjsInitialSyncDone</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">false</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">_yjsMap</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">_yjsTimeSyncTimeout</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">_localChangeTs</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">{},</span>  <span style="color:#57606a">// tracks when local values last changed (for merge)
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">_localChangeTs</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">Alpine</span><span style="color:#1f2328">.</span><span style="color:#1f2328">$persist</span><span style="color:#1f2328">({}).</span><span style="color:#1f2328">as</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;_localChangeTs&#34;</span><span style="color:#1f2328">),</span>  <span style="color:#57606a">// tracks when local values last changed (for merge); persisted so LWW survives a reload
 </span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>  <span style="color:#1f2328">_syncEpisodeTime</span><span style="color:#1f2328">(</span><span style="color:#1f2328">url</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">time</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">_yjsTimesMap</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">clearTimeout</span><span style="color:#1f2328">(</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">_yjsTimeSyncTimeout</span><span style="color:#1f2328">)</span>
@@ -757,12 +779,12 @@ episode, dark mode, and build hash.</li>
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           this.countdown=null
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           if(this.motionreplaytimer){clearTimeout(this.motionreplaytimer)}
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           this.motionreplaytimer = setTimeout(() =&gt; {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                 info(&#39;end of time to shake to play&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                 this.motionreplaytimer = null
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                 this.$dispatch(&#39;pleaserewind&#39;, {time: 50}) // I most likely missed the end
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                         info(&#39;end of time to shake to play&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                         this.motionreplaytimer = null
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                         this.$dispatch(&#39;pleaserewind&#39;, {time: 50}) // I most likely missed the end
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           }, 10000)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">         }
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">     }, 1000)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                 }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">         }, 1000)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">},
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">}&#34;</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;w-full flex&#34;</span>
 </span></span><span style="display:flex;"><span>         <span style="color:#f6f8fa;background-color:#82071e">@</span><span style="color:#1f2328">devicemotion</span><span style="color:#f6f8fa;background-color:#82071e">.</span><span style="color:#1f2328">window</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;let motion = (
@@ -890,25 +912,25 @@ center toggles play/pause, bottom center triggers Picture-in-Picture.</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      let episode_rate = localStorage.getItem(key(&#39;rate&#39;))
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      if(episode_rate)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.playbackRate = parseFloat(episode_rate)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                        this.$el.playbackRate = parseFloat(episode_rate)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      }
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      else
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            let podcast_rate = localStorage.getItem(`rate_${current.podcast.name}`)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            if(podcast_rate)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                this.$el.playbackRate = parseFloat(podcast_rate)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                        let podcast_rate = localStorage.getItem(`rate_${current.podcast.name}`)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                        if(podcast_rate)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                        {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                            this.$el.playbackRate = parseFloat(podcast_rate)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                        }
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      }
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      window.v = this.$el
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    },
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    onended() {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        },
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        onended() {
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      localStorage.setItem(this.key(&#39;time&#39;), 0)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      this._syncEpisodeTime(this.current.episode.url, 0)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      if(this.auto_next) {
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          this.$dispatch(&#39;gotonext&#39;, {playing: true})
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      }
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    },
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  _initMedium(el) {
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      this.init_values(el)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      if(&#39;mediaSession&#39; in navigator) {
@@ -936,7 +958,7 @@ center toggles play/pause, bottom center triggers Picture-in-Picture.</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          navigator.mediaSession.playbackState = &#39;paused&#39;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      }
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  },
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    medium: {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        medium: {
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      async [&#39;x-init&#39;]() {
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          this._initMedium(this.$el)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          // watch for episode changes without element destruction (goto_next/prev)
@@ -951,63 +973,63 @@ center toggles play/pause, bottom center triggers Picture-in-Picture.</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">              }
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">              this.current_progress = {cur: this.$el.currentTime, duration: this.$el.duration}
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          })
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            if(this.current.playing) {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                await $nextTick()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                this.$el.play()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            }
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.current_progress = {cur: this.$el.currentTime, duration: this.$el.duration}
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    if(this.current.playing) {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                        await $nextTick()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                        this.$el.play()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.current_progress = {cur: this.$el.currentTime, duration: this.$el.duration}
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@pleasesetspeed.window&#39;]() {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.playbackRate = this.$event.detail.speed
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.playbackRate = this.$event.detail.speed
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@play&#39;]() {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.volume = 1
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.current.playing = true
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.volume = 1
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.current.playing = true
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@pleaseplay.window&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.play()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.play()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@pleasevolume.window&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.volume = this.$event.detail.volume
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.volume = this.$event.detail.volume
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@pleasepause.window&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.pause()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.pause()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@pleaseffwd.window&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.currentTime += 10
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.currentTime += 10
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@pleaserewind.window&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.currentTime -= this.$event.detail.time || 10
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.currentTime -= this.$event.detail.time || 10
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@pause.window&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.pause()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.pause()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      async [&#39;@loadeddata&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            await $nextTick()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.scrollIntoView()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    await $nextTick()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.scrollIntoView()
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@pause&#39;]() {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.current.playing = false
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            if(this.$el.currentTime === this.$el.duration)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                this.onended()
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.current.playing = false
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    if(this.$el.currentTime === this.$el.duration)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                        this.onended()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    }
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@ended&#39;]() {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            // this is not triggerd for audio in qutebrowser
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    // this is not triggerd for audio in qutebrowser
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@timeupdate&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            localStorage.setItem(this.key(&#39;time&#39;), this.$el.currentTime)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.current_progress = {cur: this.$el.currentTime, duration: this.$el.duration}
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this._syncEpisodeTime(this.current.episode.url, this.$el.currentTime)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    localStorage.setItem(this.key(&#39;time&#39;), this.$el.currentTime)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.current_progress = {cur: this.$el.currentTime, duration: this.$el.duration}
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this._syncEpisodeTime(this.current.episode.url, this.$el.currentTime)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@setcurrenttime.window&#39;]() {
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.$el.currentTime = this.$event.detail.value
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.$el.currentTime = this.$event.detail.value
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      [&#39;@ratechange&#39;](){
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            localStorage.setItem(this.key(&#39;rate&#39;), this.$el.playbackRate)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            localStorage.setItem(`rate_${current.podcast.name}`, this.$el.playbackRate)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            this.current_speed = this.$el.playbackRate
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    localStorage.setItem(this.key(&#39;rate&#39;), this.$el.playbackRate)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    localStorage.setItem(`rate_${current.podcast.name}`, this.$el.playbackRate)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    this.current_speed = this.$el.playbackRate
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  },
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">}&#34;</span>
@@ -1220,10 +1242,11 @@ immutable IPFS/CDN content.</p>
 </span></span></code></pre></div><h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/pwa_vs_kivy_app/">pwa vs kivy app</a></li>
+<li><a class="internal-link" href="/braindump/posts/simple_pwa_organiser/">simple pwa organiser</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/9e6b6eff-c01c-478a-980a-859acd4073a3?title=some_simple_podcast_player">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 16 May 2026</time></aside>
+	  <aside class="date"><time>Last updated: 17 May 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 17 Mar 2024</time></aside>
     </div>
   </div>

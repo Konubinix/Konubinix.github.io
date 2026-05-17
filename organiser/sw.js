@@ -1,5 +1,5 @@
 const CACHES = [
-    { name: 'organiser-7572536' },
+    { name: 'organiser-8ec672f' },
 ];
 const ASSETS = ['./', './index.html', './app.js', './manifest.json'];
 

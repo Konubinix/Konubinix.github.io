@@ -1,6 +1,6 @@
 <!-- [[id:a4ddc6b7-f78e-42c4-8446-1c5d8405e8b7::+BEGIN_SRC mhtml :results verbatim :exports none :noweb yes :mkdirp yes :tangle ~/perso/org-publish/github/organiser/index.html][No heading:2]] -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="sl-theme-dark">
   <head>
     <meta charset="UTF-8">
     <script>
@@ -34,34 +34,36 @@
         }
       }
     </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2/cdn/themes/dark.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2/cdn/shoelace-autoloader.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+          theme: {
+              extend: {
+                  colors: {
+                      bg: '#1b1d2e',
+                      card: '#262a40',
+                      fg: '#e8e8f0',
+                      muted: '#8a8ea5',
+                      accent: '#f9a826',
+                  },
+              },
+          },
+      };
+    </script>
     <style>
       :root{
           --bg:#1b1d2e; --card:#262a40; --fg:#e8e8f0; --muted:#8a8ea5;
           --accent:#f9a826;
       }
-      *{box-sizing:border-box}
-      body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;line-height:1.4;min-height:100vh}
-      [hidden]{display:none !important}
       #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9999}
       body[data-app-ready] #loading{display:none}
-      .loading-ring{width:44px;height:44px;border:3px solid #333;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-      @keyframes spin{to{transform:rotate(360deg)}}
       .build-tag{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:8px;font-size:.65rem;color:var(--muted);font-family:monospace;pointer-events:none;z-index:50}
       .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
       .empty-state .emoji{font-size:3rem;margin-bottom:12px}
       .empty-state h1{font-size:1.4rem;margin:0 0 8px 0;color:var(--fg)}
       .empty-state p{font-size:.95rem;line-height:1.5}
-      .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
-      .modal-shell{
-          position:fixed;z-index:100;
-          top:50%;left:50%;transform:translate(-50%,-50%);
-          width:min(var(--modal-max-width, 420px), calc(100vw - 16px));
-          max-height:calc(100vh - 32px);
-          background:var(--modal-card, var(--card, #1f2235));
-          border-radius:12px;
-          box-shadow:0 12px 32px rgba(0,0,0,.5);
-          overflow-y:auto;
-      }
       @keyframes spotlight-pulse{
           0%   {box-shadow:0 0 0 0   transparent}
           20%  {box-shadow:0 0 0 6px var(--spotlight-color, rgba(249,168,38,.85))}
@@ -78,14 +80,8 @@
       .sync-status[data-status=disconnected]{color:#e63946}
       .add-form{display:grid;gap:10px;padding:16px;max-width:420px;margin:0 auto}
       .add-form label{display:block;font-size:.9rem;color:var(--muted)}
-      .add-form input[type=text]{width:100%;background:var(--card);color:var(--fg);border:1px solid #333;border-radius:6px;padding:8px;font:inherit;margin-top:4px}
-      .add-form input[type=color]{width:48px;height:32px;border:0;background:transparent;margin-top:4px;padding:0;cursor:pointer}
       .add-form-actions{display:flex;gap:8px}
-      .add-form-actions button{flex:1;padding:10px;border:0;border-radius:6px;font:inherit;font-weight:600;cursor:pointer}
-      .add-form-actions button[type=submit]{background:var(--accent);color:#111}
-      .add-form-actions button[type=button]{background:var(--card);color:var(--fg)}
-      .modal-shell .add-form{margin:0}
-      .add-form-actions button.danger{background:#e94560;color:#fff}
+      .add-form-actions sl-button{flex:1}
       .colour-swatches{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
       .colour-swatch{
           width:28px;height:28px;border-radius:50%;
@@ -100,34 +96,7 @@
       .unassigned h2{font-size:.85rem;color:var(--muted);font-weight:600;margin:8px 0;text-transform:uppercase;letter-spacing:.05em}
       .items-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
       .items-list .item{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--card);border-radius:8px;color:var(--fg)}
-      .context-menu{
-          position:fixed;z-index:60;
-          background:var(--card);color:var(--fg);
-          border:1px solid #333;border-radius:6px;
-          box-shadow:0 6px 16px rgba(0,0,0,.4);
-          padding:4px;min-width:140px;
-      }
-      .context-menu button{
-          display:block;width:100%;text-align:left;
-          background:transparent;color:inherit;
-          border:0;padding:8px 12px;font:inherit;cursor:pointer;
-          border-radius:4px;
-      }
-      .context-menu button:hover{background:rgba(255,255,255,.06)}
-      .catalog-shell{
-          --modal-max-width:480px;
-          display:flex;flex-direction:column;overflow:hidden;
-      }
-      .catalog-header{
-          display:flex;align-items:center;justify-content:space-between;
-          padding:10px 14px;border-bottom:1px solid #2a2d44;
-      }
-      .catalog-header h2{margin:0;font-size:1rem}
-      .catalog-close{
-          background:transparent;color:var(--fg);border:0;
-          font-size:1.4rem;cursor:pointer;padding:0 6px;line-height:1;
-      }
-      .catalog-body{padding:8px 12px;overflow-y:auto;flex:1}
+      .context-menu{position:fixed;z-index:60;min-width:140px}
       .all-items{display:flex;flex-wrap:wrap;gap:6px;margin:0}
       .all-items-chip{
           appearance:none;border:1px solid #333;border-radius:14px;
@@ -210,9 +179,9 @@
       .item-thumb{width:24px;height:24px;border-radius:4px;object-fit:cover;flex-shrink:0}
     </style>
   </head>
-  <body>
-    <div id="loading"><div class="loading-ring"></div></div>
-    <span class="build-tag" title="Build">7572536</span>
+  <body class="bg-bg text-fg font-sans leading-snug min-h-screen">
+    <div id="loading"><sl-spinner style="font-size:44px;--indicator-color:var(--accent)"></sl-spinner></div>
+    <span class="build-tag" title="Build">8ec672f</span>
     <main id="app"></main>
     <script type="module" src="./app.js"></script>
   </body>

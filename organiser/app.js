@@ -68,10 +68,10 @@ function boxFormTemplate(){
                alt=${photoName ? `Photo preview ${photoName}` : 'Photo preview'}>
         ` : ''}
         <div class="add-form-actions">
-          <button type="submit">Save</button>
-          <button type="button" @click=${closeForm}>Cancel</button>
+          <sl-button type="submit" variant="primary">Save</sl-button>
+          <sl-button @click=${closeForm}>Cancel</sl-button>
           ${ui.boxForm.editingId ? html`
-            <button type="button" class="danger" @click=${onBoxFormDelete}>Delete</button>
+            <sl-button variant="danger" @click=${onBoxFormDelete}>Delete</sl-button>
           ` : ''}
         </div>
       </form>
@@ -81,20 +81,20 @@ function boxFormTemplate(){
 function boxesListTemplate(){
     const rows = store.getTable('boxes');
     const itemsById = store.getTable('items');
-    const queryB = ui.searchQuery.trim().toLowerCase();
-    const itemMatchesB = name => !queryB || name.toLowerCase().includes(queryB);
+    const query = ui.searchQuery.trim().toLowerCase();
+    const itemMatches = name => !query || name.toLowerCase().includes(query);
     const sortedIds = Object.keys(rows).sort((a, b) =>
         (rows[a].order ?? 0) - (rows[b].order ?? 0));
     const ids = sortedIds.filter(id => {
-        if(!queryB) return true;
+        if(!query) return true;
         return Object.keys(itemsById).some(iid =>
-            itemsById[iid].boxId === id && itemMatchesB(itemsById[iid].name));
+            itemsById[iid].boxId === id && itemMatches(itemsById[iid].name));
     });
     if(!ids.length) return '';
     return html`
       <ul class="boxes-list reorder-list" data-reorder="boxes" aria-label="Boxes">
         ${ids.map((id, idx) =>
-            boxTemplate(id, idx, rows[id], itemsById, itemMatchesB))}
+            boxTemplate(id, idx, rows[id], itemsById, itemMatches))}
       </ul>
     `;
 }
@@ -103,11 +103,9 @@ function itemFormTemplate(){
     const {name, image, nameError} = ui.itemForm;
     return html`
       <form class="add-form" @submit=${onItemFormSubmit}>
-        <label>Item name
-          <input type="text" placeholder="e.g. 3mm screw" required
-                 .value=${name}
-                 @input=${onItemNameInput}>
-        </label>
+        <sl-input label="Item name" placeholder="e.g. 3mm screw" required
+                  .value=${name}
+                  @sl-input=${onItemNameInput}></sl-input>
         ${ui.itemForm.nameError ? html`
           <p class="form-error" role="alert">An item with this name already exists.</p>
         ` : ''}
@@ -134,10 +132,10 @@ function itemFormTemplate(){
           `)}
         </div>
         <div class="add-form-actions">
-          <button type="submit">Save</button>
-          <button type="button" @click=${closeForm}>Cancel</button>
+          <sl-button type="submit" variant="primary">Save</sl-button>
+          <sl-button @click=${closeForm}>Cancel</sl-button>
           ${ui.itemForm.editingId ? html`
-            <button type="button" class="danger" @click=${onItemFormDelete}>Delete</button>
+            <sl-button variant="danger" @click=${onItemFormDelete}>Delete</sl-button>
           ` : ''}
         </div>
       </form>
@@ -146,11 +144,11 @@ function itemFormTemplate(){
 
 function unassignedSectionTemplate(){
     const itemsTable = store.getTable('items');
-    const queryU = ui.searchQuery.trim().toLowerCase();
+    const query = ui.searchQuery.trim().toLowerCase();
     const unassignedIds = Object.keys(itemsTable)
         .filter(id => {
             if(itemsTable[id].boxId) return false;
-            return !queryU || itemsTable[id].name.toLowerCase().includes(queryU);
+            return !query || itemsTable[id].name.toLowerCase().includes(query);
         })
         .sort((a, b) => itemsTable[a].name.localeCompare(itemsTable[b].name));
     if(!unassignedIds.length) return '';
@@ -166,10 +164,10 @@ function unassignedSectionTemplate(){
 
 function allItemsTemplate(){
     const itemsTable = store.getTable('items');
-    const queryAI = ui.searchQuery.trim().toLowerCase();
+    const query = ui.searchQuery.trim().toLowerCase();
     const ids = Object.keys(itemsTable)
-        .filter(id => !queryAI ||
-                      itemsTable[id].name.toLowerCase().includes(queryAI))
+        .filter(id => !query ||
+                      itemsTable[id].name.toLowerCase().includes(query))
         .sort((a, b) =>
             itemsTable[a].name.localeCompare(itemsTable[b].name));
     return html`
@@ -201,7 +199,6 @@ function jumpToBox(boxId){
     if(!el) return;
     el.scrollIntoView({behavior: 'smooth', block: 'center'});
     el.classList.remove('spotlight');
-    // Force reflow so re-adding the class restarts the animation.
     void el.offsetWidth;
     el.classList.add('spotlight');
     el.addEventListener('animationend',
@@ -212,7 +209,6 @@ function jumpToBox(boxId){
 function setSyncStatus(s){
     setUI({syncStatus: s});
 }
-
 function openSocket(url){
     return new Promise((resolve, reject) => {
         const ws = new WebSocket(url);
@@ -220,7 +216,6 @@ function openSocket(url){
         ws.addEventListener('error', reject, {once: true});
     });
 }
-
 async function startSync(){
     const params = new URLSearchParams(location.search);
     const fromParam = params.get('sync_url');
@@ -273,47 +268,38 @@ function appTemplate(){
       <header class="app-bar">
         <span class="sync-status" data-status=${ui.syncStatus} role="status">Sync ${ui.syncStatus}</span>
         <div class="app-bar-actions">
-          <button type="button" @click=${openBoxForm}>Add a box</button>
-          <button type="button" @click=${() => openItemForm()}>Add an item</button>
-          <button type="button" @click=${() => setUI({catalogOpen: true})}>Catalog</button>
+          <sl-button @click=${openBoxForm}>Add a box</sl-button>
+          <sl-button @click=${() => openItemForm()}>Add an item</sl-button>
+          <sl-button @click=${() => setUI({catalogOpen: true})}>Catalog</sl-button>
         </div>
-        <input type="search" placeholder="Search…" aria-label="Search"
-               .value=${ui.searchQuery}
-               @input=${e => setUI({searchQuery: e.target.value})}>
+        <sl-input type="search" placeholder="Search…" aria-label="Search" clearable
+                  .value=${ui.searchQuery}
+                  @sl-input=${e => setUI({searchQuery: e.target.value})}></sl-input>
       </header>
       ${ui.formOpen === 'box' ? modalShellTemplate(boxFormTemplate()) : ''}
       ${ui.formOpen === 'item' ? modalShellTemplate(itemFormTemplate()) : ''}
       ${ui.catalogOpen ? html`
-        <div class="modal-backdrop"
-             @click=${() => setUI({catalogOpen: false})}></div>
-        <div class="modal-shell catalog-shell" role="dialog" aria-label="Catalog">
-          <header class="catalog-header">
-            <h2>All items</h2>
-            <button type="button" class="catalog-close" aria-label="Close catalog"
-                    @click=${() => setUI({catalogOpen: false})}>×</button>
-          </header>
-          <div class="catalog-body">
-            ${allItemsTemplate()}
-          </div>
-        </div>
+        <sl-dialog label="All items" open
+                   style="--width: 480px;"
+                   @sl-request-close=${() => setUI({catalogOpen: false})}>
+          ${allItemsTemplate()}
+        </sl-dialog>
       ` : ''}
       ${emptyStateTemplate()}
       ${boxesListTemplate()}
       ${unassignedSectionTemplate()}
       ${ui.contextMenu ? html`
-        <div class="context-menu" role="menu"
-             style="left:${ui.contextMenu.x}px; top:${ui.contextMenu.y}px">
+        <sl-menu class="context-menu"
+                 style="left:${ui.contextMenu.x}px; top:${ui.contextMenu.y}px">
           ${ui.contextMenu.boxId ? html`
-            <button type="button" role="menuitem"
-                    @click=${() => openItemForm({boxId: ui.contextMenu.boxId})}>
+            <sl-menu-item @click=${() => openItemForm({boxId: ui.contextMenu.boxId})}>
               Add item here
-            </button>
+            </sl-menu-item>
           ` : ''}
-          <button type="button" role="menuitem"
-                  @click=${() => setUI({dragEnabled: !ui.dragEnabled, contextMenu: null})}>
+          <sl-menu-item @click=${() => setUI({dragEnabled: !ui.dragEnabled, contextMenu: null})}>
             ${ui.dragEnabled ? 'Done' : 'Rearrange'}
-          </button>
-        </div>
+          </sl-menu-item>
+        </sl-menu>
       ` : ''}
     `;
 }
@@ -344,10 +330,12 @@ startSync();
 
 function modalShellTemplate(form){
     return html`
-      <div class="modal-backdrop"></div>
-      <div class="modal-shell">
+      <sl-dialog
+          open
+          no-header
+          @sl-request-close=${e => e.preventDefault()}>
         ${form}
-      </div>
+      </sl-dialog>
     `;
 }
 async function fileToThumbnail(file){
@@ -492,13 +480,15 @@ function onBoxFormDelete(){
     const {editingId} = ui.boxForm;
     if(!editingId) return;
     if(!confirm('Delete this box? Items inside go back to Unassigned.')) return;
-    const items = store.getTable('items');
-    for(const id of Object.keys(items)){
-        if(items[id].boxId === editingId){
-            store.setCell('items', id, 'boxId', '');
+    store.transaction(() => {
+        const items = store.getTable('items');
+        for(const id of Object.keys(items)){
+            if(items[id].boxId === editingId){
+                store.setCell('items', id, 'boxId', '');
+            }
         }
-    }
-    store.delRow('boxes', editingId);
+        store.delRow('boxes', editingId);
+    });
     closeForm();
 }
 
@@ -765,8 +755,6 @@ document.addEventListener('reorder:move', e => {
 document.addEventListener('contextmenu', e => {
     if (e.target.closest('input, textarea, select, .context-menu')) return;
     e.preventDefault();
-    // A chip carries its own identity; don't let it inherit its parent
-    // box's "add item here" entry.
     const onChip = !!e.target.closest('[data-item-id]');
     const boxEl = onChip ? null : e.target.closest('[data-box-id]');
     setUI({contextMenu: {
