@@ -60,14 +60,14 @@
   user-select: none;
   pointer-events: none;
 }
-.slot-ref {
+pre a.slot-ref, pre a.internal-link {
   color: inherit;
   text-decoration: underline dotted;
   text-decoration-color: rgba(120, 120, 200, 0.6);
   text-underline-offset: 0.2em;
   cursor: pointer;
 }
-.slot-ref:hover {
+pre a.slot-ref:hover, pre a.internal-link:hover {
   text-decoration-style: solid;
   text-decoration-color: currentColor;
 }
@@ -75,11 +75,36 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('pre').forEach(pre => {
-    const html = pre.innerHTML;
-    const newHtml = html.replace(/&lt;&lt;([A-Za-z0-9_-]+)&gt;&gt;/g, (m, name) => {
-      return '<a class="internal-link" href="#code-snippet--' + name + '" class="slot-ref">' + m + '</a>';
+    const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT, {
+      acceptNode: n => n.parentElement && n.parentElement.closest('a')
+        ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
     });
-    if (newHtml !== html) pre.innerHTML = newHtml;
+    const positions = [];
+    let flat = '';
+    let node;
+    while ((node = walker.nextNode())) {
+      for (let i = 0; i < node.nodeValue.length; i++) {
+        positions.push({node: node, offset: i});
+        flat += node.nodeValue[i];
+      }
+    }
+    const re = /<<([A-Za-z0-9_-]+)>>/g;
+    const matches = [];
+    let m;
+    while ((m = re.exec(flat))) {
+      matches.push({start: m.index, end: m.index + m[0].length, name: m[1]});
+    }
+    matches.reverse().forEach(({start, end, name}) => {
+      const range = document.createRange();
+      range.setStart(positions[start].node, positions[start].offset);
+      range.setEnd(positions[end - 1].node, positions[end - 1].offset + 1);
+      range.deleteContents();
+      const a = document.createElement('a');
+      a.href = '#code-snippet--' + name;
+      a.className = 'slot-ref';
+      a.textContent = '<<' + name + '>>';
+      range.insertNode(a);
+    });
   });
 });
 </script>
