@@ -515,7 +515,7 @@ the list itself caps at 840 pixels so it stays centred and
 readable on a wide screen.</p>
 <p>One small thing the rule does explicitly that looks redundant
 is set <code>flex-direction:row</code>. The list also wears the
-<code>.reorder-list</code> class so the shared <a class="internal-link" href="/braindump/new-posts/shared_blocks/#reorder-engine">reorder engine</a> picks it
+<code>.reorder-list</code> class so the shared <a class="internal-link" href="/braindump/posts/shared_blocks/#reorder-engine">reorder engine</a> picks it
 up, and that engine sets <code>flex-direction:column</code> on its lists
 by default (a sensible default for the column-shaped lists most
 callers want to reorder). I want a row layout instead, so I
@@ -996,7 +996,7 @@ than once per cell, which matters during the drag because the
 pointer-engine&rsquo;s geometry queries would otherwise be chasing a
 list that&rsquo;s re-rendering under its feet.</p>
 <p>I&rsquo;m not writing the reorder engine itself in this doc — it lives in
-<a class="internal-link" href="/braindump/new-posts/shared_blocks/#reorder-engine">shared blocks</a> because <a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/">Condorcet</a> needs the same thing. The
+<a class="internal-link" href="/braindump/posts/shared_blocks/#reorder-engine">shared blocks</a> because <a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/">Condorcet</a> needs the same thing. The
 contract it expects is: a <code>.reorder-list</code> on the <code>&lt;ul&gt;</code>, a
 <code>.reorder-item</code> class plus a <code>data-idx</code> attribute on each <code>&lt;li&gt;</code>,
 and a <code>.reorder-grip</code> element to grab. When a drag finishes the
@@ -1770,7 +1770,7 @@ use. So instead of native drag I use pointer events, which behave
 identically whether the pointer is a mouse, a stylus, or a
 finger. The geometry work — detecting which target the pointer is
 over, deciding whether the gesture counts as a drag or a tap —
-is identical to what <a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/">Condorcet</a> needed, so it lives in a <a class="internal-link" href="/braindump/new-posts/shared_blocks/#dropzone-engine">shared
+is identical to what <a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/">Condorcet</a> needed, so it lives in a <a class="internal-link" href="/braindump/posts/shared_blocks/#dropzone-engine">shared
 engine</a> rather than in this doc.</p>
 <p>What I do supply is the wiring: I tell the engine which elements
 are sources (the item chips, marked with <code>data-draggable</code>) and
@@ -2531,28 +2531,16 @@ server in <a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_r
 in <code>nomad/docker/tinybasesync/</code>, and <code>clk nd build tinybasesync</code> builds and pushes the image. The Playwright
 test fixture and the nomad job both pull from the registry.</p>
 <h3 id="7c2a5e10-2b02-4a91-9002-000000000011">Provisioning a device</h3>
-<p>Once the server is up, joining a new device to it has to be
-easy enough that I&rsquo;ll actually do it when I sit down at the
-laptop, but not so open that anyone with the URL can sync into
-my inventory. The compromise is a one-shot magic-link
-handshake: the WebSocket endpoint sits behind a traefik
-middleware (<a target="_blank" href="~/perso/perso/nomad/jobs/tinybasesync.hcl">nomad job</a> for the configuration) that requires a
-token on first contact. <code>clk authorizationserver generate</code>
-mints a URL with the token already baked in and the
-<code>?sync_url</code> parameter pre-populated, so the first time I open
-it on the new device, <a class="internal-link" href="#7c2a5e10-2b02-4a91-9002-00000000000f">startSync</a> writes the URL into
-<code>localStorage</code> and the parameter strips itself from the
-address bar.</p>
+<p>Once the server is up, joining a new device to it is a matter
+of getting the sync URL onto it. The <code>?sync_url</code> query
+parameter pre-populates it, so the first time I open the app on
+a new device, <a class="internal-link" href="#7c2a5e10-2b02-4a91-9002-00000000000f">startSync</a> writes the URL into <code>localStorage</code> and
+the parameter strips itself from the address bar.</p>
 <p>The path <code>tinybasesync/organiser</code> is what scopes the room (see
 <a class="internal-link" href="#7c2a5e10-2b02-4a91-9002-00000000000f">Sync across devices</a> for room semantics) — I host other
 sync-using apps under the same server, and the per-path
 isolation is what keeps their writes from crossing each other.</p>
-<p>So when I provision a phone or a laptop I run one of these:</p>
-<div class="block-label">sync-provisioning</div>
-<p><a id="code-snippet--sync-provisioning"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>clk authorizationserver generate --redirect <span style="color:#0a3069">&#39;https://sam.konubinix.eu/organiser?sync_url=wss://konubinix.eu/tinybasesync/organiser&#39;</span> tinybasesync/organiser sam-phone
-</span></span><span style="display:flex;"><span>clk authorizationserver generate --redirect <span style="color:#0a3069">&#39;http://localhost:9682/debug/organiser?sync_url=ws://localhost:9682/tinybasesync/organiser&#39;</span> tinybasesync/organiser sam-phone-debug
-</span></span></code></pre></div><p><strong>A trap I keep tripping over when I add a new sync path.</strong> The
+<p><strong>A trap I keep tripping over when I add a new sync path.</strong> The
 request to a new path is also gated by two separate lighttpd
 allow-list regexes — one on the host&rsquo;s <code>localhost:9682</code> stack
 (<code>~/.config/clk/bin/podcast.serve</code>), one on the phone&rsquo;s
@@ -2604,7 +2592,7 @@ phone still runs the old app&rdquo; within about ten minutes. I solve
 that by naming the cache after the build&rsquo;s hash — change any
 build artefact, the hash changes, the old cache is dropped on
 the next activation. The cache-handling code itself is the same
-as in every other PWA I&rsquo;ve written, so it lives in a <a class="internal-link" href="/braindump/new-posts/shared_blocks/#service-worker">shared
+as in every other PWA I&rsquo;ve written, so it lives in a <a class="internal-link" href="/braindump/posts/shared_blocks/#service-worker">shared
 block</a>; what&rsquo;s app-specific is which files to cache and which
 cache name to give them. The shared register block also skips
 <code>localhost</code> and <code>127.0.0.1</code>, so the dev tangle and the
@@ -2925,7 +2913,7 @@ resets through <code>clear_state</code> anyway.</p>
 </span></span><span style="display:flex;"><span>    main<span style="color:#1f2328">()</span>
 </span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/a4ddc6b7-f78e-42c4-8446-1c5d8405e8b7?title=simple_pwa_organiser">Permalink</a></h2>
       </div>
-	  <aside class="date"><time>Last updated: 17 May 2026</time></aside>
+	  <aside class="date"><time>Last updated: 18 May 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 May 2026</time></aside>
     </div>
   </div>
