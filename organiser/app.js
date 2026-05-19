@@ -1,195 +1,3 @@
-function itemTemplate(id, item){
-    return html`
-      <li class="item" data-item-id=${id} ?data-draggable=${ui.dragEnabled}
-          style=${item.bgColor ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}` : ''}
-          @click=${() => openItemEdit(id, item)}>
-        ${item.image ? html`<img class="item-thumb" src=${item.image} alt=${item.name}>` : ''}
-        <span class="item-name">${item.name}</span>
-      </li>
-    `;
-}
-
-function boxTemplate(id, idx, row, itemsById, itemMatches){
-    return html`
-      <li
-        class="box reorder-item"
-        data-box-id=${id}
-        data-idx=${idx}
-        ?data-drop-target=${ui.dragEnabled}
-      >
-        <button type="button" class="box-photo"
-                aria-label="Box ${row.photoName}"
-                @click=${() => openBoxEdit(id, row)}>
-          <img class="box-photo-thumb" src=${row.photo} alt="">
-        </button>
-        <ul class="items-in-box">
-          ${Object.keys(itemsById)
-            .filter(iid => itemsById[iid].boxId === id && itemMatches(itemsById[iid].name))
-            .sort((a, b) => itemsById[a].name.localeCompare(itemsById[b].name))
-            .map(iid => itemTemplate(iid, itemsById[iid]))}
-        </ul>
-        ${ui.dragEnabled ? html`
-          <button type="button" class="reorder-grip" aria-label="Reorder ${row.photoName}">
-            <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">
-              <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
-              <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
-              <circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>
-            </svg>
-          </button>
-        ` : ''}
-      </li>
-    `;
-}
-
-function emptyStateTemplate(){
-    const empty = !Object.keys(store.getTable('boxes')).length
-               && !Object.keys(store.getTable('items')).length;
-    if(!empty) return '';
-    return html`
-      <div class="empty-state">
-        <div class="emoji">&#x1f4e6;</div>
-        <h1>Organiser</h1>
-        <p>No boxes yet.</p>
-      </div>
-    `;
-}
-
-function boxFormTemplate(){
-    const {photo, photoName} = ui.boxForm;
-    return html`
-      <form class="add-form" @submit=${onBoxFormSubmit}>
-        <label>Photo
-          <input type="file" accept="image/*" capture="environment"
-                 @change=${onBoxPhotoChange}>
-        </label>
-        ${photo ? html`
-          <img class="box-photo-preview"
-               src=${photo}
-               alt=${photoName ? `Photo preview ${photoName}` : 'Photo preview'}>
-        ` : ''}
-        <div class="add-form-actions">
-          <sl-button type="submit" variant="primary">Save</sl-button>
-          <sl-button @click=${closeForm}>Cancel</sl-button>
-          ${ui.boxForm.editingId ? html`
-            <sl-button variant="danger" @click=${onBoxFormDelete}>Delete</sl-button>
-          ` : ''}
-        </div>
-      </form>
-    `;
-}
-
-function boxesListTemplate(){
-    const rows = store.getTable('boxes');
-    const itemsById = store.getTable('items');
-    const query = ui.searchQuery.trim().toLowerCase();
-    const itemMatches = name => !query || name.toLowerCase().includes(query);
-    const sortedIds = Object.keys(rows).sort((a, b) =>
-        (rows[a].order ?? 0) - (rows[b].order ?? 0));
-    const ids = sortedIds.filter(id => {
-        if(!query) return true;
-        return Object.keys(itemsById).some(iid =>
-            itemsById[iid].boxId === id && itemMatches(itemsById[iid].name));
-    });
-    if(!ids.length) return '';
-    return html`
-      <ul class="boxes-list reorder-list" data-reorder="boxes" aria-label="Boxes">
-        ${ids.map((id, idx) =>
-            boxTemplate(id, idx, rows[id], itemsById, itemMatches))}
-      </ul>
-    `;
-}
-
-function itemFormTemplate(){
-    const {name, image, nameError} = ui.itemForm;
-    return html`
-      <form class="add-form" @submit=${onItemFormSubmit}>
-        <sl-input label="Item name" placeholder="e.g. 3mm screw" required
-                  .value=${name}
-                  @sl-input=${onItemNameInput}></sl-input>
-        ${ui.itemForm.nameError ? html`
-          <p class="form-error" role="alert">An item with this name already exists.</p>
-        ` : ''}
-        <label>Image
-          <input type="file" accept="image/*" capture="environment"
-                 @change=${onItemImageChange}>
-        </label>
-        ${image ? html`
-          <img class="item-image-preview" src=${image} alt="Image preview">
-        ` : ''}
-        <label>Background colour
-          <input type="color" .value=${ui.itemForm.bgColor || '#000000'}
-                 @input=${e => setItemFormColour(e.target.value)}>
-        </label>
-        <div class="colour-swatches" role="group" aria-label="Recently used colours">
-          <button type="button" class="colour-swatch colour-none"
-                  aria-label="No colour"
-                  @click=${() => setItemFormColour('')}></button>
-          ${usedItemColours().map(c => html`
-            <button type="button" class="colour-swatch"
-                    style=${`background:${c}`}
-                    aria-label="Use colour ${c}"
-                    @click=${() => setItemFormColour(c)}></button>
-          `)}
-        </div>
-        <div class="add-form-actions">
-          <sl-button type="submit" variant="primary">Save</sl-button>
-          <sl-button @click=${closeForm}>Cancel</sl-button>
-          ${ui.itemForm.editingId ? html`
-            <sl-button variant="danger" @click=${onItemFormDelete}>Delete</sl-button>
-          ` : ''}
-        </div>
-      </form>
-    `;
-}
-
-function unassignedSectionTemplate(){
-    const itemsTable = store.getTable('items');
-    const query = ui.searchQuery.trim().toLowerCase();
-    const unassignedIds = Object.keys(itemsTable)
-        .filter(id => {
-            if(itemsTable[id].boxId) return false;
-            return !query || itemsTable[id].name.toLowerCase().includes(query);
-        })
-        .sort((a, b) => itemsTable[a].name.localeCompare(itemsTable[b].name));
-    if(!unassignedIds.length) return '';
-    return html`
-      <section class="unassigned" ?data-drop-target=${ui.dragEnabled}>
-        <h2>Unassigned</h2>
-        <ul class="items-list">
-          ${unassignedIds.map(id => itemTemplate(id, itemsTable[id]))}
-        </ul>
-      </section>
-    `;
-}
-
-function allItemsTemplate(){
-    const itemsTable = store.getTable('items');
-    const query = ui.searchQuery.trim().toLowerCase();
-    const ids = Object.keys(itemsTable)
-        .filter(id => !query ||
-                      itemsTable[id].name.toLowerCase().includes(query))
-        .sort((a, b) =>
-            itemsTable[a].name.localeCompare(itemsTable[b].name));
-    return html`
-      <section class="all-items" aria-label="All items">
-        ${ids.map(id => {
-            const item = itemsTable[id];
-            const style = item.bgColor
-                ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}`
-                : '';
-            return html`
-              <button type="button" class="all-items-chip"
-                      data-name=${item.name}
-                      aria-label=${item.name}
-                      style=${style}
-                      @click=${() => jumpToBox(item.boxId)}>
-              </button>
-            `;
-        })}
-      </section>
-    `;
-}
-
 function jumpToBox(boxId){
     setUI({catalogOpen: false});
     const sel = boxId
@@ -261,60 +69,421 @@ function setUI(updates){
     renderApp();
 }
 
-const appRoot = document.getElementById('app');
-
-function appTemplate(){
+class AppRoot extends LitElement {
+    createRenderRoot(){ return this; }
+    connectedCallback(){
+        super.connectedCallback();
+        installAppRootHandlers(this);
+    }
+    render(){ return appTemplate(this); }
+}
+customElements.define('app-root', AppRoot);
+function installAppRootHandlers(root){
+    const on = (type, fn) => root.addEventListener(type, fn);
+    on('open-box-form', () => openBoxForm());
+    on('open-item-form', e => openItemForm(e.detail || {}));
+    on('open-catalog', () => setUI({catalogOpen: true}));
+    on('close-catalog', () => setUI({catalogOpen: false}));
+    on('close-form', () => closeForm());
+    on('submit-box', () => onBoxFormSubmit());
+    on('submit-item', () => onItemFormSubmit());
+    on('delete-box', () => onBoxFormDelete());
+    on('delete-item', () => onItemFormDelete());
+    on('box-photo-change', e => onBoxPhotoChange(e.detail.file));
+    on('item-image-change', e => onItemImageChange(e.detail.file));
+    on('item-name-input', e => onItemNameInput(e.detail.value));
+    on('item-colour-pick', e => setItemFormColour(e.detail.value));
+    on('edit-box', e => openBoxEdit(e.detail.boxId, e.detail.row));
+    on('edit-item', e => openItemEdit(e.detail.itemId, e.detail.item));
+    on('toggle-drag', () => setUI({dragEnabled: !ui.dragEnabled, contextMenu: null}));
+    on('add-item-here', e => openItemForm({boxId: e.detail.boxId}));
+    on('catalog-jump', e => jumpToBox(e.detail.boxId));
+}
+function appTemplate(root){
     return html`
       <header class="app-bar">
-        <span class="sync-status" data-status=${ui.syncStatus} role="status">Sync ${ui.syncStatus}</span>
+        <sync-indicator .status=${ui.syncStatus}></sync-indicator>
         <div class="app-bar-actions">
-          <sl-button @click=${openBoxForm}>Add a box</sl-button>
-          <sl-button @click=${() => openItemForm()}>Add an item</sl-button>
-          <sl-button @click=${() => setUI({catalogOpen: true})}>Catalog</sl-button>
+          <add-box-button></add-box-button>
+          <add-item-button></add-item-button>
+          <catalog-button></catalog-button>
         </div>
         <sl-input type="search" placeholder="Search…" aria-label="Search" clearable
                   .value=${ui.searchQuery}
                   @sl-input=${e => setUI({searchQuery: e.target.value})}></sl-input>
       </header>
-      ${ui.formOpen === 'box' ? modalShellTemplate(boxFormTemplate()) : ''}
-      ${ui.formOpen === 'item' ? modalShellTemplate(itemFormTemplate()) : ''}
-      ${ui.catalogOpen ? html`
-        <sl-dialog label="All items" open
-                   style="--width: 480px;"
-                   @sl-request-close=${() => setUI({catalogOpen: false})}>
-          ${allItemsTemplate()}
-        </sl-dialog>
-      ` : ''}
-      ${emptyStateTemplate()}
-      ${boxesListTemplate()}
-      ${unassignedSectionTemplate()}
-      ${ui.contextMenu ? html`
-        <sl-menu class="context-menu"
-                 style="left:${ui.contextMenu.x}px; top:${ui.contextMenu.y}px">
-          ${ui.contextMenu.boxId ? html`
-            <sl-menu-item @click=${() => openItemForm({boxId: ui.contextMenu.boxId})}>
-              Add item here
-            </sl-menu-item>
-          ` : ''}
-          <sl-menu-item @click=${() => setUI({dragEnabled: !ui.dragEnabled, contextMenu: null})}>
-            ${ui.dragEnabled ? 'Done' : 'Rearrange'}
-          </sl-menu-item>
-        </sl-menu>
-      ` : ''}
+      ${ui.formOpen === 'box' ? html`<box-form .draft=${ui.boxForm}></box-form>` : ''}
+      ${ui.formOpen === 'item' ? html`<item-form .draft=${ui.itemForm}></item-form>` : ''}
+      <catalog-overlay .open=${ui.catalogOpen}
+                       .items=${store.getTable('items')}
+                       .query=${ui.searchQuery}></catalog-overlay>
+      <empty-state .visible=${!Object.keys(store.getTable('boxes')).length
+                            && !Object.keys(store.getTable('items')).length}></empty-state>
+      <box-list .rows=${store.getTable('boxes')}
+                .items=${store.getTable('items')}
+                .query=${ui.searchQuery}></box-list>
+      <unassigned-list .items=${store.getTable('items')}
+                       .query=${ui.searchQuery}></unassigned-list>
+      <context-menu .pos=${ui.contextMenu}></context-menu>
     `;
 }
-
-function renderApp(){
-    renderLit(appTemplate(), appRoot);
+class EmptyState extends LitElement {
+    static properties = { visible: {} };
+    createRenderRoot(){ return this; }
+    render(){
+        if(!this.visible) return '';
+        return html`
+          <div class="empty-state">
+            <div class="emoji">&#x1f4e6;</div>
+            <h1>Organiser</h1>
+            <p>No boxes yet.</p>
+          </div>
+        `;
+    }
 }
+customElements.define('empty-state', EmptyState);
+class AddBoxButton extends LitElement {
+    createRenderRoot(){ return this; }
+    render(){
+        return html`<sl-button @click=${() =>
+            this.dispatchEvent(new CustomEvent('open-box-form', {bubbles: true}))}>Add a box</sl-button>`;
+    }
+}
+customElements.define('add-box-button', AddBoxButton);
+class BoxForm extends LitElement {
+    static properties = { draft: {} };
+    createRenderRoot(){ return this; }
+    render(){
+        const {photo, photoName} = this.draft;
+        return modalShellTemplate(html`
+          <form class="add-form" @submit=${e => { e.preventDefault();
+              this.dispatchEvent(new CustomEvent('submit-box', {bubbles: true})); }}>
+            <label>Photo
+              <input type="file" accept="image/*" capture="environment"
+                     @change=${e => this.dispatchEvent(new CustomEvent('box-photo-change',
+                         {bubbles: true, detail: {file: e.target.files[0] || null}}))}>
+            </label>
+            ${photo ? html`
+              <img class="box-photo-preview"
+                   src=${photo}
+                   alt=${photoName ? `Photo preview ${photoName}` : 'Photo preview'}>
+            ` : ''}
+            <div class="add-form-actions">
+              <sl-button type="submit" variant="primary">Save</sl-button>
+              <sl-button @click=${() =>
+                  this.dispatchEvent(new CustomEvent('close-form', {bubbles: true}))}>Cancel</sl-button>
+              ${deleteBoxButton(this)}
+            </div>
+          </form>
+        `);
+    }
+}
+customElements.define('box-form', BoxForm);
+class BoxList extends LitElement {
+    static properties = { rows: {}, items: {}, query: {} };
+    createRenderRoot(){ return this; }
+    render(){
+        const rows = this.rows;
+        const itemsById = this.items;
+        const query = (this.query || '').trim().toLowerCase();
+        const itemMatches = name => !query || name.toLowerCase().includes(query);
+        const sortedIds = Object.keys(rows).sort((a, b) =>
+            (rows[a].order ?? 0) - (rows[b].order ?? 0));
+        const ids = sortedIds.filter(id => {
+            if(!query) return true;
+            return Object.keys(itemsById).some(iid =>
+                itemsById[iid].boxId === id && itemMatches(itemsById[iid].name));
+        });
+        if(!ids.length) return '';
+        return html`
+          <ul class="boxes-list reorder-list" data-reorder="boxes" aria-label="Boxes">
+            ${ids.map((id, idx) => html`
+              <box-card .boxId=${id} .idx=${idx} .row=${rows[id]}
+                        .itemsById=${itemsById} .query=${query}></box-card>
+            `)}
+          </ul>
+        `;
+    }
+}
+customElements.define('box-list', BoxList);
+class BoxCard extends LitElement {
+    static properties = {
+        boxId: {}, idx: {}, row: {}, itemsById: {}, query: {},
+    };
+    createRenderRoot(){ return this; }
+    render(){
+        const { boxId: id, idx } = this;
+        return html`
+          <li class="box reorder-item"
+              data-box-id=${id}
+              data-idx=${idx}
+              ?data-drop-target=${ui.dragEnabled}>
+            ${boxCardBase(this)}
+            ${boxCardItems(this)}
+            ${boxCardGrip(this)}
+          </li>
+        `;
+    }
+}
+customElements.define('box-card', BoxCard);
+function boxCardBase(card){
+    const { boxId: id, row } = card;
+    return html`
+      <button type="button" class="box-photo"
+              aria-label="Box ${row.photoName}"
+              @click=${() => card.dispatchEvent(new CustomEvent('edit-box',
+                  {bubbles: true, detail: {boxId: id, row}}))}>
+        <img class="box-photo-thumb" src=${row.photo} alt="">
+      </button>
+    `;
+}
+function deleteBoxButton(form){
+    return ui.boxForm.editingId ? html`
+      <sl-button variant="danger" @click=${() =>
+          form.dispatchEvent(new CustomEvent('delete-box', {bubbles: true}))}>Delete</sl-button>
+    ` : '';
+}
+function boxCardGrip(card){
+    return ui.dragEnabled ? html`
+      <button type="button" class="reorder-grip" aria-label="Reorder ${card.row.photoName}">
+        <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">
+          <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
+          <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
+          <circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>
+        </svg>
+      </button>
+    ` : '';
+}
+class AddItemButton extends LitElement {
+    createRenderRoot(){ return this; }
+    render(){
+        return html`<sl-button @click=${() =>
+            this.dispatchEvent(new CustomEvent('open-item-form', {bubbles: true}))}>Add an item</sl-button>`;
+    }
+}
+customElements.define('add-item-button', AddItemButton);
+class ItemForm extends LitElement {
+    static properties = { draft: {} };
+    createRenderRoot(){ return this; }
+    render(){ return modalShellTemplate(itemFormMarkup(this)); }
+}
+customElements.define('item-form', ItemForm);
+function itemFormMarkup(form){
+    const {name, image} = form.draft;
+    return html`
+      <form class="add-form" @submit=${e => { e.preventDefault();
+          form.dispatchEvent(new CustomEvent('submit-item', {bubbles: true})); }}>
+        <sl-input label="Item name" placeholder="e.g. 3mm screw" required
+                  .value=${name}
+                  @sl-input=${e => form.dispatchEvent(new CustomEvent('item-name-input',
+                      {bubbles: true, detail: {value: e.target.value}}))}></sl-input>
+        ${itemNameError(form)}
+        <label>Image
+          <input type="file" accept="image/*" capture="environment"
+                 @change=${e => form.dispatchEvent(new CustomEvent('item-image-change',
+                     {bubbles: true, detail: {file: e.target.files[0] || null}}))}>
+        </label>
+        ${image ? html`
+          <img class="item-image-preview" src=${image} alt="Image preview">
+        ` : ''}
+        ${itemFormColour(form)}
+        <div class="add-form-actions">
+          <sl-button type="submit" variant="primary">Save</sl-button>
+          <sl-button @click=${() =>
+              form.dispatchEvent(new CustomEvent('close-form', {bubbles: true}))}>Cancel</sl-button>
+          ${deleteItemButton(form)}
+        </div>
+      </form>
+    `;
+}
+class ItemChip extends LitElement {
+    static properties = { itemId: {}, item: {} };
+    createRenderRoot(){ return this; }
+    render(){
+        const { itemId: id, item } = this;
+        return html`
+          <li class="item" data-item-id=${id} ?data-draggable=${ui.dragEnabled}
+              style=${item.bgColor ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}` : ''}
+              @click=${() => this.dispatchEvent(new CustomEvent('edit-item',
+                  {bubbles: true, detail: {itemId: id, item}}))}>
+            ${item.image ? html`<img class="item-thumb" src=${item.image} alt=${item.name}>` : ''}
+            <span class="item-name">${item.name}</span>
+          </li>
+        `;
+    }
+}
+customElements.define('item-chip', ItemChip);
+class UnassignedList extends LitElement {
+    static properties = { items: {}, query: {} };
+    createRenderRoot(){ return this; }
+    render(){
+        const itemsTable = this.items;
+        const query = (this.query || '').trim().toLowerCase();
+        const unassignedIds = Object.keys(itemsTable)
+            .filter(id => {
+                if(itemsTable[id].boxId) return false;
+                return !query || itemsTable[id].name.toLowerCase().includes(query);
+            })
+            .sort((a, b) => itemsTable[a].name.localeCompare(itemsTable[b].name));
+        if(!unassignedIds.length) return '';
+        return html`
+          <section class="unassigned" ?data-drop-target=${ui.dragEnabled}>
+            <h2>Unassigned</h2>
+            <ul class="items-list">
+              ${unassignedIds.map(id => html`
+                <item-chip .itemId=${id} .item=${itemsTable[id]}></item-chip>
+              `)}
+            </ul>
+          </section>
+        `;
+    }
+}
+customElements.define('unassigned-list', UnassignedList);
+function boxCardItems(card){
+    const { boxId: id, itemsById } = card;
+    const query = (card.query || '').trim().toLowerCase();
+    const itemMatches = name => !query || name.toLowerCase().includes(query);
+    return html`
+      <ul class="items-in-box">
+        ${Object.keys(itemsById)
+          .filter(iid => itemsById[iid].boxId === id && itemMatches(itemsById[iid].name))
+          .sort((a, b) => itemsById[a].name.localeCompare(itemsById[b].name))
+          .map(iid => html`
+            <item-chip .itemId=${iid} .item=${itemsById[iid]}></item-chip>
+          `)}
+      </ul>
+    `;
+}
+function deleteItemButton(form){
+    return ui.itemForm.editingId ? html`
+      <sl-button variant="danger" @click=${() =>
+          form.dispatchEvent(new CustomEvent('delete-item', {bubbles: true}))}>Delete</sl-button>
+    ` : '';
+}
+function itemFormColour(form){
+    return html`
+      <label>Background colour
+        <input type="color" .value=${ui.itemForm.bgColor || '#000000'}
+               @input=${e => form.dispatchEvent(new CustomEvent('item-colour-pick',
+                   {bubbles: true, detail: {value: e.target.value}}))}>
+      </label>
+      <div class="colour-swatches" role="group" aria-label="Recently used colours">
+        <button type="button" class="colour-swatch colour-none"
+                aria-label="No colour"
+                @click=${() => form.dispatchEvent(new CustomEvent('item-colour-pick',
+                    {bubbles: true, detail: {value: ''}}))}></button>
+        ${usedItemColours().map(c => html`
+          <button type="button" class="colour-swatch"
+                  style=${`background:${c}`}
+                  aria-label="Use colour ${c}"
+                  @click=${() => form.dispatchEvent(new CustomEvent('item-colour-pick',
+                      {bubbles: true, detail: {value: c}}))}></button>
+        `)}
+      </div>
+    `;
+}
+function itemNameError(form){
+    return ui.itemForm.nameError ? html`
+      <p class="form-error" role="alert">An item with this name already exists.</p>
+    ` : '';
+}
+class ContextMenu extends LitElement {
+    static properties = { pos: {} };
+    createRenderRoot(){ return this; }
+    render(){
+        const pos = this.pos;
+        if(!pos) return '';
+        return html`
+          <sl-menu class="context-menu"
+                   style="left:${pos.x}px; top:${pos.y}px">
+            ${contextMenuAddItemEntry(this, pos)}
+            ${contextMenuToggleEntry(this)}
+          </sl-menu>
+        `;
+    }
+}
+customElements.define('context-menu', ContextMenu);
+function contextMenuToggleEntry(menu){
+    return html`
+      <sl-menu-item @click=${() =>
+          menu.dispatchEvent(new CustomEvent('toggle-drag', {bubbles: true}))}>
+        ${ui.dragEnabled ? 'Done' : 'Rearrange'}
+      </sl-menu-item>
+    `;
+}
+function contextMenuAddItemEntry(menu, pos){
+    return pos.boxId ? html`
+      <sl-menu-item @click=${() => menu.dispatchEvent(new CustomEvent('add-item-here',
+          {bubbles: true, detail: {boxId: pos.boxId}}))}>
+        Add item here
+      </sl-menu-item>
+    ` : '';
+}
+class CatalogButton extends LitElement {
+    createRenderRoot(){ return this; }
+    render(){
+        return html`<sl-button @click=${() =>
+            this.dispatchEvent(new CustomEvent('open-catalog', {bubbles: true}))}>Catalog</sl-button>`;
+    }
+}
+customElements.define('catalog-button', CatalogButton);
+class CatalogOverlay extends LitElement {
+    static properties = { open: {}, items: {}, query: {} };
+    createRenderRoot(){ return this; }
+    render(){
+        if(!this.open) return '';
+        const itemsTable = this.items;
+        const query = (this.query || '').trim().toLowerCase();
+        const ids = Object.keys(itemsTable)
+            .filter(id => !query ||
+                          itemsTable[id].name.toLowerCase().includes(query))
+            .sort((a, b) =>
+                itemsTable[a].name.localeCompare(itemsTable[b].name));
+        return html`
+          <sl-dialog label="All items" open
+                     style="--width: 480px;"
+                     @sl-request-close=${() =>
+                         this.dispatchEvent(new CustomEvent('close-catalog', {bubbles: true}))}>
+            <section class="all-items" aria-label="All items">
+              ${ids.map(id => {
+                  const item = itemsTable[id];
+                  const style = item.bgColor
+                      ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}`
+                      : '';
+                  return html`
+                    <button type="button" class="all-items-chip"
+                            data-name=${item.name}
+                            aria-label=${item.name}
+                            style=${style}
+                            @click=${() => this.dispatchEvent(new CustomEvent('catalog-jump',
+                                {bubbles: true, detail: {boxId: item.boxId}}))}>
+                    </button>
+                  `;
+              })}
+            </section>
+          </sl-dialog>
+        `;
+    }
+}
+customElements.define('catalog-overlay', CatalogOverlay);
+class SyncIndicator extends LitElement {
+    static properties = { status: {} };
+    createRenderRoot(){ return this; }
+    render(){
+        return html`<span class="sync-status" data-status=${this.status} role="status">Sync ${this.status}</span>`;
+    }
+}
+customElements.define('sync-indicator', SyncIndicator);
 
 import { createMergeableStore } from 'tinybase';
 import { createIndexedDbPersister } from 'tinybase/persisters/persister-indexed-db';
 import { createWsSynchronizer } from 'tinybase/synchronizers/synchronizer-ws-client';
-import { html, render as renderLit } from 'lit-html';
+import { html, LitElement } from 'lit';
 
 const store = createMergeableStore();
 const persister = createIndexedDbPersister(store, 'organiser');
+const appRootEl = document.querySelector('app-root');
+function renderApp(){ appRootEl?.requestUpdate(); }
 
 await persister.startAutoLoad();
 store.addTablesListener(renderApp);
@@ -358,8 +527,7 @@ async function fileToThumbnail(file){
         URL.revokeObjectURL(url);
     }
 }
-async function onBoxPhotoChange(e){
-    const file = e.target.files[0];
+async function onBoxPhotoChange(file){
     if(!file){
         setUI({boxForm: {...ui.boxForm, photo: '', photoName: ''}});
         return;
@@ -383,8 +551,7 @@ function closeForm(){
         itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
     });
 }
-function onBoxFormSubmit(e){
-    e.preventDefault();
+function onBoxFormSubmit(){
     const {photo, photoName, editingId} = ui.boxForm;
     if(!photo) return;
     const id = editingId || crypto.randomUUID();
@@ -401,11 +568,10 @@ function itemNameExists(name, exceptId){
     return Object.entries(items).some(([id, item]) =>
         id !== exceptId && item.name.toLowerCase() === lower);
 }
-function onItemNameInput(e){
-    setUI({itemForm: {...ui.itemForm, name: e.target.value, nameError: false}});
+function onItemNameInput(value){
+    setUI({itemForm: {...ui.itemForm, name: value, nameError: false}});
 }
-async function onItemImageChange(e){
-    const file = e.target.files[0];
+async function onItemImageChange(file){
     if(!file){
         setUI({itemForm: {...ui.itemForm, image: ''}});
         return;
@@ -443,8 +609,7 @@ function openItemForm(opts = {}){
         contextMenu: null,
     });
 }
-function onItemFormSubmit(e){
-    e.preventDefault();
+function onItemFormSubmit(){
     const {name: raw, image, bgColor, editingId, boxId} = ui.itemForm;
     const name = raw.trim();
     if(!name) return;
