@@ -55,7 +55,7 @@ async function startSync(){
 
 const ui = {
     formOpen: null,
-    boxForm: {photo: '', photoName: '', editingId: ''},
+    boxForm: {photo: '', editingId: ''},
     itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false, boxId: ''},
     searchQuery: '',
     syncStatus: 'off',
@@ -154,7 +154,7 @@ class BoxForm extends LitElement {
     static properties = { draft: {} };
     createRenderRoot(){ return this; }
     render(){
-        const {photo, photoName} = this.draft;
+        const {photo} = this.draft;
         return modalShellTemplate(html`
           <form class="add-form" @submit=${e => { e.preventDefault();
               this.dispatchEvent(new CustomEvent('submit-box', {bubbles: true})); }}>
@@ -164,9 +164,7 @@ class BoxForm extends LitElement {
                          {bubbles: true, detail: {file: e.target.files[0] || null}}))}>
             </label>
             ${photo ? html`
-              <img class="box-photo-preview"
-                   src=${photo}
-                   alt=${photoName ? `Photo preview ${photoName}` : 'Photo preview'}>
+              <img class="box-photo-preview" src=${photo} alt="">
             ` : ''}
             <div class="add-form-actions">
               <sl-button type="submit" variant="primary">Save</sl-button>
@@ -230,7 +228,6 @@ function boxCardBase(card){
     const { boxId: id, row } = card;
     return html`
       <button type="button" class="box-photo"
-              aria-label="Box ${row.photoName}"
               @click=${() => card.dispatchEvent(new CustomEvent('edit-box',
                   {bubbles: true, detail: {boxId: id, row}}))}>
         <img class="box-photo-thumb" src=${row.photo} alt="">
@@ -245,7 +242,7 @@ function deleteBoxButton(form){
 }
 function boxCardGrip(card){
     return ui.dragEnabled ? html`
-      <button type="button" class="reorder-grip" aria-label="Reorder ${card.row.photoName}">
+      <button type="button" class="reorder-grip">
         <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">
           <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
           <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
@@ -529,36 +526,35 @@ async function fileToThumbnail(file){
 }
 async function onBoxPhotoChange(file){
     if(!file){
-        setUI({boxForm: {...ui.boxForm, photo: '', photoName: ''}});
+        setUI({boxForm: {...ui.boxForm, photo: ''}});
         return;
     }
     const photo = await fileToThumbnail(file);
-    const photoName = file.name.replace(/\.[^.]+$/, '');
-    setUI({boxForm: {...ui.boxForm, photo, photoName}});
+    setUI({boxForm: {...ui.boxForm, photo}});
 }
 
 function openBoxForm(){
     setUI({
         formOpen: 'box',
-        boxForm: {photo: '', photoName: '', editingId: ''},
+        boxForm: {photo: '', editingId: ''},
     });
 }
 
 function closeForm(){
     setUI({
         formOpen: null,
-        boxForm: {photo: '', photoName: '', editingId: ''},
+        boxForm: {photo: '', editingId: ''},
         itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
     });
 }
 function onBoxFormSubmit(){
-    const {photo, photoName, editingId} = ui.boxForm;
+    const {photo, editingId} = ui.boxForm;
     if(!photo) return;
     const id = editingId || crypto.randomUUID();
     const existing = store.getRow('boxes', id);
     const orders = Object.values(store.getTable('boxes')).map(r => r.order ?? 0);
     const order = existing?.order ?? (orders.length ? Math.max(...orders) + 1 : 0);
-    store.setRow('boxes', id, {photo, photoName, order});
+    store.setRow('boxes', id, {photo, order});
     closeForm();
 }
 
@@ -635,7 +631,6 @@ function openBoxEdit(id, row){
         formOpen: 'box',
         boxForm: {
             photo: row.photo || '',
-            photoName: row.photoName || '',
             editingId: id,
         },
     });
