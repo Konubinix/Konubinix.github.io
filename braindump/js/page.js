@@ -125,13 +125,29 @@ if ("scrollRestoration" in history) {
   history.scrollRestoration = "manual";
 }
 
-// Save scroll position into the current history entry before any in-page
-// anchor click pushes a new entry. On back we restore it from there.
+// Each `.page` is its own scrolling container (overflow-y: auto), so we
+// snapshot every visible page's scrollTop and restore them on back.
+function snapshotPageScrolls() {
+  return Array.prototype.map.call(
+    document.querySelectorAll(".page"),
+    function (p) { return p.scrollTop; }
+  );
+}
+
+function restorePageScrolls(scrolls) {
+  var pageEls = document.querySelectorAll(".page");
+  scrolls.forEach(function (top, i) {
+    if (pageEls[i]) pageEls[i].scrollTop = top;
+  });
+}
+
+// Save the scroll snapshot into the current history entry before any
+// in-page anchor click pushes a new entry. On back we restore from there.
 document.addEventListener("click", function (e) {
   var a = e.target.closest && e.target.closest('a[href^="#"]');
   if (!a) return;
   history.replaceState(
-    Object.assign({}, history.state, { _scrollY: window.scrollY }),
+    Object.assign({}, history.state, { _pageScrolls: snapshotPageScrolls() }),
     ""
   );
 });
@@ -147,11 +163,10 @@ window.addEventListener("popstate", function (event) {
       sn.length === stacked.length &&
       sn.every(function (v, i) { return v === stacked[i]; });
     if (sameStack) {
-      // Hash-only back-navigation. Restore scroll if we saved it.
-      if (event.state && typeof event.state._scrollY === "number") {
-        requestAnimationFrame(function () {
-          window.scrollTo(0, event.state._scrollY);
-        });
+      // Hash-only back-navigation. Restore page scrolls if we saved them.
+      if (event.state && Array.isArray(event.state._pageScrolls)) {
+        var scrolls = event.state._pageScrolls;
+        requestAnimationFrame(function () { restorePageScrolls(scrolls); });
       }
       return;
     }
