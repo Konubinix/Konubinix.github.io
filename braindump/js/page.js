@@ -121,6 +121,21 @@ function initializePage(page, level) {
   });
 }
 
+if ("scrollRestoration" in history) {
+  history.scrollRestoration = "manual";
+}
+
+// Save scroll position into the current history entry before any in-page
+// anchor click pushes a new entry. On back we restore it from there.
+document.addEventListener("click", function (e) {
+  var a = e.target.closest && e.target.closest('a[href^="#"]');
+  if (!a) return;
+  history.replaceState(
+    Object.assign({}, history.state, { _scrollY: window.scrollY }),
+    ""
+  );
+});
+
 window.addEventListener("popstate", function (event) {
   // TODO: check state and pop pages if possible, rather than reloading.
   if (window.location.pathname === pages[0]) {
@@ -132,7 +147,12 @@ window.addEventListener("popstate", function (event) {
       sn.length === stacked.length &&
       sn.every(function (v, i) { return v === stacked[i]; });
     if (sameStack) {
-      // Hash-only back-navigation. Browser already restored scroll.
+      // Hash-only back-navigation. Restore scroll if we saved it.
+      if (event.state && typeof event.state._scrollY === "number") {
+        requestAnimationFrame(function () {
+          window.scrollTo(0, event.state._scrollY);
+        });
+      }
       return;
     }
   }
