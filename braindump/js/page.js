@@ -123,6 +123,19 @@ function initializePage(page, level) {
 
 window.addEventListener("popstate", function (event) {
   // TODO: check state and pop pages if possible, rather than reloading.
+  if (window.location.pathname === pages[0]) {
+    var uri = URI(window.location);
+    var sn = uri.hasQuery("stackedNotes") ? uri.query(true).stackedNotes : [];
+    if (!Array.isArray(sn)) sn = [sn];
+    var stacked = pages.slice(1);
+    var sameStack =
+      sn.length === stacked.length &&
+      sn.every(function (v, i) { return v === stacked[i]; });
+    if (sameStack) {
+      // Hash-only back-navigation. Browser already restored scroll.
+      return;
+    }
+  }
   window.location = window.location; // this reloads the page.
 });
 
