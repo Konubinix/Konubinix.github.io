@@ -482,10 +482,15 @@ const persister = createIndexedDbPersister(store, 'organiser');
 const appRootEl = document.querySelector('app-root');
 function renderApp(){ appRootEl?.requestUpdate(); }
 
+// Drain the IndexedDB replay before listening: an earlier listener
+// would fire renderApp once per replayed write.
 await persister.startAutoLoad();
 store.addTablesListener(renderApp);
 renderApp();
 await persister.startAutoSave();
+// startAutoSave debounces — this parallel listener bumps a counter
+// on each completed write so the persistence test waits on a signal,
+// not on a delay.
 let _persistSeq = 0;
 store.addTablesListener(async () => {
     await persister.save();
@@ -618,12 +623,18 @@ function onItemFormSubmit(){
         store.setRow('items', editingId, {
             name, image, bgColor, boxId: existing?.boxId || '',
         });
-    } else {
-        store.setRow('items', crypto.randomUUID(), {
-            name, image, bgColor, boxId: boxId || '',
-        });
+        closeForm();
+        return;
     }
-    closeForm();
+    store.setRow('items', crypto.randomUUID(), {
+        name, image, bgColor, boxId: boxId || '',
+    });
+    if(boxId){
+        setUI({itemForm: {name: '', image: '', bgColor: '', editingId: '',
+                          nameError: false, boxId}});
+    } else {
+        closeForm();
+    }
 }
 
 function openBoxEdit(id, row){
