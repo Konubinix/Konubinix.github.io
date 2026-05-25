@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html><title>investigate an ipfs issue leads to finding out corrupted sd card</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Investigate an Ipfs Issue Leads to Finding Out Corrupted Sd Card</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <h2 id="6ad3e04f-d129-4989-85aa-1038cafb4f8b">Symptom</h2>
+<p><code>ipfs get bafybei…</code> (a ~333 MiB DAG) on the requesting host hangs at
+exactly <code>113.16 MiB / 333.12 MiB (33.97%)</code>. The CID is &ldquo;known to be
+on the private network&rdquo; (4 RPi5 IPFS nodes, all installed from the
+same script).</p>
+<h2 id="c1d00aa7-747e-4a99-97df-e762b689e36c">Investigation</h2>
+<h3 id="232d3572-3176-4563-8aa9-41bffdf7b267">1. Bitswap state on the requesting node</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>bitswap status
+</span></span><span style="display:flex;"><span>    blocks received: 4
+</span></span><span style="display:flex;"><span>    blocks sent: 0
+</span></span><span style="display:flex;"><span>    wantlist [1 keys]
+</span></span><span style="display:flex;"><span>        bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku
+</span></span><span style="display:flex;"><span>    partners [0]
+</span></span></code></pre></div><p>Hung waiting on a single raw block. Despite 4 swarm peers being
+connected (four hosts on the LAN, last-octet labels <code>.1/.2/.3/.4</code>),
+bitswap reports <code>partners [0]</code>.</p>
+<h3 id="bdfbfed9-771a-4a18-a341-20f78b4b77b4">2. Per-peer bitswap ledgers</h3>
+<table>
+  <thead>
+      <tr>
+          <th>peer (ip)</th>
+          <th>exchanges</th>
+          <th>bytes received</th>
+          <th>note</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>12D3KooWPus3</code> (.1)</td>
+          <td>3</td>
+          <td>14323</td>
+          <td>started serving, then stopped</td>
+      </tr>
+      <tr>
+          <td><code>12D3KooWCRRA</code> (.2)</td>
+          <td>0</td>
+          <td>0</td>
+          <td>connected at libp2p, never bitswap</td>
+      </tr>
+      <tr>
+          <td><code>12D3KooWMFE2</code> (.3)</td>
+          <td>0</td>
+          <td>0</td>
+          <td>&quot;</td>
+      </tr>
+      <tr>
+          <td><code>12D3KooWNPt4</code> (.4)</td>
+          <td>0</td>
+          <td>0</td>
+          <td>&quot;</td>
+      </tr>
+  </tbody>
+</table>
+<p>Routing.Type = <code>none</code> (DHT off, fine for private LAN). No swarm key.
+<code>findprovs</code> is therefore useless. The 5th &ldquo;bootstrap&rdquo; peer
+<code>12D3KooWKG85</code> is on the requesting host itself — a stale entry from a
+previous identity (different PeerID), harmless.</p>
+<p>The user confirms: pinned the CID on &gt;=2 nodes in the past, then
+unpinned. <code>ipfs repo gc</code> never runs (no <code>--enable-gc</code> in cmdline,
+<code>GCPeriod=1500000h</code>, <code>StorageGCWatermark=90/2TB</code>). So unpinned data
+should still be on disk.</p>
+<h3 id="00a0c9cc-772f-4402-a247-81b9af69d4ac">3. node-1 (.1) logs</h3>
+<p><code>clk nd logs --job ipfs --node node-1 --stderr</code> shows a Go runtime
+panic on every startup, in quic-go, on arm64:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>exec ipfs daemon --migrate=true --enable-pubsub-experiment
+</span></span><span style="display:flex;"><span>INFO failed to sufficiently increase receive buffer size ...
+</span></span><span style="display:flex;"><span>runtime: pcdata is 7 and 5 locals stack map entries for
+</span></span><span style="display:flex;"><span>  github.com/quic-go/quic-go.(*outgoingStreamsMap[go.shape.*uint8]).OpenStream
+</span></span><span style="display:flex;"><span>fatal error: bad symbol table
+</span></span></code></pre></div><p>Repeated across many supervisor restarts. The panic is in
+<code>runtime.(*stkframe).getStackMap</code> during <code>copystack</code> — classic symptom
+of an invalid pclntab / corrupted binary or memory.</p>
+<h3 id="3bd97453-4434-4733-9571-d198688751b1">4. Hash the binary inside the image</h3>
+<table>
+  <thead>
+      <tr>
+          <th>node</th>
+          <th>sha256 of /usr/local/bin/ipfs</th>
+          <th>version</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>node-2</td>
+          <td><code>456392265a6fea33fc457f37fbf2c9aa32680430c29215de3d716a3e148e01c9</code></td>
+          <td>0.39.0</td>
+      </tr>
+      <tr>
+          <td>node-1</td>
+          <td><code>fc63cb930b70066561db9cc475f23438f48abda4f8fb448bd6f566843e5d29c2</code></td>
+          <td>0.39.0</td>
+      </tr>
+  </tbody>
+</table>
+<p>Different hashes for the same image tag. <code>docker rmi --force</code> +
+re-pull on node-1 produced <code>fc63...</code> again. So the image fetched
+into node-1&rsquo;s docker storage is deterministically <strong>different</strong>
+from the one on node-2. The same tag in the registry is the
+same; <code>docker image inspect</code> would have settled which case applies,
+but the actual root cause was revealed by the next step.</p>
+<h3 id="87f9c290-7a82-41da-8df2-c25a9bef15ca">5. Read-stability test on the binary</h3>
+<p>Storage layout on node-1:</p>
+<ul>
+<li>root FS on SD card (<code>/dev/mmcblk0p2</code>, 14 GB)</li>
+<li>Docker storage driver: <code>overlay2</code> on extfs</li>
+<li>Last ext4 fsck: <code>Sat Aug 17 12:11:40 2024</code>, mount count 84, state
+&ldquo;clean&rdquo;, errors-behavior &ldquo;Continue&rdquo;</li>
+<li>dmesg/journal: no I/O errors (box was just rebooted today, ring
+buffer was empty)</li>
+</ul>
+<p>Read the same on-disk file twice with the page cache flushed in
+between:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#953800">F</span><span style="color:#0550ae">=</span>/var/lib/docker/overlay2/5f4262.../diff/usr/local/bin/ipfs
+</span></span><span style="display:flex;"><span>sha256sum <span style="color:#0a3069">&#34;</span><span style="color:#953800">$F</span><span style="color:#0a3069">&#34;</span>                       <span style="color:#57606a"># -&gt; fc63cb93...</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0550ae">3</span> &gt; /proc/sys/vm/drop_caches
+</span></span><span style="display:flex;"><span>sha256sum <span style="color:#0a3069">&#34;</span><span style="color:#953800">$F</span><span style="color:#0a3069">&#34;</span>                       <span style="color:#57606a"># -&gt; 931a207d...</span>
+</span></span></code></pre></div><p>Two different hashes for the same file in the same fs, no writes in
+between. The block device is returning different bytes on successive
+reads.</p>
+<h2 id="9118464f-a0ab-4ad2-8401-a3cf756b7f11">Root cause</h2>
+<p>The SD card on node-1 is silently corrupting reads (or has
+corrupted writes that now read back as random garbage). No kernel
+error, no ext4 error — just bit-flipping NAND. ext4 metadata_csum
+catches metadata corruption but file data has no checksum. Classic
+end-of-life SD card after a long stretch of Docker-style write load.</p>
+<p>This explains the whole chain:</p>
+<ul>
+<li>Go runtime panics with &ldquo;bad symbol table&rdquo; → the executable&rsquo;s
+pclntab / itab data read back as random bytes.</li>
+<li><code>docker rmi --force</code> + re-pull doesn&rsquo;t fix it → new bytes land on
+the same flaky NAND blocks (or the corruption is on read, not
+write).</li>
+<li>Hash differs from node-2 → node-2&rsquo;s SD reads its bytes
+correctly.</li>
+<li>Same wrong hash twice in a row earlier in the session → page
+cache; flushing it surfaces the instability.</li>
+<li>Why the network used to serve this CID and now doesn&rsquo;t →
+node-1 is the (only?) node that has the leaf block; its
+daemon can no longer stay up to serve it.</li>
+</ul>
+<h2 id="27419042-ee20-43c0-9d07-41ae0c4e7135">Remediation</h2>
+<ol>
+<li><strong>Replace node-1&rsquo;s SD card.</strong> Every read can return different
+garbage; nothing on it is trustworthy.</li>
+<li>Before replacing, attempt to <code>rsync</code> the ipfs blocks volume off
+node-1; corrupted blocks will be rejected by ipfs on the
+receiving side (CID mismatch) so we keep whatever survives.</li>
+<li>Verify on .2/.3/.4 whether any other node has the missing
+leaf block:
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk nd <span style="color:#6639ba">exec</span> ipfs &lt;node&gt; -- ipfs block stat --offline <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku
+</span></span></code></pre></div>If yes, the current <code>ipfs get</code> can finish once node-1 stops
+poisoning the bitswap session, or with a one-shot
+<code>ipfs swarm connect</code> refresh after disabling node-1&rsquo;s job.</li>
+<li>When replacing, pick a quality card — see
+<a class="internal-link" href="/braindump/posts/raspberry_pi_sd_card/">Raspberry Pi SD Card</a>
+(SanDisk A1 / Extreme Pro hold up under Pi workloads). USB-SSD
+or NVMe HAT remain the safest option for heavy write load.</li>
+</ol>
+<h2 id="8759c530-e7e0-4f12-983f-9790b2d52e6d">Can the corrupted card be reused after reformatting?</h2>
+<p>Short answer: no, treat it as dead for any role you care about.</p>
+<p>Reformatting only rewrites filesystem metadata. It does not reset
+the underlying NAND, does not restore the controller&rsquo;s reserve
+blocks, and does not change which physical cells are flaky. What we
+observed — same file producing two different sha256 on successive
+reads — is the classic signature of <strong>NAND wear-out</strong>: the controller&rsquo;s
+Flash Translation Layer (FTL) has run out of spare blocks to remap
+writes to, so reads now hit marginal cells that flip bits. The cells
+are degraded silicon; no software can fix that.</p>
+<p>Less likely but possible alternatives, in decreasing order of
+plausibility for this card:</p>
+<ul>
+<li>Counterfeit / fake-capacity card where writes past the real end
+wrap around and corrupt earlier sectors.</li>
+<li>One-off voltage glitch or kernel driver bug (would not reproduce
+deterministically the way ours did).</li>
+</ul>
+<h3 id="cdac8684-9397-432e-b7e9-b77530c94ff2">Confirming wear-out (destructive)</h3>
+<p>Do this with the card in a USB reader on a different machine, not in
+the Pi. <code>/dev/sdX</code> must be carefully verified (<code>lsblk</code> first).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo umount /dev/sdX*
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># f3: purpose-built SD validation; also catches fake capacity</span>
+</span></span><span style="display:flex;"><span>sudo apt install f3
+</span></span><span style="display:flex;"><span>sudo f3probe --destructive --time-ops /dev/sdX
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># then full write + read-back cycle on a fresh fs:</span>
+</span></span><span style="display:flex;"><span>sudo f3write /mnt/sd
+</span></span><span style="display:flex;"><span>sudo f3read  /mnt/sd
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># alternative: badblocks destructive write+read test</span>
+</span></span><span style="display:flex;"><span>sudo badblocks -wsv -b <span style="color:#0550ae">4096</span> /dev/sdX
+</span></span></code></pre></div><p>A <strong>failed</strong> test (any reported corrupted sector / bad block) is
+definitive: card is dead, bin it.</p>
+<h3 id="79aa492b-cc34-4be6-ad91-f270b98fe653">Why a passing test does not certify the card</h3>
+<p>The asymmetry matters: failure proves bad, success proves nothing.
+The reasons are fundamental to flash, not limitations of the tools:</p>
+<ul>
+<li><strong>No predictive value.</strong> SD health is a function of <em>future</em>
+behaviour under the real workload — retention over weeks, wear
+progression under writes, bit-flip rate at temperature. No
+point-in-time test can predict that.</li>
+<li><strong>No telemetry exposed.</strong> Consumer SD cards have no SMART, no
+reserve-block count, no wear-level counter, no retention metric.
+The controller hides everything behind the FTL; you are testing a
+black box that reveals nothing about its remaining life.</li>
+<li><strong>Tests refresh what they touch.</strong> Destructive write+read tests
+rewrite every sector. The controller may remap them to known-good
+blocks, so the test reads back fresh data. Real-world use writes
+once and reads months later — that is when retention failures
+appear, and the test cannot simulate it within seconds.</li>
+<li><strong>Probabilistic flips are under-sampled.</strong> A marginal cell might
+flip 1 read in 1000. Single-pass tests miss this; sustained
+workload doesn&rsquo;t.</li>
+<li><strong>Logical layer only.</strong> f3 / badblocks address LBAs. The FTL&rsquo;s
+remap is opaque — the cells that misbehaved earlier may never be
+re-addressed during the test.</li>
+</ul>
+<p>A retention soak (write, unpower for weeks, read back) under
+thermal/write stress matching the real workload would come closest,
+but even that only certifies the card <strong>up to that point</strong>.</p>
+<h3 id="130e4b45-5b32-46b1-99ff-dc697924e1b6">Conclusion</h3>
+<p>The rule &ldquo;definitive good, or drop it&rdquo; collapses cleanly:</p>
+<table>
+  <thead>
+      <tr>
+          <th>card state</th>
+          <th>definitive verdict possible?</th>
+          <th>action</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>brand new, unused</td>
+          <td>yes — <code>f3probe</code> catches fakes / infant mortality</td>
+          <td>run f3probe before deploying</td>
+      </tr>
+      <tr>
+          <td>in service, no symptoms</td>
+          <td>no</td>
+          <td>leave alone, monitor with scrub</td>
+      </tr>
+      <tr>
+          <td>in service, has shown bit-flips</td>
+          <td>no — bad is definitive, &ldquo;good&rdquo; isn&rsquo;t</td>
+          <td>bin it</td>
+      </tr>
+  </tbody>
+</table>
+<p>For node-1&rsquo;s card: bit-flips observed → no test can recover
+it. Replace.</p>
+<p>For replacement cards: see
+<a class="internal-link" href="/braindump/posts/raspberry_pi_sd_card/">Raspberry Pi SD Card</a>.
+Combined with the btrfs root + weekly <code>btrfs scrub</code> setup, the next
+failure will be loud and immediate instead of silent.</p>
+<h2 id="7125e536-e649-4a71-9ae8-34d1a09d46c8">Periodic detection — nomad sysbatch sentinel</h2>
+<p>The cheapest reliable detector for the failure mode we hit is the
+same one that found it: read a static file twice with the page cache
+flushed between reads, alert on hash divergence. Add a 1 MiB
+write+read-back to also catch write-side rot.</p>
+<p>Shape: <code>type = &quot;sysbatch&quot;</code> (one alloc per node) + <code>periodic</code>
+(cron-style schedule) + <code>raw_exec</code> (host-level, root, so it can
+write to <code>/proc/sys/vm/drop_caches</code>). Failure is signalled by a
+non-zero exit; nomad will surface it via <code>clk nd status</code> and the
+alloc&rsquo;s stderr will contain the diagnostic line.</p>
+<p>The name keeps <code>sdrot</code> even though the probe is media-agnostic: the
+SD card is the medium most likely to fail this way in this fleet,
+and the check still runs harmlessly on SSD/HDD-backed nodes.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">job</span> <span style="color:#0a3069">&#34;sdrot&#34;</span> {
+</span></span><span style="display:flex;"><span>  datacenters <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;dc1&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>  type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;sysbatch&#34;</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">  # Read-stability sentinel for the root filesystem. Detects silent
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">  # NAND bit-flips that ext4 cannot — same technique that caught the
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">  # node-1 failure.
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">periodic</span> {
+</span></span><span style="display:flex;"><span>    crons             <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;0 0 12 * * *&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    prohibit_overlap <span style="color:#0550ae">=</span> <span style="color:#cf222e">true</span>
+</span></span><span style="display:flex;"><span>    time_zone        <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;Europe/Paris&#34;</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">group</span> <span style="color:#0a3069">&#34;sdrot&#34;</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">ephemeral_disk</span> {
+</span></span><span style="display:flex;"><span>      size <span style="color:#0550ae">=</span> <span style="color:#0550ae">50</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">task</span> <span style="color:#0a3069">&#34;sdrot&#34;</span> {
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">logs</span> {
+</span></span><span style="display:flex;"><span>        max_files     <span style="color:#0550ae">=</span> <span style="color:#0550ae">5</span>
+</span></span><span style="display:flex;"><span>        max_file_size <span style="color:#0550ae">=</span> <span style="color:#0550ae">5</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      driver <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;raw_exec&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">config</span> {
+</span></span><span style="display:flex;"><span>        command <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;${NOMAD_TASK_DIR}/sentinel.sh&#34;</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">template</span> {
+</span></span><span style="display:flex;"><span>        destination <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;local/sentinel.sh&#34;</span>
+</span></span><span style="display:flex;"><span>        perms       <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;755&#34;</span>
+</span></span><span style="display:flex;"><span>        data        <span style="color:#0550ae">=</span> <span style="color:#f6f8fa;background-color:#82071e">&lt;&lt;-</span><span style="color:#cf222e">EOH</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">        #!/bin/sh
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">        # Storage read-stability sentinel. Runs as root via raw_exec
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">        # because /proc/sys/vm/drop_caches needs write privilege.
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">        # Non-zero exit =&gt; nomad marks the alloc failed.
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>        <span style="color:#cf222e">set</span> <span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">u</span>
+</span></span><span style="display:flex;"><span>        TARGET<span style="color:#0550ae">=</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">usr</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">lib</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">os</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">release</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">        # 1. Read-stability of a static system file.
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>        a<span style="color:#0550ae">=</span><span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#1f2328">(</span><span style="color:#cf222e">sha256sum</span> <span style="color:#0a3069">&#34;$TARGET&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">|</span> <span style="color:#cf222e">awk</span> <span style="color:#f6f8fa;background-color:#82071e">&#39;</span>{<span style="color:#cf222e">print</span> <span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#0550ae">1</span>}<span style="color:#f6f8fa;background-color:#82071e">&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">echo</span> <span style="color:#0550ae">3</span> <span style="color:#f6f8fa;background-color:#82071e">&gt;</span> <span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">proc</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">sys</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">vm</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">drop_caches</span>
+</span></span><span style="display:flex;"><span>        b<span style="color:#0550ae">=</span><span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#1f2328">(</span><span style="color:#cf222e">sha256sum</span> <span style="color:#0a3069">&#34;$TARGET&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">|</span> <span style="color:#cf222e">awk</span> <span style="color:#f6f8fa;background-color:#82071e">&#39;</span>{<span style="color:#cf222e">print</span> <span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#0550ae">1</span>}<span style="color:#f6f8fa;background-color:#82071e">&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        if [ &#34;$a&#34; !<span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;$b&#34;</span> <span style="color:#1f2328">]</span><span style="color:#f6f8fa;background-color:#82071e">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">echo</span> <span style="color:#0a3069">&#34;FAIL read-stability $TARGET: $a vs $b&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">&gt;&amp;</span><span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">exit</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">fi</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">        # 2. Write + read-back of 1 MiB random data (catches write-side rot).
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>        T<span style="color:#0550ae">=</span><span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#1f2328">(</span><span style="color:#cf222e">mktemp</span> <span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">var</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">tmp</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">sdrot</span><span style="color:#1f2328">.</span><span style="color:#cf222e">XXXXXX</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">trap</span> <span style="color:#f6f8fa;background-color:#82071e">&#39;</span><span style="color:#cf222e">rm</span> <span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">f</span> <span style="color:#0a3069">&#34;$T&#34;</span><span style="color:#f6f8fa;background-color:#82071e">&#39;</span> <span style="color:#cf222e">EXIT</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">head</span> <span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">c</span> <span style="color:#0550ae">1048576</span> <span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">dev</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">urandom</span> <span style="color:#f6f8fa;background-color:#82071e">&gt;</span> <span style="color:#0a3069">&#34;$T&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">sync</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">echo</span> <span style="color:#0550ae">3</span> <span style="color:#f6f8fa;background-color:#82071e">&gt;</span> <span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">proc</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">sys</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">vm</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">drop_caches</span>
+</span></span><span style="display:flex;"><span>        expected<span style="color:#0550ae">=</span><span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#1f2328">(</span><span style="color:#cf222e">sha256sum</span> <span style="color:#0a3069">&#34;$T&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">|</span> <span style="color:#cf222e">awk</span> <span style="color:#f6f8fa;background-color:#82071e">&#39;</span>{<span style="color:#cf222e">print</span> <span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#0550ae">1</span>}<span style="color:#f6f8fa;background-color:#82071e">&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">echo</span> <span style="color:#0550ae">3</span> <span style="color:#f6f8fa;background-color:#82071e">&gt;</span> <span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">proc</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">sys</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">vm</span><span style="color:#f6f8fa;background-color:#82071e">/</span><span style="color:#cf222e">drop_caches</span>
+</span></span><span style="display:flex;"><span>        got<span style="color:#0550ae">=</span><span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#1f2328">(</span><span style="color:#cf222e">sha256sum</span> <span style="color:#0a3069">&#34;$T&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">|</span> <span style="color:#cf222e">awk</span> <span style="color:#f6f8fa;background-color:#82071e">&#39;</span>{<span style="color:#cf222e">print</span> <span style="color:#f6f8fa;background-color:#82071e">$</span><span style="color:#0550ae">1</span>}<span style="color:#f6f8fa;background-color:#82071e">&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        if [ &#34;$expected&#34; !<span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;$got&#34;</span> <span style="color:#1f2328">]</span><span style="color:#f6f8fa;background-color:#82071e">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">echo</span> <span style="color:#0a3069">&#34;FAIL write-readback: $expected vs $got&#34;</span> <span style="color:#f6f8fa;background-color:#82071e">&gt;&amp;</span><span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#cf222e">exit</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">EOH</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">resources</span> {
+</span></span><span style="display:flex;"><span>        cpu    <span style="color:#0550ae">=</span> <span style="color:#0550ae">50</span>
+</span></span><span style="display:flex;"><span>        memory <span style="color:#0550ae">=</span> <span style="color:#0550ae">30</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="c4a8fa5d-9457-4c1e-b168-9526f4e17ee9">Lessons / pointers</h2>
+<ul>
+<li><code>partners [0]</code> in <code>ipfs bitswap stat</code>, despite peers in
+<code>swarm peers</code>, means no peer currently has open bitswap sessions
+with us / acknowledges our wants. Always check this before
+blaming peers.</li>
+<li><code>Routing.Type = &quot;none&quot;</code> makes <code>ipfs routing findprovs</code> a no-op.</li>
+<li><code>GC</code> does not run automatically unless <code>ipfs daemon --enable-gc</code>
+and a threshold is exceeded — unpinning is not the same as
+deleting.</li>
+<li>For SD-card silent corruption: do not trust <code>dumpe2fs</code> &ldquo;clean&rdquo;,
+do not trust dmesg quiet. Do a <strong>read-stability test</strong> with
+<code>echo 3 &gt; /proc/sys/vm/drop_caches</code> between two reads of the
+same file. Differing hashes = storage is bad. This is also the
+cheapest fsck-equivalent for Docker on overlay2 (where layer
+blobs aren&rsquo;t content-addressable on disk).</li>
+<li>For Docker layer integrity, the in-disk story depends on the
+backend: <code>overlay2</code> = extracted, not addressable; the <strong>containerd
+snapshotter</strong> keeps blobs content-addressed and can be fsck&rsquo;d by
+recomputing each file&rsquo;s sha256 vs its filename.</li>
+</ul>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a class="internal-link" href="/braindump/posts/ipfs_get_hangs_on_the_empty_content_leaf_block/">ipfs get hangs on the empty-content leaf block</a></li>
+</ul>
+<h2 id="permalink"><a class="internal-link" href="/braindump/de1c1b57-4d33-46d2-a1a8-6d6efccc75ba?title=investigate_an_ipfs_issue_leads_to_finding_out_corrupted_sd_card">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+      </div>
+	  <aside class="date"><time>Last updated: 25 May 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 May 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
