@@ -482,20 +482,17 @@ const persister = createIndexedDbPersister(store, 'organiser');
 const appRootEl = document.querySelector('app-root');
 function renderApp(){ appRootEl?.requestUpdate(); }
 
-// Drain the IndexedDB replay before listening: an earlier listener
-// would fire renderApp once per replayed write.
 await persister.startAutoLoad();
 store.addTablesListener(renderApp);
 renderApp();
 await persister.startAutoSave();
-// startAutoSave debounces — this parallel listener bumps a counter
-// on each completed write so the persistence test waits on a signal,
-// not on a delay.
+
 let _persistSeq = 0;
-store.addTablesListener(async () => {
-    await persister.save();
-    document.body.setAttribute('data-persist-seq', String(++_persistSeq));
+persister.addStatusListener((_, status) => {
+    if(status === 0) document.body.setAttribute(
+        'data-persist-seq', String(++_persistSeq));
 });
+
 document.body.setAttribute('data-app-ready', '1');
 startSync();
 
