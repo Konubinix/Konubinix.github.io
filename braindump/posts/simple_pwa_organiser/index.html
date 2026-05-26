@@ -254,7 +254,12 @@ store or <code>ui</code>.</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">      &lt;&lt;app-template-context-menu&gt;&gt;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    `</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
-</span></span></code></pre></div><p>See <a class="internal-link" href="#7c2a5e10-2b02-4a91-9002-00000000000f">Sync across devices</a> for <code>MergeableStore</code> and <code>startSync()</code>.</p>
+</span></span></code></pre></div><p>See <a class="internal-link" href="#7c2a5e10-2b02-4a91-9002-00000000000f">Sync across devices</a> for <code>MergeableStore</code> and <code>startSync()</code>.
+TinyBase persisters expose a status listener that fires on
+every transition between idle, loading and saving; the boot
+wires the idle return to a body attribute <code>data-persist-seq</code>
+so the <a class="internal-link" href="#7c2a5e10-2b02-4a91-9002-00000000000a">persistence test</a> can wait on a counter rather
+than on a debounce delay.</p>
 <div class="konix-block-name-marker" data-name="init"></div>
 <p><a id="code-snippet--init"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">createMergeableStore</span> <span style="color:#1f2328">}</span> <span style="color:#1f2328">from</span> <span style="color:#0a3069">&#39;tinybase&#39;</span><span style="color:#1f2328">;</span>
@@ -267,20 +272,17 @@ store or <code>ui</code>.</p>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">appRootEl</span> <span style="color:#0550ae">=</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">querySelector</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;app-root&#39;</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">renderApp</span><span style="color:#1f2328">(){</span> <span style="color:#1f2328">appRootEl</span><span style="color:#0550ae">?</span><span style="color:#1f2328">.</span><span style="color:#1f2328">requestUpdate</span><span style="color:#1f2328">();</span> <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a">// Drain the IndexedDB replay before listening: an earlier listener
-</span></span></span><span style="display:flex;"><span><span style="color:#57606a">// would fire renderApp once per replayed write.
-</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span><span style="color:#cf222e">await</span> <span style="color:#1f2328">persister</span><span style="color:#1f2328">.</span><span style="color:#1f2328">startAutoLoad</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">await</span> <span style="color:#1f2328">persister</span><span style="color:#1f2328">.</span><span style="color:#1f2328">startAutoLoad</span><span style="color:#1f2328">();</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">store</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addTablesListener</span><span style="color:#1f2328">(</span><span style="color:#1f2328">renderApp</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">renderApp</span><span style="color:#1f2328">();</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">await</span> <span style="color:#1f2328">persister</span><span style="color:#1f2328">.</span><span style="color:#1f2328">startAutoSave</span><span style="color:#1f2328">();</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a">// startAutoSave debounces — this parallel listener bumps a counter
-</span></span></span><span style="display:flex;"><span><span style="color:#57606a">// on each completed write so the persistence test waits on a signal,
-</span></span></span><span style="display:flex;"><span><span style="color:#57606a">// not on a delay.
-</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span><span style="color:#cf222e">let</span> <span style="color:#1f2328">_persistSeq</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span>
-</span></span><span style="display:flex;"><span><span style="color:#1f2328">store</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addTablesListener</span><span style="color:#1f2328">(</span><span style="color:#cf222e">async</span> <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">await</span> <span style="color:#1f2328">persister</span><span style="color:#1f2328">.</span><span style="color:#1f2328">save</span><span style="color:#1f2328">();</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;data-persist-seq&#39;</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">String</span><span style="color:#1f2328">(</span><span style="color:#0550ae">++</span><span style="color:#1f2328">_persistSeq</span><span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">let</span> <span style="color:#1f2328">_persistSeq</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">persister</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addStatusListener</span><span style="color:#1f2328">((</span><span style="color:#1f2328">_</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">status</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">status</span> <span style="color:#0550ae">===</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#39;data-persist-seq&#39;</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">String</span><span style="color:#1f2328">(</span><span style="color:#0550ae">++</span><span style="color:#1f2328">_persistSeq</span><span style="color:#1f2328">));</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;data-app-ready&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;1&#39;</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">startSync</span><span style="color:#1f2328">();</span>
 </span></span></code></pre></div><h2 id="a4d3f201-3c03-4b92-9003-000000000005">Visual basics</h2>
@@ -2391,10 +2393,10 @@ it back before the first render. This chapter is just the
 regression test — a box added in one session is still there in
 the next.</p>
 <p>The race between Save and reload is settled by the
-<code>data-persist-seq</code> signal from <a class="internal-link" href="#a4d3f201-3c03-4b92-9003-000000000004">Initial load</a>: a save-on-change
-listener bumps the attribute once the IndexedDB write returns,
-and the test waits on that counter rather than guessing at the
-debounce window.</p>
+<code>data-persist-seq</code> signal from <a class="internal-link" href="#a4d3f201-3c03-4b92-9003-000000000004">Initial load</a>: a status
+listener bumps the attribute every time the persister leaves
+the saving state, and the test waits on that counter rather
+than guessing at the debounce window.</p>
 <div class="konix-block-name-marker" data-name="test-persistence"></div>
 <p><a id="code-snippet--test-persistence"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
@@ -3002,17 +3004,6 @@ totals about 53 lines. The bridges in the previous attempts
 ran 45 to 225 lines (see <a class="internal-link" href="#146594fa-0478-4e0c-8c6a-a422ef73e6a3">choice of technology</a>) — code whose
 only job was to keep two engines in step. Here, there is no
 second engine.</p>
-<p>The tests reach for what a user actually does. A box is
-located by its photo content, not by a label the user never
-reads. <code>add_box</code> drives the same upload-and-save the user
-performs. <code>get_by_role</code> replaces CSS-class probes. The few
-places where tests still touch internals — drag clones, the
-spotlight animation marker, layout sanity — are bounded: the
-user sees those without naming them.</p>
-<p>What snags: the boot sequence still keeps two hand-rolled
-workarounds (drain the replay before listening, parallel
-listener for the persistence counter). Documented inline in
-<a class="internal-link" href="#a4d3f201-3c03-4b92-9003-000000000004">Initial load</a>. First candidates to remove in a next iteration.</p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/a4ddc6b7-f78e-42c4-8446-1c5d8405e8b7?title=simple_pwa_organiser">Permalink</a></h2>
 <style>
 .konix-block-name-marker { display: none; }
