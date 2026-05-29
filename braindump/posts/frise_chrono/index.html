@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html><title>frise chrono</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Frise Chrono</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>I have years of photos and videos sitting in Postgres, exposed through
+<a target="_blank" href="https://postgrest.org/">PostgREST</a> (the <a class="internal-link" href="/braindump/posts/wip_ipfsdocs_slider_alpinejs/">ipfsdocs slider</a> reads them). The slider walks them
+one at a time; what I miss is the <strong>shape of time</strong> — seeing a whole stretch of
+months at once, each photo pinned where it actually happened, the way a wall
+timeline reads at a glance.</p>
+<p>Let&rsquo;s build that frise: a horizontal time ruler with month and year graduations,
+photos posed by date above it.</p>
+<h2 id="0b1d2e3f-0002-4000-8000-000000000001">Choice of technology</h2>
+<p>My last local-first app, the <a class="internal-link" href="/braindump/posts/simple_pwa_organiser/">organiser</a>, leaned on <a target="_blank" href="https://tinybase.org/">TinyBase</a> because its
+data was born on the device and had to merge across phones — a job for a
+<a target="_blank" href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">CRDT</a>. The frise is the opposite case. The photos already live in Postgres;
+the database <strong>is</strong> the source of truth, and the app only reads it (the rare
+write — tagging, changing a state — is a fire-and-forget that invalidates a
+cache, not a concurrent edit to reconcile). No CRDT, no local store to keep
+in step with a remote one.</p>
+<p>That reframes the lesson I took from the organiser. The trap there was never
+&ldquo;two engines&rdquo; as such — it was the <strong>hand-written bridge</strong> between a render
+engine and a CRDT, kept in sync by code I had to maintain. Two engines are
+fine when the bridge between them ships with the libraries and the data flows
+one way. A read-mostly app is exactly that setting: data comes down, events
+go up, nothing merges.</p>
+<p>So I get to try a fresh combo, picked so the bridge is off-the-shelf:</p>
+<ul>
+<li><strong><a target="_blank" href="https://www.graphile.org/postgraphile/">PostGraphile</a></strong> exposes the same Postgres as a GraphQL API — the
+experiment I want to run alongside the existing PostgREST.</li>
+<li><strong><a target="_blank" href="https://formidable.com/open-source/urql/">urql</a></strong> is a small GraphQL client whose normalised cache <strong>is</strong> the read
+store: PostGraphile fills it, the UI reads from it. Its
+<a target="_blank" href="https://www.npmjs.com/package/@urql/preact">Preact bindings</a> are the bridge I don&rsquo;t have to write.</li>
+<li><strong><a target="_blank" href="https://preactjs.com/">Preact</a></strong> + <strong><a target="_blank" href="https://github.com/developit/htm">HTM</a></strong> render with hooks and JSX-like tagged templates — no build
+step, loaded straight from <a target="_blank" href="https://esm.sh/">esm.sh</a> through an import map.</li>
+</ul>
+<p>The frise itself — the ruler, the month and year ticks, the photos placed by
+date — stays a bespoke component on plain CSS. A timeline library would drag
+in its own DOM and its own data model: a second store to reconcile with
+urql&rsquo;s, the hand-written bridge again, for a layout that is a few lines of
+<code>date → x</code>.</p>
+<h2 id="0b1d2e3f-0003-4000-8000-000000000001">Boot into a titled shell</h2>
+<p>Before a single photo has loaded, the screen must not read as broken. The
+minimum honest boot is a <strong>titled shell</strong>: the app mounts and names itself, so
+an empty screen says &ldquo;the frise, still loading&rdquo; rather than &ldquo;nothing
+happened&rdquo;. The loading and empty states proper come once there is a backend
+to be loading from; this first cycle only pins that the shell mounts and
+shows its name.</p>
+<p>The test opens the app and looks for the title by its heading role — the
+observable surface, stable across every later state the frise will grow.</p>
+<div class="konix-block-name-marker" data-name="test-boot"></div>
+<p><a id="code-snippet--test-boot"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_boots_into_titled_shell</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Opening the app shows the titled shell, so a blank screen never
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    reads as broken.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    open_app<span style="color:#1f2328">(</span>page<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>get_by_role<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;heading&#34;</span><span style="color:#1f2328">,</span> name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Frise chrono&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>is_visible<span style="color:#1f2328">(),</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;the app title isn&#39;t visible after load&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: boots into titled shell&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>Booting needs two things in the page: an import map naming where the render
+libraries come from, and a node to mount into. The map carries only what this
+cycle uses — Preact&rsquo;s <code>html</code> and <code>render</code>, bound together by HTM; the GraphQL
+client earns its entry when the first query does.</p>
+<div class="konix-block-name-marker" data-name="importmap"></div>
+<p><a id="code-snippet--importmap"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">script</span> <span style="color:#1f2328">type</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;importmap&#34;</span><span style="color:#1f2328">&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;imports&#34;</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;htm/preact&#34;</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#34;https://esm.sh/htm@3/preact&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">script</span><span style="color:#1f2328">&gt;</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="app-mount"></div>
+<p><a id="code-snippet--app-mount"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#1f2328">id</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;app&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span></code></pre></div><p>The boot itself renders the shell and raises a <code>data-app-ready</code> flag on the
+body, so the test waits on a deterministic signal rather than a guessed
+delay.</p>
+<div class="konix-block-name-marker" data-name="boot"></div>
+<p><a id="code-snippet--boot"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">html</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">render</span> <span style="color:#1f2328">}</span> <span style="color:#1f2328">from</span> <span style="color:#0a3069">&#39;htm/preact&#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">App</span><span style="color:#1f2328">(){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">html</span><span style="color:#0a3069">`&lt;h1&gt;Frise chrono&lt;/h1&gt;`</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">render</span><span style="color:#1f2328">(</span><span style="color:#1f2328">html</span><span style="color:#0a3069">`&lt;</span><span style="color:#0a3069">${</span><span style="color:#1f2328">App</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> /&gt;`</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getElementById</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;app&#39;</span><span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;data-app-ready&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;1&#39;</span><span style="color:#1f2328">);</span>
+</span></span></code></pre></div><p>A dark canvas under it all, so the shell doesn&rsquo;t flash white before the
+styles settle.</p>
+<div class="konix-block-name-marker" data-name="css-base"></div>
+<p><a id="code-snippet--css-base"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-css" data-lang="css"><span style="display:flex;"><span><span style="color:#1f2328">:</span><span style="color:#0550ae">root</span><span style="color:#1f2328">{</span> <span style="color:#953800">--bg</span><span style="color:#1f2328">:</span><span style="color:#0550ae">#1b1d2e</span><span style="color:#1f2328">;</span> <span style="color:#953800">--fg</span><span style="color:#1f2328">:</span><span style="color:#0550ae">#e8e8f0</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">body</span><span style="color:#1f2328">{</span> <span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>bg<span style="color:#1f2328">);</span> <span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>fg<span style="color:#1f2328">);</span> <span style="color:#cf222e">font-family</span><span style="color:#1f2328">:</span>system-ui<span style="color:#1f2328">,</span><span style="color:#cf222e">sans-serif</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">margin</span><span style="color:#1f2328">:</span><span style="color:#0550ae">0</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">}</span>
+</span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/f2606223-11a7-47eb-9f7f-1a1684b27c54?title=frise_chrono">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+      </div>
+	  <aside class="date"><time>Last updated: 29 May 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 May 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
