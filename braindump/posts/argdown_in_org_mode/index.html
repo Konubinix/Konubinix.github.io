@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html><title>argdown in org-mode</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Argdown in Org-Mode</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>I keep wanting to map arguments the way I write code: in plain text, in
+my <code>.org</code> files, versioned and linked into the rest of my notes, with a
+rendered graph falling out when I need to <strong>see</strong> the shape of a debate.
+<a target="_blank" href="https://argdown.org/">Argdown</a> is exactly that for the syntax — a Markdown-ish language where
+<code>[statements]</code> and <code>&lt;arguments&gt;</code> connect with <code>+</code> (support) and <code>-</code>
+(attack), and a <a target="_blank" href="https://en.wikipedia.org/wiki/Graphviz">Graphviz</a>-layouted map drops out the other end. What it
+<strong>isn&rsquo;t</strong>, yet, is org-mode-friendly: there&rsquo;s no <code>ob-argdown</code>, the CLI is
+file-centric, and it isn&rsquo;t packaged for Nix.</p>
+<p>This note is the bridge. Four pieces: a decision (keep Argdown, don&rsquo;t
+rebuild), a Nix flake that gives me an <code>argdown</code> binary, the org-babel
+layer <code>KONIX_argdown.el</code> (this note is its literate source) so a
+<code>#+begin_src argdown</code> block renders inline — as a web-component for
+publishing, or to a local <code>:file</code> for editing — and a <strong>collector</strong> so
+argdown fragments scattered across many notes aggregate into a
+synthesis map.</p>
+<h2 id="1f7c3a2b-0002-0000-0000-000000000001">Choice of direction</h2>
+<p>Three ways to get org-friendly argument maps: lean on Argdown as the
+engine and write a thin babel wrapper; reach for a different
+text→graph tool; or build my own argument-mapping notation from
+scratch. I want the first, and the reasoning is worth pinning so I
+don&rsquo;t relitigate it in six months.</p>
+<p><strong>Why not rebuild my own.</strong> The hard part of argument mapping isn&rsquo;t the
+syntax — it&rsquo;s the <strong>layout</strong>: placing premises above conclusions,
+grouping pro/con branches, routing edges without crossings. Argdown
+delegates that to Graphviz and has spent years getting the
+argument-specific layering right. Reinventing it is months of work for
+a worse result. The syntax I could rewrite in an afternoon; the layout
+I could not.</p>
+<p><strong>Why not a generic tool.</strong> The only mature text→graph tools that slot
+into org-babel cleanly are general-purpose — Graphviz (<code>ob-dot</code>),
+PlantUML, Mermaid. None of them understands the <strong>semantics</strong> of an
+argument: premise/conclusion structure, support vs attack,
+reconstruction into inference steps. I&rsquo;d be hand-encoding all of that
+into raw DOT, which is precisely the work Argdown already did.</p>
+<p><strong>Why Argdown is a safe bet right now.</strong> I checked its health before
+committing:</p>
+<ul>
+<li><code>@argdown/cli</code> shipped <strong>v2.0.0 on 2026-04-27</strong> — a real major release
+after a long quiet stretch (the prior release was v1.7.5 in Sept
+2021). The repo had a push the day I looked. So it&rsquo;s actively
+maintained again, though still essentially a single-maintainer
+project (Christian Voigt) — the one real risk to weigh.</li>
+<li>v2 requires <strong>Node ≥ 22.11</strong>. Fine; the flake pins its own Node.</li>
+<li>It is <strong>not</strong> in nixpkgs and ships <strong>no</strong> official flake. Hence the next
+chapter.</li>
+<li>The CLI reads a <strong>file</strong>, not stdin, but v2 <strong>can</strong> export to <strong>stdout</strong>
+(<code>--stdout</code>) and takes an explicit <code>-f</code> format. That dictates the
+babel bridge&rsquo;s shape — write the block body to a temp file, run the
+CLI with <code>-f svg --stdout</code>, redirect into <code>:file</code> (see <a class="internal-link" href="#1f7c3a2b-0004-0000-0000-000000000001">The org-babel
+bridge</a>). Without <code>--stdout</code> the second positional arg is a folder
+and the default format is PDF — a trap the smoke test caught.</li>
+</ul>
+<p>So: keep Argdown, package it, wrap it. The lock-in I accept is a Node
+runtime dependency — paid for once by the flake.</p>
+<h2 id="1f7c3a2b-0003-0000-0000-000000000001">Packaging argdown with Nix</h2>
+<p>Argdown isn&rsquo;t in nixpkgs, so I package the published npm CLI myself.
+The clean idiom for &ldquo;I just want this registry package as a Nix
+binary&rdquo; is <code>buildNpmPackage</code> wrapping a tiny throw-away package whose
+only dependency is <code>@argdown/cli</code>. Nix resolves the dependency tree
+from a lockfile, builds it offline, and I wrap the resulting
+<code>.bin/argdown</code> with Node on its <code>PATH</code>.</p>
+<p>The throw-away package is two lines of intent: depend on the CLI at
+the version I vetted.</p>
+<div class="konix-block-name-marker" data-name="package-json"></div>
+<p><a id="code-snippet--package-json"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#34;name&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;argdown-env&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#34;version&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;2.0.0&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#34;dependencies&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">{</span> <span style="color:#0550ae">&#34;@argdown/cli&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;2.0.0&#34;</span> <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>The lockfile is <strong>generated, not authored</strong> — npm resolves the full
+transitive tree. <code>--ignore-scripts</code> stops any postinstall (notably the
+Puppeteer/Chromium download path) from firing during resolution, and
+<code>--package-lock-only</code> means nothing is actually installed, just the
+lock written. Run this once after tangling <code>package.json</code>:</p>
+<div class="konix-block-name-marker" data-name="gen-lockfile"></div>
+<p><a id="code-snippet--gen-lockfile"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>npm install --package-lock-only --ignore-scripts
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;wrote </span><span style="color:#cf222e">$(</span><span style="color:#6639ba">pwd</span><span style="color:#cf222e">)</span><span style="color:#0a3069">/package-lock.json&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>up to date, audited 139 packages in 7s
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>38 packages are looking for funding
+</span></span><span style="display:flex;"><span>  run `npm fund` for details
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>12 vulnerabilities (4 moderate, 8 high)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>To address issues that do not require attention, run:
+</span></span><span style="display:flex;"><span>  npm audit fix
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>To address all issues (including breaking changes), run:
+</span></span><span style="display:flex;"><span>  npm audit fix --force
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Run `npm audit` for details.
+</span></span><span style="display:flex;"><span>wrote /home/sam/prog/devel/flakes/argdown/package-lock.json
+</span></span></code></pre></div><p>Now the flake. <code>dontNpmBuild</code> because there&rsquo;s nothing to compile — I
+only want the dependencies materialised. <code>installPhase</code> copies the
+resolved <code>node_modules</code> into the store and wraps the CLI&rsquo;s bin entry
+so it finds Node at runtime regardless of Argdown&rsquo;s internal <code>dist</code>
+path. <code>npmDepsHash</code> starts as <code>fakeHash</code>; the first build fails and
+hands me the real one to paste in (cf. Dev environment).</p>
+<div class="konix-block-name-marker" data-name="flake-nix"></div>
+<p><a id="code-snippet--flake-nix"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-nix" data-lang="nix"><span style="display:flex;"><span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>  description <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;Argdown CLI (SVG/DOT/PDF, no Puppeteer)&#34;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>  inputs<span style="color:#0550ae">.</span>nixpkgs<span style="color:#0550ae">.</span>url <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;github:NixOS/nixpkgs/nixos-unstable&#34;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  outputs <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span> self<span style="color:#0550ae">,</span> nixpkgs <span style="color:#1f2328">}:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">let</span>
+</span></span><span style="display:flex;"><span>      systems <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span> <span style="color:#0a3069">&#34;x86_64-linux&#34;</span> <span style="color:#0a3069">&#34;aarch64-linux&#34;</span> <span style="color:#0a3069">&#34;x86_64-darwin&#34;</span> <span style="color:#0a3069">&#34;aarch64-darwin&#34;</span> <span style="color:#1f2328">];</span>
+</span></span><span style="display:flex;"><span>      forAll  <span style="color:#0550ae">=</span> f<span style="color:#1f2328">:</span> nixpkgs<span style="color:#0550ae">.</span>lib<span style="color:#0550ae">.</span>genAttrs systems <span style="color:#1f2328">(</span>s<span style="color:#1f2328">:</span> f nixpkgs<span style="color:#0550ae">.</span>legacyPackages<span style="color:#0550ae">.</span><span style="color:#0a3069">${</span>s<span style="color:#0a3069">}</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">in</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>      packages <span style="color:#0550ae">=</span> forAll <span style="color:#1f2328">(</span>pkgs<span style="color:#1f2328">:</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        default <span style="color:#0550ae">=</span> pkgs<span style="color:#0550ae">.</span>buildNpmPackage <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>          pname <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;argdown-cli&#34;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>          version <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;2.0.0&#34;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>          src <span style="color:#0550ae">=</span> <span style="color:#0a3069">./.</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>          <span style="color:#57606a"># First build: leave fakeHash, copy the printed `got:` hash here.</span>
+</span></span><span style="display:flex;"><span>          npmDepsHash <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;sha256-npIaF9t8ySovuhwYYumNb0mS9qdhjkq9AdMDZ6rROnk=&#34;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>          dontNpmBuild <span style="color:#0550ae">=</span> <span style="color:#0550ae">true</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>          npmFlags <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span> <span style="color:#0a3069">&#34;--ignore-scripts&#34;</span> <span style="color:#1f2328">];</span>
+</span></span><span style="display:flex;"><span>          nativeBuildInputs <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span> pkgs<span style="color:#0550ae">.</span>makeWrapper <span style="color:#1f2328">];</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>          installPhase <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            runHook preInstall
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            mkdir -p $out/lib $out/bin
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            cp -r node_modules $out/lib/node_modules
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            makeWrapper $out/lib/node_modules/.bin/argdown $out/bin/argdown \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">              --prefix PATH : </span><span style="color:#0a3069">${</span>pkgs<span style="color:#0550ae">.</span>nodejs<span style="color:#0a3069">}</span><span style="color:#0a3069">/bin
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            runHook postInstall
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          &#39;&#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">};</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      devShells <span style="color:#0550ae">=</span> forAll <span style="color:#1f2328">(</span>pkgs<span style="color:#1f2328">:</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        default <span style="color:#0550ae">=</span> pkgs<span style="color:#0550ae">.</span>mkShell <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>          packages <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span> self<span style="color:#0550ae">.</span>packages<span style="color:#0550ae">.</span><span style="color:#0a3069">${</span>pkgs<span style="color:#0550ae">.</span>system<span style="color:#0a3069">}</span><span style="color:#0550ae">.</span>default <span style="color:#1f2328">];</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">};</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">};</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Getting the hash is a one-time <code>fakeHash</code> dance: build once, the
+build fails and prints the real <code>got: sha256-…</code>, paste it into
+<code>flake-nix</code> above. After that the hash is fixed and builds are
+reproducible. This block extracts the printed hash:</p>
+<div class="konix-block-name-marker" data-name="build-flake"></div>
+<p><a id="code-snippet--build-flake"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>nix build 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span> <span style="color:#1f2328">|</span> sed -n <span style="color:#0a3069">&#39;s/.*\(got:.*sha256-[A-Za-z0-9+/=]*\).*/\1/p&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># paste that hash into flake-nix, then re-run: nix build &amp;&amp; ./result/bin/argdown --version</span>
+</span></span></code></pre></div><h3 id="1f7c3a2b-0003-0000-0000-000000000002">Installing it: a hardlias</h3>
+<p>I don&rsquo;t <code>nix profile install</code> by hand. The convention here is a
+<strong>hardlias</strong>: a tiny wrapper in <code>~/prog/devel/bin/hardliases/</code> (already
+on <code>PATH</code>) that lazily <code>nix profile add=s the flake the first time the command is run — same shape as the =gcloud</code>, <code>hld</code>, … hardliases.
+So &ldquo;installing argdown&rdquo; is just tangling this script; the first
+<code>argdown</code> call builds and adds the flake, and every later call is a
+plain binary on <code>PATH</code>. <code>nix_install_binary NAME default FLAKEDIR</code>
+(from <code>_ko_nix.sh</code>) returns <code>~/.nix-profile/bin/NAME</code>, installing
+<code>FLAKEDIR#default</code> if absent.</p>
+<div class="konix-block-name-marker" data-name="argdown-hardlias"></div>
+<p><a id="code-snippet--argdown-hardlias"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#6639ba">source</span> _ko_nix.sh
+</span></span><span style="display:flex;"><span><span style="color:#953800">me</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>basename <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">0</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">bin</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>nix_install_binary <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">me</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;default&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">KONIX_DEVEL_DIR</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/flakes/argdown&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">bin</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$@</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><h2 id="1f7c3a2b-0004-0000-0000-000000000001">The org-babel bridge</h2>
+<p>This is the literate source of <code>~/prog/devel/elfiles/KONIX_argdown.el</code>.
+That file already existed, hand-written: an <code>argdown-mode</code> for editing
+<code>.argdown</code> and an <code>org-babel-execute:argdown</code> that rendered to an html
+web-component (the publish path, used by <a class="internal-link" href="/braindump/posts/est_ce_que_je_veux_faire_vacciner_mon_fils_de_6_ans_contre_le_covid/">several argument notes</a>) or
+pushed png/pdf to IPFS. I&rsquo;m not throwing that away — I&rsquo;m folding it in
+here and adding two things: render-to-<code>:file</code> (svg/dot/pdf/json, for
+editing and inline preview) and the cross-note <a class="internal-link" href="#1f7c3a2b-0006-0000-0000-000000000001">collector</a>. One
+dispatcher, branching on headers.</p>
+<p>The shape of every call: Argdown can&rsquo;t read <strong>stdin</strong> (its input is a
+file/glob), so the body goes through a temp <code>.argdown</code> file. For
+output, v2 grew <code>--stdout</code> — the clean path for the text formats (svg,
+dot, json, graphml) and the web-component. Two formats refuse stdout:
+<strong>pdf</strong> comes out empty on stdout, so it goes through a temp <strong>folder</strong>
+(<code>argdown map -f pdf IN DIR</code> writes <code>DIR/&lt;basename&gt;.pdf</code>); <strong>png</strong> has no
+Graphviz path at all without the Puppeteer plugin we skipped, so I
+render svg and convert it with ImageMagick. <code>--silent</code> keeps the
+output free of log noise.</p>
+<p>First the major mode and font-lock, kept verbatim from the original.</p>
+<div class="konix-block-name-marker" data-name="KONIX_argdown-mode"></div>
+<p><a id="code-snippet--KONIX-argdown-mode"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#57606a">;;; KONIX_argdown.el --- Argdown mode + org-babel  -*- lexical-binding: t; -*-</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; Copyright (C) 2021  konubinix</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; Author: konubinix &lt;konubinixweb@gmail.com&gt;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; This program is free software; you can redistribute it and/or modify</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; it under the terms of the GNU General Public License as published by</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; the Free Software Foundation, either version 3 of the License, or</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; (at your option) any later version.</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;;; Commentary:</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; Literate source: roam/argdown_in_org_mode.org.  Major mode + font-lock</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; for argdown, plus org-babel rendering (html web-component / :file</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; svg|dot|pdf|json / pdf|png to IPFS) and a cross-note fragment collector.</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;;; Code:</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">require</span> <span style="color:#032f62">&#39;ob</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">require</span> <span style="color:#032f62">&#39;cl-lib</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defface</span> <span style="color:#953800">argdown-supportive-claim-face</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">((</span><span style="color:#0550ae">t</span> <span style="color:#6639ba">:foreground</span> <span style="color:#0a3069">&#34;green&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Face for argdown supportive claims.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">:group</span> <span style="color:#032f62">&#39;argdown</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defface</span> <span style="color:#953800">argdown-unsupportive-claim-face</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">((</span><span style="color:#0550ae">t</span> <span style="color:#6639ba">:foreground</span> <span style="color:#0a3069">&#34;red&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Face for argdown unsupportive claims.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">:group</span> <span style="color:#032f62">&#39;argdown</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defface</span> <span style="color:#953800">argdown-countradict-claim-face</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">((</span><span style="color:#0550ae">t</span> <span style="color:#6639ba">:foreground</span> <span style="color:#0a3069">&#34;red&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Face for argdown countradict claims.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">:group</span> <span style="color:#032f62">&#39;argdown</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defvar</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#953800">argdown-highlights</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;\\[\\([^]]+\\)\\]:?&#34;</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#953800">font-lock-function-name-face</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;&lt;\\([^&gt;]+\\)&gt;:?&#34;</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#953800">font-lock-function-name-face</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;^ +\\(\\+\\) &#34;</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#032f62">&#39;argdown-supportive-claim-face</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;^ +\\(\\-\\) &#34;</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#032f62">&#39;argdown-unsupportive-claim-face</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;^ +\\(&gt;&lt;\\) &#34;</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#032f62">&#39;argdown-countradict-claim-face</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Specific argdown construct to highlight.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;;;###autoload</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">define-derived-mode</span> <span style="color:#953800">argdown-mode</span> <span style="color:#953800">markdown-mode</span> <span style="color:#0a3069">&#34;argdown&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Major mode for editing argdown document.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">font-lock-defaults</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span><span style="color:#953800">argdown-highlights</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">setq-local</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#953800">markdown-asymmetric-header</span> <span style="color:#0550ae">t</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#953800">markdown-unordered-list-item-prefix</span> <span style="color:#0a3069">&#34;  + &#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>The rendering helpers. <code>argdown--render</code> is the one place that knows
+the per-format quirks (stdout vs folder vs ImageMagick); everything
+else calls it.</p>
+<div class="konix-block-name-marker" data-name="argdown-helpers"></div>
+<p><a id="code-snippet--argdown-helpers"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--require-bin</span> <span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Error unless the </span><span style="color:#032f62">`argdown&#39;</span><span style="color:#0a3069"> CLI is reachable.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">unless</span> <span style="color:#1f2328">(</span><span style="color:#953800">executable-find</span> <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>error <span style="color:#0a3069">&#34;argdown: not on PATH — its hardlias lazily installs the flake; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">tangle/build it (see argdown_in_org_mode.org)&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--with-input</span> <span style="color:#1f2328">(</span><span style="color:#953800">body</span> <span style="color:#953800">fn</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Write BODY to a temp .argdown file and call FN with its absolute path.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">in</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-temp-file</span> <span style="color:#0a3069">&#34;argdown-&#34;</span> <span style="color:#0a3069">&#34;.argdown&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-file</span> <span style="color:#953800">in</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#953800">body</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">fn</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#953800">in</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--stdout</span> <span style="color:#1f2328">(</span><span style="color:#953800">fmt</span> <span style="color:#953800">in</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return the argdown map of INPUT file as a string, exported in FMT.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown map -f %s --stdout --silent %s&#34;</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">fmt</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--web-component</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return the argdown web-component html for INPUT file (publish path).&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown web-component --stdout --silent %s&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--render</span> <span style="color:#1f2328">(</span><span style="color:#953800">fmt</span> <span style="color:#953800">in</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Render INPUT file to OUT in FMT.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Text formats (svg, dot, json, graphml) go through --stdout; pdf through a
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">temp folder (it refuses stdout); png/jpg/webp by converting the svg with
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">ImageMagick (no Puppeteer needed).&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">cond</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">((</span><span style="color:#953800">string=</span> <span style="color:#953800">fmt</span> <span style="color:#0a3069">&#34;pdf&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">dir</span> <span style="color:#1f2328">(</span><span style="color:#953800">make-temp-file</span> <span style="color:#0a3069">&#34;argdown-pdf&#34;</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">unwind-protect</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown map -f pdf --silent %s %s&#34;</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">dir</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">made</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">car</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">directory-files</span> <span style="color:#953800">dir</span> <span style="color:#0550ae">t</span> <span style="color:#0a3069">&#34;\\.pdf\\&#39;&#34;</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#6639ba">unless</span> <span style="color:#953800">made</span> <span style="color:#1f2328">(</span>error <span style="color:#0a3069">&#34;argdown: pdf export produced no file&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#6639ba">copy-file</span> <span style="color:#953800">made</span> <span style="color:#953800">out</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#953800">delete-directory</span> <span style="color:#953800">dir</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">((</span><span style="color:#6639ba">member</span> <span style="color:#953800">fmt</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;png&#34;</span> <span style="color:#0a3069">&#34;jpg&#34;</span> <span style="color:#0a3069">&#34;webp&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">svg</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-temp-file</span> <span style="color:#0a3069">&#34;argdown-&#34;</span> <span style="color:#0a3069">&#34;.svg&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#953800">magick</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#1f2328">(</span><span style="color:#953800">executable-find</span> <span style="color:#0a3069">&#34;magick&#34;</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">executable-find</span> <span style="color:#0a3069">&#34;convert&#34;</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">unless</span> <span style="color:#953800">magick</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span>error <span style="color:#0a3069">&#34;argdown: need ImageMagick (magick/convert) to export %s&#34;</span> <span style="color:#953800">fmt</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-file</span> <span style="color:#953800">svg</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--stdout</span> <span style="color:#0a3069">&#34;svg&#34;</span> <span style="color:#953800">in</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;%s %s %s&#34;</span> <span style="color:#953800">magick</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#953800">svg</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">out</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#0550ae">t</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-file</span> <span style="color:#953800">out</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--stdout</span> <span style="color:#953800">fmt</span> <span style="color:#953800">in</span><span style="color:#1f2328">))))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--to-ipfs</span> <span style="color:#1f2328">(</span><span style="color:#953800">file</span> <span style="color:#953800">suffix</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Upload FILE to IPFS via </span><span style="color:#032f62">`konix/ipfa-buffer&#39;</span><span style="color:#0a3069">, return the URL plus SUFFIX.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">set-buffer-multibyte</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">insert-file-contents-literally</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/ipfa-buffer</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)</span> <span style="color:#953800">suffix</span><span style="color:#1f2328">)))</span>
+</span></span></code></pre></div><p>The dispatcher. <code>:file</code> wins (render there, return nil so Org inserts
+the link); otherwise <code>:results output html</code> gives the web-component,
+and <code>:results … pdf|png</code> upload to IPFS — exactly the modes the
+existing notes already use. With <code>:argdown-collect</code> the <a class="internal-link" href="#1f7c3a2b-0006-0000-0000-000000000001">collector</a>
+prepends fragments from other notes before rendering.</p>
+<div class="konix-block-name-marker" data-name="argdown-execute"></div>
+<p><a id="code-snippet--argdown-execute"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">org-babel-execute:argdown</span> <span style="color:#1f2328">(</span><span style="color:#953800">body</span> <span style="color:#953800">params</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Render an Argdown BODY.  Dispatch on headers:
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">- :file F                -&gt; write the map to F (svg/dot/json/graphml/pdf/png),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                            return nil so Org inserts the [[file:F]] link
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">- :results output html   -&gt; argdown web-component html (the publish path)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">- :results ... pdf|png   -&gt; render and upload to IPFS, return the URL
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Composition (prepended to BODY, in this order): :argdown-include REFS pulls named
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">blocks (local or </span><span style="color:#032f62">`file.org:name&#39;</span><span style="color:#0a3069">, recursive — see </span><span style="color:#032f62">`konix/argdown--expand-includes&#39;</span><span style="color:#0a3069">);
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">:argdown-collect SPEC pulls whole linked notes (see </span><span style="color:#032f62">`konix/argdown-collect&#39;</span><span style="color:#0a3069">).
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Argdown then merges everything by title.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">argdown--require-bin</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">inc</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">c</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">assq</span> <span style="color:#6639ba">:argdown-include</span> <span style="color:#953800">params</span><span style="color:#1f2328">))))</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#953800">c</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;%s&#34;</span> <span style="color:#953800">c</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">col</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">c</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">assq</span> <span style="color:#6639ba">:argdown-collect</span> <span style="color:#953800">params</span><span style="color:#1f2328">))))</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#953800">c</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;%s&#34;</span> <span style="color:#953800">c</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">full</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">mapconcat</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">#&#39;identity</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#6639ba">delq</span> <span style="color:#0550ae">nil</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#953800">inc</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--expand-includes</span> <span style="color:#953800">inc</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#953800">col</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown-collect</span> <span style="color:#953800">col</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#953800">body</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;\n\n&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">rp</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">assq</span> <span style="color:#6639ba">:result-params</span> <span style="color:#953800">params</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">file</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">assq</span> <span style="color:#6639ba">:file</span> <span style="color:#953800">params</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">argdown--with-input</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#953800">full</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#6639ba">cond</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#953800">file</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">fmt</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">e</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">downcase</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#1f2328">(</span><span style="color:#953800">file-name-extension</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;svg&#34;</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>                      <span style="color:#1f2328">(</span><span style="color:#6639ba">pcase</span> <span style="color:#953800">e</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;gv&#34;</span> <span style="color:#0a3069">&#34;dot&#34;</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;jpeg&#34;</span> <span style="color:#0a3069">&#34;jpg&#34;</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">_</span> <span style="color:#953800">e</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">argdown--render</span> <span style="color:#953800">fmt</span> <span style="color:#953800">in</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#953800">file</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#0550ae">nil</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">((</span><span style="color:#6639ba">member</span> <span style="color:#0a3069">&#34;html&#34;</span> <span style="color:#953800">rp</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--web-component</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">((</span><span style="color:#6639ba">member</span> <span style="color:#0a3069">&#34;pdf&#34;</span> <span style="color:#953800">rp</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">out</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-temp-file</span> <span style="color:#0a3069">&#34;argdown-&#34;</span> <span style="color:#0a3069">&#34;.pdf&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">argdown--render</span> <span style="color:#0a3069">&#34;pdf&#34;</span> <span style="color:#953800">in</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">argdown--to-ipfs</span> <span style="color:#953800">out</span> <span style="color:#0a3069">&#34;?a.pdf&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">((</span><span style="color:#6639ba">member</span> <span style="color:#0a3069">&#34;png&#34;</span> <span style="color:#953800">rp</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">out</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-temp-file</span> <span style="color:#0a3069">&#34;argdown-&#34;</span> <span style="color:#0a3069">&#34;.png&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">argdown--render</span> <span style="color:#0a3069">&#34;png&#34;</span> <span style="color:#953800">in</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">argdown--to-ipfs</span> <span style="color:#953800">out</span> <span style="color:#0a3069">&#34;?a.png&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#0550ae">t</span> <span style="color:#1f2328">(</span>error <span style="color:#0a3069">&#34;argdown: give :file F, or :results output html|pdf|png&#34;</span><span style="color:#1f2328">)))))))</span>
+</span></span></code></pre></div><p>Wiring it into the running Emacs is just loading the file: defining
+<code>org-babel-execute:argdown</code> is all org-babel needs to dispatch <code>C-c C-c</code> on an argdown block — <strong>not</strong> <code>org-babel-do-load-languages</code>, which
+would <code>require 'ob-argdown</code> (a file we don&rsquo;t have; we own the
+<code>execute</code> function directly). The <code>argdown</code> binary is on <code>PATH</code>
+through its <a class="internal-link" href="#1f7c3a2b-0003-0000-0000-000000000002">hardlias</a>, so there&rsquo;s no path juggling here. <code>load</code>
+rather than <code>require</code> so a re-tangle picks up the new code without
+restarting Emacs.</p>
+<div class="konix-block-name-marker" data-name="ob-argdown-load"></div>
+<p><a id="code-snippet--ob-argdown-load"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">load</span> <span style="color:#0a3069">&#34;~/prog/devel/elfiles/KONIX_argdown.el&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h2 id="1f7c3a2b-0006-0000-0000-000000000001">Aggregating across notes</h2>
+<p>The reason I want this in my zettelkasten at all: an argument doesn&rsquo;t
+live in one note. I jot a fragment where the thought lands — a claim
+in one note, an objection in another — and later I want a <strong>synthesis</strong>
+note that shows the whole debate as one map. The covid note already
+does the small version of this with in-file noweb (<code>&lt;&lt;belief&gt;&gt;</code>); the
+collector does it across notes.</p>
+<p>The trick is Argdown&rsquo;s own semantics: statements <code>[Title]</code> and
+arguments <code>&lt;Title&gt;</code> <strong>merge by title</strong> across the whole input, and
+relations are additive. So aggregation is just <strong>concatenation</strong>: gather
+the argdown blocks from a set of notes, paste them together, let
+Argdown weave them into one graph. A fragment that says <code>[X] + &lt;Y&gt;</code> in
+one note and <code>[X] - &lt;Z&gt;</code> in another yields a single <code>[X]</code> with both
+branches. No merge logic of my own — titles are the join keys.</p>
+<p>Which notes? Three ways to name the set, reusing the org-roam plumbing
+already in <code>elfiles/</code>: the notes this synthesis <strong>links to</strong> (<code>id:</code>
+links anywhere in the buffer, <code>links</code>), the notes linked <strong>within the
+current heading subtree</strong> (<code>subtree</code> — the section that owns the
+block, matching my per-section &ldquo;n&rsquo;utilise en source que les notes
+mentionnées ici&rdquo; convention), the notes that <strong>link here</strong>
+(<code>backlinks</code>), or every note carrying a <strong>tag</strong>. A synthesis note is
+then a single block:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>#+begin_src argdown :results output html :argdown-collect subtree
+</span></span><span style="display:flex;"><span>  [thèse]: my central claim, tying the fragments together.
+</span></span><span style="display:flex;"><span>#+end_src
+</span></span></code></pre></div><p><code>konix/argdown-collect</code> resolves the set to a list of files, reads
+every <code>argdown</code> src block out of each (via <code>org-element</code>, so it
+doesn&rsquo;t depend on org&rsquo;s flaky cross-file noweb), and concatenates
+their bodies. The synthesis note&rsquo;s own body is appended last by the
+dispatcher, so its <code>[thèse]</code> sits with the gathered fragments.</p>
+<div class="konix-block-name-marker" data-name="argdown-collect"></div>
+<p><a id="code-snippet--argdown-collect"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--bodies-in-file</span> <span style="color:#1f2328">(</span><span style="color:#953800">file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return the bodies of every argdown src block in FILE.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Common leading indentation is stripped (</span><span style="color:#032f62">`org-remove-indentation&#39;</span><span style="color:#0a3069">) so the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">fragment&#39;s top-level statements land in column 0 — Argdown is
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">indentation-sensitive, and blocks are often indented under a heading.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">insert-file-contents</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">delay-mode-hooks</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-mode</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">org-element-map</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-parse-buffer</span><span style="color:#1f2328">)</span> <span style="color:#032f62">&#39;src-block</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">sb</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#1f2328">(</span><span style="color:#953800">string=</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:language</span> <span style="color:#953800">sb</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#953800">string-trim-right</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">org-remove-indentation</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:value</span> <span style="color:#953800">sb</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">))))))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--link-ids</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">&amp;optional</span> <span style="color:#953800">subtree</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return the </span><span style="color:#032f62">`id:&#39;</span><span style="color:#0a3069"> link targets in the current buffer, in order.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">With SUBTREE non-nil, restrict to the heading subtree at point (the section
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">that owns the block being rendered) — this honours the per-section
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">\&#34;n&#39;utilise en source que les notes mentionnées ici\&#34; convention.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">save-excursion</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">save-restriction</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#953800">subtree</span> <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-before-first-heading-p</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#953800">org-back-to-heading</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#953800">org-narrow-to-subtree</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">(</span><span style="color:#953800">ids</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#953800">org-element-map</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-parse-buffer</span><span style="color:#1f2328">)</span> <span style="color:#032f62">&#39;link</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">l</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#1f2328">(</span><span style="color:#953800">string=</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:type</span> <span style="color:#953800">l</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;id&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:path</span> <span style="color:#953800">l</span><span style="color:#1f2328">)</span> <span style="color:#953800">ids</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">nreverse</span> <span style="color:#953800">ids</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--linked-files</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">&amp;optional</span> <span style="color:#953800">subtree</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Files of the </span><span style="color:#032f62">`id:&#39;</span><span style="color:#0a3069"> links in the current buffer (or SUBTREE at point).&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">delete-dups</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#6639ba">delq</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#6639ba">mapcar</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">id</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                   <span style="color:#1f2328">(</span><span style="color:#953800">when-let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">node</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-roam-node-from-id</span> <span style="color:#953800">id</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#1f2328">(</span><span style="color:#953800">org-roam-node-file</span> <span style="color:#953800">node</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--link-ids</span> <span style="color:#953800">subtree</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--backlink-files</span> <span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Files of notes that link to any node in the current file.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">delete-dups</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#6639ba">delq</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#6639ba">mapcar</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">bl</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                   <span style="color:#1f2328">(</span><span style="color:#6639ba">ignore-errors</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#1f2328">(</span><span style="color:#953800">org-roam-node-file</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-roam-backlink-source-node</span> <span style="color:#953800">bl</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#6639ba">apply</span> <span style="color:#6639ba">#&#39;append</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#1f2328">(</span><span style="color:#6639ba">mapcar</span> <span style="color:#6639ba">#&#39;</span><span style="color:#953800">org-roam-backlinks-get</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#1f2328">(</span><span style="color:#953800">konix/org-roam-nodes-in-file</span><span style="color:#1f2328">)))))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--tagged-files</span> <span style="color:#1f2328">(</span><span style="color:#953800">tag</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Files of notes carrying TAG.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">delete-dups</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#6639ba">delq</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#6639ba">mapcar</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">row</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                   <span style="color:#1f2328">(</span><span style="color:#953800">when-let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">node</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-roam-node-from-id</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">car</span> <span style="color:#953800">row</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#1f2328">(</span><span style="color:#953800">org-roam-node-file</span> <span style="color:#953800">node</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#953800">org-roam-db-query</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">[</span><span style="color:#6639ba">:select</span> <span style="color:#1f2328">[</span><span style="color:#953800">node_id</span><span style="color:#1f2328">]</span> <span style="color:#6639ba">:from</span> <span style="color:#953800">tags</span> <span style="color:#6639ba">:where</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">=</span> <span style="color:#953800">tag</span> <span style="color:#953800">$s1</span><span style="color:#1f2328">)]</span> <span style="color:#953800">tag</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown-collect</span> <span style="color:#1f2328">(</span><span style="color:#953800">spec</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Concatenate argdown fragments from notes selected by SPEC.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">SPEC is \&#34;links\&#34; (notes this one links to), \&#34;subtree\&#34; (notes linked within
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">the current heading subtree), \&#34;backlinks\&#34; (notes linking here), or a tag
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">name.  The current file is always excluded.  Argdown merges
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">statements/arguments by title, so the concatenation renders as one map.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">require</span> <span style="color:#032f62">&#39;org-roam</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">files</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">pcase</span> <span style="color:#953800">spec</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;links&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--linked-files</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;subtree&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--linked-files</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;backlinks&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--backlink-files</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">(</span><span style="color:#953800">_</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--tagged-files</span> <span style="color:#953800">spec</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">self</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">buffer-file-name</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">files</span> <span style="color:#1f2328">(</span><span style="color:#953800">cl-remove-if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">f</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#953800">self</span> <span style="color:#1f2328">(</span><span style="color:#953800">file-equal-p</span> <span style="color:#953800">f</span> <span style="color:#953800">self</span><span style="color:#1f2328">)))</span> <span style="color:#953800">files</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">mapconcat</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">f</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#6639ba">mapconcat</span> <span style="color:#6639ba">#&#39;identity</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--bodies-in-file</span> <span style="color:#953800">f</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;\n\n&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#953800">files</span> <span style="color:#0a3069">&#34;\n\n&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;;; :argdown-include — precise composition by named block (« notre mode »)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--parse-include</span> <span style="color:#1f2328">(</span><span style="color:#953800">params</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Extract the :argdown-include value from a src-block PARAMS string, or nil.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Stops at the next ` :key&#39;, so values may contain colons (file.org:name).&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#953800">params</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#6639ba">string-match</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;:argdown-include[ \t]+\\(.*?\\)\\(?:[ \t]+:[a-zA-Z]\\|$\\)&#34;</span> <span style="color:#953800">params</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">match-string</span> <span style="color:#0550ae">1</span> <span style="color:#953800">params</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--resolve-file</span> <span style="color:#1f2328">(</span><span style="color:#953800">file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Resolve a .org FILE ref to an absolute path among the roam notes.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">file-name-absolute-p</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">boundp</span> <span style="color:#032f62">&#39;org-roam-directory</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">p</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#953800">file</span> <span style="color:#953800">org-roam-directory</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">file-exists-p</span> <span style="color:#953800">p</span><span style="color:#1f2328">)</span> <span style="color:#953800">p</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#953800">file</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--named-block</span> <span style="color:#1f2328">(</span><span style="color:#953800">name</span> <span style="color:#cf222e">&amp;optional</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return (VALUE . PARAMS) of the argdown src block named NAME in FILE
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">\(or the current buffer when FILE is nil).  VALUE is dedented.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">find</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">org-element-map</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-parse-buffer</span><span style="color:#1f2328">)</span> <span style="color:#032f62">&#39;src-block</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">sb</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#1f2328">(</span><span style="color:#953800">string=</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:language</span> <span style="color:#953800">sb</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#6639ba">equal</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:name</span> <span style="color:#953800">sb</span><span style="color:#1f2328">)</span> <span style="color:#953800">name</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-remove-indentation</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:value</span> <span style="color:#953800">sb</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                       <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:parameters</span> <span style="color:#953800">sb</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#0550ae">nil</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#953800">file</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">insert-file-contents</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">delay-mode-hooks</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-mode</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">find</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">find</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--expand-into</span> <span style="color:#1f2328">(</span><span style="color:#953800">spec</span> <span style="color:#953800">seen</span> <span style="color:#953800">context-file</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Resolve SPEC (refs string) to concatenated argdown.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Local refs resolve against CONTEXT-FILE (nil = current buffer); a </span><span style="color:#032f62">`file.org:name&#39;</span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">ref switches the context to that file for its own sub-includes.  SEEN is a hash
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">table keying (file . name) to break cycles.  Included premises come first.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">(</span><span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">dolist</span> <span style="color:#1f2328">(</span><span style="color:#953800">ref</span> <span style="color:#1f2328">(</span><span style="color:#953800">split-string</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#953800">spec</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;[ \t\n,]+&#34;</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">m</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">string-match</span> <span style="color:#0a3069">&#34;\\`\\(.+\\.org\\):\\(.+\\)\\&#39;&#34;</span> <span style="color:#953800">ref</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#953800">file</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#953800">m</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--resolve-file</span> <span style="color:#1f2328">(</span><span style="color:#953800">match-string</span> <span style="color:#0550ae">1</span> <span style="color:#953800">ref</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#953800">context-file</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#953800">name</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#953800">m</span> <span style="color:#1f2328">(</span><span style="color:#953800">match-string</span> <span style="color:#0550ae">2</span> <span style="color:#953800">ref</span><span style="color:#1f2328">)</span> <span style="color:#953800">ref</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#953800">key</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;%s\0%s&#34;</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#953800">file</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span> <span style="color:#953800">name</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">unless</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">gethash</span> <span style="color:#953800">key</span> <span style="color:#953800">seen</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">puthash</span> <span style="color:#953800">key</span> <span style="color:#0550ae">t</span> <span style="color:#953800">seen</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">blk</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--named-block</span> <span style="color:#953800">name</span> <span style="color:#953800">file</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#953800">blk</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;// [argdown-include introuvable : %s]&#34;</span> <span style="color:#953800">ref</span><span style="color:#1f2328">)</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">sub</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--parse-include</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#953800">blk</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#953800">sub</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--expand-into</span> <span style="color:#953800">sub</span> <span style="color:#953800">seen</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span> <span style="color:#953800">out</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">car</span> <span style="color:#953800">blk</span><span style="color:#1f2328">)</span> <span style="color:#953800">out</span><span style="color:#1f2328">))))))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">mapconcat</span> <span style="color:#6639ba">#&#39;identity</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">nreverse</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;\n\n&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--expand-includes</span> <span style="color:#1f2328">(</span><span style="color:#953800">spec</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Public entry: resolve SPEC to concatenated argdown (recursive, cycle-safe).&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--expand-into</span> <span style="color:#953800">spec</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">make-hash-table</span> <span style="color:#6639ba">:test</span> <span style="color:#032f62">&#39;equal</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">provide</span> <span style="color:#032f62">&#39;KONIX_argdown</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;;; KONIX_argdown.el ends here</span>
+</span></span></code></pre></div><h2 id="1f7c3a2b-0005-0000-0000-000000000001">A worked example</h2>
+<p>The whole point is to write an argument in prose-ish text and see the
+map. Here&rsquo;s a small one — should I keep relying on Argdown, given the
+single-maintainer risk? — that doubles as the fixture for the smoke
+test.</p>
+<div class="konix-block-name-marker" data-name="sample-argdown"></div>
+<p><a id="code-snippet--sample-argdown"></a></p>
+<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Keep Argdown]: I should build on Argdown rather than roll my own.
+  + &lt;Layout is the hard part&gt;: Argument layout (premise/conclusion
+    layering, pro/con grouping) is years of work I&#39;d otherwise redo.
+  + &lt;Actively maintained&gt;: v2.0.0 shipped in 2026 after a long pause.
+  - &lt;Bus factor&gt;: It is essentially a single-maintainer project.
+    + &lt;Fork is cheap&gt;: MIT-licensed, and my Nix flake pins a known version.
+</code></pre><p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample and
+assert a non-empty, well-formed SVG. If this is green, the whole chain
+— hardlias → flake → CLI → Graphviz → file — holds. It calls <code>argdown</code>
+straight off <code>PATH</code> (so it also exercises the <a class="internal-link" href="#1f7c3a2b-0003-0000-0000-000000000002">hardlias</a> install), and
+tangles the fixture to a temp file so the test is self-contained.</p>
+<div class="konix-block-name-marker" data-name="smoke-test"></div>
+<p><a id="code-snippet--smoke-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#6639ba">set</span> -e
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">command</span> -v argdown &gt;/dev/null <span style="color:#0550ae">||</span> <span style="color:#0550ae">{</span> <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;FAIL: argdown not on PATH (hardlias?)&#34;</span><span style="color:#1f2328">;</span> <span style="color:#6639ba">exit</span> 1<span style="color:#1f2328">;</span> <span style="color:#0550ae">}</span>
+</span></span><span style="display:flex;"><span>cat &gt; /tmp/argdown-smoke.argdown <span style="color:#0a3069">&lt;&lt;&#39;EOF&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">[Keep Argdown]: I should build on Argdown rather than roll my own.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  + &lt;Layout is the hard part&gt;: Argument layout (premise/conclusion
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    layering, pro/con grouping) is years of work I&#39;d otherwise redo.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  + &lt;Actively maintained&gt;: v2.0.0 shipped in 2026 after a long pause.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  - &lt;Bus factor&gt;: It is essentially a single-maintainer project.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    + &lt;Fork is cheap&gt;: MIT-licensed, and my Nix flake pins a known version.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">EOF</span>
+</span></span><span style="display:flex;"><span>argdown map -f svg --stdout --silent /tmp/argdown-smoke.argdown &gt; /tmp/argdown-smoke.svg
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">test</span> -s /tmp/argdown-smoke.svg
+</span></span><span style="display:flex;"><span>grep -q <span style="color:#0a3069">&#34;&lt;svg&#34;</span> /tmp/argdown-smoke.svg
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;  PASS: argdown renders a non-empty SVG&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>PASS: argdown renders a non-empty SVG
+</span></span></code></pre></div><p>The second test pins the <a class="internal-link" href="#1f7c3a2b-0006-0000-0000-000000000001">aggregation</a> core: two argdown fragments in
+a note that share the title <code>[Thèse]</code>, pulled out by
+<code>konix/argdown--bodies-in-file</code> and concatenated, must render as <strong>one</strong>
+map carrying both branches (<code>&lt;Pour&gt;</code> and <code>&lt;Contre&gt;</code>). This exercises
+the extraction + Argdown&rsquo;s merge-by-title without needing the org-roam
+db, which only supplies the file list.</p>
+<div class="konix-block-name-marker" data-name="collect-test"></div>
+<p><a id="code-snippet--collect-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">dir</span> <span style="color:#1f2328">(</span><span style="color:#953800">make-temp-file</span> <span style="color:#0a3069">&#34;argdown-collect&#34;</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">note</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#0a3069">&#34;frags.org&#34;</span> <span style="color:#953800">dir</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">out</span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#0a3069">&#34;merged.svg&#34;</span> <span style="color:#953800">dir</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">unwind-protect</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-file</span> <span style="color:#953800">note</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#0a3069">&#34;#+begin_src argdown\n[Thèse]: centrale.\n  + &lt;Pour&gt;: un appui.\n#+end_src\n\n&#34;</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#0a3069">&#34;#+begin_src argdown\n[Thèse]\n  - &lt;Contre&gt;: une objection.\n#+end_src\n&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">bodies</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--bodies-in-file</span> <span style="color:#953800">note</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#953800">merged</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">mapconcat</span> <span style="color:#6639ba">#&#39;identity</span> <span style="color:#953800">bodies</span> <span style="color:#0a3069">&#34;\n\n&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#6639ba">=</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">length</span> <span style="color:#953800">bodies</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;expected 2 fragments, got %S&#34;</span> <span style="color:#953800">bodies</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#953800">argdown--with-input</span> <span style="color:#953800">merged</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--render</span> <span style="color:#0a3069">&#34;svg&#34;</span> <span style="color:#953800">in</span> <span style="color:#953800">out</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">svg</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">insert-file-contents</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">buffer-string</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;Pour&#34;</span> <span style="color:#953800">svg</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;merged map missing &lt;Pour&gt;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;Contre&#34;</span> <span style="color:#953800">svg</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;merged map missing &lt;Contre&gt;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;  PASS: two fragments merged into one map (Pour + Contre under Thèse)&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">delete-directory</span> <span style="color:#953800">dir</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: two fragments merged into one map (Pour + Contre under Thèse)&#34;
+</span></span></code></pre></div><p>The third test pins the <code>subtree</code> scope of <code>konix/argdown--link-ids</code>:
+with point inside a section, it must see the <code>id:</code> links of <strong>that</strong>
+section (including its sub-headings) and not those of a sibling
+section. This needs no org-roam — it checks the id targets the
+collector would resolve, which is exactly where over-collection would
+leak in.</p>
+<div class="konix-block-name-marker" data-name="collect-subtree-test"></div>
+<p><a id="code-snippet--collect-subtree-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#0a3069">&#34;* H1\nintro [[id:AAA][a]]\n** H1a\n[[id:BBB][b]]\n* H2\n[[id:CCC][c]]\n&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">delay-mode-hooks</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-mode</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">goto-char</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">point-min</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">forward-line</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>                      <span style="color:#57606a">; inside H1&#39;s body, before H1a</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">sub</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--link-ids</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#953800">all</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--link-ids</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#6639ba">equal</span> <span style="color:#953800">sub</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;AAA&#34;</span> <span style="color:#0a3069">&#34;BBB&#34;</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;subtree ids: %S&#34;</span> <span style="color:#953800">sub</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#6639ba">member</span> <span style="color:#0a3069">&#34;CCC&#34;</span> <span style="color:#953800">all</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;buffer ids: %S&#34;</span> <span style="color:#953800">all</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">member</span> <span style="color:#0a3069">&#34;CCC&#34;</span> <span style="color:#953800">sub</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;subtree leaked sibling: %S&#34;</span> <span style="color:#953800">sub</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: subtree scope keeps the section&#39;s links, drops the sibling&#39;s&#34;</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: subtree scope keeps the section&#39;s links, drops the sibling&#39;s&#34;
+</span></span></code></pre></div><p>The fourth test pins <code>:argdown-include</code> (« notre mode ») — composition by
+<strong>named block</strong>, recursive and cross-file, without the <code>name-ex()</code> wrapper
+boilerplate. A premise <code>prem-a</code> and an argument <code>arg-b</code> that declares
+<code>:argdown-include prem-a</code> ; pulling <code>arg-b</code> must transitively bring <code>prem-a</code>,
+and the rendered map must link <code>[A]</code> to <code>&lt;B&gt;</code>.</p>
+<div class="konix-block-name-marker" data-name="include-test"></div>
+<p><a id="code-snippet--include-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">dir</span> <span style="color:#1f2328">(</span><span style="color:#953800">make-temp-file</span> <span style="color:#0a3069">&#34;argdown-include&#34;</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">f</span>   <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#0a3069">&#34;frags.org&#34;</span> <span style="color:#953800">dir</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">out</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#0a3069">&#34;m.svg&#34;</span> <span style="color:#953800">dir</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">unwind-protect</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-file</span> <span style="color:#953800">f</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#0a3069">&#34;#+NAME: prem-a\n#+BEGIN_SRC argdown :eval no\n[A]: une prémisse.\n#+END_SRC\n\n&#34;</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#0a3069">&#34;#+NAME: arg-b\n#+BEGIN_SRC argdown :argdown-include prem-a\n&lt;B&gt;: un argument.\n  + [A]\n#+END_SRC\n&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">merged</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/argdown--expand-includes</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#953800">f</span> <span style="color:#0a3069">&#34;:arg-b&#34;</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;\\[A\\]: une prémisse&#34;</span> <span style="color:#953800">merged</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;include n&#39;a pas tiré prem-a (récursif) : %S&#34;</span> <span style="color:#953800">merged</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;&lt;B&gt;: un argument&#34;</span> <span style="color:#953800">merged</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;include n&#39;a pas tiré arg-b : %S&#34;</span> <span style="color:#953800">merged</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#953800">argdown--with-input</span> <span style="color:#953800">merged</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--render</span> <span style="color:#0a3069">&#34;svg&#34;</span> <span style="color:#953800">in</span> <span style="color:#953800">out</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">svg</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">insert-file-contents</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">buffer-string</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;&gt;A&lt;\\|&gt;A \\|A&lt;/text&gt;\\|une prémisse&#34;</span> <span style="color:#953800">svg</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>                       <span style="color:#0a3069">&#34;carte sans [A]&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;  PASS: :argdown-include tire arg-b et, récursivement, sa prémisse prem-a (cross-fichier)&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">delete-directory</span> <span style="color:#953800">dir</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: :argdown-include tire arg-b et, récursivement, sa prémisse prem-a (cross-fichier)&#34;
+</span></span></code></pre></div><h2 id="c3f0eba5-4789-42d9-b743-49146bcb87a4">config</h2>
+<h2 id="permalink"><a class="internal-link" href="/braindump/1f7c3a2b-9e4d-4c81-b6a2-3d5e8f1a9c40?title=argdown_in_org_mode">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+      </div>
+	  <aside class="date"><time>Last updated: 30 May 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 May 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
