@@ -286,6 +286,20 @@ output free of log noise.</p>
 </span></span></code></pre></div><p>The rendering helpers. <code>argdown--render</code> is the one place that knows
 the per-format quirks (stdout vs folder vs ImageMagick); everything
 else calls it.</p>
+<p>The publish path wraps the web-component in a self-sizing <code>srcdoc</code>
+iframe, and that&rsquo;s not cosmetic. Hugo&rsquo;s <strong>Goldmark</strong> reparses any raw HTML
+it finds in the Markdown body, and the component is a multi-line blob — a
+source listing (with <strong>blank lines</strong> between statements) plus an inline
+<code>&lt;svg&gt;</code>. <code>&lt;iframe&gt;</code> is a Goldmark <strong>type-6</strong> HTML tag, so a multi-line iframe
+passes through verbatim — right up until a <strong>blank line</strong>, which ends the
+block and throws the rest back into Markdown (paragraph-wrapping the SVG
+into <code>&lt;p&gt;=/=&lt;/p&gt;</code> and shredding it — the map came out as scattered, broken
+links). So <code>argdown--iframe-wrap</code> escapes the blob into the <code>srcdoc</code>
+attribute (<code>&amp;</code> and <code>\&quot;</code> only — the browser peels one layer) and <strong>collapses
+blank lines</strong>, keeping real newlines so the emitted attribute stays readable
+in the source rather than one giant line. The iframe also isolates the
+component&rsquo;s CDN scripts/styles from the page, and being same-origin it
+sizes itself from the inside.</p>
 <div class="konix-block-name-marker" data-name="argdown-helpers"></div>
 <p><a id="code-snippet--argdown-helpers"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--require-bin</span> <span style="color:#1f2328">()</span>
@@ -308,19 +322,53 @@ else calls it.</p>
 </span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">argdown--web-component-style</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;&lt;style&gt;.argdown-figure{padding-right:50px;box-sizing:border-box}&lt;/style&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Shift the web-component toolbar left of the hypothes.is right sidebar,
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">which otherwise hides Argdown&#39;s top-right (menu/close) button on the
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">published site.  The toolbar flows from the figure&#39;s right edge, so right
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">padding on the figure moves it inward.&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;&lt;style&gt;html,body{margin:0;padding:0}&lt;/style&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Reset margins inside the srcdoc iframe so the component sits flush.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">The old right-padding hack to dodge the hypothes.is sidebar is gone: the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">component now lives in an isolated iframe, where that sidebar can&#39;t reach.&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">argdown--iframe-script</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;&lt;script&gt;function fit(){try{frameElement.style.height=document.documentElement.scrollHeight+&#39;px&#39;;}catch(e){}}window.addEventListener(&#39;load&#39;,fit);new ResizeObserver(fit).observe(document.documentElement);&lt;/script&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Self-sizing script for the srcdoc iframe.  A srcdoc iframe is same-origin,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">so its document can set its own </span><span style="color:#032f62">`frameElement&#39;</span><span style="color:#0a3069"> height directly — no
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">parent-side listener.  ResizeObserver re-fits when the source/map toggle (or
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">the async web-component upgrade) changes the content height.&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#1f2328">(</span><span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Escape HTML for a double-quoted </span><span style="color:#032f62">`srcdoc&#39;</span><span style="color:#0a3069"> attribute value.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Only </span><span style="color:#032f62">`&amp;&#39;</span><span style="color:#0a3069"> and </span><span style="color:#032f62">`\&#34;&#39;</span><span style="color:#0a3069"> need escaping — the browser peels off exactly one layer
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">before parsing the value as a document, so inner entities like `&amp;#39;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">survive (escape </span><span style="color:#032f62">`&amp;&#39;</span><span style="color:#0a3069"> first, hence).  Runs of blank lines are collapsed to a
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">single newline: a blank line is the one thing that ends a Goldmark type-6
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">HTML block, and </span><span style="color:#032f62">`&lt;iframe&gt;&#39;</span><span style="color:#0a3069"> is a type-6 tag, so the multi-line value passes
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">through verbatim as long as none survive — and real newlines keep it
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">readable in the org source rather than one giant line.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;&#34;</span> <span style="color:#0a3069">&#34;&amp;amp;&#34;</span> <span style="color:#953800">html</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;\&#34;&#34;</span> <span style="color:#0a3069">&#34;&amp;quot;&#34;</span> <span style="color:#953800">s</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;\n\\(?:[ \t]*\n\\)+&#34;</span> <span style="color:#0a3069">&#34;\n&#34;</span> <span style="color:#953800">s</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">s</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--iframe-wrap</span> <span style="color:#1f2328">(</span><span style="color:#953800">component-html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Wrap COMPONENT-HTML (one Argdown web-component) in a self-sizing srcdoc
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">iframe, hiding its markup from Goldmark (see </span><span style="color:#032f62">`argdown-helpers&#39;</span><span style="color:#0a3069"> narrative).
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Same-origin, so </span><span style="color:#032f62">`argdown--iframe-script&#39;</span><span style="color:#0a3069"> sizes it from inside.  Newlines
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">between the document parts keep the emitted attribute readable in source.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">doc</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;!DOCTYPE html&gt;\n&lt;html&gt;&lt;head&gt;&lt;meta charset=\&#34;utf-8\&#34;&gt;\n&#34;</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#953800">argdown--web-component-style</span> <span style="color:#0a3069">&#34;\n&lt;/head&gt;\n&lt;body&gt;\n&#34;</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#953800">component-html</span> <span style="color:#0a3069">&#34;\n&#34;</span> <span style="color:#953800">argdown--iframe-script</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;\n&lt;/body&gt;&lt;/html&gt;&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#0a3069">&#34;&lt;iframe class=\&#34;argdown-frame\&#34; style=\&#34;width:100%%;height:400px;border:0\&#34; srcdoc=\&#34;%s\&#34;&gt;&lt;/iframe&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#1f2328">(</span><span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#953800">doc</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--web-component</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return the argdown web-component html for INPUT file (publish path).&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#953800">argdown--web-component-style</span>
-</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
-</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown web-component --stdout --silent %s&#34;</span>
-</span></span><span style="display:flex;"><span>                   <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>           <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return the argdown web-component for INPUT file as a self-sizing srcdoc
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">iframe (the publish path).&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">argdown--iframe-wrap</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown web-component --stdout --silent %s&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--render</span> <span style="color:#1f2328">(</span><span style="color:#953800">fmt</span> <span style="color:#953800">in</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Render INPUT file to OUT in FMT.
@@ -411,12 +459,48 @@ prepends fragments from other notes before rendering.</p>
 <code>org-babel-execute:argdown</code> is all org-babel needs to dispatch <code>C-c C-c</code> on an argdown block — <strong>not</strong> <code>org-babel-do-load-languages</code>, which
 would <code>require 'ob-argdown</code> (a file we don&rsquo;t have; we own the
 <code>execute</code> function directly). The <code>argdown</code> binary is on <code>PATH</code>
-through its <a class="internal-link" href="#1f7c3a2b-0003-0000-0000-000000000002">hardlias</a>, so there&rsquo;s no path juggling here. <code>load</code>
-rather than <code>require</code> so a re-tangle picks up the new code without
-restarting Emacs.</p>
-<div class="konix-block-name-marker" data-name="ob-argdown-load"></div>
-<p><a id="code-snippet--ob-argdown-load"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">load</span> <span style="color:#0a3069">&#34;~/prog/devel/elfiles/KONIX_argdown.el&#34;</span><span style="color:#1f2328">)</span>
+through its <a class="internal-link" href="#1f7c3a2b-0003-0000-0000-000000000002">hardlias</a>, so there&rsquo;s no path juggling here. A
+re-tangle then takes effect by reloading the file (<code>load</code>, not
+<code>require</code>, so it re-runs) without restarting Emacs.</p>
+<h2 id="1f7c3a2b-0008-0000-0000-000000000001">Color in the Hugo export</h2>
+<p>In Emacs the <code>argdown-highlights</code> font-lock above paints <code>[statements]</code>,
+<code>&lt;arguments&gt;</code> and the <code>+=/</code>-= relations. None of that survives <code>ox-hugo</code>:
+a <code>#+begin_src argdown</code> block is emitted as a plain fenced code block, and
+Hugo hands fenced blocks to <strong>Chroma</strong>, which has no <code>argdown</code> lexer (and
+can&rsquo;t load a custom one without recompiling). So the published block is
+monochrome — the font-lock only ever colored the Emacs buffer.</p>
+<p>Rather than teach Chroma argdown, I let <strong>Emacs itself</strong> colorize the block,
+reusing the very font-lock I already wrote: <code>org-html-fontify-code</code> runs
+<code>argdown-mode</code> over the body through <code>htmlize</code>, and — with
+<code>org-html-htmlize-output-type</code> at <code>inline-css</code> — returns spans carrying
+inline <code>color:</code> styles, theme-independent and needing no extra CSS. One
+<code>:around</code> advice on <code>org-hugo-src-block</code> swaps in that path for the
+<code>argdown</code> language; every other language still flows through Chroma
+untouched. The editing colors and the published colors now share a single
+source: the faces.</p>
+<p>Two caveats. <code>org-html-fontify-code</code> strips the enclosing <code>&lt;pre&gt;</code>, so I
+re-wrap it. And Goldmark must run with <code>unsafe = true</code> so the raw <code>&lt;pre&gt;</code>
+reaches the page — the same setting the TODO/tag recoloring in
+<code>KONIX_AL-ox-hugo.el</code> already relies on.</p>
+<div class="konix-block-name-marker" data-name="argdown-hugo-color"></div>
+<p><a id="code-snippet--argdown-hugo-color"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/ox-hugo--argdown-html</span> <span style="color:#1f2328">(</span><span style="color:#953800">src-block</span> <span style="color:#953800">info</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return SRC-BLOCK fontified as inline-styled argdown HTML.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Chroma has no argdown lexer, so colorize with </span><span style="color:#032f62">`argdown-mode&#39;</span><span style="color:#0a3069"> + htmlize.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`org-html-fontify-code&#39;</span><span style="color:#0a3069"> strips the enclosing &lt;pre&gt;, so re-wrap it.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;&lt;pre class=\&#34;src src-argdown\&#34;&gt;\n%s&lt;/pre&gt;\n&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#953800">org-html-fontify-code</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">org-export-format-code-default</span> <span style="color:#953800">src-block</span> <span style="color:#953800">info</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/ox-hugo-src-block--argdown</span> <span style="color:#1f2328">(</span><span style="color:#953800">orig</span> <span style="color:#953800">src-block</span> <span style="color:#953800">contents</span> <span style="color:#953800">info</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Fontify argdown src blocks with Emacs; defer everything else to ORIG.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#953800">string=</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-element-property</span> <span style="color:#6639ba">:language</span> <span style="color:#953800">src-block</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#953800">konix/ox-hugo--argdown-html</span> <span style="color:#953800">src-block</span> <span style="color:#953800">info</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">orig</span> <span style="color:#953800">src-block</span> <span style="color:#953800">contents</span> <span style="color:#953800">info</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">with-eval-after-load</span> <span style="color:#032f62">&#39;ox-hugo</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">advice-add</span> <span style="color:#032f62">&#39;org-hugo-src-block</span> <span style="color:#6639ba">:around</span> <span style="color:#6639ba">#&#39;</span><span style="color:#953800">konix/ox-hugo-src-block--argdown</span><span style="color:#1f2328">))</span>
 </span></span></code></pre></div><h2 id="1f7c3a2b-0006-0000-0000-000000000001">Aggregating across notes</h2>
 <p>The reason I want this in my zettelkasten at all: an argument doesn&rsquo;t
 live in one note. I jot a fragment where the thought lands — a claim
@@ -714,14 +798,15 @@ map. Here&rsquo;s a small one — should I keep relying on Argdown, given the
 single-maintainer risk? — that doubles as the fixture for the smoke
 test.</p>
 <div class="konix-block-name-marker" data-name="sample-argdown"></div>
-<p><a id="code-snippet--sample-argdown"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Keep Argdown]: I should build on Argdown rather than roll my own.
-  + &lt;Layout is the hard part&gt;: Argument layout (premise/conclusion
-    layering, pro/con grouping) is years of work I&#39;d otherwise redo.
-  + &lt;Actively maintained&gt;: v2.0.0 shipped in 2026 after a long pause.
-  - &lt;Bus factor&gt;: It is essentially a single-maintainer project.
-    + &lt;Fork is cheap&gt;: MIT-licensed, and my Nix flake pins a known version.
-</code></pre><p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample and
+<pre class="src src-argdown">
+[<span style="color: #93E0E3;">Keep Argdown</span>]: I should build on Argdown rather than roll my own.
+  <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Layout is the hard part</span>&gt;: Argument layout (premise/conclusion
+    layering, pro/con grouping) is years of work I'd otherwise redo.
+  <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Actively maintained</span>&gt;: v2.0.0 shipped in 2026 after a long pause.
+  <span style="color: #ff0000;">-</span> &lt;<span style="color: #93E0E3;">Bus factor</span>&gt;: It is essentially a single-maintainer project.
+    <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Fork is cheap</span>&gt;: MIT-licensed, and my Nix flake pins a known version.
+</pre>
+<p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample and
 assert a non-empty, well-formed SVG. If this is green, the whole chain
 — hardlias → flake → CLI → Graphviz → file — holds. It calls <code>argdown</code>
 straight off <code>PATH</code> (so it also exercises the <a class="internal-link" href="#1f7c3a2b-0003-0000-0000-000000000002">hardlias</a> install), and
@@ -816,6 +901,61 @@ and the rendered map must link <code>[A]</code> to <code>&lt;B&gt;</code>.</p>
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;  PASS: :argdown-include tire arg-b et, récursivement, sa prémisse prem-a (cross-fichier)&#34;</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">delete-directory</span> <span style="color:#953800">dir</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: :argdown-include tire arg-b et, récursivement, sa prémisse prem-a (cross-fichier)&#34;
+</span></span></code></pre></div><p>The fifth test pins the <a class="internal-link" href="#1f7c3a2b-0008-0000-0000-000000000001">Hugo color</a> path: exporting an argdown block
+through the <code>hugo</code> backend must yield <strong>Emacs-fontified</strong> HTML — our
+<code>src-argdown</code> wrapper carrying inline <code>color:</code> spans — and not a bare
+Chroma fence. It drives the <code>:around</code> advice end to end, so green there
+means the published map&rsquo;s source listing is colored the way it is while
+editing.</p>
+<div class="konix-block-name-marker" data-name="hugo-color-test"></div>
+<p><a id="code-snippet--hugo-color-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">require</span> <span style="color:#032f62">&#39;ox-hugo</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">html</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-export-string-as</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;#+begin_src argdown\n[Keep Argdown]: build on it.\n  + &lt;Layout&gt;: the hard part.\n#+end_src\n&#34;</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#032f62">&#39;hugo</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;src-argdown&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;no argdown wrapper: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;color:&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;no inline color span: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;^```&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;leaked a chroma fence: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: hugo export colorizes argdown via Emacs font-lock (inline css)&#34;</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: hugo export colorizes argdown via Emacs font-lock (inline css)&#34;
+</span></span></code></pre></div><p>The sixth test pins the <a class="internal-link" href="#1f7c3a2b-0004-0000-0000-000000000001">publish-path iframe</a> against the Goldmark bug
+it fixes. The hostile blob carries <strong>both</strong> triggers — a blank line and a
+4-space-indented line — plus a quote and an <code>&lt;svg&gt;</code>. <code>argdown--iframe-wrap</code>
+must emit a <strong>single-line</strong> <code>&lt;iframe srcdoc=…&gt;</code> (so Goldmark finds no
+internals to reparse) and the escaped value must <strong>round-trip</strong> back to the
+blob verbatim (so the component reaches the browser intact). It needs
+neither the CLI nor ox-hugo — it pins the exact transform that makes the
+output Goldmark-safe.</p>
+<div class="konix-block-name-marker" data-name="iframe-test"></div>
+<p><a id="code-snippet--iframe-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">blob</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;figure&gt;&lt;argdown-map&gt;&lt;pre&gt;&lt;code&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;[x]: a statement\n&#34;</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;    indented continuation\n&#34;</span>   <span style="color:#57606a">; indentation must survive untouched</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;\n&#34;</span>                             <span style="color:#57606a">; a blank line — the one Goldmark trigger</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;[y]: another\n&lt;/code&gt;&lt;/pre&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;&lt;svg&gt;&lt;g id=\&#34;graph0\&#34;&gt;&lt;/g&gt;&lt;/svg&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;&lt;/argdown-map&gt;&lt;/figure&gt;&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">frame</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--iframe-wrap</span> <span style="color:#953800">blob</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-prefix-p</span> <span style="color:#0a3069">&#34;&lt;iframe&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;not an iframe: %S&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; Readable: keeps real newlines — no &amp;#10; soup, no one giant line.</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;\n&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;iframe collapsed to one line: %S&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; But carries NO blank line — the only thing that ends a Goldmark type-6</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; HTML block (&lt;iframe&gt; is a type-6 tag, so multi-line passes through).</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;\n[ \t]*\n&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;blank line would break Goldmark: %S&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;srcdoc=\&#34;&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;no srcdoc: %S&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; Unescape the srcdoc the way the browser would (one pass): everything</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; but the collapsed blank line survives — indentation, the svg, intact.</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">string-match</span> <span style="color:#0a3069">&#34;srcdoc=\&#34;\\(\\(?:.\\|\n\\)*\\)\&#34;&gt;&lt;/iframe&gt;\\&#39;&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">v</span> <span style="color:#1f2328">(</span><span style="color:#953800">match-string</span> <span style="color:#0550ae">1</span> <span style="color:#953800">frame</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">un</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;&amp;amp;&#34;</span> <span style="color:#0a3069">&#34;&amp;&#34;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;quot;&#34;</span> <span style="color:#0a3069">&#34;\&#34;&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;    indented continuation&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;indentation lost: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;id=\&#34;graph0\&#34;&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;svg lost: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;\n[ \t]*\n&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;blank line survived into srcdoc: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: readable multi-line srcdoc iframe, no blank lines (Goldmark-safe)&#34;</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: readable multi-line srcdoc iframe, no blank lines (Goldmark-safe)&#34;
 </span></span></code></pre></div><h2 id="c3f0eba5-4789-42d9-b743-49146bcb87a4">config</h2>
 <h2 id="permalink"><a class="internal-link" href="/braindump/1f7c3a2b-9e4d-4c81-b6a2-3d5e8f1a9c40?title=argdown_in_org_mode">Permalink</a></h2>
 <style>
