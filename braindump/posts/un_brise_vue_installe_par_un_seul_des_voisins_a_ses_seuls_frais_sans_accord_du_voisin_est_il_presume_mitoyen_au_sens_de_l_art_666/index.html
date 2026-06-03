@@ -154,9 +154,9 @@ new ResizeObserver(fit).observe(document.documentElement);
 </pre>
 <p><em>Source</em> : C. civ. art. 552<sup id="fnref:4"><a class="internal-link" href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>, 553<sup id="fnref:5"><a class="internal-link" href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup> ; Cass. 2003<sup id="fnref1:2"><a class="internal-link" href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>, 2008<sup id="fnref1:3"><a class="internal-link" href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>.</p>
 <h2 id="7b8ec8d3-11af-432e-8456-60b8ea9f0e50">Première question : présumé mitoyen, ou non ?</h2>
-<iframe class="argdown-frame" style="width:100%;height:400px;border:0" srcdoc="&lt;!DOCTYPE html&gt;
+<iframe class="argdown-frame" style="width:100%;height:70vh;min-height:320px;border:0" srcdoc="&lt;!DOCTYPE html&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;
-&lt;style&gt;html,body{margin:0;padding:0}.argdown-graph{margin:0;text-align:center}.argdown-graph svg{max-width:100%;height:auto}&lt;/style&gt;
+&lt;style&gt;html,body{margin:0;padding:0;height:100%}.argdown-graph{margin:0;height:100%}.argdown-graph svg{width:100%;height:100%;cursor:grab;touch-action:none}.argdown-graph svg:active{cursor:grabbing}&lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
 &lt;figure class=&quot;argdown-graph&quot;&gt;&lt;svg width=&quot;478pt&quot; height=&quot;560pt&quot;
@@ -275,12 +275,33 @@ new ResizeObserver(fit).observe(document.documentElement);
 &lt;/svg&gt;
 &lt;/figure&gt;
 &lt;script&gt;
-function fit(){
-  var el=document.documentElement;
-  try{frameElement.style.height=el.scrollHeight+'px'}catch(e){}
-}
-addEventListener('load',fit);
-new ResizeObserver(fit).observe(document.documentElement);
+(function(){
+  var svg=document.querySelector('svg'); if(!svg) return;
+  var vb=(svg.getAttribute('viewBox')||'').trim().split(/[ ,]+/).map(Number);
+  if(vb.length!==4) return;
+  var o=vb.slice(), x=vb[0], y=vb[1], w=vb[2], h=vb[3];
+  svg.removeAttribute('width'); svg.removeAttribute('height');
+  function apply(){ svg.setAttribute('viewBox', x+' '+y+' '+w+' '+h); }
+  function at(e){ var r=svg.getBoundingClientRect();
+    return [x+(e.clientX-r.left)/r.width*w, y+(e.clientY-r.top)/r.height*h]; }
+  svg.addEventListener('wheel', function(e){ e.preventDefault();
+    var k = e.deltaY&lt;0 ? 0.85 : 1/0.85, nw=w*k, nh=h*k;
+    if(nw &lt; o[2]*0.05 || nw &gt; o[2]*20) return;
+    var p=at(e); x=p[0]-(p[0]-x)*k; y=p[1]-(p[1]-y)*k; w=nw; h=nh; apply();
+  }, {passive:false});
+  var s=null, d=null, moved=false;
+  svg.addEventListener('pointerdown', function(e){ s=[e.clientX,e.clientY]; d=null; moved=false;
+    try{ svg.setPointerCapture(e.pointerId); }catch(_){} });
+  svg.addEventListener('pointermove', function(e){ if(!s) return;
+    if(!d){ if(Math.hypot(e.clientX-s[0], e.clientY-s[1]) &lt; 4) return; d=s.slice(); moved=true; }
+    var r=svg.getBoundingClientRect();
+    x-=(e.clientX-d[0])/r.width*w; y-=(e.clientY-d[1])/r.height*h;
+    d=[e.clientX,e.clientY]; apply(); });
+  function end(){ s=null; d=null; }
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+  svg.addEventListener('click', function(e){ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);
+  svg.addEventListener('dblclick', function(e){ e.preventDefault(); x=o[0];y=o[1];w=o[2];h=o[3]; apply(); });
+})();
 &lt;/script&gt;
 &lt;/body&gt;&lt;/html&gt;"></iframe>
 <h2 id="a18b73ad-bc48-4dc6-84a4-2d28832096ca">Seconde question : établir le caractère privatif</h2>
