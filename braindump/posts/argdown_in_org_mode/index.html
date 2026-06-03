@@ -557,12 +557,15 @@ path&rsquo;s <code>argdown--web-component</code> and the <code>:file</code> path
 hand their SVG to <code>argdown--inject-links</code>, which walks each <code>&lt;a xlink:title&gt;</code>,
 decodes Graphviz&rsquo;s entities (<code>argdown--svg-unescape</code>), matches the title to a
 url, and splices in <code>xlink:href</code> — making the <strong>whole node</strong> a clickable link to
-its source. The same <code>&lt;a xlink:title&gt;</code> nodes appear in Argdown&rsquo;s standalone
-SVG and in the web-component&rsquo;s slotted SVG, so one injector serves both. Edge
-anchors (title <code>&quot;support&quot;</code> …) don&rsquo;t match and are left alone. A Graphviz node
-has a single <code>&lt;a&gt;</code>, so it&rsquo;s one link per node by construction (the first the
-statement carries); the click affordance (hover title, cursor) is the
-web-component&rsquo;s own styling on the published map.</p>
+its source. It also adds <code>target</code>&quot;_blank&quot;= (<code>rel</code>&ldquo;noopener&rdquo;<code>): the published map lives in a =srcdoc</code> iframe, and a source like Légifrance answers with
+<code>X-Frame-Options: DENY</code>, so following the link <strong>inside</strong> the frame only shows
+&ldquo;refused to connect&rdquo; — the source has to open at the top level, in a new tab.
+The same <code>&lt;a xlink:title&gt;</code> nodes appear in Argdown&rsquo;s standalone SVG and in the
+web-component&rsquo;s slotted SVG, so one injector serves both. Edge anchors (title
+<code>&quot;support&quot;</code> …) don&rsquo;t match and are left alone. A Graphviz node has a single
+<code>&lt;a&gt;</code>, so it&rsquo;s one link per node by construction (the first the statement
+carries); the click affordance (hover title, cursor) is the web-component&rsquo;s
+own styling on the published map.</p>
 <p>The match rides two assumptions about Argdown&rsquo;s current output, and both fail
 <strong>silently</strong> (a missing link, never a wrong one): the node anchor is exactly
 <code>&lt;a xlink:title</code>&quot;…&quot;&gt;= (a future Argdown adding another attribute to it would
@@ -615,7 +618,11 @@ less code, rides its renderer, and the link is the only thing that&rsquo;s ours.
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">text in URLS (text→url), making the whole node a clickable link to its
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">source.  Argdown wraps every node — and every edge — in `&lt;a xlink:title=…&gt;&#39;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">with no href; an edge title (e.g. \&#34;support\&#34;) has no model match and is left
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">untouched.  Argdown&#39;s own layout, argument edges, and styling are preserved.&#34;</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">untouched.  Argdown&#39;s own layout, argument edges, and styling are preserved.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">The link gets </span><span style="color:#032f62">`target=\&#34;_blank\&#34;&#39;</span><span style="color:#0a3069"> (with </span><span style="color:#032f62">`rel=\&#34;noopener\&#34;&#39;</span><span style="color:#0a3069">): the map lives in
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">a srcdoc iframe, and a source like Légifrance sends `X-Frame-Options: DENY&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">— navigating *inside* the frame would just show \&#34;refused to connect\&#34;, so the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">source must open at the top level, in a new tab.&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#953800">svg</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">goto-char</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">point-min</span><span style="color:#1f2328">))</span>
@@ -624,7 +631,8 @@ less code, rides its renderer, and the link is the only thing that&rsquo;s ours.
 </span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#953800">url</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">gethash</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--svg-unescape</span> <span style="color:#953800">attr</span><span style="color:#1f2328">)</span> <span style="color:#953800">urls</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#953800">url</span>
 </span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">replace-match</span>
-</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;a xlink:href=\&#34;&#34;</span> <span style="color:#953800">url</span> <span style="color:#0a3069">&#34;\&#34; xlink:title=\&#34;&#34;</span> <span style="color:#953800">attr</span> <span style="color:#0a3069">&#34;\&#34;&gt;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;a target=\&#34;_blank\&#34; rel=\&#34;noopener\&#34; xlink:href=\&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>                   <span style="color:#953800">url</span> <span style="color:#0a3069">&#34;\&#34; xlink:title=\&#34;&#34;</span> <span style="color:#953800">attr</span> <span style="color:#0a3069">&#34;\&#34;&gt;&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>           <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">buffer-string</span><span style="color:#1f2328">)))</span>
 </span></span></code></pre></div><h2 id="1f7c3a2b-0008-0000-0000-000000000001">Color in the Hugo export</h2>
@@ -1192,9 +1200,11 @@ no CLI, deterministic — feeding a fake SVG + a text→url map; it also exercis
 </span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">urls</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">h</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">make-hash-table</span> <span style="color:#6639ba">:test</span> <span style="color:#032f62">&#39;equal</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#6639ba">puthash</span> <span style="color:#0a3069">&#34;l&#39;art. 666 (art.666).&#34;</span> <span style="color:#0a3069">&#34;https://ex.test/666&#34;</span> <span style="color:#953800">h</span><span style="color:#1f2328">)</span> <span style="color:#953800">h</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">out</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--inject-links</span> <span style="color:#953800">svg</span> <span style="color:#953800">urls</span><span style="color:#1f2328">)))</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; the matching node &lt;a&gt; becomes a whole-node clickable link, title kept</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; the matching node &lt;a&gt; becomes a whole-node clickable link that opens the</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; source in a new top-level tab (target=_blank: the iframe can&#39;t frame</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; Légifrance), with the title kept</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span>
-</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;&lt;a xlink:href=\&#34;https://ex.test/666\&#34; xlink:title=\&#34;l&amp;#39;art. 666 (art.666).\&#34;&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;&lt;a target=\&#34;_blank\&#34; rel=\&#34;noopener\&#34; xlink:href=\&#34;https://ex.test/666\&#34; xlink:title=\&#34;l&amp;#39;art. 666 (art.666).\&#34;&gt;&#34;</span>
 </span></span><span style="display:flex;"><span>              <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>             <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;node href not injected: %S&#34;</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; edge anchors (no model match) are untouched</span>
@@ -1227,6 +1237,11 @@ bundle and the <code>&lt;argdown-map&gt;</code> custom element are all present. 
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;&lt;svg&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;map svg missing from publish output: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;xlink:href=\&#34;https://example.com/x\&#34;&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
 </span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;source link not clickable in the map: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; The source opens in a NEW TAB, not inside the frame (Légifrance &amp; co.</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; send X-Frame-Options: DENY — in-frame navigation just \&#34;refused to</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; connect\&#34;).  The anchor must carry target=_blank.</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;&lt;a target=\&#34;_blank\&#34;[^&gt;]*xlink:href=\&#34;https://example.com/x\&#34;&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;source link does not open in a new tab (no target=_blank): %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; The published view IS Argdown&#39;s web-component (its toolbar/zoom/</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; fullscreen): the CDN bundle and the custom element must be present.</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;web-components&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
