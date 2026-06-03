@@ -117,8 +117,9 @@ function appTemplate(root){
       <catalog-overlay .open=${ui.catalogOpen}
                        .items=${store.getTable('items')}
                        .query=${ui.searchQuery}></catalog-overlay>
-      <empty-state .visible=${!Object.keys(store.getTable('boxes')).length
-                            && !Object.keys(store.getTable('items')).length}></empty-state>
+      ${!Object.keys(store.getTable('boxes')).length
+        && !Object.keys(store.getTable('items')).length
+          ? html`<empty-state></empty-state>` : ''}
       <box-list .rows=${store.getTable('boxes')}
                 .items=${store.getTable('items')}
                 .query=${ui.searchQuery}></box-list>
@@ -128,10 +129,8 @@ function appTemplate(root){
     `;
 }
 class EmptyState extends LitElement {
-    static properties = { visible: {} };
     createRenderRoot(){ return this; }
     render(){
-        if(!this.visible) return '';
         return html`
           <div class="empty-state">
             <div class="emoji">&#x1f4e6;</div>

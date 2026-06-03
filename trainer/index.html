@@ -1,0 +1,100 @@
+<!-- [[id:e2a7c4d9-3b8f-4c16-9d20-1a2b3c4d5e6f::+BEGIN_SRC mhtml :results verbatim :exports none :noweb yes :mkdirp yes :tangle ~/perso/org-publish/github/trainer/index.html][No heading:2]] -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+
+      Generic PWA meta tags: charset, purge escape hatch, viewport, and manifest
+      link.  Callers add their own =<title>= and =<meta name="theme-color">=.
+
+      #+NAME: pwa-meta-ex
+      #+BEGIN_SRC org :results none :exports none :noweb yes
+        [[pwa-meta]]
+      #+END_SRC
+
+      #+NAME: pwa-meta
+      #+BEGIN_SRC bash :results output :exports results
+        cat<<'EOF'
+        <meta charset="UTF-8">
+        <script>
+        if(new URLSearchParams(location.search).has('purge')&&'serviceWorker'in navigator){
+          caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});
+          navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(s){s.unregister()})});
+          location.replace(location.pathname);
+        }
+        </script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="mobile-web-app-capable" content="yes">
+        <link rel="manifest" href="manifest.json">
+        EOF
+      #+END_SRC
+
+    <meta name="theme-color" content="#1b1d2e">
+    <title>Karate beep trainer</title>
+    <script>
+      if('serviceWorker' in navigator
+         && location.hostname !== 'localhost'
+         && location.hostname !== '127.0.0.1'){
+          navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'});
+      }
+    </script>
+    <script type="importmap">
+      {
+        "imports": {
+          "lit": "https://esm.sh/lit@3"
+        }
+      }
+    </script>
+    <style>
+      :root{
+          --bg:#1b1d2e; --card:#262a40; --fg:#e8e8f0; --muted:#8a8ea5;
+          --accent:#f9a826; --danger:#e63946;
+      }
+      body{margin:0;background:var(--bg);color:var(--fg);
+           font-family:system-ui,sans-serif;line-height:1.4;min-height:100vh}
+      .app-bar{padding:12px 16px;border-bottom:1px solid #2a2d44;text-align:center}
+      .app-bar h1{font-size:1.2rem;margin:0;color:var(--fg)}
+      .screen{padding:8px 0 32px}
+      #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+               background:var(--bg);color:var(--muted);z-index:9999}
+      body[data-app-ready] #loading{display:none}
+      .build-tag{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:8px;
+                 font-size:.65rem;color:var(--muted);font-family:monospace;
+                 pointer-events:none;z-index:50}
+      .config{display:grid;gap:12px;padding:16px;max-width:420px;margin:0 auto}
+      .config label{display:grid;gap:4px;font-size:.9rem;color:var(--muted)}
+      .config input{background:var(--card);color:var(--fg);border:1px solid #333;
+                    border-radius:6px;padding:10px;font:inherit;font-size:1.1rem}
+      .error{color:var(--danger);margin:0;font-size:.9rem}
+      button.primary{background:var(--accent);color:#111;border:0;border-radius:8px;
+                     padding:14px;font:inherit;font-weight:700;font-size:1.1rem;
+                     cursor:pointer;width:100%}
+      .run{padding:16px;max-width:420px;margin:0 auto}
+      .hint{text-align:center;color:var(--muted);margin:0}
+      .count{font-size:4rem;font-weight:800;text-align:center;color:var(--accent);
+             margin:16px 0;font-variant-numeric:tabular-nums}
+      button.danger{background:var(--danger);color:#fff;border:0;border-radius:8px;
+                    padding:14px;font:inherit;font-weight:700;font-size:1.1rem;
+                    cursor:pointer;width:100%}
+      .gaps{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:4px}
+      .gap{background:var(--card);border-radius:6px;padding:8px 12px;color:var(--fg);
+           font-variant-numeric:tabular-nums}
+      .summary{padding:0 16px;max-width:420px;margin:16px auto 0}
+      .summary h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;
+                  color:var(--muted);margin:0 0 4px}
+      .summary p{margin:0;color:var(--fg)}
+      #flash{position:fixed;inset:0;background:var(--accent);opacity:0;
+             pointer-events:none;z-index:80}
+      #flash.on{animation:flash-fade .25s ease-out}
+      @keyframes flash-fade{0%{opacity:0}10%{opacity:.85}100%{opacity:0}}
+    </style>
+  </head>
+  <body>
+    <div id="loading">Loading…</div>
+    <span class="build-tag" title="Build">7625b16</span>
+    <div id="flash" aria-hidden="true"></div>
+    <main><app-root></app-root></main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
+<!-- No heading:2 ends here -->

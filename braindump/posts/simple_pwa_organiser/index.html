@@ -123,7 +123,7 @@ JS-only. A future Python importer or a backend reading the
 inventory will parse the JSON the <a class="internal-link" href="#7c2a5e10-2b02-4a91-9002-000000000010">sync server</a> writes, or drive
 a JS runtime as a subprocess. Yjs and Automerge would have given
 me a real cross-language peer — at the cost of bringing the
-reactivity duality back. I&rsquo;d rather take the language lock-in.</p>
+reactivity duality back.</p>
 <h2 id="a4d3f201-3c03-4b92-9003-000000000001">Setting up the store</h2>
 <h3 id="a4d3f201-3c03-4b92-9003-000000000002">External libraries</h3>
 <p>Let&rsquo;s import lit and tinybase.</p>
@@ -141,9 +141,8 @@ reactivity duality back. I&rsquo;d rather take the language lock-in.</p>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">script</span><span style="color:#1f2328">&gt;</span>
 </span></span></code></pre></div><h3 id="a4d3f201-3c03-4b92-9003-000000000003">Store schema</h3>
 <p>What I want to remember is small: a <strong>box</strong> I can recognise on
-sight (so a photo, because the labels I&rsquo;ve been using are
-unreadable across the room), and an <strong>item</strong> that names the thing I
-was looking for. An item has to know which box it lives in so the
+sight, and an <strong>item</strong> that names the thing I was looking for. An
+item has to know which box it lives in so the
 search can answer &ldquo;where did I put that?&rdquo;, and it has to allow no
 box at all so I can dump items into the system before I&rsquo;ve
 decided where they go.</p>
@@ -166,10 +165,9 @@ with photos</a>).</li>
 visually (see <a class="internal-link" href="#7c2a5e10-2b02-4a91-9002-00000000000e">Items with background colour</a>).</li>
 </ul>
 <h3 id="a4d3f201-3c03-4b92-9003-000000000004">Initial load</h3>
-<p>Let&rsquo;s keep the navigation state in a <code>ui</code> object. Each field is
-defined by the feature chapter that owns it; this skeleton just
-collects the pieces. Each <code>&lt;&lt;…&gt;&gt;</code> below refers to lines of code
-defined later in the doc — one per field.</p>
+<p>Let&rsquo;s keep the navigation state in a <code>ui</code> object. The fields
+will be introduced later in the doc; this skeleton just collects
+the pieces. Each <code>&lt;&lt;…&gt;&gt;</code> below refers to one of them.</p>
 <div class="konix-block-name-marker" data-name="ui-state"></div>
 <p><a id="code-snippet--ui-state"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">ui</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
@@ -299,16 +297,8 @@ chapters can reach for <code>var(--muted)</code> or <code>var(--accent)</code> b
 </span></span><span style="display:flex;"><span>    <span style="color:#953800">--accent</span><span style="color:#1f2328">:</span><span style="color:#0550ae">#f9a826</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
 </span></span></code></pre></div><h2 id="7c2a5e10-2b02-4a91-9002-000000000001">Open the app</h2>
-<p>The first time I open the app on a fresh phone there&rsquo;s nothing in
-the store yet, and an empty page would leave me wondering whether
-the thing failed to load. So I want a small landing message: an
-emoji big enough to read across the room, the app&rsquo;s name, a single
-line saying &ldquo;no boxes yet.&rdquo; It should disappear the second I add
-anything, no matter what — a box or just an unassigned item.</p>
-<p>The test I want to pin first is the trivial one: open the app,
-see the hint. (<code>clear_state</code>, used here and in every later test,
-resets IndexedDB and localStorage between cases — defined in
-<a class="internal-link" href="#b5e4a312-4d04-4c93-9004-000000000001">Playwright tests</a>.)</p>
+<p>At first, with nothing in the store, the app opens to an empty
+state.</p>
 <div class="konix-block-name-marker" data-name="test-empty-state"></div>
 <p><a id="code-snippet--test-empty-state"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
@@ -318,20 +308,13 @@ resets IndexedDB and localStorage between cases — defined in
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;No boxes yet&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>is_visible<span style="color:#1f2328">(),</span> \
 </span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;empty-state line not visible after fresh load&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: empty state&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p>&ldquo;Disappear the second I add anything&rdquo; tells me what to compute:
-whether both tables are empty. Because the renderer runs on every
-store change, I don&rsquo;t need any kind of show/hide gymnastics — the
-template returns the hint when both tables are empty, and returns
-nothing the next time the user has actually written something. The
-empty state lives in the document the same way a paragraph does
-when it has content to display, and is simply absent otherwise.</p>
+</span></span></code></pre></div><p>The empty state is a plain element: an emoji, the app&rsquo;s name, a
+one-line hint.</p>
 <div class="konix-block-name-marker" data-name="empty-state-class"></div>
 <p><a id="code-snippet--empty-state-class"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">EmptyState</span> <span style="color:#cf222e">extends</span> <span style="color:#1f2328">LitElement</span> <span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">static</span> <span style="color:#1f2328">properties</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">visible</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">{}</span> <span style="color:#1f2328">};</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">createRenderRoot</span><span style="color:#1f2328">(){</span> <span style="color:#cf222e">return</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">render</span><span style="color:#1f2328">(){</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">visible</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#1f2328">html</span><span style="color:#0a3069">`
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          &lt;div class=&#34;empty-state&#34;&gt;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            &lt;div class=&#34;emoji&#34;&gt;&amp;#x1f4e6;&lt;/div&gt;
@@ -342,17 +325,20 @@ when it has content to display, and is simply absent otherwise.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">customElements</span><span style="color:#1f2328">.</span><span style="color:#1f2328">define</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;empty-state&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">EmptyState</span><span style="color:#1f2328">);</span>
-</span></span></code></pre></div><p>The empty-state goes on screen only when the store has no box
-and no item yet.</p>
+</span></span></code></pre></div><p>Rather than carry a visibility flag of its own, the element is
+put on screen only when the store has no box and no item yet —
+the template gates it the same way it gates the forms.</p>
 <div class="konix-block-name-marker" data-name="app-template-empty-state"></div>
 <p><a id="code-snippet--app-template-empty-state"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#0550ae">&lt;</span><span style="color:#1f2328">empty</span><span style="color:#0550ae">-</span><span style="color:#1f2328">state</span> <span style="color:#1f2328">.</span><span style="color:#1f2328">visible</span><span style="color:#0550ae">=</span><span style="color:#1f2328">$</span><span style="color:#1f2328">{</span><span style="color:#0550ae">!</span><span style="color:#6639ba">Object</span><span style="color:#1f2328">.</span><span style="color:#1f2328">keys</span><span style="color:#1f2328">(</span><span style="color:#1f2328">store</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getTable</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;boxes&#39;</span><span style="color:#1f2328">)).</span><span style="color:#1f2328">length</span>
-</span></span><span style="display:flex;"><span>                      <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#0550ae">!</span><span style="color:#6639ba">Object</span><span style="color:#1f2328">.</span><span style="color:#1f2328">keys</span><span style="color:#1f2328">(</span><span style="color:#1f2328">store</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getTable</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;items&#39;</span><span style="color:#1f2328">)).</span><span style="color:#1f2328">length</span><span style="color:#1f2328">}</span><span style="color:#0550ae">&gt;&lt;</span><span style="color:#f6f8fa;background-color:#82071e">/empty-state&gt;</span>
-</span></span></code></pre></div><p>The thing I most want to avoid visually is the user mistaking the
-hint for a stuck loading screen. Centering the block, muting the
-text colour, and pushing the emoji to font-size 3 buys that — at a
-glance it reads &ldquo;this is what the app looks like when it&rsquo;s empty&rdquo;,
-not &ldquo;the thing is still spinning.&rdquo;</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#1f2328">$</span><span style="color:#1f2328">{</span><span style="color:#0550ae">!</span><span style="color:#6639ba">Object</span><span style="color:#1f2328">.</span><span style="color:#1f2328">keys</span><span style="color:#1f2328">(</span><span style="color:#1f2328">store</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getTable</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;boxes&#39;</span><span style="color:#1f2328">)).</span><span style="color:#1f2328">length</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#0550ae">!</span><span style="color:#6639ba">Object</span><span style="color:#1f2328">.</span><span style="color:#1f2328">keys</span><span style="color:#1f2328">(</span><span style="color:#1f2328">store</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getTable</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;items&#39;</span><span style="color:#1f2328">)).</span><span style="color:#1f2328">length</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">?</span> <span style="color:#1f2328">html</span><span style="color:#0a3069">`&lt;empty-state&gt;&lt;/empty-state&gt;`</span> <span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Centred, muted, the emoji pushed to font-size 3 — at a glance:</p>
+<div style="text-align:center;padding:30px 20px;color:#8a8ea5;background:#1b1d2e;border-radius:6px;margin:0.6em 0">
+  <div style="font-size:3rem;margin-bottom:12px">&#x1f4e6;</div>
+  <h1 style="font-size:1.4rem;margin:0 0 8px 0;color:#e8e8f0">Organiser</h1>
+  <p style="font-size:.95rem;line-height:1.5;margin:0">No boxes yet.</p>
+</div>
 <div class="konix-block-name-marker" data-name="css-empty-state"></div>
 <p><a id="code-snippet--css-empty-state"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-css" data-lang="css"><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">empty-state</span><span style="color:#1f2328">{</span><span style="color:#cf222e">text-align</span><span style="color:#1f2328">:</span><span style="color:#cf222e">center</span><span style="color:#1f2328">;</span><span style="color:#cf222e">padding</span><span style="color:#1f2328">:</span><span style="color:#0550ae">60</span><span style="color:#cf222e">px</span> <span style="color:#0550ae">20</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>muted<span style="color:#1f2328">)}</span>
@@ -360,11 +346,8 @@ not &ldquo;the thing is still spinning.&rdquo;</p>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">empty-state</span> <span style="color:#0550ae">h1</span><span style="color:#1f2328">{</span><span style="color:#cf222e">font-size</span><span style="color:#1f2328">:</span><span style="color:#0550ae">1.4</span><span style="color:#cf222e">rem</span><span style="color:#1f2328">;</span><span style="color:#cf222e">margin</span><span style="color:#1f2328">:</span><span style="color:#0550ae">0</span> <span style="color:#0550ae">0</span> <span style="color:#0550ae">8</span><span style="color:#cf222e">px</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span><span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>fg<span style="color:#1f2328">)}</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">empty-state</span> <span style="color:#0550ae">p</span><span style="color:#1f2328">{</span><span style="color:#cf222e">font-size</span><span style="color:#1f2328">:</span><span style="color:#0550ae">.95</span><span style="color:#cf222e">rem</span><span style="color:#1f2328">;</span><span style="color:#cf222e">line-height</span><span style="color:#1f2328">:</span><span style="color:#0550ae">1.5</span><span style="color:#1f2328">}</span>
 </span></span></code></pre></div><h2 id="7c2a5e10-2b02-4a91-9002-000000000002">Add a box</h2>
-<p>The photo <strong>is</strong> the box: pick (or take) one, save. No name, no
-colour, no other fields — the photo carries everything I need
-to recognise it.</p>
-<p>The test pins down what &ldquo;added&rdquo; feels like end to end: the
-thumbnail appears in the list, the empty-state hint goes away.</p>
+<p>The photo <strong>is</strong> the box: pick (or take) one, save. The photo
+carries everything I need to recognise it.</p>
 <div class="konix-block-name-marker" data-name="test-add-first-box"></div>
 <p><a id="code-snippet--test-add-first-box"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
@@ -389,8 +372,7 @@ thumbnail appears in the list, the empty-state hint goes away.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;No boxes yet&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>is_visible<span style="color:#1f2328">(),</span> \
 </span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;empty-state still visible after add&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: add first box&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p>The entry-point button opens the box form when tapped.</p>
-<div class="konix-block-name-marker" data-name="add-box-button-class"></div>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="add-box-button-class"></div>
 <p><a id="code-snippet--add-box-button-class"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">AddBoxButton</span> <span style="color:#cf222e">extends</span> <span style="color:#1f2328">LitElement</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">createRenderRoot</span><span style="color:#1f2328">(){</span> <span style="color:#cf222e">return</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">}</span>
@@ -400,10 +382,7 @@ thumbnail appears in the list, the empty-state hint goes away.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">customElements</span><span style="color:#1f2328">.</span><span style="color:#1f2328">define</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;add-box-button&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">AddBoxButton</span><span style="color:#1f2328">);</span>
-</span></span></code></pre></div><p>The bar will host more than just this button later — at minimum a
-search field, and eventually a sync indicator — so the action takes
-its place alongside the others rather than dominating the screen.</p>
-<div class="konix-block-name-marker" data-name="app-template-add-box-button"></div>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="app-template-add-box-button"></div>
 <p><a id="code-snippet--app-template-add-box-button"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#0550ae">&lt;</span><span style="color:#1f2328">add</span><span style="color:#0550ae">-</span><span style="color:#1f2328">box</span><span style="color:#0550ae">-</span><span style="color:#1f2328">button</span><span style="color:#0550ae">&gt;&lt;</span><span style="color:#f6f8fa;background-color:#82071e">/add-box-button&gt;</span>
 </span></span></code></pre></div><p>Now that the bar has its first occupant, time to style it. A
@@ -3005,6 +2984,7 @@ second engine.</p>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/a_photos_videos_organiser_with_preact/">a photos/videos organiser with preact</a></li>
 <li><a class="internal-link" href="/braindump/posts/frise_chrono/">frise chrono</a></li>
+<li><a class="internal-link" href="/braindump/posts/simple_pwa_karate_beep_trainer/">simple pwa karate beep trainer</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/a4ddc6b7-f78e-42c4-8446-1c5d8405e8b7?title=simple_pwa_organiser">Permalink</a></h2>
 <style>
