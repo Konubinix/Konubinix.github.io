@@ -241,9 +241,11 @@ step on the SVG.</p>
 </span></span><span style="display:flex;"><span><span style="color:#57606a">;;; Commentary:</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a">;; Literate source: roam/argdown_in_org_mode.org.  Major mode + font-lock</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a">;; for argdown, plus org-babel rendering (Argdown&#39;s own SVG map with clickable</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a">;; source links injected — argdown map -f svg + argdown json for the url lookup</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a">;; / :file svg|dot|pdf|png / pdf|png to IPFS) and a cross-note fragment collector.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; for argdown, plus org-babel rendering with clickable source links injected</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; (argdown json for the url lookup): the publish path serves Argdown&#39;s own</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; web-component (interactive map + zoom/fullscreen toolbar) in a srcdoc iframe;</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; :file svg|dot|pdf|png writes the static map; pdf|png upload to IPFS.  Plus a</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; cross-note fragment collector.</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a">;;; Code:</span>
 </span></span><span style="display:flex;"><span>
@@ -285,32 +287,34 @@ step on the SVG.</p>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">)</span>
 </span></span></code></pre></div><p>The rendering helpers. <code>argdown--render</code> writes a block to a file
 (svg/dot/pdf/png) via <a class="internal-link" href="#1f7c3a2b-0009-0000-0000-000000000001">Argdown&rsquo;s renderer with links injected</a>, for the
-<code>:file</code> path; the publish path reaches the same map through <code>argdown--map-svg</code>.</p>
-<p>The publish path wraps the map SVG in a pan/zoom <code>srcdoc</code> iframe, and
+<code>:file</code> path. The publish path instead serves Argdown&rsquo;s own <strong>web-component</strong>
+(<code>argdown web-component</code>): the interactive viewer the site used to have —
+map plus a toolbar (zoom-lock, fullscreen, source toggle) — which it loads
+from a CDN. <code>argdown--web-component</code> takes that HTML and injects the source
+<code>href</code> into its slotted SVG (<a class="internal-link" href="#1f7c3a2b-0009-0000-0000-000000000001">the same <code>&lt;a xlink:title&gt;</code> nodes</a>). We own only
+the link; the whole viewer is Argdown&rsquo;s — no homegrown pan/zoom to maintain.</p>
+<p>The publish path then wraps that web-component in a <code>srcdoc</code> iframe, and
 that&rsquo;s not cosmetic. Hugo&rsquo;s <strong>Goldmark</strong> reparses any raw HTML it finds in the
-Markdown body, and the SVG is a multi-line blob of <code>&lt;svg&gt;=/=&lt;g&gt;=/=&lt;a&gt;</code> (the
-source links are <code>&lt;a xlink:href&gt;</code>). <code>&lt;iframe&gt;</code> is a Goldmark <strong>type-6</strong> HTML
-tag, so a multi-line iframe passes through verbatim — right up until a <strong>blank
-line</strong>, which would end the block and throw the rest back into Markdown. So
-<code>argdown--iframe-wrap</code> <strong>entity-escapes</strong> the blob into the <code>srcdoc</code> attribute —
-<code>&amp;</code>, <code>&lt;</code>, <code>&gt;</code> and <code>\&quot;</code> (the browser peels one layer, so the tags come back
-intact inside the frame) — and <strong>collapses blank lines</strong>, keeping real newlines
-so the emitted attribute stays readable in the source rather than one giant
-line. Escaping <code>&lt;=/=&gt;</code> isn&rsquo;t optional: leave them raw and Hugo&rsquo;s link rewriter
-(it adds <code>target</code>\&quot;_blank\&quot;= to <code>&lt;a&gt;=/=&lt;link&gt;</code> — and the SVG is <strong>full</strong> of
-source <code>&lt;a&gt;</code> links) edits tags <strong>inside</strong> the attribute and injects raw quotes
-that truncate the whole <code>srcdoc</code> — it shipped empty once for exactly that.
-With them escaped, the only real tag is the outer <code>&lt;iframe&gt;</code>, which also
-isolates the map from the page; being same-origin, an inline script gives the
-SVG wheel-zoom + drag-pan inside its fixed viewport.</p>
-<p>Why a <strong>fixed</strong> viewport with zoom, rather than sizing the iframe to fit the
-whole graph: the maps get large (verbatim-source nodes especially), and
-squeezing a big graph into page width makes it unreadable. A fixed stage
-(<code>height:70vh</code>, min 320px) you can wheel-zoom (clamped 5%–2000%) and drag-pan
-turns a dense map into something explorable — the affordance the dropped
-web-component used to give. The cost: a <strong>small</strong> map now sits letterboxed with
-some whitespace, where fit-to-content sized exactly to it. Worth it for the
-maps that actually need it.</p>
+Markdown body, and the component is a multi-line blob of <code>&lt;link&gt;=/=&lt;script&gt;=/ =&lt;figure&gt;=/=&lt;svg&gt;</code>. <code>&lt;iframe&gt;</code> is a Goldmark <strong>type-6</strong> HTML tag, so a multi-line
+iframe passes through verbatim — right up until a <strong>blank line</strong>, which would
+end the block and throw the rest back into Markdown. So <code>argdown--iframe-wrap</code>
+<strong>entity-escapes</strong> the blob into the <code>srcdoc</code> attribute and <strong>collapses blank
+lines</strong>, keeping real newlines so the emitted attribute stays readable in the
+source rather than one giant line. The browser peels exactly one entity layer
+before parsing <code>srcdoc</code> as a document, so the escaping is invisible inside the
+frame, and the iframe also isolates the component&rsquo;s CDN css/js from the page.</p>
+<p>The escaping is load-bearing against Hugo&rsquo;s link rewriter — a blunt
+<code>s|target="_blank" href=|target</code>&quot;_blank&quot; target="_blank" href=|= sed. Escaping <code>&lt;=/=&gt;</code> keeps it from finding
+the source <code>&lt;a&gt;</code> tags <strong>inside</strong> the attribute, but the component also pulls a
+CDN <code>&lt;link target="_blank" href=…&gt;</code> stylesheet, and the literal text <code>target="_blank" href=</code> survives a mere
+<code>&lt;</code>-escape. So <code>argdown--srcdoc-escape</code> also encodes every <code>\=</code> as <code>&amp;#61;</code>:
+nothing for the sed to match, and the browser decodes it back in the same
+pass. Without this the <code>srcdoc</code> shipped truncated once.</p>
+<p>Why an iframe with a fixed <code>height:70vh</code> (min 320px) stage: the maps get
+large (verbatim-source nodes especially), and the web-component&rsquo;s own zoom and
+fullscreen turn a dense map into something explorable within that stage —
+exactly the affordance the site had before. <code>allowfullscreen</code> on the iframe
+lets its fullscreen button break out of the stage.</p>
 <div class="konix-block-name-marker" data-name="argdown-helpers"></div>
 <p><a id="code-snippet--argdown-helpers"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--require-bin</span> <span style="color:#1f2328">()</span>
@@ -326,67 +330,32 @@ maps that actually need it.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">fn</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#953800">in</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">argdown--iframe-reset-style</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;&lt;style&gt;html,body{margin:0;padding:0;height:100%}.argdown-graph{margin:0;height:100%}.argdown-graph svg{width:100%;height:100%;cursor:grab;touch-action:none}.argdown-graph svg:active{cursor:grabbing}.argdown-graph a[*|href]{cursor:pointer}.argdown-graph a[*|href] text:first-of-type{fill:#1a73e8;text-decoration:underline}&lt;/style&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Make the map SVG fill a fixed, pannable viewport; a node carrying a source
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">link (its </span><span style="color:#032f62">`&lt;a&gt;&#39;</span><span style="color:#0a3069"> got an injected href) shows a blue, underlined title and a
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">pointer cursor — the visible affordance that the whole node is clickable.&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">argdown--iframe-script</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; Built with concat + \n so the source lines stay short *and* the emitted</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; script is multi-line (no one giant line in the published #+RESULTS).</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&lt;script&gt;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;(function(){\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  var svg=document.querySelector(&#39;svg&#39;); if(!svg) return;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  var vb=(svg.getAttribute(&#39;viewBox&#39;)||&#39;&#39;).trim().split(/[ ,]+/).map(Number);\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  if(vb.length!==4) return;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  var o=vb.slice(), x=vb[0], y=vb[1], w=vb[2], h=vb[3];\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  svg.removeAttribute(&#39;width&#39;); svg.removeAttribute(&#39;height&#39;);\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  function apply(){ svg.setAttribute(&#39;viewBox&#39;, x+&#39; &#39;+y+&#39; &#39;+w+&#39; &#39;+h); }\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  function at(e){ var r=svg.getBoundingClientRect();\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    return [x+(e.clientX-r.left)/r.width*w, y+(e.clientY-r.top)/r.height*h]; }\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;wheel&#39;, function(e){ e.preventDefault();\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    var k = e.deltaY&lt;0 ? 0.85 : 1/0.85, nw=w*k, nh=h*k;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    if(nw &lt; o[2]*0.05 || nw &gt; o[2]*20) return;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    var p=at(e); x=p[0]-(p[0]-x)*k; y=p[1]-(p[1]-y)*k; w=nw; h=nh; apply();\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  }, {passive:false});\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  var s=null, d=null, moved=false;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;pointerdown&#39;, function(e){ s=[e.clientX,e.clientY]; d=null; moved=false;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    try{ svg.setPointerCapture(e.pointerId); }catch(_){} });\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;pointermove&#39;, function(e){ if(!s) return;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    if(!d){ if(Math.hypot(e.clientX-s[0], e.clientY-s[1]) &lt; 4) return; d=s.slice(); moved=true; }\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    var r=svg.getBoundingClientRect();\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    x-=(e.clientX-d[0])/r.width*w; y-=(e.clientY-d[1])/r.height*h;\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    d=[e.clientX,e.clientY]; apply(); });\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  function end(){ s=null; d=null; }\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;pointerup&#39;, end); svg.addEventListener(&#39;pointercancel&#39;, end);\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;click&#39;, function(e){ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;dblclick&#39;, function(e){ e.preventDefault(); x=o[0];y=o[1];w=o[2];h=o[3]; apply(); });\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;})();\n&#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&lt;/script&gt;&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Self-contained pan/zoom for the map SVG in the srcdoc iframe (same-origin,
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">so an inline script drives it; no library).  Reads the SVG </span><span style="color:#032f62">`viewBox&#39;</span><span style="color:#0a3069"> as the
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">camera, drops width/height so CSS fills the viewport, then: wheel zooms
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">toward the cursor (clamped 5%–2000%), pointer-drag pans (with pointer
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">capture for smooth fast drags), double-click resets.  Panning only starts
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">past a ~4px threshold, and a real drag suppresses the trailing click — so a
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">still click still follows the node&#39;s source link.&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;&lt;style&gt;html,body{margin:0;padding:0;height:100%}.argdown-figure{margin:0;height:100%}argdown-map{display:block;height:100%}&lt;/style&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Strip the iframe&#39;s default body margin and let Argdown&#39;s web-component
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">fill the fixed viewport.  The component supplies everything else — the map,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">its toolbar (zoom-lock, fullscreen, source toggle), and the click affordance
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">on the source-linked nodes — from its own CDN stylesheet.&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#1f2328">(</span><span style="color:#953800">html</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Escape HTML for a double-quoted </span><span style="color:#032f62">`srcdoc&#39;</span><span style="color:#0a3069"> attribute value.
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Escape </span><span style="color:#032f62">`&amp;&#39;</span><span style="color:#0a3069">, </span><span style="color:#032f62">`&lt;&#39;</span><span style="color:#0a3069">, </span><span style="color:#032f62">`&gt;&#39;</span><span style="color:#0a3069"> and </span><span style="color:#032f62">`\&#34;&#39;</span><span style="color:#0a3069"> (escape </span><span style="color:#032f62">`&amp;&#39;</span><span style="color:#0a3069"> first) — the browser peels off
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">exactly one layer before parsing the value as a document, so inner entities
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">like `&amp;#39;&#39; survive and the tags come back intact.  </span><span style="color:#032f62">`&lt;&#39;</span><span style="color:#0a3069">/</span><span style="color:#032f62">`&gt;&#39;</span><span style="color:#0a3069"> must go too:
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">leaving them raw lets Hugo&#39;s link rewriter (it adds target=\&#34;_blank\&#34; to
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`&lt;a&gt;&#39;</span><span style="color:#0a3069">/</span><span style="color:#032f62">`&lt;link&gt;&#39;</span><span style="color:#0a3069">) find tags *inside* the attribute and inject raw quotes that
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">truncate the whole srcdoc.  With them escaped, the only real tag is the
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">outer </span><span style="color:#032f62">`&lt;iframe&gt;&#39;</span><span style="color:#0a3069">.  Runs of blank lines are collapsed to a single newline (a
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">blank line ends a Goldmark type-6 HTML block); real newlines stay, so the
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">emitted attribute is readable in the org source rather than one giant line.&#34;</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Escape </span><span style="color:#032f62">`&amp;&#39;</span><span style="color:#0a3069">, </span><span style="color:#032f62">`&lt;&#39;</span><span style="color:#0a3069">, </span><span style="color:#032f62">`&gt;&#39;</span><span style="color:#0a3069">, </span><span style="color:#032f62">`\&#34;&#39;</span><span style="color:#0a3069"> and </span><span style="color:#032f62">`=&#39;</span><span style="color:#0a3069"> (escape </span><span style="color:#032f62">`&amp;&#39;</span><span style="color:#0a3069"> first) — the browser peels
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">off exactly one layer before parsing the value as a document, so inner
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">entities like `&amp;#39;&#39; survive and the tags come back intact.  </span><span style="color:#032f62">`&lt;&#39;</span><span style="color:#0a3069">/</span><span style="color:#032f62">`&gt;&#39;</span><span style="color:#0a3069"> must
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">go too: leaving them raw lets Hugo&#39;s link rewriter find tags *inside* the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">attribute and corrupt them.  And </span><span style="color:#032f62">`=&#39;</span><span style="color:#0a3069"> must go because that rewriter is a
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">blunt `s|target="_blank" href=|target=\&#34;_blank\&#34; target="_blank" href=|&#39; sed: the web-component pulls a CDN
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">`&lt;link target="_blank" href=…&gt;&#39; stylesheet, and even with the </span><span style="color:#032f62">`&lt;&#39;</span><span style="color:#0a3069"> escaped the literal text
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`target="_blank" href=&#39;</span><span style="color:#0a3069"> is still there for the sed to match — injecting raw quotes that
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">truncate the srcdoc.  Encoding every </span><span style="color:#032f62">`=&#39;</span><span style="color:#0a3069"> as `&amp;#61;&#39; leaves nothing for it
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">to match; the browser decodes `&amp;#61;&#39;→</span><span style="color:#032f62">`=&#39;</span><span style="color:#0a3069"> in the same single pass.  Runs of
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">blank lines are collapsed to a single newline (a blank line ends a Goldmark
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">type-6 HTML block); real newlines stay, so the emitted attribute is readable
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">in the org source rather than one giant line.&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;&#34;</span> <span style="color:#0a3069">&#34;&amp;amp;&#34;</span> <span style="color:#953800">html</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&lt;&#34;</span> <span style="color:#0a3069">&#34;&amp;lt;&#34;</span> <span style="color:#953800">s</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&gt;&#34;</span> <span style="color:#0a3069">&#34;&amp;gt;&#34;</span> <span style="color:#953800">s</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;\&#34;&#34;</span> <span style="color:#0a3069">&#34;&amp;quot;&#34;</span> <span style="color:#953800">s</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;=&#34;</span> <span style="color:#0a3069">&#34;&amp;#61;&#34;</span> <span style="color:#953800">s</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;\n\\(?:[ \t]*\n\\)+&#34;</span> <span style="color:#0a3069">&#34;\n&#34;</span> <span style="color:#953800">s</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#953800">s</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
@@ -394,21 +363,22 @@ maps that actually need it.</p>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Wrap CONTENT-HTML in a standalone HTML document.
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">This is the single source of truth for both destinations: the publish path
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">embeds it in the iframe (</span><span style="color:#032f62">`argdown--iframe-wrap&#39;</span><span style="color:#0a3069">), and </span><span style="color:#032f62">`konix/argdown-preview&#39;</span><span style="color:#0a3069">
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">opens it in a browser — so the preview is faithful by construction.  The
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">map SVG is self-contained (inline styles), so no external css; same-origin,
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">so </span><span style="color:#032f62">`argdown--iframe-script&#39;</span><span style="color:#0a3069"> gives it pan/zoom; newlines between parts keep
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">the embedded form readable in the org source.&#34;</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">opens it in a browser — so the preview is faithful by construction.  CONTENT
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">is Argdown&#39;s web-component (it carries its own CDN css/js and toolbar), so
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">the document adds only a margin reset; newlines between parts keep the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">embedded form readable in the org source.&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;!DOCTYPE html&gt;\n&lt;html&gt;&lt;head&gt;&lt;meta charset=\&#34;utf-8\&#34;&gt;\n&#34;</span>
 </span></span><span style="display:flex;"><span>          <span style="color:#953800">argdown--iframe-reset-style</span> <span style="color:#0a3069">&#34;\n&lt;/head&gt;\n&lt;body&gt;\n&#34;</span>
-</span></span><span style="display:flex;"><span>          <span style="color:#953800">content-html</span> <span style="color:#0a3069">&#34;\n&#34;</span> <span style="color:#953800">argdown--iframe-script</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#953800">content-html</span>
 </span></span><span style="display:flex;"><span>          <span style="color:#0a3069">&#34;\n&lt;/body&gt;&lt;/html&gt;&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--iframe-wrap</span> <span style="color:#1f2328">(</span><span style="color:#953800">content-html</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Wrap CONTENT-HTML in a pan/zoom srcdoc iframe (the publish path),
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">entity-escaping </span><span style="color:#032f62">`argdown--document&#39;</span><span style="color:#0a3069"> so it survives Goldmark and the link
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">rewriter (see </span><span style="color:#032f62">`argdown-helpers&#39;</span><span style="color:#0a3069"> narrative).&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Wrap CONTENT-HTML in a srcdoc iframe (the publish path), entity-escaping
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`argdown--document&#39;</span><span style="color:#0a3069"> so it survives Goldmark and the link rewriter (see
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`argdown-helpers&#39;</span><span style="color:#0a3069"> narrative).  </span><span style="color:#032f62">`allowfullscreen&#39;</span><span style="color:#0a3069"> lets the web-component&#39;s
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">fullscreen button expand the map out of its 70vh stage.&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&lt;iframe class=\&#34;argdown-frame\&#34; style=\&#34;width:100%%;height:70vh;min-height:320px;border:0\&#34; srcdoc=\&#34;%s\&#34;&gt;&lt;/iframe&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&lt;iframe class=\&#34;argdown-frame\&#34; allowfullscreen style=\&#34;width:100%%;height:70vh;min-height:320px;border:0\&#34; srcdoc=\&#34;%s\&#34;&gt;&lt;/iframe&gt;&#34;</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--document</span> <span style="color:#953800">content-html</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--stdout</span> <span style="color:#1f2328">(</span><span style="color:#953800">fmt</span> <span style="color:#953800">in</span><span style="color:#1f2328">)</span>
@@ -429,13 +399,27 @@ maps that actually need it.</p>
 </span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">svg</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">string-match</span> <span style="color:#0a3069">&#34;&lt;svg&#34;</span> <span style="color:#953800">raw</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">substring</span> <span style="color:#953800">raw</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">match-beginning</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">))</span> <span style="color:#953800">raw</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">argdown--inject-links</span> <span style="color:#953800">svg</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--source-urls</span> <span style="color:#953800">in</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--web-component</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return Argdown&#39;s own web-component HTML for INPUT file, with a clickable
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">source link injected into each node that cites one.  `argdown web-component&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">emits the CDN </span><span style="color:#032f62">`&lt;link&gt;&#39;</span><span style="color:#0a3069">/</span><span style="color:#032f62">`&lt;script&gt;&#39;</span><span style="color:#0a3069"> tags plus a </span><span style="color:#032f62">`&lt;figure&gt;&#39;</span><span style="color:#0a3069">/</span><span style="color:#032f62">`&lt;argdown-map&gt;&#39;</span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">whose `&lt;div slot=\&#34;map\&#34;&gt;&#39; holds the very SVG `argdown map&#39; produces — same
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">`&lt;a xlink:title&gt;&#39; nodes </span><span style="color:#032f62">`argdown--inject-links&#39;</span><span style="color:#0a3069"> splices an </span><span style="color:#032f62">`xlink:href&#39;</span><span style="color:#0a3069"> into.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">We ride the whole viewer (its map, zoom, fullscreen and source-toggle
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">toolbar); the href is the only thing that&#39;s ours.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">argdown--inject-links</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown web-component --stdout --silent %s&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">argdown--source-urls</span> <span style="color:#953800">in</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--publish-content</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;The published view of INPUT file: the SVG map, whose nodes carry the
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">clickable source links (`[label](url)&#39; → real `&lt;a href&gt;&#39;).&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;figure class=\&#34;argdown-graph\&#34;&gt;&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--map-svg</span> <span style="color:#953800">in</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;&lt;/figure&gt;&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;The published view of INPUT file: Argdown&#39;s web-component, whose slotted
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">map nodes carry the clickable source links (`[label](url)&#39; → real `&lt;a href&gt;&#39;).&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">argdown--web-component</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--publish-iframe</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return the published map for INPUT file as a pan/zoom srcdoc iframe.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return the published map for INPUT file as a web-component srcdoc iframe.&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">argdown--iframe-wrap</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--publish-content</span> <span style="color:#953800">in</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--render</span> <span style="color:#1f2328">(</span><span style="color:#953800">fmt</span> <span style="color:#953800">in</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
@@ -503,7 +487,8 @@ ships.</p>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Render an Argdown BODY.  Dispatch on headers:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">- :file F                -&gt; write the map to F (svg/dot/pdf/png/jpg/webp),
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                            return nil so Org inserts the [[file:F]] link
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">- :results output html   -&gt; svg map iframe, links clickable (publish path)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">- :results output html   -&gt; web-component map iframe (interactive viewer:
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                            zoom/fullscreen/source toggle), links clickable
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">- :results ... pdf|png   -&gt; render and upload to IPFS, return the URL
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Composition (prepended to BODY via </span><span style="color:#032f62">`argdown--compose&#39;</span><span style="color:#0a3069">): :argdown-include REFS
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">pulls named blocks (local or </span><span style="color:#032f62">`file.org:name&#39;</span><span style="color:#0a3069">, recursive); :argdown-collect SPEC
@@ -536,8 +521,10 @@ ships.</p>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Open the argdown src block at point as a standalone HTML document in a
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">browser — the very document the publish path embeds in its iframe, so what
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">you see is what you&#39;ll publish.  Sources are composed (:argdown-include /
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">:argdown-collect) exactly as on render.  The map SVG is self-contained, so
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">this works offline.&#34;</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">:argdown-collect) exactly as on render.  The viewer is Argdown&#39;s
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">web-component, which loads its toolbar/zoom/fullscreen from a CDN — so the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">interactive map needs the network; offline, only the static slotted SVG
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">paints.&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">interactive</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">argdown--require-bin</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">info</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-get-src-block-info</span> <span style="color:#032f62">&#39;light</span><span style="color:#1f2328">)))</span>
@@ -565,14 +552,17 @@ faithful fix is to render with Argdown&rsquo;s <strong>own</strong> <code>argdow
 its tuned layout, its argument→conclusion edges, its styling — and merely
 <strong>inject</strong> the <code>href</code>.</p>
 <p><code>argdown--source-urls</code> reads the model (<code>argdown json</code>) into a map of each
-node&rsquo;s description text → its first source url. <code>argdown--map-svg</code> runs
-Argdown&rsquo;s SVG and hands it to <code>argdown--inject-links</code>, which walks each <code>&lt;a xlink:title&gt;</code>, decodes Graphviz&rsquo;s entities (<code>argdown--svg-unescape</code>), matches
-the title to a url, and splices in <code>xlink:href</code> — making the <strong>whole node</strong> a
-clickable link to its source. Edge anchors (title <code>&quot;support&quot;</code> …) don&rsquo;t match
-and are left alone. A Graphviz node has a single <code>&lt;a&gt;</code>, so it&rsquo;s one link per
-node by construction (the first the statement carries); the visible affordance
-— title turns blue + underlined, pointer cursor — is CSS in
-<code>argdown--iframe-reset-style</code>.</p>
+node&rsquo;s description text → its first source url. Both consumers — the publish
+path&rsquo;s <code>argdown--web-component</code> and the <code>:file</code> path&rsquo;s <code>argdown--map-svg</code> —
+hand their SVG to <code>argdown--inject-links</code>, which walks each <code>&lt;a xlink:title&gt;</code>,
+decodes Graphviz&rsquo;s entities (<code>argdown--svg-unescape</code>), matches the title to a
+url, and splices in <code>xlink:href</code> — making the <strong>whole node</strong> a clickable link to
+its source. The same <code>&lt;a xlink:title&gt;</code> nodes appear in Argdown&rsquo;s standalone
+SVG and in the web-component&rsquo;s slotted SVG, so one injector serves both. Edge
+anchors (title <code>&quot;support&quot;</code> …) don&rsquo;t match and are left alone. A Graphviz node
+has a single <code>&lt;a&gt;</code>, so it&rsquo;s one link per node by construction (the first the
+statement carries); the click affordance (hover title, cursor) is the
+web-component&rsquo;s own styling on the published map.</p>
 <p>The match rides two assumptions about Argdown&rsquo;s current output, and both fail
 <strong>silently</strong> (a missing link, never a wrong one): the node anchor is exactly
 <code>&lt;a xlink:title</code>&quot;…&quot;&gt;= (a future Argdown adding another attribute to it would
@@ -973,14 +963,15 @@ map. Here&rsquo;s a small one — should I keep relying on Argdown, given the
 single-maintainer risk? — that doubles as the fixture for the smoke
 test.</p>
 <div class="konix-block-name-marker" data-name="sample-argdown"></div>
-<p><a id="code-snippet--sample-argdown"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Keep Argdown]: I should build on Argdown rather than roll my own.
-  + &lt;Layout is the hard part&gt;: Argument layout (premise/conclusion
-    layering, pro/con grouping) is years of work I&#39;d otherwise redo.
-  + &lt;Actively maintained&gt;: v2.0.0 shipped in 2026 after a long pause.
-  - &lt;Bus factor&gt;: It is essentially a single-maintainer project.
-    + &lt;Fork is cheap&gt;: MIT-licensed, and my Nix flake pins a known version.
-</code></pre><p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample through
+<pre class="src src-argdown">
+[<span style="color: #93E0E3;">Keep Argdown</span>]: I should build on Argdown rather than roll my own.
+  <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Layout is the hard part</span>&gt;: Argument layout (premise/conclusion
+    layering, pro/con grouping) is years of work I'd otherwise redo.
+  <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Actively maintained</span>&gt;: v2.0.0 shipped in 2026 after a long pause.
+  <span style="color: #ff0000;">-</span> &lt;<span style="color: #93E0E3;">Bus factor</span>&gt;: It is essentially a single-maintainer project.
+    <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Fork is cheap</span>&gt;: MIT-licensed, and my Nix flake pins a known version.
+</pre>
+<p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample through
 <code>argdown--map-svg</code> (Argdown&rsquo;s own SVG + <a class="internal-link" href="#1f7c3a2b-0009-0000-0000-000000000001">our link injection</a>) and assert a
 non-empty, well-formed SVG. Green means the chain holds — Argdown parses, lays
 out, and renders the SVG with its <strong>bundled</strong> Graphviz (no system <code>dot</code>), off
@@ -1100,13 +1091,18 @@ unescape pass must restore the component. It needs neither the CLI nor
 ox-hugo.</p>
 <div class="konix-block-name-marker" data-name="iframe-test"></div>
 <p><a id="code-snippet--iframe-test"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">blob</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;figure&gt;&lt;argdown-map&gt;&lt;pre&gt;&lt;code&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;[x]: a statement\n&#34;</span>
-</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;    indented continuation\n&#34;</span>   <span style="color:#57606a">; indentation must survive untouched</span>
-</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;\n&#34;</span>                             <span style="color:#57606a">; a blank line — the one Goldmark trigger</span>
-</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;[y]: another\n&lt;/code&gt;&lt;/pre&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;&lt;svg&gt;&lt;g id=\&#34;graph0\&#34;&gt;&lt;/g&gt;&lt;/svg&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>                     <span style="color:#0a3069">&#34;&lt;/argdown-map&gt;&lt;/figure&gt;&#34;</span><span style="color:#1f2328">))</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">blob</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#57606a">;; the CDN stylesheet the web-component pulls: a *bare* `target="_blank" href=&#39;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#57606a">;; (not `xlink:href&#39;) — the exact shape Hugo&#39;s link-rewriting</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#57606a">;; sed `s|([^:])target="_blank" href=|...|&#39; would corrupt unless `=&#39; is encoded.</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;&lt;link rel=\&#34;stylesheet\&#34; target="_blank" href=\&#34;https://cdn.example/x.css\&#34;&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;&lt;figure&gt;&lt;argdown-map&gt;&lt;pre&gt;&lt;code&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;[x]: a statement\n&#34;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;    indented continuation\n&#34;</span>   <span style="color:#57606a">; indentation must survive untouched</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;\n&#34;</span>                             <span style="color:#57606a">; a blank line — the one Goldmark trigger</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;[y]: another\n&lt;/code&gt;&lt;/pre&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;&lt;svg&gt;&lt;g id=\&#34;graph0\&#34;&gt;&lt;/g&gt;&lt;/svg&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;&lt;/argdown-map&gt;&lt;/figure&gt;&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">frame</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--iframe-wrap</span> <span style="color:#953800">blob</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-prefix-p</span> <span style="color:#0a3069">&#34;&lt;iframe&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;not an iframe: %S&#34;</span> <span style="color:#953800">frame</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; Readable: keeps real newlines — no &amp;#10; soup, no one giant line.</span>
@@ -1125,18 +1121,32 @@ ox-hugo.</p>
 </span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;&amp;quot;&#34;</span> <span style="color:#0a3069">&#34;\&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;&amp;gt;&#34;</span> <span style="color:#0a3069">&#34;&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;lt;&#34;</span> <span style="color:#0a3069">&#34;&lt;&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0a3069">&#34;&amp;lt;&#34;</span> <span style="color:#0a3069">&#34;&lt;&#34;</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#57606a">;; decode the numeric `=&#39; entity FIRST (before `&amp;amp;&#39;),</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#57606a">;; the way the browser&#39;s single pass does.</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;#61;&#34;</span> <span style="color:#0a3069">&#34;=&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; The ONLY real tag is the outer &lt;iframe&gt;: no raw &lt;, &gt; inside the</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; attribute.  Else the publish pipeline&#39;s link rewriter (it adds</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; target=&#34;_blank&#34; to &lt;a&gt;/&lt;link&gt;) edits tags *inside* srcdoc and</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; injects raw quotes that truncate it — exactly what shipped once.</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;[&lt;&gt;]&#34;</span> <span style="color:#953800">v</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;raw angle brackets in srcdoc: %S&#34;</span> <span style="color:#953800">v</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; One browser unescape pass restores the component verbatim.</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; And NO literal `target="_blank" href=&#39; survives: every `=&#39; is encoded as `&amp;#61;&#39;, so</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; Hugo&#39;s `s|([^:])target="_blank" href=|...|&#39; sed finds nothing to match in the CDN</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; `&lt;link target="_blank" href=…&gt;&#39; (escaping `&lt;&#39; alone leaves the text `target="_blank" href=&#39; intact —</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; that shipped a truncated srcdoc once).  Reverting the `=&#39; step in</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; `argdown--srcdoc-escape&#39; turns this assertion red.</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;target="_blank" href=&#34;</span> <span style="color:#953800">v</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;literal target="_blank" href= survived — Hugo&#39;s sed would inject raw quotes and truncate: %S&#34;</span> <span style="color:#953800">v</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; One browser unescape pass restores the component verbatim — including</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; the CDN link&#39;s href, decoded back from `&amp;#61;&#39;.</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;    indented continuation&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;indentation lost: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;id=\&#34;graph0\&#34;&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;svg lost: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;target="_blank" href=\&#34;https://cdn.example/x.css\&#34;&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;cdn link href lost on roundtrip: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;\n[ \t]*\n&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;blank line survived into srcdoc: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: srcdoc fully entity-escaped (no raw tags/quotes), multi-line, no blank lines&#34;</span><span style="color:#1f2328">))</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: srcdoc fully entity-escaped (no raw tags/quotes), multi-line, no blank lines&#34;
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: srcdoc fully entity-escaped (no raw tags/quotes, no literal target="_blank" href=), roundtrips, multi-line, no blank lines&#34;</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: srcdoc fully entity-escaped (no raw tags/quotes, no literal target="_blank" href=), roundtrips, multi-line, no blank lines&#34;
 </span></span></code></pre></div><p>The seventh test pins <code>konix/argdown-preview</code>&rsquo;s contract: <strong>what you preview
 is what you publish</strong>. <code>argdown--document</code> builds one standalone HTML doc;
 the preview opens it in a browser, and the publish path embeds that same doc
@@ -1155,10 +1165,14 @@ document the preview shows — no drift between the two paths.</p>
 </span></span><span style="display:flex;"><span>             <span style="color:#0a3069">&#34;&amp;quot;&#34;</span> <span style="color:#0a3069">&#34;\&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span>
 </span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;&amp;gt;&#34;</span> <span style="color:#0a3069">&#34;&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;lt;&#34;</span> <span style="color:#0a3069">&#34;&lt;&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;&amp;lt;&#34;</span> <span style="color:#0a3069">&#34;&lt;&#34;</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;#61;&#34;</span> <span style="color:#0a3069">&#34;=&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-prefix-p</span> <span style="color:#0a3069">&#34;&lt;!DOCTYPE html&gt;&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview not a standalone doc: %S&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#953800">component</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc missing the component&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;addEventListener(&#39;wheel&#39;&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc missing pan/zoom script&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; The web-component carries its own UI: the document adds NO homegrown</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; pan/zoom script — pinning that we don&#39;t reinvent the toolbar.</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;&lt;script&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc has a homegrown script: %S&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; One document, two destinations: the iframe embeds exactly what preview shows.</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#6639ba">string-equal</span> <span style="color:#953800">doc</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview/publish drift:\n%S\n---\n%S&#34;</span> <span style="color:#953800">doc</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;  PASS: preview builds the standalone doc the iframe embeds (preview == publish)&#34;</span><span style="color:#1f2328">)</span>
@@ -1187,11 +1201,12 @@ no CLI, deterministic — feeding a fake SVG + a text→url map; it also exercis
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;&lt;a xlink:title=\&#34;support\&#34;&gt;&#34;</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;edge anchor altered: %S&#34;</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;  PASS: injects xlink:href into the matching node, leaves edge anchors alone&#34;</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: injects xlink:href into the matching node, leaves edge anchors alone&#34;
-</span></span></code></pre></div><p>The eighth test pins the publish path itself, end to end: <code>:results output html</code> ships the SVG map (the shape of the debate) whose nodes carry the
-clickable source links — a link <code>[Src](url)</code> becomes a real <code>&lt;a href&gt;</code> in
-the map. It renders a statement with a link through <code>argdown--publish-iframe</code>,
-unescapes the <code>srcdoc</code>, and asserts the map <code>&lt;svg&gt;</code> and the clickable anchor
-are present and no web-component JS bundle is pulled. CLI-backed.</p>
+</span></span></code></pre></div><p>The eighth test pins the publish path itself, end to end: <code>:results output html</code> ships Argdown&rsquo;s web-component (the interactive viewer — map plus
+zoom/fullscreen/source toolbar) whose slotted map nodes carry the clickable
+source links — a link <code>[Src](url)</code> becomes a real <code>&lt;a href&gt;</code> in the map. It
+renders a statement with a link through <code>argdown--publish-iframe</code>, unescapes
+the <code>srcdoc</code>, and asserts the map <code>&lt;svg&gt;</code>, the clickable anchor, the CDN
+bundle and the <code>&lt;argdown-map&gt;</code> custom element are all present. CLI-backed.</p>
 <div class="konix-block-name-marker" data-name="publish-test"></div>
 <p><a id="code-snippet--publish-test"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">executable-find</span> <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">))</span>
@@ -1206,14 +1221,20 @@ are present and no web-component JS bundle is pulled. CLI-backed.</p>
 </span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;&amp;quot;&#34;</span> <span style="color:#0a3069">&#34;\&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;&amp;gt;&#34;</span> <span style="color:#0a3069">&#34;&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;lt;&#34;</span> <span style="color:#0a3069">&#34;&lt;&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0a3069">&#34;&amp;lt;&#34;</span> <span style="color:#0a3069">&#34;&lt;&#34;</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;#61;&#34;</span> <span style="color:#0a3069">&#34;=&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;&lt;svg&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;map svg missing from publish output: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;xlink:href=\&#34;https://example.com/x\&#34;&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
 </span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;source link not clickable in the map: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;web-components&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span>
-</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;heavy web-component JS bundle pulled instead of inline svg: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: publish path ships the svg map with a clickable source link in a node&#34;</span><span style="color:#1f2328">))</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: publish path ships the svg map with a clickable source link in a node&#34;
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; The published view IS Argdown&#39;s web-component (its toolbar/zoom/</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">;; fullscreen): the CDN bundle and the custom element must be present.</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;web-components&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;web-component bundle missing — toolbar/zoom would be gone: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;&lt;argdown-map&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;argdown-map custom element missing from publish output: %S&#34;</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: publish path ships Argdown&#39;s web-component with a clickable source link in a map node&#34;</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: publish path ships Argdown&#39;s web-component with a clickable source link in a map node&#34;
 </span></span></code></pre></div><h2 id="c3f0eba5-4789-42d9-b743-49146bcb87a4">config</h2>
 <h2 id="permalink"><a class="internal-link" href="/braindump/1f7c3a2b-9e4d-4c81-b6a2-3d5e8f1a9c40?title=argdown_in_org_mode">Permalink</a></h2>
 <style>
