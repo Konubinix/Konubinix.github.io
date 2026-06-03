@@ -1,3 +1,6 @@
+import van from 'vanjs-core';
+const { header, main, h1, h2, p, div, section, form, label, input, button, ul, li } = van.tags;
+
 const CONFIG_KEY = 'karate-trainer.config';
 const DEFAULTS = { count: 10, min: 3, max: 10 };
 
@@ -9,13 +12,13 @@ function loadConfig(){
     return { ...DEFAULTS };
 }
 
-function saveConfig(config){
+function saveConfig(){
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch(_){}
 }
 function setConfigField(field, value){
-    const config = { ...state.config, [field]: value };
-    saveConfig(config);
-    setState({ config, configError: '' });
+    config[field] = value;
+    saveConfig();
+    configError.val = '';
 }
 function validateConfig(c){
     if(!(c.count >= 1)) return 'Number of beeps must be at least 1.';
@@ -24,12 +27,10 @@ function validateConfig(c){
     return '';
 }
 
-const state = { config: null, configError: '', session: null };
+const config = loadConfig();
 
-function setState(updates){
-    Object.assign(state, updates);
-    renderApp();
-}
+const configError = van.state('');
+const session = van.state(null);
 
 let audioCtx = null;
 
@@ -72,118 +73,92 @@ function flash(){
 }
 
 function startSession(){
-    const error = validateConfig(state.config);
-    if(error){ setState({ configError: error }); return; }
+    const error = validateConfig(config);
+    if(error){ configError.val = error; return; }
     ensureAudio();
-    state.session = { running: true, done: 0, total: state.config.count, gaps: [], timer: null };
+    session.val = { running: true, done: 0, total: config.count, gaps: [], timer: null };
     document.body.setAttribute('data-running', '1');
-    renderApp();
     scheduleNext();
 }
 function scheduleNext(){
-    const s = state.session;
+    const s = session.val;
     if(!s || !s.running) return;
     if(s.done >= s.total){ finishSession(); return; }
-    const gap = randomGap(state.config.min, state.config.max);
+    const gap = randomGap(config.min, config.max);
     s.timer = setTimeout(() => {
-        if(!state.session || !state.session.running) return;
+        const cur = session.val;
+        if(!cur || !cur.running) return;
         beep();
         flash();
-        state.session.done++;
-        state.session.gaps.push(gap);
-        renderApp();
+        session.val = { ...cur, done: cur.done + 1, gaps: [...cur.gaps, gap] };
         scheduleNext();
     }, gap);
 }
 function finishSession(){
-    if(state.session) state.session.running = false;
+    const s = session.val;
+    if(s) session.val = { ...s, running: false };
     document.body.setAttribute('data-running', '0');
-    renderApp();
 }
 function randomGap(minSeconds, maxSeconds){
     const lo = minSeconds * 1000, hi = maxSeconds * 1000;
     return Math.round(lo + Math.random() * (hi - lo));
 }
 function stopSession(){
-    const s = state.session;
+    const s = session.val;
     if(s && s.timer) clearTimeout(s.timer);
-    if(s) s.running = false;
+    if(s) session.val = { ...s, running: false };
     document.body.setAttribute('data-running', '0');
-    renderApp();
 }
 
-class AppRoot extends LitElement {
-    createRenderRoot(){ return this; }
-    render(){ return appTemplate(); }
+function App(){
+    return [
+        header({ class: 'app-bar' }, h1('Karate beep trainer')),
+        main({ class: 'screen' },
+            () => session.val && session.val.running ? RunningView() : IdleView()),
+    ];
 }
-customElements.define('app-root', AppRoot);
-function appTemplate(){
-    return html`
-      <header class="app-bar"><h1>Karate beep trainer</h1></header>
-      <main class="screen">
-        ${state.session && state.session.running ? runningView() : idleView()}
-      </main>
-    `;
+function IdleView(){
+    const c = config;
+    const s = session.val;
+    const last = s && !s.running && s.done > 0 ? s : null;
+    return div(
+        form({ class: 'config', novalidate: true,
+               onsubmit: e => { e.preventDefault(); startSession(); } },
+            label('Number of beeps',
+                input({ type: 'number', min: '1', step: '1', value: c.count,
+                        oninput: e => setConfigField('count', parseInt(e.target.value || '0', 10)) })),
+            label('Minimum delay (s)',
+                input({ type: 'number', min: '0', step: 'any', value: c.min,
+                        oninput: e => setConfigField('min', parseFloat(e.target.value || '0')) })),
+            label('Maximum delay (s)',
+                input({ type: 'number', min: '0', step: 'any', value: c.max,
+                        oninput: e => setConfigField('max', parseFloat(e.target.value || '0')) })),
+            () => configError.val ? p({ class: 'error', role: 'alert' }, configError.val) : '',
+            button({ type: 'submit', class: 'primary' }, 'Start'),
+        ),
+        last ? sessionSummary(last) : '',
+    );
 }
-function idleView(){
-    const c = state.config || DEFAULTS;
-    const last = state.session && !state.session.running && state.session.done > 0
-        ? state.session : null;
-    return html`
-      <form class="config" @submit=${e => { e.preventDefault(); startSession(); }}>
-        <label>Number of beeps
-          <input type="number" min="1" step="1" .value=${String(c.count)}
-                 @input=${e => setConfigField('count', parseInt(e.target.value || '0', 10))}>
-        </label>
-        <label>Minimum delay (s)
-          <input type="number" min="0" step="0.5" .value=${String(c.min)}
-                 @input=${e => setConfigField('min', parseFloat(e.target.value || '0'))}>
-        </label>
-        <label>Maximum delay (s)
-          <input type="number" min="0" step="0.5" .value=${String(c.max)}
-                 @input=${e => setConfigField('max', parseFloat(e.target.value || '0'))}>
-        </label>
-        ${state.configError ? html`<p class="error" role="alert">${state.configError}</p>` : ''}
-        <button type="submit" class="primary">Start</button>
-      </form>
-      ${last ? sessionSummary(last) : ''}
-    `;
-}
-function runningView(){
-    const s = state.session;
-    return html`
-      <div class="run">
-        <p class="hint">Listen — punch on the beep.</p>
-        <div class="count" role="status">${s.done} / ${s.total}</div>
-        <button class="danger" @click=${() => stopSession()}>Stop</button>
-        ${gapList(s)}
-      </div>
-    `;
+function RunningView(){
+    const s = session.val;
+    return div({ class: 'run' },
+        p({ class: 'hint' }, 'Listen — punch on the beep.'),
+        div({ class: 'count', role: 'status' }, `${s.done} / ${s.total}`),
+        button({ class: 'danger', onclick: () => stopSession() }, 'Stop'),
+        gapList(s),
+    );
 }
 function gapList(s){
-    return html`
-      <ul class="gaps" aria-label="Delays before each beep">
-        ${s.gaps.map((ms, i) => html`
-          <li class="gap" data-ms=${ms}>${i + 1}. ${(ms / 1000).toFixed(1)}s</li>
-        `)}
-      </ul>
-    `;
+    return ul({ class: 'gaps', 'aria-label': 'Delays before each beep' },
+        s.gaps.map((ms, i) =>
+            li({ class: 'gap', 'data-ms': ms }, `${i + 1}. ${(ms / 1000).toFixed(1)}s`)));
 }
 function sessionSummary(s){
-    return html`
-      <section class="summary">
-        <h2>Last session</h2>
-        <p>${s.done} beep${s.done > 1 ? 's' : ''}.</p>
-        ${gapList(s)}
-      </section>
-    `;
+    return section({ class: 'summary' },
+        h2('Last session'),
+        p(`${s.done} beep${s.done > 1 ? 's' : ''}.`),
+        gapList(s));
 }
 
-import { html, LitElement } from 'lit';
-
-const appRootEl = document.querySelector('app-root');
-function renderApp(){ appRootEl?.requestUpdate(); }
-
-state.config = loadConfig();
-renderApp();
+van.add(document.getElementById('app'), App());
 document.body.setAttribute('data-app-ready', '1');

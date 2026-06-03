@@ -81,22 +81,22 @@ customElements.define('app-root', AppRoot);
 function installAppRootHandlers(root){
     const on = (type, fn) => root.addEventListener(type, fn);
     on('open-box-form', () => openBoxForm());
-    on('open-item-form', e => openItemForm(e.detail || {}));
-    on('open-catalog', () => setUI({catalogOpen: true}));
-    on('close-catalog', () => setUI({catalogOpen: false}));
     on('close-form', () => closeForm());
-    on('submit-box', () => onBoxFormSubmit());
-    on('submit-item', () => onItemFormSubmit());
-    on('delete-box', () => onBoxFormDelete());
-    on('delete-item', () => onItemFormDelete());
     on('box-photo-change', e => onBoxPhotoChange(e.detail.file));
-    on('item-image-change', e => onItemImageChange(e.detail.file));
-    on('item-name-input', e => onItemNameInput(e.detail.value));
-    on('item-colour-pick', e => setItemFormColour(e.detail.value));
+    on('submit-box', () => onBoxFormSubmit());
     on('edit-box', e => openBoxEdit(e.detail.boxId, e.detail.row));
+    on('delete-box', () => onBoxFormDelete());
+    on('open-item-form', e => openItemForm(e.detail || {}));
+    on('item-name-input', e => onItemNameInput(e.detail.value));
+    on('item-image-change', e => onItemImageChange(e.detail.file));
+    on('submit-item', () => onItemFormSubmit());
     on('edit-item', e => openItemEdit(e.detail.itemId, e.detail.item));
+    on('delete-item', () => onItemFormDelete());
+    on('item-colour-pick', e => setItemFormColour(e.detail.value));
     on('toggle-drag', () => setUI({dragEnabled: !ui.dragEnabled, contextMenu: null}));
     on('add-item-here', e => openItemForm({boxId: e.detail.boxId}));
+    on('open-catalog', () => setUI({catalogOpen: true}));
+    on('close-catalog', () => setUI({catalogOpen: false}));
     on('catalog-jump', e => jumpToBox(e.detail.boxId));
 }
 function appTemplate(root){
