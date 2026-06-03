@@ -330,11 +330,17 @@ lets its fullscreen button break out of the stage.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">fn</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#953800">in</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">argdown--iframe-reset-style</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;&lt;style&gt;html,body{margin:0;padding:0;height:100%}.argdown-figure{margin:0;height:100%}argdown-map{display:block;height:100%}&lt;/style&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;&lt;style&gt;html,body{margin:0;padding:0;height:100%}.argdown-figure{margin:0;height:100%}argdown-map{display:block;height:100%}svg a[*|href]{cursor:pointer}svg a[*|href] text[font-weight=\&#34;bold\&#34;]{fill:#1a73e8;text-decoration:underline}&lt;/style&gt;&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Strip the iframe&#39;s default body margin and let Argdown&#39;s web-component
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">fill the fixed viewport.  The component supplies everything else — the map,
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">its toolbar (zoom-lock, fullscreen, source toggle), and the click affordance
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">on the source-linked nodes — from its own CDN stylesheet.&#34;</span><span style="color:#1f2328">)</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">fill the fixed viewport (its toolbar — zoom-lock, fullscreen, source toggle —
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">is the component&#39;s own).  The rest is the *link affordance*: the component
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">draws every node alike, so a node we made clickable (its </span><span style="color:#032f62">`&lt;a&gt;&#39;</span><span style="color:#0a3069"> got an injected
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`xlink:href&#39;</span><span style="color:#0a3069">) is otherwise indistinguishable.  We mark it — the bold title
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">line turns blue + underlined, the cursor a pointer — by styling `a[*|href]&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">(the </span><span style="color:#032f62">`*|&#39;</span><span style="color:#0a3069"> matches the namespaced </span><span style="color:#032f62">`xlink:href&#39;</span><span style="color:#0a3069">); plain nodes and edge anchors
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">have no href and stay untouched.  This document-level CSS reaches the SVG even
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">though it is *slotted* light-DOM inside the component (slotted content is
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">styled by the host document, not the shadow tree).&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#1f2328">(</span><span style="color:#953800">html</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Escape HTML for a double-quoted </span><span style="color:#032f62">`srcdoc&#39;</span><span style="color:#0a3069"> attribute value.
@@ -564,8 +570,10 @@ The same <code>&lt;a xlink:title&gt;</code> nodes appear in Argdown&rsquo;s stan
 web-component&rsquo;s slotted SVG, so one injector serves both. Edge anchors (title
 <code>&quot;support&quot;</code> …) don&rsquo;t match and are left alone. A Graphviz node has a single
 <code>&lt;a&gt;</code>, so it&rsquo;s one link per node by construction (the first the statement
-carries); the click affordance (hover title, cursor) is the web-component&rsquo;s
-own styling on the published map.</p>
+carries). The web-component draws every node alike, so the <strong>visual indicator</strong>
+that a node is clickable — its bold title turned blue + underlined, the cursor
+a pointer — is our own CSS on <code>a[*|href]</code> in <code>argdown--iframe-reset-style</code>, not
+the component&rsquo;s.</p>
 <p>The match rides two assumptions about Argdown&rsquo;s current output, and both fail
 <strong>silently</strong> (a missing link, never a wrong one): the node anchor is exactly
 <code>&lt;a xlink:title</code>&quot;…&quot;&gt;= (a future Argdown adding another attribute to it would
