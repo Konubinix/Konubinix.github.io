@@ -315,6 +315,13 @@ large (verbatim-source nodes especially), and the web-component&rsquo;s own zoom
 fullscreen turn a dense map into something explorable within that stage —
 exactly the affordance the site had before. <code>allowfullscreen</code> on the iframe
 lets its fullscreen button break out of the stage.</p>
+<p>The one behaviour we graft onto the component is a tiny <strong>click guard</strong>
+(<code>argdown--iframe-click-guard</code>): the component pans on pointer-drag but lets
+the trailing <code>click</code> through, so releasing a pan over a source node opened its
+link mid-pan. A capture-phase listener vetoes the <code>click</code> that ends a drag
+(pointer moved past ~6px), leaving a still click to follow the link. It rides
+on top of the component — not a pan/zoom reimplementation — the single thing
+we own besides the link injection and the affordance CSS.</p>
 <div class="konix-block-name-marker" data-name="argdown-helpers"></div>
 <p><a id="code-snippet--argdown-helpers"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--require-bin</span> <span style="color:#1f2328">()</span>
@@ -341,6 +348,31 @@ lets its fullscreen button break out of the stage.</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">have no href and stay untouched.  This document-level CSS reaches the SVG even
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">though it is *slotted* light-DOM inside the component (slotted content is
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">styled by the host document, not the shadow tree).&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">argdown--iframe-click-guard</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; concat + \n: short source lines, and a multi-line script in the emitted</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; #+RESULTS rather than one giant line.</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&lt;script&gt;\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;(function(){\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  var sx=null, sy=null, moved=false;\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  addEventListener(&#39;pointerdown&#39;, function(e){ sx=e.clientX; sy=e.clientY; moved=false; }, true);\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  addEventListener(&#39;pointermove&#39;, function(e){\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    if(sx!==null &amp;&amp; Math.hypot(e.clientX-sx, e.clientY-sy) &gt; 6) moved=true; }, true);\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;  addEventListener(&#39;click&#39;, function(e){\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;    if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;})();\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&lt;/script&gt;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;The one bit of behaviour we add to the web-component: cancel the click that
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">*ends a drag*.  Argdown&#39;s component pans the map on pointer-drag but doesn&#39;t
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">suppress the trailing </span><span style="color:#032f62">`click&#39;</span><span style="color:#0a3069">, so releasing a pan over a source node fired its
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">link — opening Légifrance mid-pan.  This capture-phase guard remembers whether
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">the pointer moved past ~6px between </span><span style="color:#032f62">`pointerdown&#39;</span><span style="color:#0a3069"> and </span><span style="color:#032f62">`click&#39;</span><span style="color:#0a3069">; if so it
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`preventDefault&#39;</span><span style="color:#0a3069">+</span><span style="color:#032f62">`stopPropagation&#39;</span><span style="color:#0a3069">s the click (no navigation) — a still click
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">passes through and follows the link.  Capture phase + a window listener run
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">before the component&#39;s own handlers, so it works without touching the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">component.  It is NOT a pan/zoom reimplementation — the component still does
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">all the panning and zooming; we only veto the spurious end-of-drag click.&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#1f2328">(</span><span style="color:#953800">html</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Escape HTML for a double-quoted </span><span style="color:#032f62">`srcdoc&#39;</span><span style="color:#0a3069"> attribute value.
@@ -370,12 +402,13 @@ lets its fullscreen button break out of the stage.</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">This is the single source of truth for both destinations: the publish path
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">embeds it in the iframe (</span><span style="color:#032f62">`argdown--iframe-wrap&#39;</span><span style="color:#0a3069">), and </span><span style="color:#032f62">`konix/argdown-preview&#39;</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">opens it in a browser — so the preview is faithful by construction.  CONTENT
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">is Argdown&#39;s web-component (it carries its own CDN css/js and toolbar), so
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">the document adds only a margin reset; newlines between parts keep the
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">embedded form readable in the org source.&#34;</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">is Argdown&#39;s web-component (it carries its own CDN css/js and toolbar); the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">document adds a margin reset + link affordance (</span><span style="color:#032f62">`argdown--iframe-reset-style&#39;</span><span style="color:#0a3069">)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">and the end-of-drag click guard (</span><span style="color:#032f62">`argdown--iframe-click-guard&#39;</span><span style="color:#0a3069">).  Newlines
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">between parts keep the embedded form readable in the org source.&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;!DOCTYPE html&gt;\n&lt;html&gt;&lt;head&gt;&lt;meta charset=\&#34;utf-8\&#34;&gt;\n&#34;</span>
 </span></span><span style="display:flex;"><span>          <span style="color:#953800">argdown--iframe-reset-style</span> <span style="color:#0a3069">&#34;\n&lt;/head&gt;\n&lt;body&gt;\n&#34;</span>
-</span></span><span style="display:flex;"><span>          <span style="color:#953800">content-html</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#953800">content-html</span> <span style="color:#0a3069">&#34;\n&#34;</span> <span style="color:#953800">argdown--iframe-click-guard</span>
 </span></span><span style="display:flex;"><span>          <span style="color:#0a3069">&#34;\n&lt;/body&gt;&lt;/html&gt;&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--iframe-wrap</span> <span style="color:#1f2328">(</span><span style="color:#953800">content-html</span><span style="color:#1f2328">)</span>
@@ -1186,9 +1219,11 @@ document the preview shows — no drift between the two paths.</p>
 </span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;#61;&#34;</span> <span style="color:#0a3069">&#34;=&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-prefix-p</span> <span style="color:#0a3069">&#34;&lt;!DOCTYPE html&gt;&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview not a standalone doc: %S&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#953800">component</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc missing the component&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; The web-component carries its own UI: the document adds NO homegrown</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; pan/zoom script — pinning that we don&#39;t reinvent the toolbar.</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;&lt;script&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc has a homegrown script: %S&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; The web-component pans/zooms itself: the ONLY script we add is the</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; end-of-drag click guard (so a pan doesn&#39;t open the link).  Pin that it</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; ships, and that we did NOT reimplement pan/zoom (no wheel handler).</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;pointerdown&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc missing the drag click-guard: %S&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;wheel&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc reimplements pan/zoom: %S&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; One document, two destinations: the iframe embeds exactly what preview shows.</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#6639ba">string-equal</span> <span style="color:#953800">doc</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview/publish drift:\n%S\n---\n%S&#34;</span> <span style="color:#953800">doc</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;  PASS: preview builds the standalone doc the iframe embeds (preview == publish)&#34;</span><span style="color:#1f2328">)</span>
