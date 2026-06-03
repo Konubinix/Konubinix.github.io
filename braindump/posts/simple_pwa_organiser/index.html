@@ -65,13 +65,11 @@ build-config tax before I write anything useful.</li>
 </ul>
 <p>I&rsquo;m clearer about what gets in the way. Time for another stack.</p>
 <p>The pattern is the same on all three: two reactivity engines
-competing for the same DOM. Alpine drives from its reactive
-store; yjs (a <a target="_blank" href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">CRDT</a> library — a data structure that lets multiple
-devices edit concurrently and merge without losing writes) drives
-from its document; the bridge between them is where the bugs
-lived.</p>
-<p>Counted in lines of bridge code (the glue that keeps the
-renderer&rsquo;s reactive state and the CRDT in step):</p>
+competing for the same state.</p>
+<p>Counted in lines of bridge code — the glue that keeps the
+renderer&rsquo;s reactive state and the <a target="_blank" href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">CRDT</a> (a data structure that lets
+multiple devices edit concurrently and merge without losing
+writes) in step:</p>
 <table>
   <thead>
       <tr>
@@ -97,20 +95,19 @@ renderer&rsquo;s reactive state and the CRDT in step):</p>
 <p>The bridges to sync the rendering engine and the CRDT one were
 harder to maintain than expected, and traps like cycle or desync
 are frequent.</p>
-<p>So this time, one source of truth: a single <a target="_blank" href="https://tinybase.org/">TinyBase</a> store, store</p>
-<ul>
-<li>sync in one package, no rendering-side datastore at all. <a target="_blank" href="https://lit.dev/">Lit</a></li>
-</ul>
-<p>carries the render layer — small custom-element classes that
-read from properties the root passes down and dispatch events
-back up when the user interacts. The store drives; the components
-respond.</p>
-<p><strong>That&rsquo;s the move.</strong></p>
+<p>So this time, let&rsquo;s try one source of truth: a single
+<a target="_blank" href="https://tinybase.org/">TinyBase</a> store, with store and sync in one package and no
+rendering-side datastore at all. <a target="_blank" href="https://lit.dev/">Lit</a> carries the render layer —
+small custom-element classes that read from properties the root
+passes down and dispatch events back up when the user interacts.
+The store drives; the components respond.</p>
 <p>The page is a single <code>&lt;app-root&gt;</code> element. When the store
 changes, <code>&lt;app-root&gt;</code> re-renders top to bottom; its children
 read state from their properties and dispatch events back up.
 <code>&lt;app-root&gt;</code>&rsquo;s handlers mutate the store, which triggers the
-next render. One loop; no component drives itself.</p>
+next render. One loop; no component drives itself. Re-rendering
+the whole tree on every change won&rsquo;t scale to a large component
+tree, but for an app this small it&rsquo;s plenty.</p>
 <p>Writes bubble up as events, reads come down as props; the two
 meet only at <code>&lt;app-root&gt;</code> and the store.</p>
 <p>The widgets come from <strong><a target="_blank" href="https://shoelace.style/">Shoelace</a></strong> — dialogs, buttons, inputs,
