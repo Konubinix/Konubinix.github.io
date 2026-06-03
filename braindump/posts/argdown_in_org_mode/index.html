@@ -285,7 +285,7 @@ folder, no ImageMagick. <code>--silent</code> keeps the model output free of log
 </span></span></code></pre></div><p>The rendering helpers. <code>argdown--render</code> writes a block to a file
 (svg/dot/pdf/png) via <a class="internal-link" href="#1f7c3a2b-0009-0000-0000-000000000001">our map renderer</a> + Graphviz, for the <code>:file</code> path; the
 publish path reaches the same renderer through <code>argdown--map-svg</code>.</p>
-<p>The publish path wraps the map SVG in a self-sizing <code>srcdoc</code> iframe, and
+<p>The publish path wraps the map SVG in a pan/zoom <code>srcdoc</code> iframe, and
 that&rsquo;s not cosmetic. Hugo&rsquo;s <strong>Goldmark</strong> reparses any raw HTML it finds in the
 Markdown body, and the SVG is a multi-line blob of <code>&lt;svg&gt;=/=&lt;g&gt;=/=&lt;a&gt;</code> (the
 source links are <code>&lt;a xlink:href&gt;</code>). <code>&lt;iframe&gt;</code> is a Goldmark <strong>type-6</strong> HTML
@@ -300,7 +300,16 @@ line. Escaping <code>&lt;=/=&gt;</code> isn&rsquo;t optional: leave them raw and
 source <code>&lt;a&gt;</code> links) edits tags <strong>inside</strong> the attribute and injects raw quotes
 that truncate the whole <code>srcdoc</code> — it shipped empty once for exactly that.
 With them escaped, the only real tag is the outer <code>&lt;iframe&gt;</code>, which also
-isolates the map from the page; being same-origin it sizes itself inside.</p>
+isolates the map from the page; being same-origin, an inline script gives the
+SVG wheel-zoom + drag-pan inside its fixed viewport.</p>
+<p>Why a <strong>fixed</strong> viewport with zoom, rather than sizing the iframe to fit the
+whole graph: the maps get large (verbatim-source nodes especially), and
+squeezing a big graph into page width makes it unreadable. A fixed stage
+(<code>height:70vh</code>, min 320px) you can wheel-zoom (clamped 5%–2000%) and drag-pan
+turns a dense map into something explorable — the affordance the dropped
+web-component used to give. The cost: a <strong>small</strong> map now sits letterboxed with
+some whitespace, where fit-to-content sized exactly to it. Worth it for the
+maps that actually need it.</p>
 <div class="konix-block-name-marker" data-name="argdown-helpers"></div>
 <p><a id="code-snippet--argdown-helpers"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--require-bin</span> <span style="color:#1f2328">()</span>
@@ -318,26 +327,49 @@ isolates the map from the page; being same-origin it sizes itself inside.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">fn</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#953800">in</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">argdown--iframe-reset-style</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;&lt;style&gt;html,body{margin:0;padding:0}.argdown-graph{margin:0;text-align:center}.argdown-graph svg{max-width:100%;height:auto}&lt;/style&gt;&#34;</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Reset margins inside the srcdoc iframe and keep the map SVG centered and
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    scaled to the frame width.&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;&lt;style&gt;html,body{margin:0;padding:0;height:100%}.argdown-graph{margin:0;height:100%}.argdown-graph svg{width:100%;height:100%;cursor:grab;touch-action:none}.argdown-graph svg:active{cursor:grabbing}&lt;/style&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Make the map SVG fill a fixed, pannable viewport inside the srcdoc iframe.&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">argdown--iframe-script</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#57606a">;; Built with concat + \n so the source lines stay short *and* the emitted</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#57606a">;; script is multi-line (no 200-char one-liner in the published #+RESULTS).</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#57606a">;; script is multi-line (no one giant line in the published #+RESULTS).</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span>
 </span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;&lt;script&gt;\n&#34;</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;function fit(){\n&#34;</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  var el=document.documentElement;\n&#34;</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  try{frameElement.style.height=el.scrollHeight+&#39;px&#39;}catch(e){}\n&#34;</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;}\n&#34;</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;addEventListener(&#39;load&#39;,fit);\n&#34;</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;new ResizeObserver(fit).observe(document.documentElement);\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;(function(){\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  var svg=document.querySelector(&#39;svg&#39;); if(!svg) return;\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  var vb=(svg.getAttribute(&#39;viewBox&#39;)||&#39;&#39;).trim().split(/[ ,]+/).map(Number);\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  if(vb.length!==4) return;\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  var o=vb.slice(), x=vb[0], y=vb[1], w=vb[2], h=vb[3];\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  svg.removeAttribute(&#39;width&#39;); svg.removeAttribute(&#39;height&#39;);\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  function apply(){ svg.setAttribute(&#39;viewBox&#39;, x+&#39; &#39;+y+&#39; &#39;+w+&#39; &#39;+h); }\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  function at(e){ var r=svg.getBoundingClientRect();\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    return [x+(e.clientX-r.left)/r.width*w, y+(e.clientY-r.top)/r.height*h]; }\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;wheel&#39;, function(e){ e.preventDefault();\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    var k = e.deltaY&lt;0 ? 0.85 : 1/0.85, nw=w*k, nh=h*k;\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    if(nw &lt; o[2]*0.05 || nw &gt; o[2]*20) return;\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    var p=at(e); x=p[0]-(p[0]-x)*k; y=p[1]-(p[1]-y)*k; w=nw; h=nh; apply();\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  }, {passive:false});\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  var s=null, d=null, moved=false;\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;pointerdown&#39;, function(e){ s=[e.clientX,e.clientY]; d=null; moved=false;\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    try{ svg.setPointerCapture(e.pointerId); }catch(_){} });\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;pointermove&#39;, function(e){ if(!s) return;\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    if(!d){ if(Math.hypot(e.clientX-s[0], e.clientY-s[1]) &lt; 4) return; d=s.slice(); moved=true; }\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    var r=svg.getBoundingClientRect();\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    x-=(e.clientX-d[0])/r.width*w; y-=(e.clientY-d[1])/r.height*h;\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;    d=[e.clientX,e.clientY]; apply(); });\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  function end(){ s=null; d=null; }\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;pointerup&#39;, end); svg.addEventListener(&#39;pointercancel&#39;, end);\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;click&#39;, function(e){ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;  svg.addEventListener(&#39;dblclick&#39;, function(e){ e.preventDefault(); x=o[0];y=o[1];w=o[2];h=o[3]; apply(); });\n&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;})();\n&#34;</span>
 </span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;&lt;/script&gt;&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Self-sizing script for the srcdoc iframe.  A srcdoc iframe is same-origin,
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    so its document can set its own </span><span style="color:#032f62">`frameElement&#39;</span><span style="color:#0a3069"> height directly — no
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    parent-side listener.  ResizeObserver re-fits when the async css load or any
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    reflow changes the content height.&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Self-contained pan/zoom for the map SVG in the srcdoc iframe (same-origin,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    so an inline script drives it; no library).  Reads the SVG </span><span style="color:#032f62">`viewBox&#39;</span><span style="color:#0a3069"> as the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    camera, drops width/height so CSS fills the viewport, then: wheel zooms
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    toward the cursor (clamped 5%–2000%), pointer-drag pans (with pointer
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    capture for smooth fast drags), double-click resets.  Panning only starts
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    past a ~4px threshold, and a real drag suppresses the trailing click — so a
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    still click still follows the node&#39;s source link.&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#1f2328">(</span><span style="color:#953800">html</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Escape HTML for a double-quoted </span><span style="color:#032f62">`srcdoc&#39;</span><span style="color:#0a3069"> attribute value.
@@ -358,24 +390,24 @@ isolates the map from the page; being same-origin it sizes itself inside.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#953800">s</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--document</span> <span style="color:#1f2328">(</span><span style="color:#953800">content-html</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Wrap CONTENT-HTML in a standalone, self-sizing HTML document.
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Wrap CONTENT-HTML in a standalone HTML document.
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    This is the single source of truth for both destinations: the publish path
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    embeds it in the iframe (</span><span style="color:#032f62">`argdown--iframe-wrap&#39;</span><span style="color:#0a3069">), and </span><span style="color:#032f62">`konix/argdown-preview&#39;</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    opens it in a browser — so the preview is faithful by construction.  The
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    map SVG is self-contained (inline styles), so no external css; same-origin,
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    so </span><span style="color:#032f62">`argdown--iframe-script&#39;</span><span style="color:#0a3069"> sizes it; newlines between parts keep the
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    embedded form readable in the org source.&#34;</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    so </span><span style="color:#032f62">`argdown--iframe-script&#39;</span><span style="color:#0a3069"> gives it pan/zoom; newlines between parts keep
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    the embedded form readable in the org source.&#34;</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;!DOCTYPE html&gt;\n&lt;html&gt;&lt;head&gt;&lt;meta charset=\&#34;utf-8\&#34;&gt;\n&#34;</span>
 </span></span><span style="display:flex;"><span>              <span style="color:#953800">argdown--iframe-reset-style</span> <span style="color:#0a3069">&#34;\n&lt;/head&gt;\n&lt;body&gt;\n&#34;</span>
 </span></span><span style="display:flex;"><span>              <span style="color:#953800">content-html</span> <span style="color:#0a3069">&#34;\n&#34;</span> <span style="color:#953800">argdown--iframe-script</span>
 </span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34;\n&lt;/body&gt;&lt;/html&gt;&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--iframe-wrap</span> <span style="color:#1f2328">(</span><span style="color:#953800">content-html</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Wrap CONTENT-HTML in a self-sizing srcdoc iframe (the publish path),
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Wrap CONTENT-HTML in a pan/zoom srcdoc iframe (the publish path),
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    entity-escaping </span><span style="color:#032f62">`argdown--document&#39;</span><span style="color:#0a3069"> so it survives Goldmark and the link
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    rewriter (see </span><span style="color:#032f62">`argdown-helpers&#39;</span><span style="color:#0a3069"> narrative).&#34;</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;&lt;iframe class=\&#34;argdown-frame\&#34; style=\&#34;width:100%%;height:400px;border:0\&#34; srcdoc=\&#34;%s\&#34;&gt;&lt;/iframe&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#0a3069">&#34;&lt;iframe class=\&#34;argdown-frame\&#34; style=\&#34;width:100%%;height:70vh;min-height:320px;border:0\&#34; srcdoc=\&#34;%s\&#34;&gt;&lt;/iframe&gt;&#34;</span>
 </span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--document</span> <span style="color:#953800">content-html</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--map-svg</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
@@ -392,7 +424,7 @@ isolates the map from the page; being same-origin it sizes itself inside.</p>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;figure class=\&#34;argdown-graph\&#34;&gt;&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--map-svg</span> <span style="color:#953800">in</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;&lt;/figure&gt;&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--publish-iframe</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Return the published map for INPUT file as a self-sizing srcdoc iframe.&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Return the published map for INPUT file as a pan/zoom srcdoc iframe.&#34;</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#953800">argdown--iframe-wrap</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--publish-content</span> <span style="color:#953800">in</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--render</span> <span style="color:#1f2328">(</span><span style="color:#953800">fmt</span> <span style="color:#953800">in</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
@@ -970,15 +1002,14 @@ map. Here&rsquo;s a small one — should I keep relying on Argdown, given the
 single-maintainer risk? — that doubles as the fixture for the smoke
 test.</p>
 <div class="konix-block-name-marker" data-name="sample-argdown"></div>
-<pre class="src src-argdown">
-[<span style="color: #93E0E3;">Keep Argdown</span>]: I should build on Argdown rather than roll my own.
-  <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Layout is the hard part</span>&gt;: Argument layout (premise/conclusion
-    layering, pro/con grouping) is years of work I'd otherwise redo.
-  <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Actively maintained</span>&gt;: v2.0.0 shipped in 2026 after a long pause.
-  <span style="color: #ff0000;">-</span> &lt;<span style="color: #93E0E3;">Bus factor</span>&gt;: It is essentially a single-maintainer project.
-    <span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Fork is cheap</span>&gt;: MIT-licensed, and my Nix flake pins a known version.
-</pre>
-<p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample through
+<p><a id="code-snippet--sample-argdown"></a></p>
+<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Keep Argdown]: I should build on Argdown rather than roll my own.
+  + &lt;Layout is the hard part&gt;: Argument layout (premise/conclusion
+    layering, pro/con grouping) is years of work I&#39;d otherwise redo.
+  + &lt;Actively maintained&gt;: v2.0.0 shipped in 2026 after a long pause.
+  - &lt;Bus factor&gt;: It is essentially a single-maintainer project.
+    + &lt;Fork is cheap&gt;: MIT-licensed, and my Nix flake pins a known version.
+</code></pre><p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample through
 <strong>our</strong> pipeline and assert a non-empty, well-formed SVG. Green means the whole
 chain holds — <code>argdown json</code> (parser) → <a class="internal-link" href="#1f7c3a2b-0009-0000-0000-000000000001">our DOT generator</a> → Graphviz <code>dot</code>
 (renderer) — exercising both binaries off <code>PATH</code> (the <a class="internal-link" href="#1f7c3a2b-0003-0000-0000-000000000002">hardlias</a> installs).</p>
@@ -1155,7 +1186,7 @@ document the preview shows — no drift between the two paths.</p>
 </span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&amp;lt;&#34;</span> <span style="color:#0a3069">&#34;&lt;&#34;</span> <span style="color:#953800">v</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-prefix-p</span> <span style="color:#0a3069">&#34;&lt;!DOCTYPE html&gt;&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview not a standalone doc: %S&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#953800">component</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc missing the component&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;ResizeObserver&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc missing self-size script&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-search</span> <span style="color:#0a3069">&#34;addEventListener(&#39;wheel&#39;&#34;</span> <span style="color:#953800">doc</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview doc missing pan/zoom script&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#57606a">;; One document, two destinations: the iframe embeds exactly what preview shows.</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#6639ba">string-equal</span> <span style="color:#953800">doc</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;preview/publish drift:\n%S\n---\n%S&#34;</span> <span style="color:#953800">doc</span> <span style="color:#953800">un</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;  PASS: preview builds the standalone doc the iframe embeds (preview == publish)&#34;</span><span style="color:#1f2328">)</span>
