@@ -160,5 +160,19 @@ function sessionSummary(s){
         gapList(s));
 }
 
-van.add(document.getElementById('app'), App());
-document.body.setAttribute('data-app-ready', '1');
+const DEMO = new URLSearchParams(location.search).get('demo');
+if(DEMO === 'error')
+    configError.val = 'Maximum delay must be at least the minimum.';
+else if(DEMO === 'running' || DEMO === 'flash')
+    session.val = { running:true, done:3, total:10, gaps:[5200,7800,4100], timer:null };
+else if(DEMO === 'summary')
+    session.val = { running:false, done:10, total:10, timer:null,
+                    gaps:[5200,7800,4100,6300,9100,3400,8800,4700,7200,5900] };
+if(DEMO !== 'loading'){
+    van.add(document.getElementById('app'), App());
+    document.body.setAttribute('data-app-ready', '1');
+}
+if(DEMO === 'flash'){
+    const f = document.getElementById('flash');
+    if(f){ f.style.animation = 'none'; f.style.opacity = '0.85'; }
+}
