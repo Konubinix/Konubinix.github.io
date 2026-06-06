@@ -421,12 +421,37 @@ we own besides the link injection and the affordance CSS.</p>
 </span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&lt;iframe class=\&#34;argdown-frame\&#34; allowfullscreen style=\&#34;width:100%%;height:70vh;min-height:320px;border:0\&#34; srcdoc=\&#34;%s\&#34;&gt;&lt;/iframe&gt;&#34;</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">argdown--srcdoc-escape</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--document</span> <span style="color:#953800">content-html</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--run</span> <span style="color:#1f2328">(</span><span style="color:#953800">cmd</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Run argdown shell CMD, returning stdout.  On a non-zero exit or empty
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">output, signal an error carrying argdown&#39;s OWN diagnostics — stderr, or a
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">re-run without </span><span style="color:#032f62">`--silent&#39;</span><span style="color:#0a3069"> — instead of letting a downstream JSON/SVG parse
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">fail with a cryptic \&#34;End of file while parsing JSON\&#34;.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">err</span> <span style="color:#1f2328">(</span><span style="color:#953800">make-temp-file</span> <span style="color:#0a3069">&#34;argdown-err&#34;</span><span style="color:#1f2328">))</span> <span style="color:#953800">out</span> <span style="color:#953800">code</span> <span style="color:#953800">stderr</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">unwind-protect</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">code</span> <span style="color:#1f2328">(</span><span style="color:#953800">call-process-shell-command</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#953800">cmd</span> <span style="color:#0550ae">nil</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">current-buffer</span><span style="color:#1f2328">)</span> <span style="color:#953800">err</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">out</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">buffer-string</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">stderr</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
+</span></span><span style="display:flex;"><span>                         <span style="color:#1f2328">(</span><span style="color:#6639ba">insert-file-contents</span> <span style="color:#953800">err</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">buffer-string</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">eq</span> <span style="color:#953800">code</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">))</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-empty-p</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-trim</span> <span style="color:#953800">out</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">diag</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-trim</span> <span style="color:#953800">stderr</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-empty-p</span> <span style="color:#953800">diag</span><span style="color:#1f2328">)</span>   <span style="color:#57606a">; --silent can swallow the error</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">diag</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-trim</span>
+</span></span><span style="display:flex;"><span>                            <span style="color:#1f2328">(</span><span style="color:#953800">shell-command-to-string</span>
+</span></span><span style="display:flex;"><span>                             <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34; --silent\\b&#34;</span> <span style="color:#0a3069">&#34;&#34;</span> <span style="color:#953800">cmd</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                                     <span style="color:#0a3069">&#34; 2&gt;&amp;1&#34;</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span>error <span style="color:#0a3069">&#34;argdown failed (exit %s): %s&#34;</span> <span style="color:#953800">code</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-empty-p</span> <span style="color:#953800">diag</span><span style="color:#1f2328">)</span> <span style="color:#953800">out</span> <span style="color:#953800">diag</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">delete-file</span> <span style="color:#953800">err</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--stdout</span> <span style="color:#1f2328">(</span><span style="color:#953800">fmt</span> <span style="color:#953800">in</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return Argdown&#39;s own map of INPUT file exported in FMT, via --stdout.&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">argdown--run</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown map -f %s --stdout --silent %s&#34;</span>
-</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">fmt</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">fmt</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">))))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--map-svg</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return Argdown&#39;s own SVG map of INPUT file with a clickable source link
@@ -632,8 +657,7 @@ less code, rides its renderer, and the link is the only thing that&rsquo;s ours.
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--json</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Parse the `argdown json&#39; model of INPUT file into an alist tree.&#34;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">json-parse-string</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-eval</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown json --stdout --silent %s&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">))</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">argdown--run</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown json --stdout --silent %s&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#6639ba">:object-type</span> <span style="color:#032f62">&#39;alist</span> <span style="color:#6639ba">:array-type</span> <span style="color:#032f62">&#39;list</span> <span style="color:#6639ba">:null-object</span> <span style="color:#0550ae">nil</span> <span style="color:#6639ba">:false-object</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--source-urls</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
@@ -1329,7 +1353,54 @@ control is what makes the test discriminate — a no-op would fail it.</p>
 </span></span><span style="display:flex;"><span>                 <span style="color:#0a3069">&#34;loose: + between statements should support, got %S&#34;</span> <span style="color:#953800">loose</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;  PASS: :argdown-mode strict makes + between statements entail (loose: support)&#34;</span><span style="color:#1f2328">)))</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: :argdown-mode strict makes + between statements entail (loose: support)&#34;
-</span></span></code></pre></div><h2 id="c3f0eba5-4789-42d9-b743-49146bcb87a4">config</h2>
+</span></span></code></pre></div><h2 id="1f7c3a2b-0010-0000-0000-000000000001">Writing reconstructed arguments: tips and pitfalls</h2>
+<p>Hard-won while reconstructing a chain of PCS arguments (premise-conclusion
+structures). The syntax reference is <a target="_blank" href="https://argdown.org/syntax/">argdown.org</a>; these are the traps that
+actually bite in this org-babel + strict-mode setup.</p>
+<ul>
+<li>
+<p><em>Inline the conclusion when arguments chain.</em> A reconstruction&rsquo;s conclusion
+can be written inline on its numbered line — <code>(3) [C]: texte</code> — or as a
+separate <code>[C]: texte</code> definition placed after the <code>----</code>. The separate form
+parses for a <strong>standalone</strong> argument (EOF follows it), but the moment <code>[C]</code> is
+reused as a <strong>premise of another</strong> PCS in the same composed input, Argdown
+aborts with <code>Expecting token of type --&gt; EOF</code>. Cure: put the conclusion (and
+any premise) text <strong>inline</strong> on its <code>(n)</code> line; don&rsquo;t leave a bare <code>[C]: …</code>
+definition dangling after the structure.</p>
+</li>
+<li>
+<p><em>In strict mode, <code>+</code> / <code>-</code> between statements are strong claims.</em> With
+<code>:argdown-mode strict</code>, between two <code>[statements]</code> <code>+</code> means <strong>entails</strong>, <code>-</code>
+<strong>contrary</strong>, <code>&gt;&lt;</code> <strong>contradiction</strong> (an <code>&lt;argument&gt;</code>&rsquo;s <code>+</code> / <code>-</code> stay
+support / attack). So never use <code>+</code> for mere corroboration — it asserts
+entailment, which a vetter will (rightly) reject. And a <em>doubt</em> — a
+meta-statement of uncertainty — is neither a proposition nor its negation:
+it cannot be wired as <code>-</code> on a conclusion; record it as its own reservation
+statement instead.</p>
+</li>
+<li>
+<p><em>Flag a premise that isn&rsquo;t a quote.</em> A premise that is the author&rsquo;s legal
+characterization rather than a verbatim source belongs in a PCS only if it
+says so — e.g. <code>[X]: … (caractérisation, non sourcée)</code> — so it is not read
+as a sourced statement. (Cf. <a class="internal-link" href="/braindump/posts/how_to_write_a_literature_note/#45dbc85e-1221-4086-a8d2-de0e9853261f">every claim is sourced or absent</a>.)</p>
+</li>
+<li>
+<p><em>Titles are the join keys; references are silent.</em> <code>:argdown-include</code> is
+transitive and Argdown merges <code>[statements]</code> / <code>&lt;arguments&gt;</code> <strong>by title</strong>, so
+pulling the same block in via two paths is deduped (harmless). The flip
+side: a mistyped title in a relation mints a <strong>new empty node</strong> instead of
+erroring — so check references explicitly (<code>note_grep</code>) when renaming or
+deleting a node. Titles tolerate <code>:</code> and <code>« »</code>, but keep them short; the
+body carries the verbatim.</p>
+</li>
+<li>
+<p><em>Make the parser talk.</em> <code>argdown--run</code> (see <a class="internal-link" href="#1f7c3a2b-0004-0000-0000-000000000001">the org-babel bridge</a>) now raises
+Argdown&rsquo;s own diagnostic — line and unexpected token — instead of a cryptic
+downstream <code>End of file while parsing JSON</code>. If a block won&rsquo;t render,
+re-run it and read that message first.</p>
+</li>
+</ul>
+<h2 id="c3f0eba5-4789-42d9-b743-49146bcb87a4">config</h2>
 <h2 id="permalink"><a class="internal-link" href="/braindump/1f7c3a2b-9e4d-4c81-b6a2-3d5e8f1a9c40?title=argdown_in_org_mode">Permalink</a></h2>
 <style>
 .konix-block-name-marker { display: none; }
