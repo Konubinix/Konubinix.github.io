@@ -385,7 +385,7 @@ window.addEventListener('appinstalled', function() {
   <a class="sync-dot" id="syncDot" title="Sync status" onclick="if(document.body.getAttribute('data-ws')==='connected'&&confirm('Clear authorization?')){location.href='/authorizationserver/clear-cookie?resource=ywebsocket/'+_roomName}"></a>
   <input type="text" class="game-name-input" id="gameName" placeholder="Game name&#x2026;" spellcheck="false"
     @input="setGameName($el.value)">
-  <span class="build-hash" title="Build">8d6ad23</span>
+  <span class="build-hash" title="Build">324a5d1</span>
   <div class="header-actions">
     <button class="icon-btn" id="btnInstall" title="Install" style="display:none" @click="installApp()">&#x1f4f2;</button>
     <button class="icon-btn" id="btnScoreboard" title="Scoreboard" @click="openScoreboard()">&#x1f3c6;</button>
@@ -445,7 +445,7 @@ window.addEventListener('appinstalled', function() {
             <input type="text" inputmode="none" readonly class="entry-input"
               :data-pidx="i" :id="'entry_' + i" placeholder="–"
               :data-pname="p.name"
-              :value="$store.game.entries[i]"
+              :value="$store.game.draft[i]"
               @click="openNumpad($el)">
           </td>
         </template>
@@ -688,6 +688,39 @@ function getRounds(){
   for(var i=0;i<yRounds.length;i++) a.push(yRounds.get(i));
   return a;
 }
+
+// ── The in-progress round ──
+// The trailing round of yRounds is always the draft the players are
+// filling in; everything before it is committed history.  An untouched
+// cell holds '' (shown as a placeholder, counted as 0).
+function emptyRow(n){ var a = []; for(var i=0;i<n;i++) a.push(''); return a; }
+function committedRounds(){
+  var a = getRounds();
+  return a.length ? a.slice(0, a.length - 1) : [];
+}
+function draftRow(){
+  var a = getRounds();
+  return a.length ? a[a.length - 1].slice() : [];
+}
+function ensureDraft(){
+  var n = yPlayers.length;
+  if(n === 0) return;
+  if(yRounds.length === 0){ yRounds.push([emptyRow(n)]); return; }
+  var last = yRounds.get(yRounds.length - 1).slice();
+  if(last.length !== n){
+    while(last.length < n) last.push('');
+    last.length = n;
+    yRounds.delete(yRounds.length - 1, 1);
+    yRounds.push([last]);
+  }
+}
+function flushDraft(){
+  if(yPlayers.length === 0) return;
+  var row = Alpine.store('game').draft.slice();
+  if(yRounds.length === 0){ yRounds.push([row]); return; }
+  yRounds.delete(yRounds.length - 1, 1);
+  yRounds.push([row]);
+}
 function getSavedGames(){
   var a = [];
   for(var i=0;i<yGames.length;i++){
@@ -725,7 +758,7 @@ function getWinFn(expr){
 
 function totals(){
   var players = getPlayers();
-  var rounds = getRounds();
+  var rounds = committedRounds();
   var tfn = getTransformFn(yMeta.get('scoreTransform') || '');
   var t = players.map(function(){ return 0; });
   rounds.forEach(function(r, ri){
@@ -817,10 +850,7 @@ function confirmReorder() {
     yRounds.delete(i, 1);
     yRounds.insert(i, [newRow]);
   }
-  // Permute pending entries
-  var g = Alpine.store('game');
-  var oldEntries = g.entries.slice();
-  g.entries = perm.map(function(oldIdx){ return oldEntries[oldIdx] || 0; });
+  // The draft is the trailing round, so it is permuted in lockstep above.
   Alpine.store('app').showReorder = false;
   render();
 }
@@ -1061,12 +1091,12 @@ function startGame() {
   $('gameName').value = gn;
   yPlayers.delete(0, yPlayers.length);
   yRounds.delete(0, yRounds.length);
-  Alpine.store('game').entries = [];
   names.forEach(function(n) {
     var pm = new Y.Map();
     pm.set('name', n);
     yPlayers.push([pm]);
   });
+  ensureDraft();
   Alpine.store('app').showPick = false;
   render();
 }
@@ -1085,12 +1115,16 @@ function addPlayerToGame(name) {
   var pm = new Y.Map();
   pm.set('name', name);
   yPlayers.push([pm]);
+  // Committed rounds back-fill with 0 (the player wasn't there); the
+  // trailing draft gets an untouched '' so it still reads as a placeholder.
+  var lastIdx = yRounds.length - 1;
   for (var i = 0; i < yRounds.length; i++) {
     var r = yRounds.get(i).slice();
-    r.push(0);
+    r.push(i === lastIdx ? '' : 0);
     yRounds.delete(i, 1);
     yRounds.insert(i, [r]);
   }
+  ensureDraft();
   // Also add to roster if not already there
   var inRoster = false;
   for (var j = 0; j < yRoster.length; j++) {
@@ -1124,16 +1158,17 @@ function addPlayerFromInput() {
 function addRound(){
   var g = Alpine.store('game');
   if(yPlayers.length === 0){ alert('Add players first!'); return; }
-  var scores = g.entries.map(function(v){ return v || 0; });
+  var n = g.players.length;
+  var scores = [];
+  for(var i = 0; i < n; i++) scores.push(g.draft[i] || 0);
   var anyNonZero = scores.some(function(v){ return v !== 0; });
   if(!anyNonZero && !confirm('All scores are 0. Add this round?')) return;
   closeNumpad();
-  yRounds.push([scores]);
-  for(var i = 0; i < g.entries.length; i++){
-    g.entries[i] = '';
-    var inp = $('entry_' + i);
-    if(inp) inp.value = '';
-  }
+  // The draft becomes a committed round; a fresh empty draft takes its place.
+  var last = yRounds.length - 1;
+  if(last >= 0){ yRounds.delete(last, 1); yRounds.insert(last, [scores]); }
+  else { yRounds.push([scores]); }
+  yRounds.push([emptyRow(n)]);
   render();
   var winners = g.liveWinners;
   var winnerNames = [];
@@ -1154,20 +1189,18 @@ function addRound(){
 
 // ── Edit cell ──
 function openEdit(ri, pi){
-  openNumpadForEdit(ri, pi);
+  openCell(ri, pi);
 }
 
 function deleteEditRound(){
-  if(!npEditMode) return;
-  if(!confirm('Delete round ' + (npEditRound+1) + '?')) return;
-  var ri = npEditRound;
+  if(npRound < 0 || npIsDraft()) return;
+  if(!confirm('Delete round ' + (npRound+1) + '?')) return;
+  var ri = npRound;
   document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
   $('npDelRound').style.display = 'none';
-  npEditMode = false;
-  npEditRound = -1;
-  npEditPlayer = -1;
   Alpine.store('app').showNumpad = false;
-  npTarget = null;
+  npRound = -1;
+  npPlayer = -1;
   yRounds.delete(ri, 1);
   render();
 }
@@ -1216,7 +1249,7 @@ function showWinToast(names){
 function saveGame(){
   if(yPlayers.length === 0) return;
   var players = getPlayers();
-  var rounds = getRounds();
+  var rounds = committedRounds();
   var t = totals();
   var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   yGames.push([{
@@ -1249,7 +1282,7 @@ function newGame(){
 function exportCSV(){
   if(yPlayers.length === 0){ alert('Nothing to export.'); return; }
   var players = getPlayers();
-  var rounds = getRounds();
+  var rounds = committedRounds();
   var t = totals();
   var lines = [];
   lines.push(['Round'].concat(players.map(function(p){ return '"'+p.name.replace(/"/g,'""')+'"'; })).join(','));
@@ -1268,7 +1301,7 @@ function exportCSV(){
 function loadGame(idx){
   var g = getSavedGames()[idx];
   if(!g) return;
-  var hasScores = yRounds.length > 0;
+  var hasScores = committedRounds().length > 0;
   if(hasScores){
     if(!confirm('Save current game before loading?')) return;
     saveGame();
@@ -1305,6 +1338,7 @@ function loadGame(idx){
   yMeta.set('winCondition', g.winCondition || '');
   _cachedTransformFn = null;
   _cachedWinFn = null;
+  ensureDraft();
   Alpine.store('app').showGames = false;
   render();
 }
@@ -1318,15 +1352,25 @@ function deleteGame(idx){
 
 
 // ── Numpad ──
-var npTarget = null; // current entry input element
+// One pad edits one cell (round, player) of yRounds. The trailing round
+// is the draft the players are filling in; any earlier round is committed
+// history. The two differ only in chrome and in what the "next" key does.
+var npRound = -1; // round being edited; -1 when the pad is closed
+var npPlayer = -1;
 var npRaw = ''; // raw digit string (without sign)
 var npNeg = false;
-var npEditMode = false; // true when editing a committed cell
-var npReplaceOnKey = false; // first keystroke replaces old value in edit mode
-var npEditRound = -1;
-var npEditPlayer = -1;
+var npReplaceOnKey = false; // first keystroke replaces the value (committed-cell edit)
 var npHistoryPushed = false; // true when a history entry was pushed for the numpad
 var npClosingFromHistory = false; // guard to avoid popstate loop
+
+function npIsDraft() { return npRound >= 0 && npRound === yRounds.length - 1; }
+
+function npCellValue() {
+  var g = Alpine.store('game');
+  if (npIsDraft()) return g.draft[npPlayer];
+  var r = g.rounds[npRound];
+  return r ? r[npPlayer] : 0;
+}
 
 function npValue() {
   var val = npNeg && npRaw !== '' && npRaw !== '0' ? '-' + npRaw : npRaw;
@@ -1336,15 +1380,17 @@ function npValue() {
 function npSync() {
   var val = npNeg && npRaw !== '' && npRaw !== '0' ? '-' + npRaw : npRaw;
   $('npValue').textContent = val || '\u2013';
-  if (npEditMode) {
-    Alpine.store('game').rounds[npEditRound][npEditPlayer] = val ? parseInt(val) : 0;
-  } else if (npTarget) {
-    var pi = parseInt(npTarget.dataset.pidx);
+  if (npRound < 0) return;
+  if (npIsDraft()) {
+    // An untouched draft cell stays a placeholder until a digit is typed.
     if (npRaw !== '') {
       var n = val ? parseInt(val) : 0;
-      Alpine.store('game').entries[pi] = n;
-      npTarget.value = n;
+      Alpine.store('game').draft[npPlayer] = n;
+      var inp = $('entry_' + npPlayer);
+      if (inp) inp.value = n;
     }
+  } else {
+    Alpine.store('game').rounds[npRound][npPlayer] = val ? parseInt(val) : 0;
   }
 }
 
@@ -1375,71 +1421,66 @@ function syncNumpadPadding(open, scrollTarget) {
   }
 }
 
+// Tapping an entry input edits the draft cell; tapping a committed score
+// cell edits that round. Both funnel through openCell.
 function openNumpad(input) {
-  document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
-  npEditMode = false;
-  npTarget = input;
-  var cur = parseInt(input.value) || 0;
-  npNeg = cur < 0;
-  npRaw = Math.abs(cur).toString();
-  if (cur === 0) npRaw = '';
-  $('npLabel').textContent = input.dataset.pname || '';
-  npSync();
-  document.querySelectorAll('.entry-input').forEach(function(el) { el.classList.remove('active-pad'); });
-  input.classList.add('active-pad');
-  document.querySelectorAll('th.active-player').forEach(function(el) { el.classList.remove('active-player'); });
-  var th = document.querySelectorAll('#headerRow th')[parseInt(input.dataset.pidx) + 1];
-  if (th) th.classList.add('active-player');
-  $('npDelRound').style.display = 'none';
-  Alpine.store('app').showNumpad = true;
-  if (!npHistoryPushed) { history.pushState({numpad: true}, ''); npHistoryPushed = true; }
-  syncNumpadPadding(true, input);
+  ensureDraft();
+  openCell(yRounds.length - 1, parseInt(input.dataset.pidx));
 }
 
-function openNumpadForEdit(ri, pi) {
-  npEditMode = true;
-  npReplaceOnKey = true;
-  npEditRound = ri;
-  npEditPlayer = pi;
-  npTarget = null;
-  var players = Alpine.store('game').players;
-  var cur = yRounds.get(ri)[pi];
+function openCell(round, player) {
+  npRound = round;
+  npPlayer = player;
+  var g = Alpine.store('game');
+  var draft = npIsDraft();
+  npReplaceOnKey = !draft; // editing a committed value replaces it on the first key
+  var cur = npCellValue();
+  cur = (cur === '' || cur == null) ? 0 : cur;
   npNeg = cur < 0;
-  npRaw = Math.abs(cur).toString();
-  if (cur === 0) npRaw = '';
-  $('npLabel').textContent = (players[pi].name || '') + ' \u2014 R' + (ri + 1);
+  npRaw = cur === 0 ? '' : Math.abs(cur).toString();
+  var name = (g.players[player] && g.players[player].name) || '';
   document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
-  var cell = document.querySelector('td.score-cell[data-round="' + ri + '"][data-player="' + pi + '"]');
-  if (cell) cell.classList.add('active-edit');
   document.querySelectorAll('.entry-input').forEach(function(el) { el.classList.remove('active-pad'); });
   document.querySelectorAll('th.active-player').forEach(function(el) { el.classList.remove('active-player'); });
-  var th = document.querySelectorAll('#headerRow th')[pi + 1];
+  var scrollTarget;
+  if (draft) {
+    $('npLabel').textContent = name;
+    scrollTarget = $('entry_' + player);
+    if (scrollTarget) scrollTarget.classList.add('active-pad');
+    $('npDelRound').style.display = 'none';
+  } else {
+    $('npLabel').textContent = name + ' \u2014 R' + (round + 1);
+    scrollTarget = document.querySelector('td.score-cell[data-round="' + round + '"][data-player="' + player + '"]');
+    if (scrollTarget) scrollTarget.classList.add('active-edit');
+    $('npDelRound').style.display = 'block';
+  }
+  var th = document.querySelectorAll('#headerRow th')[player + 1];
   if (th) th.classList.add('active-player');
   npSync();
-  $('npDelRound').style.display = 'block';
   Alpine.store('app').showNumpad = true;
   if (!npHistoryPushed) { history.pushState({numpad: true}, ''); npHistoryPushed = true; }
-  syncNumpadPadding(true, cell);
+  syncNumpadPadding(true, scrollTarget);
 }
 
 function closeNumpad() {
-  if (npEditMode) {
-    var r = yRounds.get(npEditRound).slice();
-    r[npEditPlayer] = npValue();
-    yRounds.delete(npEditRound, 1);
-    yRounds.insert(npEditRound, [r]);
-    document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
-    $('npDelRound').style.display = 'none';
-    npEditMode = false;
-    npEditRound = -1;
-    npEditPlayer = -1;
+  if (npRound >= 0 && !npIsDraft()) {
+    // A committed cell is written back to its round on close.
+    var r = yRounds.get(npRound).slice();
+    r[npPlayer] = npValue();
+    yRounds.delete(npRound, 1);
+    yRounds.insert(npRound, [r]);
     render();
+  } else if (npRound >= 0) {
+    flushDraft(); // the pad sliding shut settles the draft for every device
   }
+  document.querySelectorAll('.score-cell.active-edit').forEach(function(el) { el.classList.remove('active-edit'); });
+  document.querySelectorAll('.entry-input').forEach(function(el) { el.classList.remove('active-pad'); });
+  document.querySelectorAll('th.active-player').forEach(function(el) { el.classList.remove('active-player'); });
+  $('npDelRound').style.display = 'none';
   syncNumpadPadding(false);
   Alpine.store('app').showNumpad = false;
-  if (npTarget) npTarget.classList.remove('active-pad');
-  document.querySelectorAll('th.active-player').forEach(function(el) { el.classList.remove('active-player'); });
-  npTarget = null;
+  npRound = -1;
+  npPlayer = -1;
   if (npHistoryPushed && !npClosingFromHistory) { npHistoryPushed = false; history.back(); }
   else { npHistoryPushed = false; }
 }
@@ -1466,16 +1507,12 @@ $('numpad').onclick = function(e) {
 
   if (delta) {
     npReplaceOnKey = false;
-    var cur;
-    if (npEditMode) {
-      cur = npNeg ? -(parseInt(npRaw) || 0) : (parseInt(npRaw) || 0);
-    } else {
-      cur = parseInt(npTarget && npTarget.value) || 0;
-    }
-    cur += parseInt(delta);
+    var cur = npCellValue();
+    cur = ((cur === '' || cur == null) ? 0 : cur) + parseInt(delta);
     npNeg = cur < 0;
     npRaw = Math.abs(cur).toString();
     npSync();
+    if (npIsDraft()) flushDraft(); // a ±N tap settles the value for every device
     return;
   }
 
@@ -1501,16 +1538,15 @@ $('numpad').onclick = function(e) {
     npNeg = !npNeg;
     npSync();
   } else if (key === 'next') {
-    if (npEditMode) { closeNumpad(); return; }
-    if (!npTarget) return;
-    // Finalize current entry to 0 if nothing was typed
-    var pi = parseInt(npTarget.dataset.pidx);
+    if (npRound < 0) return;
+    if (!npIsDraft()) { closeNumpad(); return; }
+    // Finalize an untouched entry to 0, then advance or commit the round.
     if (npRaw === '') {
-      Alpine.store('game').entries[pi] = 0;
-      npTarget.value = 0;
+      Alpine.store('game').draft[npPlayer] = 0;
+      var inp = $('entry_' + npPlayer);
+      if (inp) inp.value = 0;
     }
-    var idx = pi;
-    var next = $('entry_' + (idx + 1));
+    var next = $('entry_' + (npPlayer + 1));
     if (next) openNumpad(next);
     else { addRound(); }
   } else if (key === 'done') {
@@ -1635,7 +1671,7 @@ Alpine.store('app', {
 Alpine.store('game', {
   players: [],
   rounds: [],
-  entries: [],
+  draft: [],
   hasPlayers: false,
   gameName: '',
   lowWins: false,
@@ -1656,7 +1692,7 @@ Alpine.store('game', {
         }
       }
     });
-    self.entries.forEach(function(v, i){
+    self.draft.forEach(function(v, i){
       if(i < t.length) t[i] += (v || 0);
     });
     if(tfn){
@@ -1708,16 +1744,17 @@ function syncFromYjs(){
     return { name: p.name, color: COLORS[i % 8] };
   });
   g.colWidths = colWidths(players.map(function(p){ return p.name; }));
-  g.rounds = getRounds();
+  g.rounds = committedRounds();
   g.hasPlayers = players.length > 0;
   g.gameName = yMeta.get('gameName') || '';
   g.lowWins = !!yMeta.get('lowWins');
   g.scoreTransform = yMeta.get('scoreTransform') || '';
   g.winCondition = yMeta.get('winCondition') || '';
   if(document.activeElement !== $('gameName')) $('gameName').value = g.gameName;
-  // Resize entries to match player count, preserving values
-  while(g.entries.length < players.length) g.entries.push('');
-  while(g.entries.length > players.length) g.entries.pop();
+  // The draft is the trailing round; resize it to the player count.
+  g.draft = draftRow();
+  while(g.draft.length < players.length) g.draft.push('');
+  while(g.draft.length > players.length) g.draft.pop();
   g.roster = getRoster().map(function(r){ return { name: r.get ? r.get('name') : r.name }; });
   var games = getSavedGames();
   g.savedGames = games.slice().reverse().map(function(gm, ri){
@@ -1758,7 +1795,6 @@ window.updatePlayerName = function(i, v){ yPlayers.get(i).set('name', v); };
 window.removePlayer = removePlayer;
 window.openEdit = openEdit;
 window.openNumpad = openNumpad;
-window.openNumpadForEdit = openNumpadForEdit;
 window.addRound = addRound;
 window.loadGame = loadGame;
 window.deleteGame = deleteGame;
