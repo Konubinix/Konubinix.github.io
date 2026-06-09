@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Making the TOPDON TC001N Thermal Camera Stream on Android &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" class="internal-link" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" class="internal-link" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a class="internal-link" href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a class="internal-link" href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a target="_blank" href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a target="_blank" href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a class="internal-link" href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a class="internal-link" href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a class="internal-link" href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Making the TOPDON TC001N Thermal Camera Stream on Android</h1>
+	<span class="badge badge-pill badge-warning"><a class="internal-link" href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a class="internal-link" href="#the-three-layers">The three layers</a></li>
+<li><a class="internal-link" href="#advertised-modes">What the TC001N actually advertises</a></li>
+<li><a class="internal-link" href="#the-fix">The fix: patched fork built by the upstream CI</a>
+<ul>
+<li><a class="internal-link" href="#fork-and-clone">Fork and clone</a></li>
+<li><a class="internal-link" href="#inspect-constants">Inspect the constants before touching them</a></li>
+<li><a class="internal-link" href="#patch">Patch: 384 -&gt; 392, 192 -&gt; 196</a></li>
+<li><a class="internal-link" href="#push">Commit and push (this triggers the CI build)</a></li>
+<li><a class="internal-link" href="#download">Watch CI and download the APK</a></li>
+<li><a class="internal-link" href="#install">Install on the phone</a></li>
+<li><a class="internal-link" href="#verify">Verify it streams</a></li>
+</ul>
+</li>
+<li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
+<li><a class="internal-link" href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<ul>
+<li>see,
+<ul>
+<li><a class="internal-link" href="/blog/posts/should_i_have_my_radiators_flushed/">should I have my radiators flushed?</a>,</li>
+</ul>
+</li>
+</ul>
+<p>This note is the hardware/software yak-shave behind the thermal-camera
+approach in the radiator note. The camera is a <a target="_blank" href="https://www.amazon.fr/dp/B0BFCVZC6R">TOPDON TC001</a> read with the
+open-source <a target="_blank" href="https://github.com/fbreitwieser/thermal-camera-android">thermal-camera-android</a> app<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>. Out of the box it did not
+stream; getting there took peeling back three layers.</p>
+<h2 id="the-three-layers">The three layers</h2>
+<p>Diagnosis was driven from <code>adb logcat</code> on the phone (<code>oxenhead</code>).</p>
+<ol>
+<li>
+<p><strong>OTG power flapping.</strong> On the first plug the camera enumerated, then
+detached ~0.6 s later, before the app could open it &ndash; the USB-C port
+renegotiated to <code>no-power/no-data</code> and only flipped to host+source mode
+~36 s later. By then the app had already given up with <em>Device
+disconnected before open attempt</em>. Re-plugging once the port had settled
+into host+source mode made it enumerate cleanly. If it ever browns out
+again under sustained use, the fix is a powered OTG splitter that feeds the
+camera 5 V independently of the phone&rsquo;s budget.</p>
+</li>
+<li>
+<p><strong>Two-stage USB identity.</strong> The camera first appears as <code>2bdf:0106</code>
+(&ldquo;TC001N&rdquo;, an iAP/vendor device), then mode-switches and re-enumerates as
+a proper UVC device <code>2bdf:0102</code> (&ldquo;USB Camera&rdquo;). The app opens <em>that</em> second
+node fine: <em>Camera opened successfully</em>.</p>
+</li>
+<li>
+<p><strong>Stream-format mismatch (the real bug).</strong> With the camera open, format
+negotiation fails:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>I ThermalCamera: Camera opened successfully
+</span></span><span style="display:flex;"><span>E ThermalCamera: uvc_get_stream_ctrl_format_size failed: Invalid mode
+</span></span><span style="display:flex;"><span>E ThermalCamera: uvc_get_stream_ctrl_format_size (fps=0) failed: Invalid mode
+</span></span></code></pre></div><p>The app hard-codes a request for <strong>YUYV 256x384 @ 25fps</strong><sup id="fnref1:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> (a 192-row
+image half + 192-row thermal half, as on the Infiray P2 Pro it was tested
+against). The TC001N does <strong>not</strong> advertise 256x384.</p>
+</li>
+</ol>
+<h2 id="advertised-modes">What the TC001N actually advertises</h2>
+<p>Read straight from the device&rsquo;s UVC descriptors over adb (no root needed):</p>
+<div class="konix-block-name-marker" data-name="descriptors"></div>
+<p><a id="code-snippet--descriptors"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span><span style="display:flex;"><span>doit <span style="color:#0550ae">()</span> <span style="color:#0550ae">{</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">desc</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> d in <span style="color:#cf222e">$(</span>clk android -d <span style="color:#0a3069">&#34;</span><span style="color:#953800">$DEVICE</span><span style="color:#0a3069">&#34;</span> adb shell ls /sys/bus/usb/devices/<span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">v</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>clk android -d <span style="color:#0a3069">&#34;</span><span style="color:#953800">$DEVICE</span><span style="color:#0a3069">&#34;</span> adb shell cat /sys/bus/usb/devices/<span style="color:#953800">$d</span>/idVendor 2&gt;/dev/null<span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">[</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$v</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;2bdf&#34;</span> <span style="color:#0550ae">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#953800">desc</span><span style="color:#0550ae">=</span>/sys/bus/usb/devices/<span style="color:#953800">$d</span>/descriptors
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#0550ae">[</span> -z <span style="color:#0a3069">&#34;</span><span style="color:#953800">$desc</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;camera (2bdf) not on the bus -- replug and wait for 2bdf:0102&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span>
+</span></span><span style="display:flex;"><span>    clk android -d <span style="color:#0a3069">&#34;</span><span style="color:#953800">$DEVICE</span><span style="color:#0a3069">&#34;</span> adb shell od -An -tx1 <span style="color:#0a3069">&#34;</span><span style="color:#953800">$desc</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">}</span>
+</span></span><span style="display:flex;"><span>doit
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>12 01 00 02 ef 02 01 40 df 2b 02 01 09 04 01 02
+</span></span><span style="display:flex;"><span>03 01 09 02 12 02 02 01 04 80 32 08 0b 00 02 0e
+</span></span><span style="display:flex;"><span>03 00 05 09 04 00 00 00 0e 01 00 05 0d 24 01 10
+</span></span><span style="display:flex;"><span>01 51 00 00 6c dc 02 01 01 12 24 02 02 01 02 00
+</span></span><span style="display:flex;"><span>00 00 00 00 00 00 00 03 00 00 00 0c 24 05 05 01
+</span></span><span style="display:flex;"><span>00 40 02 00 00 00 09 1d 24 06 0a 41 76 9e a2 04
+</span></span><span style="display:flex;"><span>de e3 47 8b 2b f4 34 1a ff 00 3b 17 01 02 04 ff
+</span></span><span style="display:flex;"><span>ff 7f 00 00 09 24 03 03 01 01 00 02 00 09 04 01
+</span></span><span style="display:flex;"><span>00 01 0e 02 00 06 0e 24 01 01 97 01 81 00 03 00
+</span></span><span style="display:flex;"><span>00 00 01 00 1b 24 04 01 0c 59 55 59 32 00 00 10
+</span></span><span style="display:flex;"><span>00 80 00 00 aa 00 38 9b 71 10 01 00 00 00 00 1e
+</span></span><span style="display:flex;"><span>24 05 01 00 00 01 88 01 00 29 ea 05 00 29 ea 05
+</span></span><span style="display:flex;"><span>20 92 07 00 80 1a 06 00 01 80 1a 06 00 1e 24 05
+</span></span><span style="display:flex;"><span>02 00 08 02 c0 00 00 29 ea 05 00 29 ea 05 20 92
+</span></span><span style="display:flex;"><span>07 00 80 1a 06 00 01 80 1a 06 00 1e 24 05 03 00
+</span></span><span style="display:flex;"><span>00 02 e4 01 00 29 ea 05 00 29 ea 05 20 92 07 00
+</span></span><span style="display:flex;"><span>80 1a 06 00 01 80 1a 06 00 1e 24 05 04 00 84 02
+</span></span><span style="display:flex;"><span>80 01 00 29 ea 05 00 29 ea 05 20 92 07 00 80 1a
+</span></span><span style="display:flex;"><span>06 00 01 80 1a 06 00 1e 24 05 05 00 04 00 11 30
+</span></span><span style="display:flex;"><span>00 29 ea 05 00 29 ea 05 20 92 07 00 80 1a 06 00
+</span></span><span style="display:flex;"><span>01 80 1a 06 00 1e 24 05 06 00 00 01 c4 00 00 29
+</span></span><span style="display:flex;"><span>ea 05 00 29 ea 05 20 92 07 00 80 1a 06 00 01 80
+</span></span><span style="display:flex;"><span>1a 06 00 1e 24 05 07 00 04 00 4d 31 00 29 ea 05
+</span></span><span style="display:flex;"><span>00 29 ea 05 20 92 07 00 80 1a 06 00 01 80 1a 06
+</span></span><span style="display:flex;"><span>00 1e 24 05 08 00 3c 00 e3 0c 00 29 ea 05 00 29
+</span></span><span style="display:flex;"><span>ea 05 20 92 07 00 80 1a 06 00 01 80 1a 06 00 1e
+</span></span><span style="display:flex;"><span>24 05 09 00 08 00 22 31 00 29 ea 05 00 29 ea 05
+</span></span><span style="display:flex;"><span>20 92 07 00 80 1a 06 00 01 80 1a 06 00 1e 24 05
+</span></span><span style="display:flex;"><span>0a 00 10 00 91 3c 00 29 ea 05 00 29 ea 05 20 92
+</span></span><span style="display:flex;"><span>07 00 80 1a 06 00 01 80 1a 06 00 1e 24 05 0b 00
+</span></span><span style="display:flex;"><span>00 01 c0 00 00 29 ea 05 00 29 ea 05 20 92 07 00
+</span></span><span style="display:flex;"><span>80 1a 06 00 01 80 1a 06 00 1e 24 05 0c 00 00 02
+</span></span><span style="display:flex;"><span>80 01 00 29 ea 05 00 29 ea 05 20 92 07 00 80 1a
+</span></span><span style="display:flex;"><span>06 00 01 80 1a 06 00 06 24 0d 01 01 04 07 05 81
+</span></span><span style="display:flex;"><span>02 00 02 00
+</span></span></code></pre></div><p>This block walks the descriptor list by <code>bLength</code>, keeps the
+<code>VS_FRAME_UNCOMPRESSED</code> (<code>24 05</code>) entries, and decodes each frame&rsquo;s width,
+height and rate (<code>dwDefaultFrameInterval</code>, 100 ns units, so fps = 1e7 /
+interval). Format is YUY2; absurd dimensions are flagged as malformed.</p>
+<div class="konix-block-name-marker" data-name="frames"></div>
+<p><a id="code-snippet--frames"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a"># dump is the od -An -tx1 hex from the `descriptors` block; turn it into bytes.</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>dump<span style="color:#1f2328">,</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    text <span style="color:#0550ae">=</span> dump
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34; &#34;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span><span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>c<span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> row <span style="color:#0550ae">in</span> dump
+</span></span><span style="display:flex;"><span>                     <span style="color:#cf222e">for</span> c <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span>row <span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>row<span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">tuple</span><span style="color:#1f2328">))</span> <span style="color:#cf222e">else</span> <span style="color:#1f2328">[</span>row<span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>b <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>t<span style="color:#1f2328">,</span> <span style="color:#0550ae">16</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> t <span style="color:#0550ae">in</span> text<span style="color:#0550ae">.</span>split<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#cf222e">if</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>t<span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">and</span> <span style="color:#6639ba">all</span><span style="color:#1f2328">(</span>c <span style="color:#0550ae">in</span> <span style="color:#0a3069">&#34;0123456789abcdef&#34;</span> <span style="color:#cf222e">for</span> c <span style="color:#0550ae">in</span> t<span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>CS_INTERFACE<span style="color:#1f2328">,</span> VS_FRAME_UNCOMPRESSED <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x24</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x05</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;| frame | width | height | fps | usable |&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;|-&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>i <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">while</span> i <span style="color:#0550ae">&lt;</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>b<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    blen <span style="color:#0550ae">=</span> b<span style="color:#1f2328">[</span>i<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> blen <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>    d <span style="color:#0550ae">=</span> b<span style="color:#1f2328">[</span>i<span style="color:#1f2328">:</span>i <span style="color:#0550ae">+</span> blen<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>d<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">26</span> <span style="color:#0550ae">and</span> d<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> CS_INTERFACE <span style="color:#0550ae">and</span> d<span style="color:#1f2328">[</span><span style="color:#0550ae">2</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> VS_FRAME_UNCOMPRESSED<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        w <span style="color:#0550ae">=</span> d<span style="color:#1f2328">[</span><span style="color:#0550ae">5</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>d<span style="color:#1f2328">[</span><span style="color:#0550ae">6</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        h <span style="color:#0550ae">=</span> d<span style="color:#1f2328">[</span><span style="color:#0550ae">7</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>d<span style="color:#1f2328">[</span><span style="color:#0550ae">8</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        interval <span style="color:#0550ae">=</span> d<span style="color:#1f2328">[</span><span style="color:#0550ae">21</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>d<span style="color:#1f2328">[</span><span style="color:#0550ae">22</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>d<span style="color:#1f2328">[</span><span style="color:#0550ae">23</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">16</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>d<span style="color:#1f2328">[</span><span style="color:#0550ae">24</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">24</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        fps <span style="color:#0550ae">=</span> <span style="color:#6639ba">round</span><span style="color:#1f2328">(</span><span style="color:#0550ae">10_000_000</span> <span style="color:#0550ae">/</span> interval<span style="color:#1f2328">)</span> <span style="color:#cf222e">if</span> interval <span style="color:#cf222e">else</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>        usable <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;yes&#34;</span> <span style="color:#cf222e">if</span> <span style="color:#0550ae">16</span> <span style="color:#0550ae">&lt;=</span> w <span style="color:#0550ae">&lt;=</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">and</span> <span style="color:#0550ae">16</span> <span style="color:#0550ae">&lt;=</span> h <span style="color:#0550ae">&lt;=</span> <span style="color:#0550ae">1024</span> <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;no (malformed)&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;| </span><span style="color:#0a3069">{</span>d<span style="color:#1f2328">[</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> | </span><span style="color:#0a3069">{</span>w<span style="color:#0a3069">}</span><span style="color:#0a3069"> | </span><span style="color:#0a3069">{</span>h<span style="color:#0a3069">}</span><span style="color:#0a3069"> | </span><span style="color:#0a3069">{</span>fps<span style="color:#0a3069">}</span><span style="color:#0a3069"> | </span><span style="color:#0a3069">{</span>usable<span style="color:#0a3069">}</span><span style="color:#0a3069"> |&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    i <span style="color:#0550ae">+=</span> blen
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>frame</th>
+          <th>width</th>
+          <th>height</th>
+          <th>fps</th>
+          <th>usable</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>256</td>
+          <td>392</td>
+          <td>25</td>
+          <td>yes</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>520</td>
+          <td>192</td>
+          <td>25</td>
+          <td>yes</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>512</td>
+          <td>484</td>
+          <td>25</td>
+          <td>yes</td>
+      </tr>
+      <tr>
+          <td>4</td>
+          <td>644</td>
+          <td>384</td>
+          <td>25</td>
+          <td>yes</td>
+      </tr>
+      <tr>
+          <td>5</td>
+          <td>4</td>
+          <td>12305</td>
+          <td>25</td>
+          <td>no (malformed)</td>
+      </tr>
+      <tr>
+          <td>6</td>
+          <td>256</td>
+          <td>196</td>
+          <td>25</td>
+          <td>yes</td>
+      </tr>
+      <tr>
+          <td>7</td>
+          <td>4</td>
+          <td>12621</td>
+          <td>25</td>
+          <td>no (malformed)</td>
+      </tr>
+      <tr>
+          <td>8</td>
+          <td>60</td>
+          <td>3299</td>
+          <td>25</td>
+          <td>no (malformed)</td>
+      </tr>
+      <tr>
+          <td>9</td>
+          <td>8</td>
+          <td>12578</td>
+          <td>25</td>
+          <td>no (malformed)</td>
+      </tr>
+      <tr>
+          <td>10</td>
+          <td>16</td>
+          <td>15505</td>
+          <td>25</td>
+          <td>no (malformed)</td>
+      </tr>
+      <tr>
+          <td>11</td>
+          <td>256</td>
+          <td>192</td>
+          <td>25</td>
+          <td>yes</td>
+      </tr>
+      <tr>
+          <td>12</td>
+          <td>512</td>
+          <td>384</td>
+          <td>25</td>
+          <td>yes</td>
+      </tr>
+  </tbody>
+</table>
+<p>So the TC001N uses <strong>196-row halves</strong> (196 image + 196 thermal = <strong>392</strong>), not the
+192+192=384 of the P2 Pro. The app asks for 384, finds no match, and falls
+back to <code>fps=0</code> -&gt; <em>Invalid mode</em>. Nothing is wrong with the camera or the
+permissions; it is a one-constant mismatch.</p>
+<p>As of writing the app has a single release (<code>v1.0.0</code>, April 2026) that
+hard-codes 384, and there is no issue or release mentioning the TC001N &ndash; so
+this needs a patched build.</p>
+<h2 id="the-fix">The fix: patched fork built by the upstream CI</h2>
+<p>No local Android toolchain required: the repo ships a GitHub Actions workflow
+(<code>build.yml</code>) that runs <code>./gradlew assembleDebug</code> on every push and uploads an
+<code>app-debug</code> artifact. So the plan is: fork, flip the constants, push, let CI
+build, download the artifact, install it.</p>
+<p>Shared variables, pulled into every block below via noweb:</p>
+<div class="konix-block-name-marker" data-name="vars"></div>
+<p><a id="code-snippet--vars"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span></code></pre></div><h3 id="fork-and-clone">Fork and clone</h3>
+<div class="konix-block-name-marker" data-name="fork"></div>
+<p><a id="code-snippet--fork"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span><span style="display:flex;"><span>mkdir -p <span style="color:#0a3069">&#34;</span><span style="color:#953800">$WORKDIR</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">cd</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$WORKDIR</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>gh repo fork <span style="color:#0a3069">&#34;</span><span style="color:#953800">$UPSTREAM</span><span style="color:#0a3069">&#34;</span> --clone --remote
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>https://github.com/Konubinix/thermal-camera-android
+</span></span></code></pre></div><h3 id="inspect-constants">Inspect the constants before touching them</h3>
+<p>Confirm the real lines first &ndash; if <code>IMAGE_HEIGHT=/=THERMAL_HEIGHT</code> turn out to
+be derived (e.g. <code>FRAME_HEIGHT / 2</code>) rather than literal <code>192</code>, only the
+<code>FRAME_HEIGHT</code> line needs editing and the patch below should be trimmed.</p>
+<div class="konix-block-name-marker" data-name="inspect"></div>
+<p><a id="code-snippet--inspect"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span><span style="display:flex;"><span>grep -nE <span style="color:#0a3069">&#39;FRAME_WIDTH|FRAME_HEIGHT|IMAGE_HEIGHT|THERMAL_HEIGHT&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  <span style="color:#0a3069">&#34;</span><span style="color:#953800">$REPO</span><span style="color:#0a3069">/app/src/main/cpp/native-lib.cpp&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>19:static constexpr int FRAME_WIDTH = 256;
+</span></span><span style="display:flex;"><span>20:static constexpr int FRAME_HEIGHT = 384;
+</span></span><span style="display:flex;"><span>21:static constexpr int IMAGE_HEIGHT = 192;   // Top half: visual image
+</span></span><span style="display:flex;"><span>22:static constexpr int THERMAL_HEIGHT = 192; // Bottom half: thermal data
+</span></span><span style="display:flex;"><span>78:    size_t expected_size = FRAME_WIDTH * FRAME_HEIGHT * 2;
+</span></span><span style="display:flex;"><span>85:    size_t stride = FRAME_WIDTH * 2; // YUYV: 2 bytes per pixel
+</span></span><span style="display:flex;"><span>89:    uint8_t grayscale[FRAME_WIDTH * IMAGE_HEIGHT];
+</span></span><span style="display:flex;"><span>92:    for (int y = 0; y &lt; IMAGE_HEIGHT; y++) {
+</span></span><span style="display:flex;"><span>93:        for (int x = 0; x &lt; FRAME_WIDTH; x++) {
+</span></span><span style="display:flex;"><span>95:            grayscale[y * FRAME_WIDTH + x] = data[y * stride + x * 2];
+</span></span><span style="display:flex;"><span>104:    uint8_t *thermal_data = data + (IMAGE_HEIGHT * stride);
+</span></span><span style="display:flex;"><span>106:    for (int y = 0; y &lt; THERMAL_HEIGHT; y++) {
+</span></span><span style="display:flex;"><span>107:        for (int x = 0; x &lt; FRAME_WIDTH; x++) {
+</span></span><span style="display:flex;"><span>168:    float avgTemp = sumTemp / (THERMAL_HEIGHT * FRAME_WIDTH);
+</span></span><span style="display:flex;"><span>171:    int centerY = THERMAL_HEIGHT / 2;
+</span></span><span style="display:flex;"><span>172:    int centerX = FRAME_WIDTH / 2;
+</span></span><span style="display:flex;"><span>187:    uint8_t thermalLinear[FRAME_WIDTH * THERMAL_HEIGHT];
+</span></span><span style="display:flex;"><span>191:        for (int y = 0; y &lt; THERMAL_HEIGHT; y++) {
+</span></span><span style="display:flex;"><span>192:            for (int x = 0; x &lt; FRAME_WIDTH; x++) {
+</span></span><span style="display:flex;"><span>198:                thermalLinear[y * FRAME_WIDTH + x] = (uint8_t)(norm * 255.0f + 0.5f);
+</span></span><span style="display:flex;"><span>222:        jbyteArray imageArray = env-&gt;NewByteArray(FRAME_WIDTH * IMAGE_HEIGHT);
+</span></span><span style="display:flex;"><span>223:        env-&gt;SetByteArrayRegion(imageArray, 0, FRAME_WIDTH * IMAGE_HEIGHT,
+</span></span><span style="display:flex;"><span>226:        jbyteArray thermalLinearArray = env-&gt;NewByteArray(FRAME_WIDTH * THERMAL_HEIGHT);
+</span></span><span style="display:flex;"><span>227:        env-&gt;SetByteArrayRegion(thermalLinearArray, 0, FRAME_WIDTH * THERMAL_HEIGHT,
+</span></span><span style="display:flex;"><span>400:            FRAME_WIDTH, FRAME_HEIGHT, 25);
+</span></span><span style="display:flex;"><span>408:                FRAME_WIDTH, FRAME_HEIGHT, 0);
+</span></span><span style="display:flex;"><span>508:    return FRAME_WIDTH;
+</span></span><span style="display:flex;"><span>515:    return IMAGE_HEIGHT;
+</span></span></code></pre></div><h3 id="patch">Patch: 384 -&gt; 392, 192 -&gt; 196</h3>
+<div class="konix-block-name-marker" data-name="patch"></div>
+<p><a id="code-snippet--patch"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">cd</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$REPO</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">f</span><span style="color:#0550ae">=</span>app/src/main/cpp/native-lib.cpp
+</span></span><span style="display:flex;"><span>sed -i -E <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  -e <span style="color:#0a3069">&#39;s/(FRAME_HEIGHT[[:space:]]*=[[:space:]]*)384/\1392/&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  -e <span style="color:#0a3069">&#39;s/(IMAGE_HEIGHT[[:space:]]*=[[:space:]]*)192/\1196/&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  -e <span style="color:#0a3069">&#39;s/(THERMAL_HEIGHT[[:space:]]*=[[:space:]]*)192/\1196/&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  <span style="color:#0a3069">&#34;</span><span style="color:#953800">$f</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>git --no-pager diff -- <span style="color:#0a3069">&#34;</span><span style="color:#953800">$f</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>diff --git a/app/src/main/cpp/native-lib.cpp b/app/src/main/cpp/native-lib.cpp
+</span></span><span style="display:flex;"><span>index beef9f6..74540ee 100644
+</span></span><span style="display:flex;"><span>--- a/app/src/main/cpp/native-lib.cpp
+</span></span><span style="display:flex;"><span>+++ b/app/src/main/cpp/native-lib.cpp
+</span></span><span style="display:flex;"><span>@@ -17,9 +17,9 @@
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> // Frame dimensions for Infiray P2 / Topdon TC001
+</span></span><span style="display:flex;"><span> static constexpr int FRAME_WIDTH = 256;
+</span></span><span style="display:flex;"><span>-static constexpr int FRAME_HEIGHT = 384;
+</span></span><span style="display:flex;"><span>-static constexpr int IMAGE_HEIGHT = 192;   // Top half: visual image
+</span></span><span style="display:flex;"><span>-static constexpr int THERMAL_HEIGHT = 192; // Bottom half: thermal data
+</span></span><span style="display:flex;"><span>+static constexpr int FRAME_HEIGHT = 392;
+</span></span><span style="display:flex;"><span>+static constexpr int IMAGE_HEIGHT = 196;   // Top half: visual image
+</span></span><span style="display:flex;"><span>+static constexpr int THERMAL_HEIGHT = 196; // Bottom half: thermal data
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> // Global state
+</span></span><span style="display:flex;"><span> static uvc_context_t *g_ctx = nullptr;
+</span></span></code></pre></div><h3 id="push">Commit and push (this triggers the CI build)</h3>
+<div class="konix-block-name-marker" data-name="push"></div>
+<p><a id="code-snippet--push"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">cd</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$REPO</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>git switch -c <span style="color:#0a3069">&#34;</span><span style="color:#953800">$BRANCH</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>git commit -am <span style="color:#0a3069">&#34;TC001N: stream 256x392 (196+196 halves) instead of 256x384&#34;</span>
+</span></span><span style="display:flex;"><span>git push -u origin <span style="color:#0a3069">&#34;</span><span style="color:#953800">$BRANCH</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[tc001n-392 5e5988a] TC001N: stream 256x392 (196+196 halves) instead of 256x384
+</span></span><span style="display:flex;"><span> 1 file changed, 3 insertions(+), 3 deletions(-)
+</span></span><span style="display:flex;"><span>branch &#39;tc001n-392&#39; set up to track &#39;origin/tc001n-392&#39;.
+</span></span></code></pre></div><h3 id="download">Watch CI and download the APK</h3>
+<div class="konix-block-name-marker" data-name="build-and-download"></div>
+<p><a id="code-snippet--build-and-download"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">cd</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$REPO</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">RUN_ID</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>gh run list -b <span style="color:#0a3069">&#34;</span><span style="color:#953800">$BRANCH</span><span style="color:#0a3069">&#34;</span> -L1 --json databaseId -q <span style="color:#0a3069">&#39;.[0].databaseId&#39;</span><span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span>gh run watch <span style="color:#0a3069">&#34;</span><span style="color:#953800">$RUN_ID</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>rm -rf /tmp/tc001n-apk <span style="color:#0550ae">&amp;&amp;</span> mkdir -p /tmp/tc001n-apk
+</span></span><span style="display:flex;"><span>gh run download <span style="color:#0a3069">&#34;</span><span style="color:#953800">$RUN_ID</span><span style="color:#0a3069">&#34;</span> -n app-debug -D /tmp/tc001n-apk
+</span></span><span style="display:flex;"><span>ls -l /tmp/tc001n-apk
+</span></span></code></pre></div><h3 id="install">Install on the phone</h3>
+<p>The CI APK is signed with a debug key, so it will not install <em>over</em> the
+v1.0.0 release APK (signature mismatch). Uninstall the released one first.
+The USB-device-&gt;app association and permissions are re-granted on first plug.</p>
+<div class="konix-block-name-marker" data-name="install"></div>
+<p><a id="code-snippet--install"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span><span style="display:flex;"><span>clk android -d <span style="color:#0a3069">&#34;</span><span style="color:#953800">$DEVICE</span><span style="color:#0a3069">&#34;</span> adb uninstall <span style="color:#0a3069">&#34;</span><span style="color:#953800">$PKG</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">||</span> <span style="color:#6639ba">true</span>
+</span></span><span style="display:flex;"><span>clk android -d <span style="color:#0a3069">&#34;</span><span style="color:#953800">$DEVICE</span><span style="color:#0a3069">&#34;</span> adb install /tmp/tc001n-apk/app-debug.apk
+</span></span></code></pre></div><h3 id="verify">Verify it streams</h3>
+<p>Re-plug the camera, open the app, then check the log: we want <em>Camera opened
+successfully</em> with <strong>no</strong> following <em>Invalid mode</em>.</p>
+<div class="konix-block-name-marker" data-name="verify"></div>
+<p><a id="code-snippet--verify"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#953800">UPSTREAM</span><span style="color:#0550ae">=</span>fbreitwieser/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">WORKDIR</span><span style="color:#0550ae">=</span><span style="color:#953800">$HOME</span>/test/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">REPO</span><span style="color:#0550ae">=</span><span style="color:#953800">$WORKDIR</span>/thermal-camera-android
+</span></span><span style="display:flex;"><span><span style="color:#953800">DEVICE</span><span style="color:#0550ae">=</span>oxenhead
+</span></span><span style="display:flex;"><span><span style="color:#953800">BRANCH</span><span style="color:#0550ae">=</span>tc001n-392
+</span></span><span style="display:flex;"><span><span style="color:#953800">PKG</span><span style="color:#0550ae">=</span>com.breyt.thermalcamera
+</span></span><span style="display:flex;"><span>clk android -d <span style="color:#0a3069">&#34;</span><span style="color:#953800">$DEVICE</span><span style="color:#0a3069">&#34;</span> adb shell logcat -d <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;ThermalCamera: (Camera opened|uvc_get_stream|Invalid mode|streaming)&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  <span style="color:#1f2328">|</span> tail -20
+</span></span></code></pre></div><p>If the stream comes up but the image and the false-colour/temperature overlay
+look mis-split (the 196 vs 192 boundary), the remaining knob is exactly that
+<code>IMAGE_HEIGHT=/=THERMAL_HEIGHT</code> split &ndash; adjust, push again, CI rebuilds. Once
+it works cleanly it is worth a PR upstream making the resolution adaptive
+(query the descriptors instead of hard-coding), which would fix every Infiray
+variant at once.</p>
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a class="internal-link" href="/blog/posts/should_i_have_my_radiators_flushed/">should I have my radiators flushed?</a></li>
+</ul>
+<h2 id="permalink"><a class="internal-link" href="/blog/f68cb35d-4d2c-452f-8192-39ec60e145bb?title=making_the_topdon_tc001n_thermal_camera_stream_on_android">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p><code>thermal-camera-android</code> (package <code>com.breyt.thermalcamera</code>),
+github.com/fbreitwieser/thermal-camera-android. The hard-coded request lives
+in <code>app/src/main/cpp/native-lib.cpp</code> as <code>FRAME_WIDTH = 256</code> / <code>FRAME_HEIGHT = 384</code> passed to <code>uvc_get_stream_ctrl_format_size(..., UVC_FRAME_FORMAT_YUYV, FRAME_WIDTH, FRAME_HEIGHT, 25)</code>. README: &ldquo;Tested: Infiray P2 Pro. Other
+Infiray/Topdon USB-C cameras likely compatible.&rdquo;</p>
+<!--more-->
+&#160;<a class="internal-link" href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+  </article>
+  <aside class="date"><time>Last updated: 09 Jun 2026</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Jun 2026</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a class="internal-link" href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a target="_blank" href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a target="_blank" href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a class="internal-link" href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a class="internal-link" href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a class="internal-link" href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2026 Samuel Loury</p>
+</footer>
+</body>
+</html>
