@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html><title>simple pwa piano hero</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Simple Pwa Piano Hero</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <p>I have an acoustic piano and a phone. I&rsquo;d like a game that scrolls notes
+towards a line, the way Guitar Hero does, and tells me whether I actually
+played them — not by tapping a button, but by <strong>listening</strong> to the piano
+through the phone&rsquo;s microphone and checking that the right pitches sounded
+at the right moment.</p>
+<p>A piano is polyphonic: I play several notes at once. General &ldquo;what am I
+playing?&rdquo; transcription of overlapping notes is a research problem. But a
+game already knows the answer — the chart says which notes are due <strong>now</strong>.
+So the app never has to transcribe the open-ended sound; it only has to
+<strong>verify</strong> that the notes the chart expects are present in what the
+microphone hears. Verification against a known target is tractable with
+plain signal processing; transcription is not. That reframing is what
+makes this buildable without a machine-learning model.</p>
+<p>Live analysis only — nothing is recorded or stored.</p>
+<p>Live: <a target="_blank" href="https://sam.konubinix.eu/piano/">https://sam.konubinix.eu/piano/</a>.</p>
+<h2 id="c2000000-0000-4000-9000-000000000002">Choice of technology</h2>
+<p>The <a class="internal-link" href="/braindump/posts/simple_pwa_organiser/">organiser</a> drove a <a target="_blank" href="https://lit.dev/">Lit</a> render layer from a single <a target="_blank" href="https://tinybase.org/">TinyBase</a> store so that
+one source of truth fed both the renderer and cross-device sync. This app
+has nothing to sync — no inventory, no relations, no second device that
+would want to merge. The charts it plays are part of the build, and a game
+in progress is meaningless to persist. So TinyBase goes, and with it the
+widget kit: there are no dialogs or menus here, only a canvas and a couple
+of buttons.</p>
+<p>For the chrome around the game — the heading, the buttons, a live readout —
+I reach for <strong><a target="_blank" href="https://vanjs.org/">VanJS</a></strong>, the same kilobyte-sized reactive layer the <a class="internal-link" href="/braindump/posts/simple_pwa_karate_beep_trainer/">karate beep
+trainer</a> settled on: a reactive <strong>state cell</strong> is the source of truth, and the
+DOM is plain functions that read it. No build step, one ES module from a
+CDN.</p>
+<p>But the heart of the app is neither chrome nor a store: it is a stream of
+numbers arriving sixty times a second — the spectrum of the sound in the
+room — and a stream of notes scrolling towards a line. Neither belongs in a
+reactive DOM: re-rendering elements at audio rate would thrash. Both live on
+a <strong><a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API">&lt;canvas&gt;</a></strong> painted from a <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame">requestAnimationFrame</a> loop, and the sound comes
+from the <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API">Web Audio API</a> — the microphone feeding an <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode">AnalyserNode</a> whose
+spectrum the loop reads each frame. VanJS owns the chrome; the loop owns the
+game.</p>
+<p>That microphone is also what the document cannot honestly test: a suite
+can&rsquo;t play a piano. So the analysis is split from its source. The pipeline
+that turns a spectrum into &ldquo;which notes are sounding&rdquo; is pure and fully
+testable; what feeds it a spectrum is swappable. In the app the source is
+the microphone; under test it is a set of oscillators synthesised in the
+page to a pitch the test names — the faithful analog of the organiser&rsquo;s
+<code>make_png</code>, which handed a file input known bytes rather than a real photo.
+The seam is a <code>?synth</code> query parameter, the same shape as the trainer&rsquo;s
+<code>?demo</code> hook (<a class="internal-link" href="#c2000000-0000-4000-9000-000000000004">Hear a note</a>).</p>
+<h2 id="c2000000-0000-4000-9000-000000000003">Setting up the app</h2>
+<p>One thing on this screen changes reactively for now: the note the app
+currently hears. That is a <a target="_blank" href="https://vanjs.org/tutorial#state">VanJS state cell</a> — read it inside a render
+function and VanJS re-runs that function when it changes. It starts empty:
+nothing has sounded yet.</p>
+<div class="konix-block-name-marker" data-name="state"></div>
+<p><a id="code-snippet--state"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">heard</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">van</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">(</span><span style="color:#cf222e">null</span><span style="color:#1f2328">);</span>
+</span></span></code></pre></div><p>VanJS builds DOM from functions named after tags, so the setup line is the
+import plus the handful of tag builders the views use.</p>
+<div class="konix-block-name-marker" data-name="van-setup"></div>
+<p><a id="code-snippet--van-setup"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#1f2328">van</span> <span style="color:#1f2328">from</span> <span style="color:#0a3069">&#39;vanjs-core&#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">header</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">main</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">h1</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">div</span> <span style="color:#1f2328">}</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">van</span><span style="color:#1f2328">.</span><span style="color:#1f2328">tags</span><span style="color:#1f2328">;</span>
+</span></span></code></pre></div><p>The whole app mounts into one element.</p>
+<div class="konix-block-name-marker" data-name="app-mount"></div>
+<p><a id="code-snippet--app-mount"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#1f2328">id</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;app&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span></code></pre></div><p>Boot mounts the view into <code>#app</code>, raises the <code>data-app-ready</code> flag the tests
+wait on, and — only when the page carries a <code>?synth</code> parameter — starts
+listening to the synthesised source that parameter describes (<a class="internal-link" href="#c2000000-0000-4000-9000-000000000004">Hear a
+note</a>). The microphone path waits for a later chapter and a user gesture; the
+synth path needs neither, so it can start on load.</p>
+<div class="konix-block-name-marker" data-name="init"></div>
+<p><a id="code-snippet--init"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#1f2328">van</span><span style="color:#1f2328">.</span><span style="color:#1f2328">add</span><span style="color:#1f2328">(</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getElementById</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;app&#39;</span><span style="color:#1f2328">),</span> <span style="color:#1f2328">App</span><span style="color:#1f2328">());</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;data-app-ready&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;1&#39;</span><span style="color:#1f2328">);</span>
+</span></span></code></pre></div><h2 id="c2000000-0000-4000-9000-000000000005">Visual basics</h2>
+<p>The same dark palette as the organiser and the trainer, pinned to CSS custom
+properties so the feature chapters reach for <code>var(--accent)</code> by name. The
+live readout is large and centred — at a glance from the piano bench I can
+see what the app thinks I just played.</p>
+<div class="konix-block-name-marker" data-name="css-base"></div>
+<p><a id="code-snippet--css-base"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-css" data-lang="css"><span style="display:flex;"><span><span style="color:#1f2328">:</span><span style="color:#0550ae">root</span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">--bg</span><span style="color:#1f2328">:</span><span style="color:#0550ae">#1b1d2e</span><span style="color:#1f2328">;</span> <span style="color:#953800">--card</span><span style="color:#1f2328">:</span><span style="color:#0550ae">#262a40</span><span style="color:#1f2328">;</span> <span style="color:#953800">--fg</span><span style="color:#1f2328">:</span><span style="color:#0550ae">#e8e8f0</span><span style="color:#1f2328">;</span> <span style="color:#953800">--muted</span><span style="color:#1f2328">:</span><span style="color:#0550ae">#8a8ea5</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">--accent</span><span style="color:#1f2328">:</span><span style="color:#0550ae">#f9a826</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">*</span><span style="color:#1f2328">{</span><span style="color:#cf222e">box-sizing</span><span style="color:#1f2328">:</span><span style="color:#cf222e">border-box</span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">body</span><span style="color:#1f2328">{</span><span style="color:#cf222e">margin</span><span style="color:#1f2328">:</span><span style="color:#0550ae">0</span><span style="color:#1f2328">;</span><span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>bg<span style="color:#1f2328">);</span><span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>fg<span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#cf222e">font-family</span><span style="color:#1f2328">:</span>system-ui<span style="color:#1f2328">,</span><span style="color:#cf222e">sans-serif</span><span style="color:#1f2328">;</span><span style="color:#cf222e">line-height</span><span style="color:#1f2328">:</span><span style="color:#0550ae">1.4</span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">app-bar</span><span style="color:#1f2328">{</span><span style="color:#cf222e">padding</span><span style="color:#1f2328">:</span><span style="color:#0550ae">12</span><span style="color:#cf222e">px</span> <span style="color:#0550ae">16</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">border-bottom</span><span style="color:#1f2328">:</span><span style="color:#0550ae">1</span><span style="color:#cf222e">px</span> <span style="color:#cf222e">solid</span> <span style="color:#0550ae">#2a2d44</span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">app-bar</span> <span style="color:#0550ae">h1</span><span style="color:#1f2328">{</span><span style="color:#cf222e">font-size</span><span style="color:#1f2328">:</span><span style="color:#0550ae">1.1</span><span style="color:#cf222e">rem</span><span style="color:#1f2328">;</span><span style="color:#cf222e">margin</span><span style="color:#1f2328">:</span><span style="color:#0550ae">0</span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">screen</span><span style="color:#1f2328">{</span><span style="color:#cf222e">padding</span><span style="color:#1f2328">:</span><span style="color:#0550ae">24</span><span style="color:#cf222e">px</span> <span style="color:#0550ae">16</span><span style="color:#cf222e">px</span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">readout</span><span style="color:#1f2328">{</span><span style="color:#cf222e">font-size</span><span style="color:#1f2328">:</span><span style="color:#0550ae">4</span><span style="color:#cf222e">rem</span><span style="color:#1f2328">;</span><span style="color:#cf222e">font-weight</span><span style="color:#1f2328">:</span><span style="color:#0550ae">700</span><span style="color:#1f2328">;</span><span style="color:#cf222e">text-align</span><span style="color:#1f2328">:</span><span style="color:#cf222e">center</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>accent<span style="color:#1f2328">);</span><span style="color:#cf222e">min-height</span><span style="color:#1f2328">:</span><span style="color:#0550ae">1.2</span><span style="color:#cf222e">em</span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><h2 id="c2000000-0000-4000-9000-000000000004">Hear a note</h2>
+<p>Before any game, I want proof the app hears me correctly: a live readout of
+the note it currently detects, like a tuner. It is the foundation every
+later chapter builds on, and the first thing the suite can pin down — feed a
+known pitch in, read the right note name out.</p>
+<p>The test feeds a synthesised A above middle C — <a target="_blank" href="https://en.wikipedia.org/wiki/A440_(pitch_standard)">MIDI note 69</a>, 440 Hz —
+through the <code>?synth</code> seam and waits for the readout to show <code>A4</code>. No
+microphone, no permission, no real sound: the oscillator the page builds is
+the test&rsquo;s &ldquo;played note&rdquo;, the same way <code>make_png</code> was the organiser&rsquo;s
+&ldquo;uploaded photo&rdquo;.</p>
+<div class="konix-block-name-marker" data-name="test-hear-note"></div>
+<p><a id="code-snippet--test-hear-note"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_hears_single_note</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A synthesised A4 (MIDI 69) makes the live readout show A4.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span>BASE_URL <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;?synth=69&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_selector<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-app-ready]&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;A4&#34;</span><span style="color:#1f2328">,</span> exact<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>wait_for<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: hears single note&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>The readout is a single reactive element: it shows the note name in <code>heard</code>,
+or an em dash while the app has heard nothing.</p>
+<div class="konix-block-name-marker" data-name="readout-view"></div>
+<p><a id="code-snippet--readout-view"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">Readout</span><span style="color:#1f2328">(){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">div</span><span style="color:#1f2328">({</span> <span style="color:#cf222e">class</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;readout&#39;</span> <span style="color:#1f2328">},</span> <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">heard</span><span style="color:#1f2328">.</span><span style="color:#1f2328">val</span> <span style="color:#0550ae">??</span> <span style="color:#0a3069">&#39;—&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">App</span><span style="color:#1f2328">(){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">header</span><span style="color:#1f2328">({</span> <span style="color:#cf222e">class</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;app-bar&#39;</span> <span style="color:#1f2328">},</span> <span style="color:#1f2328">h1</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;Piano hero&#39;</span><span style="color:#1f2328">)),</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">main</span><span style="color:#1f2328">({</span> <span style="color:#cf222e">class</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;screen&#39;</span> <span style="color:#1f2328">},</span> <span style="color:#1f2328">Readout</span><span style="color:#1f2328">(),</span> <span style="color:#1f2328">Targets</span><span style="color:#1f2328">()),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">];</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>A note name is just a <a target="_blank" href="https://en.wikipedia.org/wiki/MIDI#Messages">MIDI number</a> dressed up: twelve names repeating every
+octave, the octave number sliding every twelve semitones, with MIDI 60
+landing on middle C (<code>C4</code>). And a frequency maps to the nearest MIDI number
+through the standard <a target="_blank" href="https://en.wikipedia.org/wiki/Equal_temperament">equal-temperament</a> formula, anchored at A4 = 440 Hz.</p>
+<div class="konix-block-name-marker" data-name="pitch-naming"></div>
+<p><a id="code-snippet--pitch-naming"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">NOTE_NAMES</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#39;C&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;C#&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;D&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;D#&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;E&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;F&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;F#&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;G&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;G#&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;A&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;A#&#39;</span><span style="color:#1f2328">,</span><span style="color:#0a3069">&#39;B&#39;</span><span style="color:#1f2328">];</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">noteName</span><span style="color:#1f2328">(</span><span style="color:#1f2328">midi</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">NOTE_NAMES</span><span style="color:#1f2328">[((</span><span style="color:#1f2328">midi</span> <span style="color:#0550ae">%</span> <span style="color:#0550ae">12</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">+</span> <span style="color:#0550ae">12</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">%</span> <span style="color:#0550ae">12</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">+</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">Math</span><span style="color:#1f2328">.</span><span style="color:#1f2328">floor</span><span style="color:#1f2328">(</span><span style="color:#1f2328">midi</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">12</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">freqToMidi</span><span style="color:#1f2328">(</span><span style="color:#1f2328">freq</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">Math</span><span style="color:#1f2328">.</span><span style="color:#1f2328">round</span><span style="color:#1f2328">(</span><span style="color:#0550ae">69</span> <span style="color:#0550ae">+</span> <span style="color:#0550ae">12</span> <span style="color:#0550ae">*</span> <span style="color:#6639ba">Math</span><span style="color:#1f2328">.</span><span style="color:#1f2328">log2</span><span style="color:#1f2328">(</span><span style="color:#1f2328">freq</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">440</span><span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>The sound reaches the analyser through whatever source the boot picked. The
+context is created lazily and resumed in case the browser handed it back
+suspended.</p>
+<div class="konix-block-name-marker" data-name="ensure-audio"></div>
+<p><a id="code-snippet--ensure-audio"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">let</span> <span style="color:#1f2328">audioCtx</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">ensureAudio</span><span style="color:#1f2328">(){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#1f2328">audioCtx</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">const</span> <span style="color:#1f2328">Ctx</span> <span style="color:#0550ae">=</span> <span style="color:#6639ba">window</span><span style="color:#1f2328">.</span><span style="color:#1f2328">AudioContext</span> <span style="color:#0550ae">||</span> <span style="color:#6639ba">window</span><span style="color:#1f2328">.</span><span style="color:#1f2328">webkitAudioContext</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">audioCtx</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">Ctx</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">audioCtx</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span> <span style="color:#0550ae">===</span> <span style="color:#0a3069">&#39;suspended&#39;</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">audioCtx</span><span style="color:#1f2328">.</span><span style="color:#1f2328">resume</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">audioCtx</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>The synthesised source is the test&rsquo;s instrument: for each MIDI note in the
+<code>?synth</code> list it starts an oscillator at that note&rsquo;s frequency and mixes
+them into one output. A single note is the degenerate case of the list, so
+the same builder will serve chords unchanged in a later chapter.</p>
+<div class="konix-block-name-marker" data-name="synth-source"></div>
+<p><a id="code-snippet--synth-source"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">synthSource</span><span style="color:#1f2328">(</span><span style="color:#1f2328">ctx</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">spec</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">midis</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">spec</span><span style="color:#1f2328">.</span><span style="color:#1f2328">split</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;,&#39;</span><span style="color:#1f2328">).</span><span style="color:#1f2328">filter</span><span style="color:#1f2328">(</span><span style="color:#1f2328">s</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">s</span> <span style="color:#0550ae">!==</span> <span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">).</span><span style="color:#1f2328">map</span><span style="color:#1f2328">(</span><span style="color:#6639ba">Number</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">mix</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">ctx</span><span style="color:#1f2328">.</span><span style="color:#1f2328">createGain</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span><span style="color:#1f2328">(</span><span style="color:#cf222e">const</span> <span style="color:#1f2328">m</span> <span style="color:#cf222e">of</span> <span style="color:#1f2328">midis</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">const</span> <span style="color:#1f2328">osc</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">ctx</span><span style="color:#1f2328">.</span><span style="color:#1f2328">createOscillator</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">osc</span><span style="color:#1f2328">.</span><span style="color:#1f2328">frequency</span><span style="color:#1f2328">.</span><span style="color:#1f2328">value</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">440</span> <span style="color:#0550ae">*</span> <span style="color:#6639ba">Math</span><span style="color:#1f2328">.</span><span style="color:#1f2328">pow</span><span style="color:#1f2328">(</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">m</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">69</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">12</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">osc</span><span style="color:#1f2328">.</span><span style="color:#1f2328">connect</span><span style="color:#1f2328">(</span><span style="color:#1f2328">mix</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">osc</span><span style="color:#1f2328">.</span><span style="color:#1f2328">start</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">mix</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Listening wires that source into an <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode">AnalyserNode</a> and starts the read loop.
+The analyser also drives a <strong>muted</strong> gain into the speakers: an analyser only
+produces data while the graph it sits in is being pulled toward a
+destination, and a zero gain pulls it without making a sound. The
+<a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/fftSize">window size</a> is 8192 samples — fine enough to separate adjacent semitones in
+the range a piano is usually played.</p>
+<div class="konix-block-name-marker" data-name="start-listening"></div>
+<p><a id="code-snippet--start-listening"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">FFT_SIZE</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">8192</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">startListening</span><span style="color:#1f2328">(</span><span style="color:#1f2328">synthSpec</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">ctx</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">ensureAudio</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">analyser</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">ctx</span><span style="color:#1f2328">.</span><span style="color:#1f2328">createAnalyser</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">analyser</span><span style="color:#1f2328">.</span><span style="color:#1f2328">fftSize</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">FFT_SIZE</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">synthSource</span><span style="color:#1f2328">(</span><span style="color:#1f2328">ctx</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">synthSpec</span><span style="color:#1f2328">).</span><span style="color:#1f2328">connect</span><span style="color:#1f2328">(</span><span style="color:#1f2328">analyser</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">mute</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">ctx</span><span style="color:#1f2328">.</span><span style="color:#1f2328">createGain</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">mute</span><span style="color:#1f2328">.</span><span style="color:#1f2328">gain</span><span style="color:#1f2328">.</span><span style="color:#1f2328">value</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">analyser</span><span style="color:#1f2328">.</span><span style="color:#1f2328">connect</span><span style="color:#1f2328">(</span><span style="color:#1f2328">mute</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">mute</span><span style="color:#1f2328">.</span><span style="color:#1f2328">connect</span><span style="color:#1f2328">(</span><span style="color:#1f2328">ctx</span><span style="color:#1f2328">.</span><span style="color:#1f2328">destination</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">listen</span><span style="color:#1f2328">(</span><span style="color:#1f2328">analyser</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Each frame, the loop reads the spectrum and names the loudest pitch in it.
+A single clean tone is one tall peak, so for now &ldquo;the note&rdquo; is simply the
+highest-magnitude bin, converted from its bin frequency to a name. A floor
+in <a target="_blank" href="https://en.wikipedia.org/wiki/Decibel">decibels</a> keeps silence from being read as a phantom note. Polyphony and
+harmonic disambiguation arrive with the game; the tuner only owes a single
+clear pitch.</p>
+<div class="konix-block-name-marker" data-name="detect-pitch"></div>
+<p><a id="code-snippet--detect-pitch"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">FLOOR_DB</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">80</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">detect</span><span style="color:#1f2328">(</span><span style="color:#1f2328">analyser</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">bins</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">Float32Array</span><span style="color:#1f2328">(</span><span style="color:#1f2328">analyser</span><span style="color:#1f2328">.</span><span style="color:#1f2328">frequencyBinCount</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">analyser</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getFloatFrequencyData</span><span style="color:#1f2328">(</span><span style="color:#1f2328">bins</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">hzPerBin</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">audioCtx</span><span style="color:#1f2328">.</span><span style="color:#1f2328">sampleRate</span> <span style="color:#0550ae">/</span> <span style="color:#1f2328">analyser</span><span style="color:#1f2328">.</span><span style="color:#1f2328">fftSize</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">let</span> <span style="color:#1f2328">peak</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#cf222e">Infinity</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">peakBin</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">1</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span><span style="color:#1f2328">(</span><span style="color:#cf222e">let</span> <span style="color:#1f2328">i</span> <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">i</span> <span style="color:#0550ae">&lt;</span> <span style="color:#1f2328">bins</span><span style="color:#1f2328">.</span><span style="color:#1f2328">length</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">i</span><span style="color:#0550ae">++</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">bins</span><span style="color:#1f2328">[</span><span style="color:#1f2328">i</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&gt;</span> <span style="color:#1f2328">peak</span><span style="color:#1f2328">){</span> <span style="color:#1f2328">peak</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">bins</span><span style="color:#1f2328">[</span><span style="color:#1f2328">i</span><span style="color:#1f2328">];</span> <span style="color:#1f2328">peakBin</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">i</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">peak</span> <span style="color:#0550ae">&lt;</span> <span style="color:#1f2328">FLOOR_DB</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">noteName</span><span style="color:#1f2328">(</span><span style="color:#1f2328">freqToMidi</span><span style="color:#1f2328">(</span><span style="color:#1f2328">peakBin</span> <span style="color:#0550ae">*</span> <span style="color:#1f2328">hzPerBin</span><span style="color:#1f2328">));</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="listen-loop"></div>
+<p><a id="code-snippet--listen-loop"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">function</span> <span style="color:#1f2328">listen</span><span style="color:#1f2328">(</span><span style="color:#1f2328">analyser</span><span style="color:#1f2328">){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#cf222e">function</span> <span style="color:#1f2328">tick</span><span style="color:#1f2328">(){</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">heard</span><span style="color:#1f2328">.</span><span style="color:#1f2328">val</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">detect</span><span style="color:#1f2328">(</span><span style="color:#1f2328">analyser</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">requestAnimationFrame</span><span style="color:#1f2328">(</span><span style="color:#1f2328">tick</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">})();</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>The converse guards the readout against an empty room: with no oscillator on
+the seam — an empty <code>?synth</code> list — nothing rises above the floor, so
+<code>detect</code> returns nothing and the readout holds its em dash rather than chase
+noise into a phantom pitch.</p>
+<div class="konix-block-name-marker" data-name="test-silence"></div>
+<p><a id="code-snippet--test-silence"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_silence_reads_as_nothing</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;An empty ?synth list feeds no tone, so the readout stays an em dash.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span>BASE_URL <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;?synth=&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_selector<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-app-ready]&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_timeout<span style="color:#1f2328">(</span><span style="color:#0550ae">300</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;—&#34;</span><span style="color:#1f2328">,</span> exact<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>is_visible<span style="color:#1f2328">(),</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;a silent room registered a phantom note&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: silence reads as nothing&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h2 id="c2000000-0000-4000-9000-000000000006">PWA shell</h2>
+<p>I want to add the app to my phone&rsquo;s home screen and open it straight at the
+piano, no browser chrome. Three small things turn the web app into a PWA,
+the same three the organiser used.</p>
+<p>The first is a <strong>manifest</strong>: the metadata the OS reads when I add the app to my
+home screen — name, theme colour, and an icon drawn inline as an SVG
+data-URL so there is no separate asset to ship.</p>
+<div class="konix-block-name-marker" data-name="manifest"></div>
+<p><a id="code-snippet--manifest"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;name&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;Piano hero&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;short_name&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;Piano&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;description&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;Listen to an acoustic piano and score the notes you play.&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;start_url&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;.&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;display&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;standalone&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;background_color&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#1b1d2e&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;theme_color&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#1b1d2e&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;icons&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">&#34;src&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;data:image/svg+xml,&lt;svg xmlns=&#39;http://www.w3.org/2000/svg&#39; viewBox=&#39;0 0 512 512&#39;&gt;&lt;rect width=&#39;512&#39; height=&#39;512&#39; rx=&#39;96&#39; fill=&#39;%231b1d2e&#39;/&gt;&lt;text x=&#39;256&#39; y=&#39;350&#39; font-size=&#39;280&#39; text-anchor=&#39;middle&#39; fill=&#39;%23f9a826&#39;&gt;P&lt;/text&gt;&lt;/svg&gt;&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">&#34;sizes&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;512x512&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">&#34;type&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;image/svg+xml&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">&#34;purpose&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;any maskable&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>The second is a <strong>service worker</strong>. The cache-first-with-write-through logic is
+the same as in every other PWA here, so it lives in a <a class="internal-link" href="/braindump/posts/shared_blocks/#service-worker">shared block</a>; what is
+app-specific is which files to cache and the cache name, keyed on the build
+hash so a deploy drops the old cache on the next activation.</p>
+<div class="konix-block-name-marker" data-name="sw"></div>
+<p><a id="code-snippet--sw"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">CACHES</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">{</span> <span style="color:#1f2328">name</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;piano-nil&#39;</span> <span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">];</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">ASSETS</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#39;./&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;./index.html&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;./app.js&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;./manifest.json&#39;</span><span style="color:#1f2328">];</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">nil</span>
+</span></span></code></pre></div><p>The third is a <strong>loading ring</strong> — a spinner covering the page until the boot
+raises <code>data-app-ready</code>, so the moment between tapping the icon and the app
+appearing doesn&rsquo;t read as broken.</p>
+<div class="konix-block-name-marker" data-name="loading-ring"></div>
+<p><a id="code-snippet--loading-ring"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#1f2328">id</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;loading&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="css-loading-ring"></div>
+<p><a id="code-snippet--css-loading-ring"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-css" data-lang="css"><span style="display:flex;"><span><span style="color:#1f2328">#</span><span style="color:#24292e">loading</span><span style="color:#1f2328">{</span><span style="color:#cf222e">position</span><span style="color:#1f2328">:</span><span style="color:#cf222e">fixed</span><span style="color:#1f2328">;</span>inset<span style="color:#1f2328">:</span><span style="color:#0550ae">0</span><span style="color:#1f2328">;</span><span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>bg<span style="color:#1f2328">);</span><span style="color:#cf222e">z-index</span><span style="color:#1f2328">:</span><span style="color:#0550ae">9999</span><span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">body</span><span style="color:#0550ae">[</span><span style="color:#0550ae">data-app-ready</span><span style="color:#0550ae">]</span> <span style="color:#1f2328">#</span><span style="color:#24292e">loading</span><span style="color:#1f2328">{</span><span style="color:#cf222e">display</span><span style="color:#1f2328">:</span><span style="color:#cf222e">none</span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>And a tiny build tag in the corner, to confirm at a glance which build a
+device actually picked up after a deploy.</p>
+<div class="konix-block-name-marker" data-name="build-tag"></div>
+<p><a id="code-snippet--build-tag"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">span</span> <span style="color:#1f2328">class</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;build-tag&#34;</span> <span style="color:#1f2328">title</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Build&#34;</span><span style="color:#1f2328">&gt;</span>nil<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">span</span><span style="color:#1f2328">&gt;</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="css-build-tag"></div>
+<p><a id="code-snippet--css-build-tag"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-css" data-lang="css"><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">build-tag</span><span style="color:#1f2328">{</span><span style="color:#cf222e">position</span><span style="color:#1f2328">:</span><span style="color:#cf222e">fixed</span><span style="color:#1f2328">;</span><span style="color:#cf222e">top</span><span style="color:#1f2328">:</span><span style="color:#0550ae">8</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">left</span><span style="color:#1f2328">:</span><span style="color:#0550ae">8</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span><span style="color:#cf222e">font-size</span><span style="color:#1f2328">:</span><span style="color:#0550ae">.65</span><span style="color:#cf222e">rem</span><span style="color:#1f2328">;</span><span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>muted<span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#cf222e">font-family</span><span style="color:#1f2328">:</span><span style="color:#cf222e">monospace</span><span style="color:#1f2328">;</span>pointer-events<span style="color:#1f2328">:</span><span style="color:#cf222e">none</span><span style="color:#1f2328">;</span><span style="color:#cf222e">z-index</span><span style="color:#1f2328">:</span><span style="color:#0550ae">50</span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><h2 id="c2000000-0000-4000-9000-00000000000e">Playwright tests</h2>
+<p>The per-feature tests need a runner, shaped by the same two rules the
+organiser and the trainer settled on: assert on the user-facing surface
+(visible text, roles, labels) over DOM internals, and let each test register
+itself with a decorator so there is no central list to forget to update.</p>
+<div class="konix-block-name-marker" data-name="test-helpers-registration"></div>
+<p><a id="code-snippet--test-helpers-registration"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>TESTS <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">testcase</span><span style="color:#1f2328">(</span>fn<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Registration decorator: each =@testcase= appends to =TESTS= in source order.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    TESTS<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>fn<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> fn
+</span></span></code></pre></div><p>The imports block does a little setup beyond importing. The Nix shell doesn&rsquo;t
+put the Playwright browsers on a path the loader knows, so it points
+<code>PLAYWRIGHT_BROWSERS_PATH</code> at the <code>playwright-browsers</code> entry in <code>buildInputs</code>
+unless already set. It pins a portrait phone viewport, since the app is
+phone-first, and names the dev slot&rsquo;s served URL as the default target.</p>
+<div class="konix-block-name-marker" data-name="test-imports"></div>
+<p><a id="code-snippet--test-imports"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span><span style="color:#0550ae">,</span> <span style="color:#24292e">sys</span><span style="color:#0550ae">,</span> <span style="color:#24292e">time</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;PLAYWRIGHT_BROWSERS_PATH&#34;</span> <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> os<span style="color:#0550ae">.</span>environ<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;buildInputs&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>split<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;playwright-browsers&#34;</span> <span style="color:#0550ae">in</span> p<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            os<span style="color:#0550ae">.</span>environ<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;PLAYWRIGHT_BROWSERS_PATH&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> p
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">playwright.sync_api</span> <span style="color:#cf222e">import</span> sync_playwright
+</span></span><span style="display:flex;"><span>BASE_URL <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;PIANO_URL&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;http://localhost:9682/debug/piano/&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>PHONE_VIEWPORT <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;width&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">400</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;height&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">800</span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>The runner mirrors the trainer&rsquo;s — whole suite by default, name-substring
+filter from positional args, <code>-x</code> to stop on first failure, <code>--headed</code> to
+watch — with one addition. Web Audio won&rsquo;t run a context until the user has
+interacted with the page, which would freeze the synthesised source before
+it ever sounded; launching Chromium with <code>--autoplay-policy=no-user-gesture-required</code>
+lifts that gate so the <code>?synth</code> seam can start on load.</p>
+<div class="konix-block-name-marker" data-name="test-runner"></div>
+<p><a id="code-snippet--test-runner"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">main</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    argv <span style="color:#0550ae">=</span> sys<span style="color:#0550ae">.</span>argv<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]</span>
+</span></span><span style="display:flex;"><span>    headed <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;--headed&#34;</span> <span style="color:#0550ae">in</span> argv
+</span></span><span style="display:flex;"><span>    stop_on_fail <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;-x&#34;</span> <span style="color:#0550ae">in</span> argv <span style="color:#0550ae">or</span> <span style="color:#0a3069">&#34;--exitfirst&#34;</span> <span style="color:#0550ae">in</span> argv
+</span></span><span style="display:flex;"><span>    patterns <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>a <span style="color:#cf222e">for</span> a <span style="color:#0550ae">in</span> argv <span style="color:#cf222e">if</span> a <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;--headed&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-x&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--exitfirst&#34;</span><span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>    selected <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>t <span style="color:#cf222e">for</span> t <span style="color:#0550ae">in</span> TESTS
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> patterns <span style="color:#0550ae">or</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>p <span style="color:#0550ae">in</span> t<span style="color:#0550ae">.</span><span style="color:#953800">__name__</span> <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> patterns<span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> selected<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;no test matches </span><span style="color:#0a3069">{</span>patterns<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        sys<span style="color:#0550ae">.</span>exit<span style="color:#1f2328">(</span><span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> sync_playwright<span style="color:#1f2328">()</span> <span style="color:#cf222e">as</span> pw<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        browser <span style="color:#0550ae">=</span> pw<span style="color:#0550ae">.</span>chromium<span style="color:#0550ae">.</span>launch<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            headless<span style="color:#0550ae">=</span><span style="color:#0550ae">not</span> headed<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            args<span style="color:#0550ae">=</span><span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;--autoplay-policy=no-user-gesture-required&#34;</span><span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        ctx <span style="color:#0550ae">=</span> browser<span style="color:#0550ae">.</span>new_context<span style="color:#1f2328">(</span>viewport<span style="color:#0550ae">=</span>PHONE_VIEWPORT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        page <span style="color:#0550ae">=</span> ctx<span style="color:#0550ae">.</span>new_page<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        page<span style="color:#0550ae">.</span>set_default_timeout<span style="color:#1f2328">(</span><span style="color:#0550ae">5000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        passed <span style="color:#0550ae">=</span> failed <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> t <span style="color:#0550ae">in</span> selected<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                t<span style="color:#1f2328">(</span>page<span style="color:#1f2328">);</span> passed <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  FAIL: </span><span style="color:#0a3069">{</span>t<span style="color:#0550ae">.</span><span style="color:#953800">__name__</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">);</span> failed <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> stop_on_fail<span style="color:#1f2328">:</span> <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>        browser<span style="color:#0550ae">.</span>close<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">{</span>passed<span style="color:#0a3069">}</span><span style="color:#0a3069"> passed, </span><span style="color:#0a3069">{</span>failed<span style="color:#0a3069">}</span><span style="color:#0a3069"> failed out of </span><span style="color:#0a3069">{</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>selected<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        sys<span style="color:#0550ae">.</span>exit<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#cf222e">if</span> failed <span style="color:#cf222e">else</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#953800">__name__</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;__main__&#34;</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    main<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/b7e3f1a2-9c4d-4e58-a1b6-3f2c8d9e0a11?title=simple_pwa_piano_hero">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+      </div>
+	  <aside class="date"><time>Last updated: 10 Jun 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 10 Jun 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
