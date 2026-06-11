@@ -18,7 +18,7 @@ function saveConfig(){
 function setConfigField(field, value){
     config[field] = value;
     saveConfig();
-    configError.val = '';
+    configError.val = validateConfig(config);
 }
 function validateConfig(c){
     if(!(c.count >= 1)) return 'Number of beeps must be at least 1.';
