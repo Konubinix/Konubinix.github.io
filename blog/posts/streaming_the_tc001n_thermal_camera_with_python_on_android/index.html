@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<script src="https://hypothes.is/embed.js" async></script>
+<title>Streaming the TC001N Thermal Camera With Python on Android &middot; Konubinix&#39; Site</title>
+
+<link rel="stylesheet" class="internal-link" href="/blog/css/main.min.8e2ccebba2bd2b151f513c5ea3c62a25d4614364fb0bc5a0261ccdc2b49f020047a52512e7e59e5d513e3aec1ed4fedb503d494c430c930053ef8f6c8a5d7d23.css" integrity="sha512-jizOu6K9KxUfUTxeo8YqJdRhQ2T7C8WgJhzNwrSfAgBHpSUS5&#43;WeXVE&#43;Ouwe1P7bUD1JTEMMkwBT749sil19Iw==" type="text/css" />
+
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="stylesheet" class="internal-link" href="/blog/css/links.min.66488b1bd98835c9d323aceb9cb379cbdf615c46936837066b038781a80444ba.css"/>
+<script type="text/javascript"
+		src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body class="container"><header>
+	<a class="internal-link" href="/blog//"><h5 class="site-title">Konubinix&#39; site</h5></a>
+  <nav class="footer-nav">
+  <ul>
+	<li><a class="internal-link" href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a target="_blank" href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a target="_blank" href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a class="internal-link" href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a class="internal-link" href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a class="internal-link" href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+</header>
+
+<main>
+  <header>
+	<h1 class="underline">Streaming the TC001N Thermal Camera With Python on Android</h1>
+	<span class="badge badge-pill badge-warning"><a class="internal-link" href="/blog/tags/fleeting/">Fleeting</a></span></header>
+  <article>
+	<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a class="internal-link" href="#why">Why a python driver at all</a></li>
+<li><a class="internal-link" href="#constants">The constants are the camera&rsquo;s own descriptors</a></li>
+<li><a class="internal-link" href="#find">Finding the camera once it has settled</a></li>
+<li><a class="internal-link" href="#permission">Getting permission the way the Arduino did</a></li>
+<li><a class="internal-link" href="#negotiate">The negotiation, where the Kotlin app died</a></li>
+<li><a class="internal-link" href="#frame">The payoff: one real frame</a></li>
+<li><a class="internal-link" href="#full-frame">Assembling a full frame</a></li>
+<li><a class="internal-link" href="#verify">Running it live</a></li>
+<li><a class="internal-link" href="#payoff">What it sees</a></li>
+<li><a class="internal-link" href="#live">A live viewer</a></li>
+<li><a class="internal-link" href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<h2 id="why">Why a python driver at all</h2>
+<p>The Kotlin app already streams. It is a single <code>v1.0.0</code> release that hard-codes
+the frame geometry — the 384-vs-392 mismatch that took a <a class="internal-link" href="/blog/posts/making_the_topdon_tc001n_thermal_camera_stream_on_android/">patched fork</a> to clear —
+so doing anything further with it means forking it and living in its build.</p>
+<p>Either way is real work. Extending that fork or writing a UVC driver from
+scratch are both a significant amount of coding, in the same ballpark of
+effort. When the effort is comparable, the platform is what decides.</p>
+<p>And that tips it. A <a class="internal-link" href="/blog/posts/a_python_runtime_on_android/">python runtime on Android</a> is already running on the phone,
+with <code>usb4a</code>, <code>numpy</code>, <code>opencv</code> and Kivy — and it carries what a Kotlin build
+cannot: drop a <code>.py</code> in the sdcard and it reloads, drive it live from the PC
+over <a target="_blank" href="/braindump/posts/rpyc/?title=rpyc#">rpyc</a>. That feedback loop is what makes the runtime a joy to work in. So
+the choice is to code in the runtime that is already mine rather than in someone
+else&rsquo;s build.</p>
+<p>One fact decides whether that choice is even open. Android&rsquo;s Java USB Host API
+exposes bulk and control transfers but <strong>not</strong> isochronous ones — the wall most
+&ldquo;UVC from Python&rdquo; attempts hit. The TC001N&rsquo;s streaming endpoint, read straight
+from its <a class="internal-link" href="/blog/posts/making_the_topdon_tc001n_thermal_camera_stream_on_android/">descriptors</a> (<code>07 05 81 02 00 02 00</code>), is endpoint <code>0x81</code>, attribute
+<code>0x02</code> — <strong>bulk</strong>. So the camera sits on the right side of that wall, and a pure
+pyjnius driver is feasible. This note proves it before any app is built.</p>
+<p>The negotiation we have to reproduce is the standard UVC handshake — claim the
+interface, PROBE and COMMIT a format, then read frames off the bulk endpoint:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>https://ipfs.konubinix.eu/p/bafkreig7hskttejoh4y42hx276mfbuplguy27iuqrbo7z6i75iamisixbm?uvc_handshake.png
+</span></span></code></pre></div><h2 id="constants">The constants are the camera&rsquo;s own descriptors</h2>
+<p>Every magic number below was read from the device, not guessed. The UVC node
+is <code>2bdf:0102</code> — the second identity the camera takes after its <a class="internal-link" href="/blog/posts/making_the_topdon_tc001n_thermal_camera_stream_on_android/">two-stage USB
+mode-switch</a>, so the driver must wait for <code>0102</code>, never <code>0106</code>. Its
+VideoControl header lists the VideoStreaming interface as number <code>1</code>. The
+uncompressed format index <code>1</code> is YUY2, and within it frame index <code>1</code> is the
+256×392 mode at a default interval of 400000 (in 100 ns units, i.e. 25 fps) —
+exactly the row count the Kotlin app got wrong. <code>bcdUVC</code> is 1.10, which fixes
+the PROBE/COMMIT control at 34 bytes.</p>
+<div class="konix-block-name-marker" data-name="spike-device-constants"></div>
+<p><a id="code-snippet--spike-device-constants"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>VENDOR<span style="color:#1f2328">,</span> PRODUCT <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x2bdf</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x0102</span>   <span style="color:#57606a"># the UVC node, AFTER the 0106-&gt;0102 switch</span>
+</span></span><span style="display:flex;"><span>VS_INTERFACE <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span>                   <span style="color:#57606a"># VideoStreaming interface number</span>
+</span></span><span style="display:flex;"><span>FORMAT_INDEX<span style="color:#1f2328">,</span> FRAME_INDEX <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span>   <span style="color:#57606a"># YUY2, 256x392</span>
+</span></span><span style="display:flex;"><span>FRAME_INTERVAL <span style="color:#0550ae">=</span> <span style="color:#0550ae">400000</span>            <span style="color:#57606a"># 100ns units -&gt; 25 fps</span>
+</span></span><span style="display:flex;"><span>PROBE_LEN <span style="color:#0550ae">=</span> <span style="color:#0550ae">34</span>                     <span style="color:#57606a"># UVC 1.1 PROBE/COMMIT control size</span>
+</span></span><span style="display:flex;"><span>BULK_EP <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x81</span>                     <span style="color:#57606a"># streaming endpoint (IN, bulk)</span>
+</span></span></code></pre></div><p>The request plumbing is the other half of the vocabulary: a class request to
+the interface, <code>SET_CUR</code> out and <code>GET_CUR</code> in, selecting the PROBE then the
+COMMIT control.</p>
+<div class="konix-block-name-marker" data-name="spike-requests"></div>
+<p><a id="code-snippet--spike-requests"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>SET_CUR<span style="color:#1f2328">,</span> GET_CUR <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x01</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x81</span>
+</span></span><span style="display:flex;"><span>VS_PROBE_CONTROL<span style="color:#1f2328">,</span> VS_COMMIT_CONTROL <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x01</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x02</span>
+</span></span><span style="display:flex;"><span>RT_SET<span style="color:#1f2328">,</span> RT_GET <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x21</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0xA1</span>        <span style="color:#57606a"># class | interface, out / in</span>
+</span></span></code></pre></div><h2 id="find">Finding the camera once it has settled</h2>
+<p>The driver must not act on the first thing that enumerates: the camera appears
+briefly as <code>0106</code> before re-enumerating as the UVC <code>0102</code> node. So discovery is
+a filter for the settled identity, returning nothing until <code>0102</code> is on the bus.</p>
+<div class="konix-block-name-marker" data-name="spike-find"></div>
+<p><a id="code-snippet--spike-find"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">find_camera</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;The UsbDevice for 2bdf:0102, or None until the mode switch lands.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> dev <span style="color:#0550ae">in</span> usb<span style="color:#0550ae">.</span>get_usb_device_list<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> dev<span style="color:#0550ae">.</span>getVendorId<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> VENDOR <span style="color:#0550ae">and</span> dev<span style="color:#0550ae">.</span>getProductId<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> PRODUCT<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> dev
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
+</span></span></code></pre></div><h2 id="permission">Getting permission the way the Arduino did</h2>
+<p>Android gates USB host access behind a runtime dialog. We don&rsquo;t re-solve that:
+the <a class="internal-link" href="/blog/posts/a_python_runtime_on_android/#1f4fc0a4-ceff-4973-9e09-a2bd5d9b3670">Arduino experiment</a> already drove <code>usb4a</code>&rsquo;s permission flow, where the
+request fires a dialog and the caller has to come back after the user accepts.
+We mirror it — hold permission and proceed, or request it and ask to be re-run.</p>
+<div class="konix-block-name-marker" data-name="spike-permission"></div>
+<p><a id="code-snippet--spike-permission"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">ensure_permission</span><span style="color:#1f2328">(</span>dev<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;True if granted. Otherwise fire the dialog and return False:
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    accept on the phone, then call run() again.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> usb<span style="color:#0550ae">.</span>has_usb_permission<span style="color:#1f2328">(</span>dev<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>    usb<span style="color:#0550ae">.</span>request_usb_permission<span style="color:#1f2328">(</span>dev<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#cf222e">False</span>
+</span></span></code></pre></div><p>With permission in hand we open the device and claim interface <code>1</code>. The PROBE
+and COMMIT controls are addressed to the VideoStreaming interface, so it must
+be claimed first; <code>forceClaim</code> detaches any driver already holding it.</p>
+<div class="konix-block-name-marker" data-name="spike-open"></div>
+<p><a id="code-snippet--spike-open"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_device</span><span style="color:#1f2328">(</span>dev<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Open and claim the VideoStreaming interface. Returns (conn, intf).&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    conn <span style="color:#0550ae">=</span> usb<span style="color:#0550ae">.</span>get_usb_manager<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>openDevice<span style="color:#1f2328">(</span>dev<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> conn <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;openDevice returned null (permission? already open?)&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    intf <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">((</span>dev<span style="color:#0550ae">.</span>getInterface<span style="color:#1f2328">(</span>i<span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterfaceCount<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#cf222e">if</span> dev<span style="color:#0550ae">.</span>getInterface<span style="color:#1f2328">(</span>i<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>getId<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> VS_INTERFACE<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> intf <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;VideoStreaming interface </span><span style="color:#0a3069">%d</span><span style="color:#0a3069"> absent&#34;</span> <span style="color:#0550ae">%</span> VS_INTERFACE<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> conn<span style="color:#0550ae">.</span>claimInterface<span style="color:#1f2328">(</span>intf<span style="color:#1f2328">,</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;claimInterface failed&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> conn<span style="color:#1f2328">,</span> intf
+</span></span></code></pre></div><h2 id="negotiate">The negotiation, where the Kotlin app died</h2>
+<p>This is the step that matters. The Kotlin app reached an open camera and then
+failed format negotiation with <em>uvc_get_stream_ctrl_format_size failed: Invalid
+mode</em>, because it asked for 256×384 and the TC001N only advertises 256×392.
+That observed red is the spec for the spike: we ask for the <strong>advertised</strong> frame
+and expect the camera to accept it instead of rejecting it.</p>
+<p>A PROBE payload pins the format, frame and interval, sets the hint bit that
+says the interval is fixed, and leaves the rest zero for the device to fill in.</p>
+<div class="konix-block-name-marker" data-name="spike-build-probe"></div>
+<p><a id="code-snippet--spike-build-probe"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">build_probe</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    buf <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(</span>PROBE_LEN<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    struct<span style="color:#0550ae">.</span>pack_into<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;&lt;H&#34;</span><span style="color:#1f2328">,</span> buf<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x0001</span><span style="color:#1f2328">)</span>        <span style="color:#57606a"># bmHint: dwFrameInterval fixed</span>
+</span></span><span style="display:flex;"><span>    buf<span style="color:#1f2328">[</span><span style="color:#0550ae">2</span><span style="color:#1f2328">],</span> buf<span style="color:#1f2328">[</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> FORMAT_INDEX<span style="color:#1f2328">,</span> FRAME_INDEX
+</span></span><span style="display:flex;"><span>    struct<span style="color:#0550ae">.</span>pack_into<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;&lt;I&#34;</span><span style="color:#1f2328">,</span> buf<span style="color:#1f2328">,</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">,</span> FRAME_INTERVAL<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> buf
+</span></span></code></pre></div><p>On the way back the camera returns the negotiated control, from which we read
+the two numbers the streaming loop will need: the per-frame size and the most
+bytes it will hand over per bulk transfer.</p>
+<div class="konix-block-name-marker" data-name="spike-parse-probe"></div>
+<p><a id="code-snippet--spike-parse-probe"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">parse_probe</span><span style="color:#1f2328">(</span>b<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> b <span style="color:#0550ae">or</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>b<span style="color:#1f2328">)</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">26</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    f <span style="color:#0550ae">=</span> struct<span style="color:#0550ae">.</span>unpack<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;&lt;HBBIHHHHHII&#34;</span><span style="color:#1f2328">,</span> b<span style="color:#1f2328">[:</span><span style="color:#0550ae">26</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;bFormatIndex&#34;</span><span style="color:#1f2328">:</span> f<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">],</span> <span style="color:#0a3069">&#34;bFrameIndex&#34;</span><span style="color:#1f2328">:</span> f<span style="color:#1f2328">[</span><span style="color:#0550ae">2</span><span style="color:#1f2328">],</span> <span style="color:#0a3069">&#34;dwFrameInterval&#34;</span><span style="color:#1f2328">:</span> f<span style="color:#1f2328">[</span><span style="color:#0550ae">3</span><span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;fps&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">round</span><span style="color:#1f2328">(</span><span style="color:#0550ae">1e7</span> <span style="color:#0550ae">/</span> f<span style="color:#1f2328">[</span><span style="color:#0550ae">3</span><span style="color:#1f2328">])</span> <span style="color:#cf222e">if</span> f<span style="color:#1f2328">[</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span> <span style="color:#cf222e">else</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;dwMaxVideoFrameSize&#34;</span><span style="color:#1f2328">:</span> f<span style="color:#1f2328">[</span><span style="color:#0550ae">9</span><span style="color:#1f2328">],</span> <span style="color:#0a3069">&#34;dwMaxPayloadTransferSize&#34;</span><span style="color:#1f2328">:</span> f<span style="color:#1f2328">[</span><span style="color:#0550ae">10</span><span style="color:#1f2328">]}</span>
+</span></span></code></pre></div><p>The control transfers themselves are one wrapper each. <em>Under the hood</em>, the IN
+direction depends on pyjnius copying the Java <code>byte[]</code> back into the <code>bytearray</code>
+we passed — the same write-back <code>usbserial4a</code>&rsquo;s read path relies on; the spike
+is partly there to confirm that holds here too.</p>
+<div class="konix-block-name-marker" data-name="spike-ctrl"></div>
+<p><a id="code-snippet--spike-ctrl"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_ctrl_out</span><span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> value<span style="color:#1f2328">,</span> data<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    b <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(</span>data<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> conn<span style="color:#0550ae">.</span>controlTransfer<span style="color:#1f2328">(</span>RT_SET<span style="color:#1f2328">,</span> SET_CUR<span style="color:#1f2328">,</span> value<span style="color:#1f2328">,</span> VS_INTERFACE<span style="color:#1f2328">,</span> b<span style="color:#1f2328">,</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>b<span style="color:#1f2328">),</span> <span style="color:#0550ae">2000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_ctrl_in</span><span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> value<span style="color:#1f2328">,</span> length<span style="color:#0550ae">=</span>PROBE_LEN<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    b <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(</span>length<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    n <span style="color:#0550ae">=</span> conn<span style="color:#0550ae">.</span>controlTransfer<span style="color:#1f2328">(</span>RT_GET<span style="color:#1f2328">,</span> GET_CUR<span style="color:#1f2328">,</span> value<span style="color:#1f2328">,</span> VS_INTERFACE<span style="color:#1f2328">,</span> b<span style="color:#1f2328">,</span> length<span style="color:#1f2328">,</span> <span style="color:#0550ae">2000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> n<span style="color:#1f2328">,</span> <span style="color:#6639ba">bytes</span><span style="color:#1f2328">(</span>b<span style="color:#1f2328">[:</span>n<span style="color:#1f2328">])</span> <span style="color:#cf222e">if</span> n <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">0</span> <span style="color:#cf222e">else</span> <span style="color:#cf222e">None</span>
+</span></span></code></pre></div><p>Negotiation is then SET_CUR(PROBE) followed by GET_CUR(PROBE); a non-negative
+read with our format echoed back is the camera accepting the mode.</p>
+<div class="konix-block-name-marker" data-name="spike-negotiate-fn"></div>
+<p><a id="code-snippet--spike-negotiate-fn"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">negotiate</span><span style="color:#1f2328">(</span>conn<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> _ctrl_out<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> VS_PROBE_CONTROL <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">,</span> build_probe<span style="color:#1f2328">())</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;SET_CUR(PROBE) failed&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    n<span style="color:#1f2328">,</span> raw <span style="color:#0550ae">=</span> _ctrl_in<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> VS_PROBE_CONTROL <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> n <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;GET_CUR(PROBE) failed -- the &#39;Invalid mode&#39; wall&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> parse_probe<span style="color:#1f2328">(</span>raw<span style="color:#1f2328">),</span> raw
+</span></span></code></pre></div><h2 id="frame">The payoff: one real frame</h2>
+<p>Negotiation succeeding is necessary but not sufficient — the proof is bytes
+moving. COMMIT activates the negotiated mode by writing the same struct back to
+the COMMIT control, after which a single bulk read should return data led by a
+short UVC payload header. Seeing that header is the spike going green.</p>
+<div class="konix-block-name-marker" data-name="spike-commit"></div>
+<p><a id="code-snippet--spike-commit"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">commit</span><span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> raw<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> _ctrl_out<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> VS_COMMIT_CONTROL <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">,</span> raw<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">grab_one</span><span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> dev<span style="color:#1f2328">,</span> max_payload<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    ep <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>e <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterfaceCount<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#cf222e">for</span> e <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterface<span style="color:#1f2328">(</span>i<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>getEndpoint<span style="color:#1f2328">(</span>j<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#cf222e">for</span> j <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterface<span style="color:#1f2328">(</span>i<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>getEndpointCount<span style="color:#1f2328">()))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#cf222e">if</span> e<span style="color:#0550ae">.</span>getAddress<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> BULK_EP<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    buf <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(</span><span style="color:#6639ba">max</span><span style="color:#1f2328">(</span>max_payload<span style="color:#1f2328">,</span> <span style="color:#0550ae">16384</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    n <span style="color:#0550ae">=</span> conn<span style="color:#0550ae">.</span>bulkTransfer<span style="color:#1f2328">(</span>ep<span style="color:#1f2328">,</span> buf<span style="color:#1f2328">,</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>buf<span style="color:#1f2328">),</span> <span style="color:#0550ae">2000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> n<span style="color:#1f2328">,</span> <span style="color:#6639ba">bytes</span><span style="color:#1f2328">(</span>buf<span style="color:#1f2328">[:</span><span style="color:#0550ae">12</span><span style="color:#1f2328">])</span> <span style="color:#cf222e">if</span> n <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">0</span> <span style="color:#cf222e">else</span> <span style="color:#cf222e">None</span>
+</span></span></code></pre></div><p>Let&rsquo;s see what this gives. The one-shot ties the steps together and prints the
+negotiated mode and the first header, releasing the interface whatever happens.</p>
+<div class="konix-block-name-marker" data-name="spike-run"></div>
+<p><a id="code-snippet--spike-run"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">run</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    dev <span style="color:#0550ae">=</span> find_camera<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> dev <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;2bdf:0102 not on the bus -- replug, wait for the mode switch&#34;</span><span style="color:#1f2328">);</span> <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> ensure_permission<span style="color:#1f2328">(</span>dev<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;permission requested -- accept on the phone and rerun&#34;</span><span style="color:#1f2328">);</span> <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>    conn<span style="color:#1f2328">,</span> intf <span style="color:#0550ae">=</span> open_device<span style="color:#1f2328">(</span>dev<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        mode<span style="color:#1f2328">,</span> raw <span style="color:#0550ae">=</span> negotiate<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;negotiated:&#34;</span><span style="color:#1f2328">,</span> mode<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;COMMIT -&gt;&#34;</span><span style="color:#1f2328">,</span> commit<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> raw<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        n<span style="color:#1f2328">,</span> header <span style="color:#0550ae">=</span> grab_one<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> dev<span style="color:#1f2328">,</span> mode<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;dwMaxPayloadTransferSize&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;bulk </span><span style="color:#0a3069">%d</span><span style="color:#0a3069"> bytes, header: </span><span style="color:#0a3069">%s</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span>n<span style="color:#1f2328">,</span> header <span style="color:#0550ae">and</span> header<span style="color:#0550ae">.</span>hex<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34; &#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">finally</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        conn<span style="color:#0550ae">.</span>releaseInterface<span style="color:#1f2328">(</span>intf<span style="color:#1f2328">);</span> conn<span style="color:#0550ae">.</span>close<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><h2 id="full-frame">Assembling a full frame</h2>
+<p>One payload proves the pipe; a picture needs whole frames, which stream back to
+back as bulk payloads. A synchronous read can&rsquo;t keep up — at ~5 MB/s the
+endpoint sits idle between calls and the kernel buffer overflows, dropping
+payloads and tearing frames. So we drain <strong>asynchronously</strong>: a pool of
+<code>UsbRequest</code>&rsquo;s always in flight (libusb&rsquo;s URB trick), each handing back its
+payload data and the <code>bmHeaderInfo</code> byte from its 2-byte header.</p>
+<div class="konix-block-name-marker" data-name="spike-grab-async"></div>
+<p><a id="code-snippet--spike-grab-async"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">grab_stream_async</span><span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> dev<span style="color:#1f2328">,</span> want<span style="color:#1f2328">,</span> bulk_ep<span style="color:#0550ae">=</span>BULK_EP<span style="color:#1f2328">,</span> nreq<span style="color:#0550ae">=</span><span style="color:#0550ae">16</span><span style="color:#1f2328">,</span> bufsz<span style="color:#0550ae">=</span><span style="color:#0550ae">16384</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">from</span> <span style="color:#24292e">jnius</span> <span style="color:#cf222e">import</span> autoclass<span style="color:#1f2328">,</span> cast
+</span></span><span style="display:flex;"><span>    UsbRequest <span style="color:#0550ae">=</span> autoclass<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;android.hardware.usb.UsbRequest&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    ByteBuffer <span style="color:#0550ae">=</span> autoclass<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;java.nio.ByteBuffer&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    ep <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>e <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterfaceCount<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#cf222e">for</span> e <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterface<span style="color:#1f2328">(</span>i<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>getEndpoint<span style="color:#1f2328">(</span>j<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#cf222e">for</span> j <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterface<span style="color:#1f2328">(</span>i<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>getEndpointCount<span style="color:#1f2328">()))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#cf222e">if</span> e<span style="color:#0550ae">.</span>getAddress<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> bulk_ep<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    reqs <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>nreq<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        r <span style="color:#0550ae">=</span> UsbRequest<span style="color:#1f2328">();</span> r<span style="color:#0550ae">.</span>initialize<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> ep<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        b <span style="color:#0550ae">=</span> ByteBuffer<span style="color:#0550ae">.</span>allocate<span style="color:#1f2328">(</span>bufsz<span style="color:#1f2328">);</span> r<span style="color:#0550ae">.</span>setClientData<span style="color:#1f2328">(</span>b<span style="color:#1f2328">);</span> r<span style="color:#0550ae">.</span>queue<span style="color:#1f2328">(</span>b<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        reqs<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>r<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    out <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">();</span> infos <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>out<span style="color:#1f2328">)</span> <span style="color:#0550ae">&lt;</span> want<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        done <span style="color:#0550ae">=</span> conn<span style="color:#0550ae">.</span>requestWait<span style="color:#1f2328">(</span><span style="color:#0550ae">2000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> done <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>        b <span style="color:#0550ae">=</span> cast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;java.nio.ByteBuffer&#34;</span><span style="color:#1f2328">,</span> done<span style="color:#0550ae">.</span>getClientData<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>        n <span style="color:#0550ae">=</span> b<span style="color:#0550ae">.</span>position<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> n <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            chunk <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(</span>n<span style="color:#1f2328">);</span> b<span style="color:#0550ae">.</span>rewind<span style="color:#1f2328">();</span> b<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span>chunk<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> n<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            infos<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>chunk<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]))</span>          <span style="color:#57606a"># bmHeaderInfo (FID/EOF bits)</span>
+</span></span><span style="display:flex;"><span>            out <span style="color:#0550ae">+=</span> chunk<span style="color:#1f2328">[</span><span style="color:#0550ae">2</span><span style="color:#1f2328">:]</span>
+</span></span><span style="display:flex;"><span>        b<span style="color:#0550ae">.</span>clear<span style="color:#1f2328">();</span> done<span style="color:#0550ae">.</span>queue<span style="color:#1f2328">(</span>b<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> r <span style="color:#0550ae">in</span> reqs<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        r<span style="color:#0550ae">.</span>cancel<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">bytes</span><span style="color:#1f2328">(</span>out<span style="color:#1f2328">),</span> infos
+</span></span></code></pre></div><p>No pixel-level guessing is needed to find frame edges: the <strong>frame-ID</strong> bit
+(<code>bmHeaderInfo &amp; 1</code>) flips at every boundary, so a frame is one run of constant
+FID — for this camera 40 payloads of 5018 bytes. We hand back the first
+complete run&rsquo;s image bytes.</p>
+<div class="konix-block-name-marker" data-name="spike-payload"></div>
+<p><a id="code-snippet--spike-payload"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>PAYLOAD <span style="color:#0550ae">=</span> <span style="color:#0550ae">5018</span>   <span style="color:#57606a"># measured: de-headered bytes per bulk payload (40 payloads = 1 frame)</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="spike-frame"></div>
+<p><a id="code-snippet--spike-frame"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">frame_by_fid</span><span style="color:#1f2328">(</span>out<span style="color:#1f2328">,</span> infos<span style="color:#1f2328">,</span> w<span style="color:#0550ae">=</span><span style="color:#0550ae">256</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">392</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    img <span style="color:#0550ae">=</span> w <span style="color:#0550ae">*</span> h <span style="color:#0550ae">*</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>    fid <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>v <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">1</span> <span style="color:#cf222e">for</span> v <span style="color:#0550ae">in</span> infos<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    tog <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">+</span> <span style="color:#1f2328">[</span>i <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>fid<span style="color:#1f2328">))</span> <span style="color:#cf222e">if</span> fid<span style="color:#1f2328">[</span>i<span style="color:#1f2328">]</span> <span style="color:#0550ae">!=</span> fid<span style="color:#1f2328">[</span>i <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">]]</span> <span style="color:#0550ae">+</span> <span style="color:#1f2328">[</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>fid<span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> a<span style="color:#1f2328">,</span> b <span style="color:#0550ae">in</span> <span style="color:#6639ba">zip</span><span style="color:#1f2328">(</span>tog<span style="color:#1f2328">,</span> tog<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0550ae">38</span> <span style="color:#0550ae">&lt;=</span> b <span style="color:#0550ae">-</span> a <span style="color:#0550ae">&lt;=</span> <span style="color:#0550ae">42</span> <span style="color:#0550ae">and</span> a <span style="color:#0550ae">*</span> PAYLOAD <span style="color:#0550ae">+</span> img <span style="color:#0550ae">&lt;=</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>out<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> out<span style="color:#1f2328">[</span>a <span style="color:#0550ae">*</span> PAYLOAD<span style="color:#1f2328">:</span>a <span style="color:#0550ae">*</span> PAYLOAD <span style="color:#0550ae">+</span> img<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;no complete frame in capture&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>The frame is two stacked 196-row panes of the same scene: an IR-image pane
+(luma on the even YUYV bytes) and a <strong>temperature</strong> pane whose byte pairs are
+16-bit raw values, <code>raw / 64 − 273.15 °C</code> (the reference&rsquo;s conversion —
+uncalibrated, so good for relative readings and false colour, not trustworthy
+absolute temperatures). The raw values clump into a narrow band, so a linear
+ramp washes out; we histogram-equalise instead — the automatic-gain trick real
+thermal cameras use — then false-colour through a black→red→yellow→white
+palette, upscale, and report min/avg/max from the true °C.</p>
+<div class="konix-block-name-marker" data-name="spike-render"></div>
+<p><a id="code-snippet--spike-render"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">render_frame</span><span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> dev<span style="color:#1f2328">,</span> path<span style="color:#1f2328">,</span> w<span style="color:#0550ae">=</span><span style="color:#0550ae">256</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">392</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">import</span> <span style="color:#24292e">numpy</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">np</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">from</span> <span style="color:#24292e">PIL</span> <span style="color:#cf222e">import</span> Image
+</span></span><span style="display:flex;"><span>    out<span style="color:#1f2328">,</span> infos <span style="color:#0550ae">=</span> grab_stream_async<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> dev<span style="color:#1f2328">,</span> <span style="color:#0550ae">6</span> <span style="color:#0550ae">*</span> w <span style="color:#0550ae">*</span> h <span style="color:#0550ae">*</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    arr <span style="color:#0550ae">=</span> np<span style="color:#0550ae">.</span>frombuffer<span style="color:#1f2328">(</span>frame_by_fid<span style="color:#1f2328">(</span>out<span style="color:#1f2328">,</span> infos<span style="color:#1f2328">,</span> w<span style="color:#1f2328">,</span> h<span style="color:#1f2328">),</span> np<span style="color:#0550ae">.</span>uint8<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>reshape<span style="color:#1f2328">(</span>h<span style="color:#1f2328">,</span> w<span style="color:#1f2328">,</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    raw <span style="color:#0550ae">=</span> arr<span style="color:#1f2328">[</span>h <span style="color:#0550ae">//</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:,</span> <span style="color:#1f2328">:,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>uint16<span style="color:#1f2328">)</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>arr<span style="color:#1f2328">[</span>h <span style="color:#0550ae">//</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:,</span> <span style="color:#1f2328">:,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>uint16<span style="color:#1f2328">)</span> <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    celsius <span style="color:#0550ae">=</span> raw <span style="color:#0550ae">/</span> <span style="color:#0550ae">64.0</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">273.15</span>
+</span></span><span style="display:flex;"><span>    flat <span style="color:#0550ae">=</span> raw<span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>float64<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>ravel<span style="color:#1f2328">()</span>                  <span style="color:#57606a"># histogram-equalise (AGC)</span>
+</span></span><span style="display:flex;"><span>    rank <span style="color:#0550ae">=</span> np<span style="color:#0550ae">.</span>empty<span style="color:#1f2328">(</span>flat<span style="color:#0550ae">.</span>size<span style="color:#1f2328">);</span> rank<span style="color:#1f2328">[</span>np<span style="color:#0550ae">.</span>argsort<span style="color:#1f2328">(</span>flat<span style="color:#1f2328">,</span> kind<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;stable&#34;</span><span style="color:#1f2328">)]</span> <span style="color:#0550ae">=</span> np<span style="color:#0550ae">.</span>arange<span style="color:#1f2328">(</span>flat<span style="color:#0550ae">.</span>size<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    t <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>rank <span style="color:#0550ae">/</span> <span style="color:#1f2328">(</span>flat<span style="color:#0550ae">.</span>size <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>reshape<span style="color:#1f2328">(</span>raw<span style="color:#0550ae">.</span>shape<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    rgb <span style="color:#0550ae">=</span> np<span style="color:#0550ae">.</span>dstack<span style="color:#1f2328">([</span>np<span style="color:#0550ae">.</span>clip<span style="color:#1f2328">(</span>t <span style="color:#0550ae">*</span> <span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">),</span> np<span style="color:#0550ae">.</span>clip<span style="color:#1f2328">(</span>t <span style="color:#0550ae">*</span> <span style="color:#0550ae">3</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">),</span> np<span style="color:#0550ae">.</span>clip<span style="color:#1f2328">(</span>t <span style="color:#0550ae">*</span> <span style="color:#0550ae">3</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)])</span>
+</span></span><span style="display:flex;"><span>    Image<span style="color:#0550ae">.</span>fromarray<span style="color:#1f2328">((</span>rgb <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>uint8<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;RGB&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>resize<span style="color:#1f2328">((</span>w <span style="color:#0550ae">*</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> h<span style="color:#1f2328">),</span> Image<span style="color:#0550ae">.</span>NEAREST<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>save<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;min&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">round</span><span style="color:#1f2328">(</span><span style="color:#6639ba">float</span><span style="color:#1f2328">(</span>celsius<span style="color:#0550ae">.</span>min<span style="color:#1f2328">()),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;avg&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">round</span><span style="color:#1f2328">(</span><span style="color:#6639ba">float</span><span style="color:#1f2328">(</span>celsius<span style="color:#0550ae">.</span>mean<span style="color:#1f2328">()),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;max&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">round</span><span style="color:#1f2328">(</span><span style="color:#6639ba">float</span><span style="color:#1f2328">(</span>celsius<span style="color:#0550ae">.</span>max<span style="color:#1f2328">()),</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)}</span>
+</span></span></code></pre></div><h2 id="verify">Running it live</h2>
+<p>This is a hardware spike, so its check is a live run, not an automated suite —
+the camera has to be plugged into the phone. The runtime&rsquo;s idiom is to drive it
+live from the PC over <a target="_blank" href="/braindump/posts/rpyc/?title=rpyc#">rpyc</a>: call into the module, watch, adjust, call again
+— the tight loop that is the whole reason for doing this in Python.</p>
+<div class="konix-block-name-marker" data-name="drive"></div>
+<p><a id="code-snippet--drive"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">rpyc</span>
+</span></span><span style="display:flex;"><span>c <span style="color:#0550ae">=</span> rpyc<span style="color:#0550ae">.</span>classic<span style="color:#0550ae">.</span>connect<span style="color:#1f2328">(</span>ip<span style="color:#1f2328">,</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>port<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>spike <span style="color:#0550ae">=</span> c<span style="color:#0550ae">.</span>modules<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;app.uvc_spike&#34;</span><span style="color:#1f2328">]</span>      <span style="color:#57606a"># the module on the device</span>
+</span></span><span style="display:flex;"><span>c<span style="color:#0550ae">.</span>modules<span style="color:#0550ae">.</span>importlib<span style="color:#0550ae">.</span>reload<span style="color:#1f2328">(</span>spike<span style="color:#1f2328">)</span>       <span style="color:#57606a"># pick up the latest edit</span>
+</span></span><span style="display:flex;"><span>spike<span style="color:#0550ae">.</span>run<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><p>Success is the inverse of the Kotlin failure: <code>negotiate</code> returns <code>fps: 25</code> with
+<code>bFrameIndex: 1</code>, and the bulk read returns a frame led by the camera&rsquo;s 2-byte
+UVC payload header (<code>02 80</code>, end-of-header set). If instead <code>GET_CUR(PROBE)</code> throws, the mode is
+still being rejected and the format constants are the place to look. Once a
+header prints, the risk is retired and the rich Kivy thermal app becomes the
+reuse job the reasoning assumed — the streaming loop, the YUYV split, and a
+<code>numpy</code> colormap into the existing Kivy texture.</p>
+<h2 id="payoff">What it sees</h2>
+<p>Let&rsquo;s see what it gives. Pointed at a ceiling window, here is the temperature
+pane the driver pulls back — the glass glowing against the cooler ceiling,
+every pixel a 16-bit reading behind the false colour (absolute °C uncalibrated,
+so read it for contrast, not as a thermometer):</p>
+<figure><img src="/ox-hugo/tc001n.png" width="360">
+</figure>
+
+<h2 id="live">A live viewer</h2>
+<p>A still is one grab; a live view has to keep the drain running flat out — the
+instant it pauses, payloads drop, the bug async just fixed. The screen only
+needs refreshing a dozen times a second, though, so the two run on separate
+clocks: a background thread drains and decodes as fast as the camera sends and
+keeps only the newest frame, while Kivy&rsquo;s timer shows whatever is latest.
+Reading frames inside the timer instead would re-open the very gaps that tore
+the picture.</p>
+<p>Colour reuses the still&rsquo;s AGC false-colour, lifted out so the loop calls it per
+frame:</p>
+<div class="konix-block-name-marker" data-name="thermal-colorize"></div>
+<p><a id="code-snippet--thermal-colorize"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">colorize</span><span style="color:#1f2328">(</span>raw16<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    flat <span style="color:#0550ae">=</span> raw16<span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>float64<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>ravel<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    rank <span style="color:#0550ae">=</span> np<span style="color:#0550ae">.</span>empty<span style="color:#1f2328">(</span>flat<span style="color:#0550ae">.</span>size<span style="color:#1f2328">);</span> rank<span style="color:#1f2328">[</span>np<span style="color:#0550ae">.</span>argsort<span style="color:#1f2328">(</span>flat<span style="color:#1f2328">,</span> kind<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;stable&#34;</span><span style="color:#1f2328">)]</span> <span style="color:#0550ae">=</span> np<span style="color:#0550ae">.</span>arange<span style="color:#1f2328">(</span>flat<span style="color:#0550ae">.</span>size<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    t <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>rank <span style="color:#0550ae">/</span> <span style="color:#1f2328">(</span>flat<span style="color:#0550ae">.</span>size <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>reshape<span style="color:#1f2328">(</span>raw16<span style="color:#0550ae">.</span>shape<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    rgb <span style="color:#0550ae">=</span> np<span style="color:#0550ae">.</span>dstack<span style="color:#1f2328">([</span>np<span style="color:#0550ae">.</span>clip<span style="color:#1f2328">(</span>t <span style="color:#0550ae">*</span> <span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">),</span> np<span style="color:#0550ae">.</span>clip<span style="color:#1f2328">(</span>t <span style="color:#0550ae">*</span> <span style="color:#0550ae">3</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">),</span> np<span style="color:#0550ae">.</span>clip<span style="color:#1f2328">(</span>t <span style="color:#0550ae">*</span> <span style="color:#0550ae">3</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)])</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">(</span>rgb <span style="color:#0550ae">*</span> <span style="color:#0550ae">255</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>uint8<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>The reader differs from the one-shot grab in the one way that matters for a
+stream: the request pool stays up for the whole session instead of being rebuilt
+each frame, so there is never a gap to drop into. It cuts frames on the same FID
+flip as before and keeps only the latest. And because a single thermal frame is
+noisy, it blends each into a running average before colouring — a few frames of
+integration, the way the camera&rsquo;s own app does, trading a little motion smear
+for a much cleaner picture.</p>
+<div class="konix-block-name-marker" data-name="thermal-reader"></div>
+<p><a id="code-snippet--thermal-reader"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_reader</span><span style="color:#1f2328">(</span>view<span style="color:#1f2328">,</span> dev<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    ep <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>e <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterfaceCount<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#cf222e">for</span> e <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterface<span style="color:#1f2328">(</span>i<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>getEndpoint<span style="color:#1f2328">(</span>j<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#cf222e">for</span> j <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>dev<span style="color:#0550ae">.</span>getInterface<span style="color:#1f2328">(</span>i<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>getEndpointCount<span style="color:#1f2328">()))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#cf222e">if</span> e<span style="color:#0550ae">.</span>getAddress<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> BULK_EP<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    reqs <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">16</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        r <span style="color:#0550ae">=</span> UsbRequest<span style="color:#1f2328">();</span> r<span style="color:#0550ae">.</span>initialize<span style="color:#1f2328">(</span>view<span style="color:#0550ae">.</span>conn<span style="color:#1f2328">,</span> ep<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        b <span style="color:#0550ae">=</span> ByteBuffer<span style="color:#0550ae">.</span>allocate<span style="color:#1f2328">(</span><span style="color:#0550ae">16384</span><span style="color:#1f2328">);</span> r<span style="color:#0550ae">.</span>setClientData<span style="color:#1f2328">(</span>b<span style="color:#1f2328">);</span> r<span style="color:#0550ae">.</span>queue<span style="color:#1f2328">(</span>b<span style="color:#1f2328">);</span> reqs<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>r<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    cur<span style="color:#1f2328">,</span> acc<span style="color:#1f2328">,</span> avg<span style="color:#1f2328">,</span> IMG <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> W <span style="color:#0550ae">*</span> H <span style="color:#0550ae">*</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> view<span style="color:#0550ae">.</span>running<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        done <span style="color:#0550ae">=</span> view<span style="color:#0550ae">.</span>conn<span style="color:#0550ae">.</span>requestWait<span style="color:#1f2328">(</span><span style="color:#0550ae">2000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> done <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        b <span style="color:#0550ae">=</span> cast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;java.nio.ByteBuffer&#34;</span><span style="color:#1f2328">,</span> done<span style="color:#0550ae">.</span>getClientData<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>        n <span style="color:#0550ae">=</span> b<span style="color:#0550ae">.</span>position<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> n <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            chunk <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(</span>n<span style="color:#1f2328">);</span> b<span style="color:#0550ae">.</span>rewind<span style="color:#1f2328">();</span> b<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span>chunk<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> n<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            f <span style="color:#0550ae">=</span> chunk<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> cur <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                cur <span style="color:#0550ae">=</span> f
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> f <span style="color:#0550ae">!=</span> cur<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>acc<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> IMG<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    a <span style="color:#0550ae">=</span> np<span style="color:#0550ae">.</span>frombuffer<span style="color:#1f2328">(</span><span style="color:#6639ba">bytes</span><span style="color:#1f2328">(</span>acc<span style="color:#1f2328">[:</span>IMG<span style="color:#1f2328">]),</span> np<span style="color:#0550ae">.</span>uint8<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>reshape<span style="color:#1f2328">(</span>H<span style="color:#1f2328">,</span> W<span style="color:#1f2328">,</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    raw16 <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>a<span style="color:#1f2328">[</span>H <span style="color:#0550ae">//</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:,</span> <span style="color:#1f2328">:,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>uint16<span style="color:#1f2328">)</span> <span style="color:#0550ae">|</span> <span style="color:#1f2328">(</span>a<span style="color:#1f2328">[</span>H <span style="color:#0550ae">//</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:,</span> <span style="color:#1f2328">:,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>uint16<span style="color:#1f2328">)</span> <span style="color:#0550ae">&lt;&lt;</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                    avg <span style="color:#0550ae">=</span> raw16<span style="color:#0550ae">.</span>astype<span style="color:#1f2328">(</span>np<span style="color:#0550ae">.</span>float32<span style="color:#1f2328">)</span> <span style="color:#cf222e">if</span> avg <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span> <span style="color:#cf222e">else</span> avg <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.75</span> <span style="color:#0550ae">+</span> raw16 <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.25</span>
+</span></span><span style="display:flex;"><span>                    view<span style="color:#0550ae">.</span>frame <span style="color:#0550ae">=</span> colorize<span style="color:#1f2328">(</span>avg<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                    c <span style="color:#0550ae">=</span> avg <span style="color:#0550ae">/</span> <span style="color:#0550ae">64.0</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">273.15</span>
+</span></span><span style="display:flex;"><span>                    view<span style="color:#0550ae">.</span>temps <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">float</span><span style="color:#1f2328">(</span>c<span style="color:#0550ae">.</span>min<span style="color:#1f2328">()),</span> <span style="color:#6639ba">float</span><span style="color:#1f2328">(</span>c<span style="color:#0550ae">.</span>mean<span style="color:#1f2328">()),</span> <span style="color:#6639ba">float</span><span style="color:#1f2328">(</span>c<span style="color:#0550ae">.</span>max<span style="color:#1f2328">()))</span>
+</span></span><span style="display:flex;"><span>                acc<span style="color:#1f2328">,</span> cur <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(),</span> f
+</span></span><span style="display:flex;"><span>            acc <span style="color:#0550ae">+=</span> chunk<span style="color:#1f2328">[</span><span style="color:#0550ae">2</span><span style="color:#1f2328">:]</span>
+</span></span><span style="display:flex;"><span>        b<span style="color:#0550ae">.</span>clear<span style="color:#1f2328">();</span> done<span style="color:#0550ae">.</span>queue<span style="color:#1f2328">(</span>b<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> r <span style="color:#0550ae">in</span> reqs<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        r<span style="color:#0550ae">.</span>cancel<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><p>The camera is a single-owner device — one open handle at a time — and a live
+stream also pins a thread, a wakelock and the lit screen. So the view claims all
+of that only while it is visible (<code>start</code>) and gives it back when it leaves
+(<code>stop</code>); otherwise it would lock the camera away from the rpyc console and the
+other screens, and keep streaming behind your back. And because the camera
+enumerates lazily (the <code>0106→0102</code> settle) and grants permission asynchronously,
+<code>start</code> polls once a second until both are ready instead of giving up on enter.</p>
+<div class="konix-block-name-marker" data-name="thermal-view"></div>
+<p><a id="code-snippet--thermal-view"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">ThermalView</span><span style="color:#1f2328">(</span>BoxLayout<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kw<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">()</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span>orientation<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;vertical&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kw<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>view_img <span style="color:#0550ae">=</span> Image<span style="color:#1f2328">(</span>allow_stretch<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> keep_ratio<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>readout <span style="color:#0550ae">=</span> Label<span style="color:#1f2328">(</span>size_hint_y<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> height<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;36dp&#34;</span><span style="color:#1f2328">,</span> text<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;opening camera…&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>view_img<span style="color:#1f2328">);</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>readout<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>frame <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>temps <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>texture <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>conn <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_ev <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_poll <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">start</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_poll <span style="color:#0550ae">=</span> Clock<span style="color:#0550ae">.</span>schedule_interval<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_try_open<span style="color:#1f2328">,</span> <span style="color:#0550ae">1.0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">_try_open</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> dt<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        dev <span style="color:#0550ae">=</span> find_camera<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> dev <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>readout<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;waiting for the camera (2bdf:0102)…&#34;</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> ensure_permission<span style="color:#1f2328">(</span>dev<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>readout<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;accept the USB permission dialog…&#34;</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_poll<span style="color:#0550ae">.</span>cancel<span style="color:#1f2328">();</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_poll <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>conn<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>intf <span style="color:#0550ae">=</span> open_device<span style="color:#1f2328">(</span>dev<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        _m<span style="color:#1f2328">,</span> raw <span style="color:#0550ae">=</span> negotiate<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>conn<span style="color:#1f2328">);</span> commit<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>conn<span style="color:#1f2328">,</span> raw<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>        wl<span style="color:#0550ae">.</span>acquire<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        threading<span style="color:#0550ae">.</span>Thread<span style="color:#1f2328">(</span>target<span style="color:#0550ae">=</span>_reader<span style="color:#1f2328">,</span> args<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> dev<span style="color:#1f2328">),</span> daemon<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_ev <span style="color:#0550ae">=</span> Clock<span style="color:#0550ae">.</span>schedule_interval<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_tick<span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">15.0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">_tick</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> dt<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>frame <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        h<span style="color:#1f2328">,</span> w<span style="color:#1f2328">,</span> _ <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>frame<span style="color:#0550ae">.</span>shape
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>texture <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>texture <span style="color:#0550ae">=</span> Texture<span style="color:#0550ae">.</span>create<span style="color:#1f2328">(</span>size<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>w<span style="color:#1f2328">,</span> h<span style="color:#1f2328">),</span> colorfmt<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;rgb&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>texture<span style="color:#0550ae">.</span>flip_vertical<span style="color:#1f2328">()</span>                       <span style="color:#57606a"># Kivy origin is bottom-left</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>texture<span style="color:#0550ae">.</span>blit_buffer<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>frame<span style="color:#0550ae">.</span>tobytes<span style="color:#1f2328">(),</span> colorfmt<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;rgb&#34;</span><span style="color:#1f2328">,</span> bufferfmt<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;ubyte&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>view_img<span style="color:#0550ae">.</span>texture <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">;</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>view_img<span style="color:#0550ae">.</span>texture <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>texture
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>temps<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>readout<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;min </span><span style="color:#0a3069">%.0f</span><span style="color:#0a3069">   avg </span><span style="color:#0a3069">%.0f</span><span style="color:#0a3069">   max </span><span style="color:#0a3069">%.0f</span><span style="color:#0a3069"> °C&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>temps
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">stop</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> ev <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_poll<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_ev<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> ev<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                ev<span style="color:#0550ae">.</span>cancel<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_poll <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_ev <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>conn <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>conn<span style="color:#0550ae">.</span>releaseInterface<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>intf<span style="color:#1f2328">);</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>conn<span style="color:#0550ae">.</span>close<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> Exception<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">pass</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>conn <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> wl<span style="color:#0550ae">.</span>isHeld<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            wl<span style="color:#0550ae">.</span>release<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><p>Wrapped as a launcher screen like the rest, so the home grid&rsquo;s button can
+<code>populate</code> it and navigate in:</p>
+<div class="konix-block-name-marker" data-name="thermal-app"></div>
+<p><a id="code-snippet--thermal-app"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">ThermalScreen</span><span style="color:#1f2328">(</span>Screen<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kw<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">()</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#0550ae">**</span>kw<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>view <span style="color:#0550ae">=</span> ThermalView<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>view<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_enter<span style="color:#0550ae">=</span><span style="color:#cf222e">lambda</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">:</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>view<span style="color:#0550ae">.</span>start<span style="color:#1f2328">(),</span>
+</span></span><span style="display:flex;"><span>                  on_pre_leave<span style="color:#0550ae">=</span><span style="color:#cf222e">lambda</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">:</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>view<span style="color:#0550ae">.</span>stop<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">ThermalApp</span><span style="color:#1f2328">(</span>App<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">@staticmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">populate</span><span style="color:#1f2328">(</span>sm<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            sm<span style="color:#0550ae">.</span>get_screen<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;thermal&#34;</span><span style="color:#1f2328">);</span> <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> ScreenManagerException<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">pass</span>
+</span></span><span style="display:flex;"><span>        sm<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>ThermalScreen<span style="color:#1f2328">(</span>name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;thermal&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">build</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        sm <span style="color:#0550ae">=</span> ScreenManager<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>populate<span style="color:#1f2328">(</span>sm<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> sm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">run</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    ThermalApp<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>run<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/blog/7c2f9e84-3a1d-4e2b-9c6f-1b8d04e7a2f9?title=streaming_the_tc001n_thermal_camera_with_python_on_android">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+  </article>
+  <aside class="date"><time>Last updated: 15 Jun 2026</time></aside>
+  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 14 Jun 2026</time></aside>
+</main>
+<hr/>
+<footer>
+  <nav class="footer-nav">
+  <ul>
+	<li><a class="internal-link" href="/blog/posts/"><i class="icon fas fa-blog"></i></a></li>
+    <li><a target="_blank" href="/braindump/"><i class="fas fa-brain"></i></a></li>
+    <li><a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="fas fa-envelope-square"></i></a></li>
+    <li><a target="_blank" href="https://github.com/konubinix"><i class="fab fa-github-square"></i></a></li>
+    <li><a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="fab fa-linkedin"></i></a></li>
+    <li><a class="internal-link" href="/blog/index.xml"><i class="fas fa-rss-square"></i></a></li>
+	<li><a class="internal-link" href="/blog/tags/"><i class="fa fa-tag"></i></a></li>
+    <li><a class="internal-link" href="/blog/blog_search"><i class="icon fa fa-search"></i></a></li>
+  </ul>
+</nav>
+
+  <p>&copy; 2026 Samuel Loury</p>
+</footer>
+</body>
+</html>
