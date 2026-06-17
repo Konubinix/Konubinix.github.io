@@ -47,9 +47,11 @@
 <ul>
 <li><a class="internal-link" href="#when-to-escalate-the-contested-question">When to escalate: the contested question</a></li>
 <li><a class="internal-link" href="#the-roles">The roles</a></li>
+<li><a class="internal-link" href="#the-shared-map-the-medium">The shared map: the medium</a></li>
 <li><a class="internal-link" href="#steelman-without-cheating">Steelman without cheating</a></li>
 <li><a class="internal-link" href="#weight-settles-it-not-the-number-of-defenders">Weight settles it, not the number of defenders</a></li>
 <li><a class="internal-link" href="#the-output-the-state-of-the-debate">The output: the state of the debate</a></li>
+<li><a class="internal-link" href="#demo-debate-how-should-agents-debate-to-reach-a-good-conclusion">Demo debate: how should agents debate to reach a good conclusion?</a></li>
 <li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
@@ -57,52 +59,168 @@
 <!--endtoc-->
 <p><em>This note is for AI agents.</em> It is an operating procedure, not prose addressed
 to a human reader.</p>
-<p>Read <a class="internal-link" href="/braindump/posts/how_to_write_a_literature_note/">how to write a literature note</a> FIRST. This protocol is an ESCALATED
-MODE of it, applicable to ANY literature note — law is only a frequent case (see
-<a class="internal-link" href="/braindump/posts/comment_ecrire_une_note_de_litterature_juridique/">Comment ecrire une note de litterature juridique</a>).
-It does not replace the neutral audit: it fires only when a question is
-genuinely contested. The general guide&rsquo;s whole sourcing discipline applies to
-every role.</p>
+<p>Read <a class="internal-link" href="/braindump/posts/how_to_write_a_literature_note/">how to write a literature note</a> (<code>./how_to_write_a_literature_note.org</code>)
+FIRST. This protocol is an ESCALATED
+MODE of it, applicable to ANY literature note — law is only a frequent case. The
+general guide&rsquo;s whole sourcing discipline applies to every role. The debate does
+not REPLACE the neutral audit — it COMPLEMENTS it, guarding against the
+confirmation bias a lone writer slides into. It fires only on a question that
+warrants it (see below).</p>
 <p>The roles below are coordinated BUDDIES — the mechanism is already the general
 guide&rsquo;s (« the audit gate is a buddy … fresh reviewer per pass »). The
-coordination and spawn tools are SELF-DESCRIBING MCP tools: do not enumerate them
-here (divergence), discover them via the catalogue. A subagent does not replace a
-buddy.</p>
-<p>Orchestration discipline: drive SYNCHRONOUSLY (post a task, wait for the answer),
-KILL each buddy as soon as its role is done, and DEGRADE gracefully if a role
-does not answer (report the missing role, do not conclude in its place). The
-coordinator&rsquo;s state is VOLATILE — it resets when the MCP server restarts: never
-assume a buddy or a task survives; drive the debate actively end to end.</p>
-<p>One buddy per role, and FRESH: the scribe and the auditor are blind to any stake
-(never « the client hopes that … »), otherwise the debate corrects nothing.</p>
+coordination and spawn tools are SELF-DESCRIBING MCP tools: discover them via the
+catalogue. A subagent does not replace a buddy. They do NOT chat: they coordinate
+through FILES ON DISK — the cartographer&rsquo;s neutral seed plus ONE <a class="internal-link" href="/braindump/posts/argdown_in_org_mode/">argdown</a> fragment
+file PER DEFENDER, each owned by exactly one buddy and merged into a single
+rendered map by title — which the buddies read and write in PHASE-SYNCHRONISED
+PARALLEL ROUNDS, with the orchestrator passing only a phase token. State on disk,
+not in ephemeral messages: that is what lets the debate survive a buddy dying
+mid-phase (see <em>Orchestration discipline</em> below).</p>
+<p>Orchestration discipline: the debate&rsquo;s whole state lives on disk — the
+cartographer&rsquo;s neutral SEED in the note&rsquo;s map block, and ONE <a class="internal-link" href="/braindump/posts/argdown_in_org_mode/">argdown</a> FRAGMENT
+FILE PER DEFENDER, each owned by exactly one buddy and merged into the rendered
+map by title (<code>:argdown-include</code>). The map IS the state of the debate (see <em>The
+output</em>); no buddy holds anything the files do not.</p>
+<p>The defenders work in PARALLEL, but in PHASE-SYNCHRONISED ROUNDS, never
+free-running. A round-robin was the first design, and it carries a fatal cost:
+the second defender reads the first&rsquo;s nodes before forming its own case, so the
+first writer frames the battlefield — the exact anchoring bias the debate exists
+to kill. Phases instead:</p>
+<ol>
+<li><em>Blind steelman</em> — each defender, in parallel, writes ONLY its own thesis&rsquo;s
+SOURCED nodes into its OWN file, reading nothing but the neutral seed and its
+own file — not the rivals&rsquo; files, not the merged map. The seed it reads is the
+cartographer&rsquo;s neutral framing ALONE, never the surrounding prose that argues
+for or against positions — that editorial voice would contaminate the blind
+read. The file boundary enforces independence here exactly as for the auditor.</li>
+<li><em>Attack</em> — barrier crossed, the steelmans now FROZEN: each defender reads the
+rivals&rsquo; files and adds attack edges (<code>-</code> / <code>&gt;&lt;</code>) IN ITS OWN file, referencing
+rival nodes BY TITLE. A defender writes node bodies only in its own file and
+references foreign nodes only as edges — so it never edits a file it does not
+own, and merge-by-title never collides.</li>
+<li><em>React</em> — each defends or concedes the attacks landed on its thesis, again in
+its own file.</li>
+</ol>
+<p>Repeat the read-frozen / write-own cycle until a FIXED POINT: a full round in
+which NO file changes (they agree), or one that only re-toggles the same attack
+edges (they agree to disagree) — that residue IS the documented disagreement.</p>
+<p>The BARRIER is what kills cross-influence — and is also what once killed the
+debate — so the orchestrator OWNS it. Within a phase no buddy sees another&rsquo;s
+current work; everyone reacts, next phase, to the SAME frozen snapshot, so the
+quickest defender cannot nudge the slowest. The orchestrator releases phase N+1
+only once every live defender has reported phase N (event-driven on the
+coordination wait — never polling, never stalling), and it passes a PHASE TOKEN
+and NOTHING else — « steelman », « attack », « react » — relaying no argument
+content; the content is in the files. It detects the fixed point MECHANICALLY,
+by diffing the fragment files between rounds, without reading their content —
+via the <code>debate_round_check</code> MCP tool (one call per round, the fragment paths +
+a stable <code>label</code>; its first line is <code>FIXED_POINT: yes|no</code>), never inline shell.
+More generally, every per-round orchestrator step is a pre-approved TOOL, never
+an ad-hoc shell command: a shell call that trips a permission prompt mid-round
+blocks the orchestrator, and the idle defenders are pruned before it clears —
+the exact stall that once killed a run.</p>
+<p>This is why the parallel round is safe now where it once collapsed. The earlier
+failure — a parallel fan-out that left the defenders blocked, idle past the prune
+window, until the ephemeral registry collapsed — was a LIVENESS bug (a barrier
+nobody owned) compounded by CLOBBERING (many writers, one file). File-per-defender
+removes the clobbering; an orchestrator-held barrier removes the stall; and
+between phases each defender sits in the coordination wait, which exempts it from
+pruning. The orchestrator manages each role&rsquo;s lifecycle (spawn, kill) and DEGRADES
+gracefully if a defender does not answer a phase: skip it, note the gap, do not
+conclude in its place. Because each defender&rsquo;s state is its own file, a pruned or
+dead buddy loses NOTHING — respawn it and point it at its file.</p>
+<p>Spoonfeed paths, never make a buddy search. When it spawns (or respawns) a worker,
+the orchestrator hands it the EXACT file paths it needs — this protocol note, the
+general guide (<code>./how_to_write_a_literature_note.org</code>), the argdown note
+(<code>./argdown_in_org_mode.org</code>), and the worker&rsquo;s OWN fragment file — as clear links.
+An org <code>id:</code> link does not resolve without the roam database, so a buddy given only
+an id wastes a turn grepping the note tree for it; give the path.</p>
+<p>One buddy per role, and FRESH: the auditor is blind to any stake (never « the
+client hopes that … »), otherwise the debate corrects nothing. It reads the MAP,
+never the per-defender advocacy files that built it.</p>
+<p>Model per role: the general guide&rsquo;s « use appropriate models » bites HARD here,
+because the roles are not equally demanding. The defenders and the auditor do
+the load-bearing reasoning — steelmanning a thesis, mounting SOURCED attacks on
+the strongest rival reading, judging whether an epistemic tag is inflated or a
+balance is false — and that is exactly the nuanced work that warrants the
+strongest model. The cartographer CAN run on a cheaper model — but ONLY when the
+enumeration is mechanical: the positions are already laid out in the sources and
+seeding them is « a straightforward application of commands » (a typical factual
+or legal question). When the enumeration ITSELF takes judgement — an open-ended,
+methodological or contested-framing question where the positions are not
+pre-listed anywhere and the real risk is missing the one no one anticipated —
+the completeness pass is the load-bearing step, and the cartographer needs the
+strong model too. Spawning every role on the cheap tier to save tokens is a false
+economy: a defender that strawmans, an auditor that rubber-stamps, or a
+cartographer that hands the debate a hand-picked framing each defeats the whole
+point of the debate.</p>
 <h2 id="when-to-escalate-the-contested-question">When to escalate: the contested question</h2>
-<p>Debate is not the default mode. A settled question goes the normal way (a neutral
-writer, a fresh audit); putting a debate on it would manufacture a controversy
+<p>Debate is not the default mode. A settled or purely factual question goes the
+normal way (a neutral writer, a fresh audit) — there is no debating « how to
+compute π », and forcing a debate onto such a question manufactures a controversy
 where there is none.</p>
-<p>Debate opens only after a completeness pass that establishes TWO things: is the
-question genuinely <em>contested</em> (sources of weight defending incompatible
-solutions); and, if so, WHICH positions are in play. The positions are enumerated
-from the sources, neutrally, BEFORE any role is assigned: otherwise the debate
-inherits a hand-picked framing and misses the position no one anticipated (e.g.
-« the invoked text does not even apply »). Enumerate first, oppose second.</p>
+<p>Debate fires when the question is SUITABLE for it: when it genuinely admits
+several defensible but incompatible answers, as typical law questions do. Once it
+qualifies, enumerate the positions from the sources, neutrally, BEFORE any role is
+assigned: otherwise the debate inherits a hand-picked framing and misses the
+position no one anticipated (e.g. « the invoked text does not even apply »).
+Enumerate first, oppose second.</p>
+<p>Watch self-reference. When the question debates its own method or host document,
+that document&rsquo;s prose already argues a side; state the positions from OUTSIDE
+that voice, or the debate silently inherits the host&rsquo;s thesis (and a position the
+host disfavours starts handicapped).</p>
 <h2 id="the-roles">The roles</h2>
-<p>Four roles, one fresh buddy each:</p>
+<p>Three roles, one fresh buddy each (no scribe — the map records itself):</p>
 <ul>
-<li><em>The cartographer</em> — runs the completeness pass: settles « contested? » and
-lists the positions, each stated neutrally with its anchoring source(s). It
-inventories, it does not argue.</li>
-<li><em>The defenders</em> — one per position. Each builds the strongest SOURCED case for
-its thesis and attacks the others&rsquo; weak points, by sourced arguments only.</li>
-<li><em>The scribe</em> — neutral, names no winner. It records the « state of the debate »
-(see below).</li>
-<li><em>The auditor</em> — fresh and blind to any stake, it checks the state of the debate
-against the discipline: every claim sourced, no advocacy leaked into the
-scribe&rsquo;s neutral voice, and weight justified rather than symmetric.</li>
+<li><em>The cartographer</em> — runs the completeness pass: confirms the question is
+SUITABLE for debate and lists the positions, each stated neutrally with its
+anchoring source(s). It SEEDS the map with the root claim and one node per
+position, then leaves. It inventories, it does not argue.</li>
+<li><em>The defenders</em> — one per position, each OWNING one fragment file. It extends
+that file in phase-synchronised rounds: first a BLIND steelman (its thesis&rsquo;s
+SOURCED nodes, reading no rival), then — rivals frozen — attack edges (<code>-</code> /
+<code>&gt;&lt;</code>) against the STRONGEST version of the others&rsquo;, referencing their nodes by
+title; by sourced arguments only, never a weak point a position would not stand
+behind. It tags the SOURCED nodes it adds by epistemic strength, but NOT a
+derived conclusion — that takes its colour by weakest-link propagation, and an
+asserted tag would only override and inflate it (see <em>Weight settles it</em>).</li>
+<li><em>The auditor</em> — fresh and blind to any stake, it checks the MAP against the
+discipline: every node carries a source link, the epistemic tags are justified
+not inflated, attacks target the strongest reading, and weight is not falsely
+symmetric.</li>
 </ul>
+<h2 id="the-shared-map-the-medium">The shared map: the medium</h2>
+<p>Files carry the debate: the cartographer&rsquo;s neutral SEED in the note&rsquo;s map block,
+which =:argdown-include=s ONE <a class="internal-link" href="/braindump/posts/argdown_in_org_mode/">argdown</a> fragment file PER DEFENDER — all merged
+into a single rendered map by title. It is the medium AND the output — there is
+no broadcast channel to miss, no membership to race, no transcript to
+reconstruct. Whoever opens the merged map reads the current state; the phase
+token says what each defender does this round.</p>
+<ul>
+<li>The cartographer SEEDS the framing — the root claim and one node per enumerated
+position, the shared neutral starting point — wires the per-defender
+<code>:argdown-include</code> and leaves each defender an empty fragment file to own, then
+leaves.</li>
+<li>Each defender EXTENDS its OWN fragment file in phase-synchronised parallel
+rounds — blind steelman, then attack on the frozen rivals, then react — so the
+one-owner-per-file rule means parallel writes never clobber. The many-to-many
+exchange happens through the merged map each defender reads at the start of a
+phase; nothing is lost if a defender misses a phase, its file simply stays as
+it was on disk.</li>
+<li>The auditor reads the MERGED map — and ONLY the map. This is what keeps it
+blind: it sees the neutral artifact, never the per-defender advocacy files that
+produced it. The file boundary enforces « fresh and blind » structurally,
+exactly as the two rooms once did, but with nothing ephemeral to prune or lose.</li>
+</ul>
+<p>At the end the orchestrator collects the map (the state of the debate) and the
+auditor&rsquo;s verdict, then kills the workers. The map persists in the note either
+way.</p>
 <h2 id="steelman-without-cheating">Steelman without cheating</h2>
 <p>Defending a thesis means assembling its STRONGEST version — steelmanning it — not
-spinning it. The adversarial part is about WHICH sources and arguments are
-surfaced; it licenses no unsourced claim. The general guide&rsquo;s discipline holds in
+spinning it. Steelman cuts BOTH ways: an attack, too, targets the strongest
+reading of the opposing thesis, never a caricature of it — scoring a point against
+a strawman settles nothing. The adversarial part is about WHICH sources and
+arguments are surfaced; it licenses no unsourced claim. The general guide&rsquo;s discipline holds in
 full: source or cut, inferences hold to the letter, no interpretation disguised
 as a source. A thesis that has only unsourced claims to defend itself is not a
 position in the debate: it is an opinion, and it falls at the audit.</p>
@@ -113,27 +231,130 @@ STEELMANNED; it says nothing about its weight.</p>
 <p>Weight is established by EVIDENCE, not by counting defenders: by the domain&rsquo;s own
 authority indicators — level and convergence of sources, recognition, dominant or
 marginal character, recent trend (in law e.g. publication au bulletin, doctrinal
-dominance, level of the decisions). The scribe justifies each position&rsquo;s weight
-with sourced indicators; the auditor contests it. A thesis defended hard but
-carried by a single isolated source is recorded « isolated » — the defence made
-it strong, the weight puts it back in its place. This is the direct application
-of the principle « weight is part of the claim ».</p>
+dominance, level of the decisions). In the map this weight is the node&rsquo;s
+EPISTEMIC TAG (<code>#(bare assertion)</code> … <code>#(established consensus)</code>, weak→strong,
+rendered as a red→green border): the defender tags each source node it adds, the
+auditor contests inflated tags. The map renders a weakly-backed claim red however
+many defenders pile nodes onto it, so false balance is VISIBLE, not merely
+discouraged. A thesis defended hard but carried by a single isolated source is
+tagged accordingly — the defence made it strong, the weight puts it back in its
+place. But beware the converse, when the SOURCE SUPPLY is one-sided: a position
+the available corpus mostly argues AGAINST is starved of citable nodes, so its
+thin, weakly-tagged defence may reflect the corpus&rsquo;s slant, not the thesis&rsquo;s true
+weight. The auditor flags that asymmetry — under-sourced is not refuted — instead
+of reading the thin side as settled. This extends the general
+guide&rsquo;s « Source quality is part of the claim »: the weight of what backs a
+claim is part of it too.</p>
 <h2 id="the-output-the-state-of-the-debate">The output: the state of the debate</h2>
-<p>The scribe produces the « state of the debate »: the positions and their best
-sourced arguments; the points of friction (which source, which exact reading is
-disputed); each position&rsquo;s weight; and what WOULD SETTLE it — the missing fact to
-request, the reference source to consult, the awaited evolution or decision.</p>
+<p>The map IS the « state of the debate », accumulated in place rather than
+synthesized after the fact: the positions and their best sourced arguments are
+its nodes; the points of friction are its unresolved attack edges (<code>-</code> / <code>&gt;&lt;</code>,
+which source and which exact reading is disputed); each position&rsquo;s weight is its
+epistemic tags; and what WOULD SETTLE it is the residue the phased rounds could not
+close — the missing fact to request, the reference source to consult, the awaited
+evolution or decision.</p>
 <p>This output IS the payoff the general guide already allows: a documented
-disagreement rather than a forced answer. It feeds directly the « bridge »
-outward (the surgical questions only a reference source — often closed or paid —
-or a human can settle), with no closed content entering the note.</p>
+disagreement rather than a forced answer. It feeds the outward « bridge » — the
+surgical questions only a reference source (often closed or paid) or a human can
+settle — with no closed or paid content entering the note.</p>
+<h2 id="demo-debate-how-should-agents-debate-to-reach-a-good-conclusion">Demo debate: how should agents debate to reach a good conclusion?</h2>
+<p>This chapter dogfoods the protocol on a META question: <em>how should a fleet of
+agents debate so that they reach a NEUTRAL, CONCRETE, COMPLETE and GOOD
+conclusion?</em> — i.e. the protocol turned on itself. It is SUITABLE for debate
+because the orchestration discipline genuinely admits several defensible but
+incompatible answers (round-robin, phase-synchronised parallel, independent-
+then-aggregate, a free-for-all, a judge-led tournament…), and the conclusion
+feeds straight back into the <em>Orchestration discipline</em> above.</p>
+<p>It is deliberately a HARDER dogfood than a factual question: the domain is
+methodological, so many claims are reasoned rather than citable. That stresses
+the discipline exactly where it is most load-bearing — « source or cut », and
+the <code>#(bare assertion)</code> tag (a claim with no source = worth zero).
+An honest run may end thin, with weak tags and a documented disagreement, and
+that is itself a finding about the protocol, not a failure of it.</p>
+<p>The new file-per-defender model is in force: the cartographer seeds the neutral
+framing in the block below, creates ONE fragment file per enumerated position
+(<code>debate_agents_&lt;position&gt;.org</code>, a named argdown block each), and wires them
+here via <code>:argdown-include</code>. Each defender then owns and extends ONLY its own
+file, in phase-synchronised rounds (blind steelman → attack on frozen rivals →
+react). The block below renders the MERGED map. Until the cartographer has run,
+it is an empty placeholder.</p>
+<p>Files in play (clear paths, so no buddy needs to search for them):</p>
+<ul>
+<li>the protocol: this note, <code>./how_to_run_an_adversarial_debate.org</code>;</li>
+<li>the general guide: <a class="internal-link" href="/braindump/posts/how_to_write_a_literature_note/">how to write a literature note</a>;</li>
+<li>Argdown syntax + the epistemic tags: <a class="internal-link" href="/braindump/posts/argdown_in_org_mode/">argdown in org-mode</a>;</li>
+<li>the per-defender fragment files merged below (<code>:argdown-include</code>): one named
+argdown block each, listed in the block header.</li>
+</ul>
 <!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
-<li><a class="internal-link" href="/braindump/posts/comment_ecrire_une_note_de_litterature_juridique/#8d156ada-6171-4cad-b73f-177af5e8fabd">For agents</a></li>
 <li><a class="internal-link" href="/braindump/posts/how_to_write_a_literature_note/#50e23f41-81c7-434e-8b1c-9728d0aa652e">For agents</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/4ebd44f1-698f-455e-934a-cc7855259d77?title=how_to_run_an_adversarial_debate">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
       </div>
 	  <aside class="date"><time>Last updated: 11 Jun 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 11 Jun 2026</time></aside>

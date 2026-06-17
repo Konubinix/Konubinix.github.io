@@ -43,30 +43,137 @@
         <h1>Remarkable Pro Move</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
         <h2 id="425acfb2-4609-4528-b905-0a78e9d67f3f">avoir deux stylos dans l&rsquo;interface plutôt qu&rsquo;un stylo et une gomme</h2>
-<h3 id="a81ad5bb-a223-4af5-93f0-498d63f17863">SOLUTION : fonctionnalité native depuis la MAJ logicielle 3.13</h3>
-<p>Depuis la version logicielle 3.13, reMarkable a ajouté un <em>second
-emplacement de stylo</em> dans la barre d&rsquo;outils, à la place de la
-gomme. On peut donc y mettre deux outils d&rsquo;écriture (voire deux
-variantes du même outil : épaisseurs ou couleurs d&rsquo;export
-différentes). On alterne entre les deux d&rsquo;un simple tap. La gomme
-reste accessible via le menu des outils.</p>
-<p>Étapes :</p>
+<h3 id="a81ad5bb-a223-4af5-93f0-498d63f17863">SOLUTION : extension tierce <code>enable-extra-pen-on-move</code></h3>
+<p>Ce n&rsquo;est pas une fonctionnalité native. Il existe une extension qui ajoute un second
+stylo (à la place de la gomme) lors d&rsquo;un déplacement<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</p>
+<h2 id="6f0b2d31-0c2a-4f1e-9a7b-2e1c4d5a6b7c">Procédure complète d&rsquo;installation (vellum / XOVI)</h2>
+<p>Prérequis (page du paquet) : appareil reMarkable Paper Pro Move (RMPPM), OS 3.26–3.27,
+<code>qt-resource-rebuilder</code> ≥ v16<sup id="fnref1:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</p>
 <ol>
-<li>Vérifier que la tablette est à jour (Menu → Paramètres →
-Général → Logiciel, version &gt;= 3.13).</li>
-<li>Ouvrir un document, déplier la barre d&rsquo;outils.</li>
-<li>Taper sur l&rsquo;emplacement du 2e outil (occupé par défaut par la
-gomme) → choisir le stylo voulu et régler épaisseur/couleur.</li>
-<li>Alterner entre les deux d&rsquo;un tap.</li>
+<li>Installer vellum (script bootstrap de vellum-cli)<sup id="fnref:2"><a class="internal-link" href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</li>
+<li><code>vellum add xovi</code> → installe le framework XOVI ; <code>qt-resource-rebuilder</code> est posé par
+défaut avec<sup id="fnref:3"><a class="internal-link" href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>.</li>
+<li><code>vellum add enable-extra-pen-on-move</code> → les dépendances sont gérées
+automatiquement<sup id="fnref:4"><a class="internal-link" href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>.</li>
+<li>Mettre à jour la hashtab (obligatoire pour un mod d&rsquo;UI comme celui-ci, et à la 1re
+pose / MAJ de <code>qt-resource-rebuilder</code>) : <code>xovi/rebuild_hashtable</code> puis attendre la
+fin (retour du prompt)<sup id="fnref:5"><a class="internal-link" href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>.</li>
+<li><strong>Démarrer XOVI</strong> : <code>xovi/start</code> en SSH. XOVI est <em>tethered</em> : à chaque reboot la
+tablette repart sur l&rsquo;OS stock, il faut relancer <code>xovi/start</code>. Ne PAS tenter de
+lancer XOVI automatiquement au boot<sup id="fnref:6"><a class="internal-link" href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>. Pour démarrer sans SSH, installer
+<code>xovi-tripletap</code> (power ×3)<sup id="fnref:7"><a class="internal-link" href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>.</li>
+<li>Pour recharger après un changement d&rsquo;extension : <code>systemctl restart xochitl</code>. Pour
+revenir au stock : reboot ou <code>xovi/stock</code><sup id="fnref:8"><a class="internal-link" href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup>.</li>
 </ol>
-<p>Sources :</p>
+<p>Note : la cause la plus probable du « rien ne change » est l&rsquo;étape 5 — les paquets
+étaient posés mais XOVI n&rsquo;avait jamais été démarré (<code>xovi/start</code>).</p>
+<h2 id="746789cc-de40-496a-8200-d3ec5a52bbd3">À anticiper (issues / PR / forums)</h2>
 <ul>
-<li><a target="_blank" href="https://remarkable.com/blog/release-3-13-swapping-pens-made-easy">https://remarkable.com/blog/release-3-13-swapping-pens-made-easy</a></li>
-<li><a target="_blank" href="https://support.remarkable.com/s/article/Toolbar">https://support.remarkable.com/s/article/Toolbar</a></li>
+<li><code>xovi/rebuild_hashtable</code> n&rsquo;est <em>jamais</em> automatique : le postinstall de
+<code>qt-resource-rebuilder</code> affiche « you must run: xovi/rebuild_hashtable ». À relancer
+après chaque MAJ (OS ou qrr)<sup id="fnref:9"><a class="internal-link" href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup>.</li>
+<li>Mur OS 3.28 : le paquet exige <code>remarkable-os&gt;=3.26 &lt;3.28</code> et tire le .qmd du dossier
+<code>3.26/</code> (hashé pour cette version). Dès que reMarkable pousse 3.28, ça casse jusqu&rsquo;à
+une version mise à jour par le mainteneur, et toute MAJ OS invalide les hash. → <em>geler
+les MAJ de l&rsquo;OS reMarkable</em><sup id="fnref:10"><a class="internal-link" href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>.</li>
+<li>XOVI est <em>tethered</em> : <code>xovi/start</code> à refaire après chaque reboot, ou installer
+<code>xovi-tripletap</code> (RMPPMove supportée officiellement). Ne PAS auto-démarrer untethered
+sur tablette chiffrée (bootloop)<sup id="fnref1:6"><a class="internal-link" href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup><sup>, </sup><sup id="fnref1:7"><a class="internal-link" href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>.</li>
+<li>Limite systemd : si <code>xochitl</code> redémarre 4+ fois en 10 min, systemd le marque en échec
+(reboot possible) — ne pas enchaîner les restarts. Le paquet exécute <code>systemctl reset-failed xochitl</code> en predeinstall (à la désinstallation) pour nettoyer ce
+compteur, pas comme garde active au runtime<sup id="fnref:11"><a class="internal-link" href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup>.</li>
+<li>Bug Split View ouvert (#15) : en vue scindée, le nombre d&rsquo;outils des deux barres peut
+devenir faux après rotation/repositionnement — « a simple fix doesn&rsquo;t seem
+possible »<sup id="fnref:12"><a class="internal-link" href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup>.</li>
+<li>Couplage de versions : laisser vellum mettre à jour <code>xovi</code> / <code>qrr</code> / <code>xovi-extensions</code>
+ensemble (<code>vellum upgrade</code>), ne pas épingler une version<sup id="fnref:13"><a class="internal-link" href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup>.</li>
+<li>Alternative possible : <code>penSlots</code> (<code>fatfort/penslots.plugin</code>, dépôt actuellement en
+404), mentionné dans une demande d&rsquo;ajout à vellum (#173) fermée en « not planned ». À
+vérifier avant de s&rsquo;y fier<sup id="fnref:14"><a class="internal-link" href="#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>.</li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/0fcf5b5a-4160-4e85-a72d-8daef4299aa3?title=remarkable_pro_move">Permalink</a></h2>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>Page du paquet <code>enable-extra-pen-on-move</code> sur l&rsquo;index vellum : description « Adds
+extra pen slot to toolbar (RMPPM only, requires qt-resource-rebuilder v16+). », Devices
+« RMPPMove », OS Compatibility « 3.26 – 3.27 », dépendance <code>qt-resource-rebuilder</code>.</p>
+<p><a target="_blank" href="https://vellum.delivery/#/package/enable-extra-pen-on-move">https://vellum.delivery/#/package/enable-extra-pen-on-move</a>&#160;<a class="internal-link" href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2">
+<p>Dépôt vellum-cli : installation par script bootstrap, sous-commandes <code>add</code>
+/ <code>del</code> / <code>update</code> / <code>upgrade</code> / <code>search</code> / <code>info</code> / <code>check-os</code> / <code>reenable</code>.</p>
+<p><a target="_blank" href="https://github.com/vellum-dev/vellum-cli">https://github.com/vellum-dev/vellum-cli</a>&#160;<a class="internal-link" href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:3">
+<p>README XOVI d&rsquo;asivery, installation du framework : « vellum add xovi ».</p>
+<p><a target="_blank" href="https://github.com/asivery/rm-xovi-extensions">https://github.com/asivery/rm-xovi-extensions</a>&#160;<a class="internal-link" href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:4">
+<p>README XOVI d&rsquo;asivery, installation d&rsquo;extensions : « Dependencies are handles
+automatically. » (la page du paquet liste <code>qt-resource-rebuilder</code> comme dépendance).</p>
+<p><a target="_blank" href="https://github.com/asivery/rm-xovi-extensions">https://github.com/asivery/rm-xovi-extensions</a>&#160;<a class="internal-link" href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:5">
+<p>README XOVI d&rsquo;asivery : « If your device updates, or if you&rsquo;re installing
+qt-resource-rebuilder for the first time or updating it, be sure to update the hashtab
+file. To do that, run the script &hellip; xovi/rebuild_hashtable and wait for it to
+complete. » <a target="_blank" href="https://github.com/asivery/rm-xovi-extensions">https://github.com/asivery/rm-xovi-extensions</a>&#160;<a class="internal-link" href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:6">
+<p>README XOVI d&rsquo;asivery : « XOVI is a tethered extension manager - after a
+restart, the tablet will get back to the stock OS. To get XOVI back, simply run
+xovi/start from the SSH prompt. » et « DO NOT attempt to set up XOVI to start
+automatically on boot. » <a target="_blank" href="https://github.com/asivery/rm-xovi-extensions">https://github.com/asivery/rm-xovi-extensions</a>&#160;<a class="internal-link" href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:7">
+<p>README xovi-tripletap : badge « rMPPMove — supported » (support officiel de
+la Paper Pro Move). <a target="_blank" href="https://github.com/rmitchellscott/xovi-tripletap">https://github.com/rmitchellscott/xovi-tripletap</a>&#160;<a class="internal-link" href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:8">
+<p>README XOVI d&rsquo;asivery : « Run systemctl restart xochitl to restart xovi » ;
+« To go back to stock either reboot, or run xovi/stock. »</p>
+<p><a target="_blank" href="https://github.com/asivery/rm-xovi-extensions">https://github.com/asivery/rm-xovi-extensions</a>&#160;<a class="internal-link" href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:9">
+<p>VELBUILD <code>xovi-extensions</code>, postinstall du sous-paquet
+<code>qt-resource-rebuilder</code> : <code>echo &quot;  you must run: xovi/rebuild_hashtable&quot;</code>.</p>
+<p><a target="_blank" href="https://github.com/vellum-dev/vellum/tree/main/packages/xovi-extensions">https://github.com/vellum-dev/vellum/tree/main/packages/xovi-extensions</a>&#160;<a class="internal-link" href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:10">
+<p>VELBUILD du paquet <code>enable-extra-pen-on-move</code> :
+<code>depends</code>&ldquo;qt-resource-rebuilder !rm1 !rm2 !rmpp !rmppure remarkable-os&gt;=3.26
+remarkable-os&lt;3.28&rdquo;<code>, source tirée du dossier =3.26/enableExtraPenOnMove.qmd</code>.</p>
+<p><a target="_blank" href="https://github.com/vellum-dev/vellum/tree/main/packages/enable-extra-pen-on-move">https://github.com/vellum-dev/vellum/tree/main/packages/enable-extra-pen-on-move</a>&#160;<a class="internal-link" href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:11">
+<p>VELBUILD <code>xovi-extensions</code>, fonction <code>predeinstall()</code> : commentaire
+« avoid a device reboot if xochitl has been restarted 4 or more times in the past 10
+minutes » suivi de <code>systemctl reset-failed xochitl</code>.</p>
+<p><a target="_blank" href="https://github.com/vellum-dev/vellum/tree/main/packages/xovi-extensions">https://github.com/vellum-dev/vellum/tree/main/packages/xovi-extensions</a>&#160;<a class="internal-link" href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:12">
+<p>ingatellent/xovi-qmd-extensions#15 (ouverte) : « The toolbar tools in both
+toolbars are updated when rotating the view or when repositioning one of the toolbars in
+Split View. &hellip; one of them has too many or too few tools. A simple fix doesn&rsquo;t seem
+possible unfortunately. » <a target="_blank" href="https://github.com/ingatellent/xovi-qmd-extensions/issues/15">https://github.com/ingatellent/xovi-qmd-extensions/issues/15</a>&#160;<a class="internal-link" href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:13">
+<p>VELBUILD : <code>xovi</code> déclare <code>depends</code>&quot;!xovi-extensions&lt;18.0.0&quot;= ;
+<code>xovi-extensions</code> déclare <code>depends</code>&ldquo;xovi&gt;=0.3.2-r1
+remarkable-os&gt;=3.20 !qt-resource-rebuilder&lt;18.0.0&rdquo;=.</p>
+<p><a target="_blank" href="https://github.com/vellum-dev/vellum/tree/main/packages/xovi-extensions">https://github.com/vellum-dev/vellum/tree/main/packages/xovi-extensions</a>&#160;<a class="internal-link" href="#fnref:13" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:14">
+<p><code>fatfort/penslots.plugin</code> renvoie HTTP 404 ; la demande
+vellum-dev/vellum#173 « [package request] Add penSlots package to index » est fermée
+« not planned ». <a target="_blank" href="https://github.com/vellum-dev/vellum/issues/173">https://github.com/vellum-dev/vellum/issues/173</a>&#160;<a class="internal-link" href="#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
       </div>
-	  <aside class="date"><time>Last updated: 09 Jun 2026</time></aside>
+	  <aside class="date"><time>Last updated: 14 Jun 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Jun 2026</time></aside>
     </div>
   </div>
