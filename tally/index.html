@@ -127,8 +127,6 @@ body[data-ws="denied"] .sync-dot{background:var(--accent)}
   transition:background .15s;flex-shrink:0;
 }
 .icon-btn:active{background:rgba(255,255,255,.18)}
-.icon-btn.primary{background:var(--accent)}
-.icon-btn.primary:active{background:#c23350}
 .build-hash{font-size:.65rem;color:var(--muted);font-family:monospace;flex-shrink:0}
 /* ── Table area ── */
 .table-wrap{
@@ -191,6 +189,15 @@ tfoot td:first-child{z-index:4;background:var(--surface)}
 .winner{color:#ffd700}
 .game-won{color:#ffd700;text-shadow:0 0 8px #ffd700}
 .preset-btn{padding:6px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,.15);background:var(--surface);color:var(--text);font-size:.8rem;cursor:pointer}
+#headerRow th:first-child{padding:2px 1px}
+.corner-controls{display:flex;flex-direction:column;align-items:center;gap:3px}
+.corner-btn{
+  width:24px;height:24px;border-radius:7px;border:none;cursor:pointer;
+  display:grid;place-items:center;font-size:.85rem;font-weight:700;
+  background:rgba(255,255,255,.08);color:var(--text);
+}
+.corner-btn.primary{background:var(--accent);color:#fff}
+.corner-btn:active{background:rgba(255,255,255,.2)}
 /* ── Entry row (in-table) ── */
 .entry-row td{padding:4px 2px}
 .entry-input{
@@ -238,6 +245,7 @@ tfoot td:first-child{z-index:4;background:var(--surface)}
   .numpad-grid{gap:3px}
   .np-btn{padding:8px 0;font-size:.95rem;border-radius:6px}
 }
+.entry-confirm.ends-game{box-shadow:0 0 0 2px #ffd700,0 0 10px 1px rgba(255,215,0,.55)}
 /* ── Empty state ── */
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-state .emoji{font-size:3rem;margin-bottom:12px}
@@ -385,15 +393,13 @@ window.addEventListener('appinstalled', function() {
   <a class="sync-dot" id="syncDot" title="Sync status" onclick="if(document.body.getAttribute('data-ws')==='connected'&&confirm('Clear authorization?')){location.href='/authorizationserver/clear-cookie?resource=ywebsocket/'+_roomName}"></a>
   <input type="text" class="game-name-input" id="gameName" placeholder="Game name&#x2026;" spellcheck="false"
     @input="setGameName($el.value)">
-  <span class="build-hash" title="Build">65266ea</span>
+  <span class="build-hash" title="Build">52ab1f4</span>
   <div class="header-actions">
     <button class="icon-btn" id="btnInstall" title="Install" style="display:none" @click="installApp()">&#x1f4f2;</button>
     <button class="icon-btn" id="btnScoreboard" title="Scoreboard" @click="openScoreboard()">&#x1f3c6;</button>
     <button class="icon-btn" id="btnLoad" title="Load" @click="openLoadModal()">&#x1f4cb;</button>
     <button class="icon-btn" id="btnExport" title="Export CSV" @click="exportCSV()">&#x1f4e5;</button>
     <button class="icon-btn" id="btnNewGame" title="New Game" @click="newGame()">&#x25b6;</button>
-    <button class="icon-btn" id="btnReorder" title="Reorder" x-show="$store.game.players.length > 1" @click="openReorderModal()">&#x2195;</button>
-    <button class="icon-btn primary" id="btnAddPlayer" title="Add Player" @click="openAddPlayerModal()">+</button>
   </div>
 </header>
 
@@ -407,7 +413,12 @@ window.addEventListener('appinstalled', function() {
     :style="'min-width:' + ($store.game.colWidths.reduce(function(s,v){return s+v},0) + 28) + 'px'">
     <thead>
       <tr id="headerRow">
-        <th>#</th>
+        <th>
+          <div class="corner-controls" x-show="$store.game.hasPlayers">
+            <button class="corner-btn primary" id="btnAddPlayer" title="Add Player" @click="openAddPlayerModal()">+</button>
+            <button class="corner-btn" id="btnReorder" title="Reorder" x-show="$store.game.players.length > 1" @click="openReorderModal()">&#x2195;</button>
+          </div>
+        </th>
         <template x-for="(p, i) in $store.game.players" :key="i">
           <th :style="'width:calc((100% - 28px) / ' + $store.game.players.length + ');min-width:' + $store.game.colWidths[i] + 'px;border-bottom:3px solid ' + p.color">
             <div class="player-header">
@@ -438,6 +449,7 @@ window.addEventListener('appinstalled', function() {
       <tr class="entry-row" x-show="$store.game.hasPlayers">
         <td>
           <button class="entry-confirm" id="entryConfirm" title="Add round"
+            :class="{ 'ends-game': $store.game.endConditionMet }"
             @click="addRound()">+</button>
         </td>
         <template x-for="(p, i) in $store.game.players" :key="'e'+i">
@@ -1737,19 +1749,22 @@ Alpine.store('game', {
     if(!t.length) return 0;
     return this.lowWins ? Math.min.apply(null, t) : Math.max.apply(null, t);
   },
-  get liveWinners(){
+  get endConditionMet(){
     var self = this;
     var efn = getEndFn(self.endCondition);
-    if(!efn) return {};
+    if(!efn) return false;
     var t = self.liveTotals;
-    // The game is over the moment any player's total satisfies the end
-    // condition. Who triggered it is irrelevant — the victors are whoever
-    // ranks first in the active direction (lowest or highest).
-    var ended = false;
     for(var i = 0; i < t.length; i++){
-      try { if(efn(t[i], i, self.rounds.length)){ ended = true; break; } } catch(e){}
+      try { if(efn(t[i], i, self.rounds.length)) return true; } catch(e){}
     }
-    if(!ended) return {};
+    return false;
+  },
+  get liveWinners(){
+    var self = this;
+    if(!self.endConditionMet) return {};
+    // Who triggered the end is irrelevant — the victors are whoever ranks
+    // first in the active direction (lowest or highest).
+    var t = self.liveTotals;
     var best = self.liveMaxTotal;
     var winners = {};
     for(var i = 0; i < t.length; i++){ if(t[i] === best) winners[i] = true; }
