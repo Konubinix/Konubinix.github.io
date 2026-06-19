@@ -385,8 +385,9 @@ wall narrows — so changing the module and re-running those suites proves it.</
 <h2 id="5e1a0d00-0010-4000-8000-000000000001">Assembling the query — shared/data.js</h2>
 <p>The DSL turns the box&rsquo;s text into a parsed query; turning that parse into the variables the
 server wants is a second concern, and a second shared module, <code>shared/data.js</code>. The apps
-differ in how they fetch — memories&rsquo; bare <code>fetch</code>, the frise&rsquo;s urql — and how they render,
-but <strong>what</strong> they ask is one shape, so it lives here rather than copied into each.</p>
+differ in how they bind reactivity — memories&rsquo; Solid <code>createResource</code>, the frise&rsquo;s urql
+hooks — and how they render, but <strong>what</strong> they ask is one shape, so it lives here rather than
+copied into each.</p>
 <p>A window shows every photo it holds up to a cap — high enough that any window you can
 actually read shows every one; only a denser one samples down to it. One number, shared:</p>
 <div class="konix-block-name-marker" data-name="data-cap"></div>
@@ -405,6 +406,66 @@ that pair is an argument and the rest is read off the parse.</p>
 </span></span><span style="display:flex;"><span>             <span style="color:#1f2328">aday</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">parsed</span><span style="color:#1f2328">.</span><span style="color:#1f2328">aday</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">awin</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">parsed</span><span style="color:#1f2328">.</span><span style="color:#1f2328">awin</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>             <span style="color:#1f2328">amonth</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">parsed</span><span style="color:#1f2328">.</span><span style="color:#1f2328">month</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">mwin</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">parsed</span><span style="color:#1f2328">.</span><span style="color:#1f2328">mwin</span> <span style="color:#1f2328">};</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Those same nine fields recur in every photo query in two more forms: the variable declarations a
+query opens with, and the arguments that pass them to the server function — identical wherever
+they appear, since only each query&rsquo;s own extras (a state filter, a sampling cap, a density
+window) differ. So the filter lives here in all three forms — the values <code>photoVars</code> builds, and
+the two strings a query splices into its declaration and its call — leaving each query to show
+only what makes it distinct.</p>
+<div class="konix-block-name-marker" data-name="data-filter"></div>
+<p><a id="code-snippet--data-filter"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">export</span> <span style="color:#cf222e">const</span> <span style="color:#1f2328">PHOTO_FILTER_DECL</span> <span style="color:#0550ae">=</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#39;$search:String!,$since:Datetime!,$until:Datetime!,$kinds:[String!],$owners:[OwnerType!],$aday:Date,$awin:Int,$amonth:Int,$mwin:Int&#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">export</span> <span style="color:#cf222e">const</span> <span style="color:#1f2328">PHOTO_FILTER_ARGS</span> <span style="color:#0550ae">=</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#39;search:$search,since:$since,until:$until,kinds:$kinds,owners:$owners,aday:$aday,awin:$awin,amonth:$amonth,mwin:$mwin&#39;</span><span style="color:#1f2328">;</span>
+</span></span></code></pre></div><p>Both node-returning queries — memories&rsquo; sample and the frise&rsquo;s search — ask for the same core
+of each photo: its content ids (<code>cid</code>, <code>thumbnailCid</code>, <code>webCid</code>), its file facts (<code>date</code>,
+<code>mimetype</code>, <code>filename</code>), and its <code>labels</code>. Only a field or two beyond that is app-specific, so
+the core is one fragment each query spreads and extends.</p>
+<div class="konix-block-name-marker" data-name="data-fragment"></div>
+<p><a id="code-snippet--data-fragment"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">export</span> <span style="color:#cf222e">const</span> <span style="color:#1f2328">PHOTO_CORE</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">`fragment PhotoCore on Photovideo {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  cid date thumbnailCid webCid mimetype filename labels }`</span><span style="color:#1f2328">;</span>
+</span></span></code></pre></div><p>Reading is one shape; the one write the apps share is another — a label or state change on a
+single photo, through the auto-generated <code>updatePhotovideo</code> with a free-form <code>PhotovideoPatch</code>.
+It asks for the changed row back rather than a bare acknowledgement: a result that carries a
+<code>Photovideo</code> marks every cached view holding that row stale, so each app&rsquo;s next read of it
+comes back fresh.</p>
+<div class="konix-block-name-marker" data-name="data-mutation"></div>
+<p><a id="code-snippet--data-mutation"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">export</span> <span style="color:#cf222e">const</span> <span style="color:#1f2328">UPDATE_PHOTO</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">`mutation($cid:String!,$patch:PhotovideoPatch!){
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  updatePhotovideo(input:{cid:$cid,patch:$patch}){ photovideo { cid labels state } } }`</span><span style="color:#1f2328">;</span>
+</span></span></code></pre></div><p>One more query both apps share: the label-completion lookup. As you type a label, each offers
+the words already in use — a prefix in, the matching words out. memories caps the list to a
+handful, the frise takes them all, so the cap rides as a parameter.</p>
+<div class="konix-block-name-marker" data-name="data-completions"></div>
+<p><a id="code-snippet--data-completions"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">export</span> <span style="color:#cf222e">const</span> <span style="color:#1f2328">LABEL_COMPLETIONS</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">`query($prefix:String!, $first:Int){ labelCompletions(prefix:$prefix, first:$first){ nodes } }`</span><span style="color:#1f2328">;</span>
+</span></span></code></pre></div><h2 id="5e1a0d00-0011-4000-8000-000000000001">The shared GraphQL client — shared/gql.js</h2>
+<p>Sending the query is one more shared concern. It goes to <code>/graphql</code> on the app&rsquo;s own
+origin, behind the LAN auth gate — a 401/403 there means this device has no grant. The
+client that sends it, caches it, and reads that gate is <code>shared/gql.js</code>: an urql client
+whose document cache dedups a window&rsquo;s repeated queries and serves a revisited one without
+a round-trip, wrapping a <code>fetch</code> that flips a tiny framework-agnostic store when the gate
+refuses. A consumer binds its own reactivity to that store and queries through the client.</p>
+<div class="konix-block-name-marker" data-name="gql-client"></div>
+<p><a id="code-snippet--gql-client"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">createClient</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">cacheExchange</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">fetchExchange</span> <span style="color:#1f2328">}</span> <span style="color:#1f2328">from</span> <span style="color:#0a3069">&#39;@urql/core&#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">let</span> <span style="color:#1f2328">_authNeeded</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">false</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">_authListeners</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">new</span> <span style="color:#1f2328">Set</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">setAuthNeeded</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">v</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span> <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">v</span> <span style="color:#0550ae">!==</span> <span style="color:#1f2328">_authNeeded</span><span style="color:#1f2328">){</span> <span style="color:#1f2328">_authNeeded</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">v</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">_authListeners</span><span style="color:#1f2328">.</span><span style="color:#1f2328">forEach</span><span style="color:#1f2328">(</span><span style="color:#1f2328">fn</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">fn</span><span style="color:#1f2328">(</span><span style="color:#1f2328">v</span><span style="color:#1f2328">));</span> <span style="color:#1f2328">}</span> <span style="color:#1f2328">};</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">export</span> <span style="color:#cf222e">const</span> <span style="color:#1f2328">getAuthNeeded</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">_authNeeded</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">export</span> <span style="color:#cf222e">function</span> <span style="color:#1f2328">subscribeAuth</span><span style="color:#1f2328">(</span><span style="color:#1f2328">fn</span><span style="color:#1f2328">){</span> <span style="color:#1f2328">_authListeners</span><span style="color:#1f2328">.</span><span style="color:#1f2328">add</span><span style="color:#1f2328">(</span><span style="color:#1f2328">fn</span><span style="color:#1f2328">);</span> <span style="color:#1f2328">fn</span><span style="color:#1f2328">(</span><span style="color:#1f2328">_authNeeded</span><span style="color:#1f2328">);</span> <span style="color:#cf222e">return</span> <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">_authListeners</span><span style="color:#1f2328">.</span><span style="color:#cf222e">delete</span><span style="color:#1f2328">(</span><span style="color:#1f2328">fn</span><span style="color:#1f2328">);</span> <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">export</span> <span style="color:#cf222e">const</span> <span style="color:#1f2328">client</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">createClient</span><span style="color:#1f2328">({</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">url</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;/graphql&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">fetch</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">async</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">input</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">init</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">const</span> <span style="color:#1f2328">r</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> <span style="color:#1f2328">fetch</span><span style="color:#1f2328">(</span><span style="color:#1f2328">input</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">init</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">r</span><span style="color:#1f2328">.</span><span style="color:#1f2328">status</span> <span style="color:#0550ae">===</span> <span style="color:#0550ae">401</span> <span style="color:#0550ae">||</span> <span style="color:#1f2328">r</span><span style="color:#1f2328">.</span><span style="color:#1f2328">status</span> <span style="color:#0550ae">===</span> <span style="color:#0550ae">403</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">setAuthNeeded</span><span style="color:#1f2328">(</span><span style="color:#cf222e">true</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span> <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">r</span><span style="color:#1f2328">.</span><span style="color:#1f2328">ok</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">setAuthNeeded</span><span style="color:#1f2328">(</span><span style="color:#cf222e">false</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#1f2328">r</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">exchanges</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">[</span><span style="color:#1f2328">cacheExchange</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">fetchExchange</span><span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">});</span>
 </span></span></code></pre></div><h2 id="4166a536-c7d2-4519-9c75-2b8708dbbefc"><span class="org-todo todo TODO" style="color:red;font-weight:bold">TODO</span> </h2>
 <ol>
 <li><input checked="" type="checkbox"> deal with - generically, like -owner:&hellip; or -type:video — a leading <code>-</code> on a
