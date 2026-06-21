@@ -96,14 +96,6 @@ bitswap reports <code>partners [0]</code>.</p>
       </tr>
   </tbody>
 </table>
-<p>Routing.Type = <code>none</code> (DHT off, fine for private LAN). No swarm key.
-<code>findprovs</code> is therefore useless. The 5th &ldquo;bootstrap&rdquo; peer
-<code>12D3KooWKG85</code> is on the requesting host itself — a stale entry from a
-previous identity (different PeerID), harmless.</p>
-<p>The user confirms: pinned the CID on &gt;=2 nodes in the past, then
-unpinned. <code>ipfs repo gc</code> never runs (no <code>--enable-gc</code> in cmdline,
-<code>GCPeriod=1500000h</code>, <code>StorageGCWatermark=90/2TB</code>). So unpinned data
-should still be on disk.</p>
 <h3 id="00a0c9cc-772f-4402-a247-81b9af69d4ac">3. node-1 (.1) logs</h3>
 <p><code>clk nd logs --job ipfs --node node-1 --stderr</code> shows a Go runtime
 panic on every startup, in quic-go, on arm64:</p>
@@ -203,113 +195,17 @@ poisoning the bitswap session, or with a one-shot
 or NVMe HAT remain the safest option for heavy write load.</li>
 </ol>
 <h2 id="8759c530-e7e0-4f12-983f-9790b2d52e6d">Can the corrupted card be reused after reformatting?</h2>
-<p>Short answer: no, treat it as dead for any role you care about.</p>
-<p>Reformatting only rewrites filesystem metadata. It does not reset
-the underlying NAND, does not restore the controller&rsquo;s reserve
-blocks, and does not change which physical cells are flaky. What we
-observed — same file producing two different sha256 on successive
-reads — is the classic signature of <strong>NAND wear-out</strong>: the controller&rsquo;s
-Flash Translation Layer (FTL) has run out of spare blocks to remap
-writes to, so reads now hit marginal cells that flip bits. The cells
-are degraded silicon; no software can fix that.</p>
-<p>Less likely but possible alternatives, in decreasing order of
-plausibility for this card:</p>
-<ul>
-<li>Counterfeit / fake-capacity card where writes past the real end
-wrap around and corrupt earlier sectors.</li>
-<li>One-off voltage glitch or kernel driver bug (would not reproduce
-deterministically the way ours did).</li>
-</ul>
-<h3 id="cdac8684-9397-432e-b7e9-b77530c94ff2">Confirming wear-out (destructive)</h3>
-<p>Do this with the card in a USB reader on a different machine, not in
-the Pi. <code>/dev/sdX</code> must be carefully verified (<code>lsblk</code> first).</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo umount /dev/sdX*
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a"># f3: purpose-built SD validation; also catches fake capacity</span>
-</span></span><span style="display:flex;"><span>sudo apt install f3
-</span></span><span style="display:flex;"><span>sudo f3probe --destructive --time-ops /dev/sdX
-</span></span><span style="display:flex;"><span><span style="color:#57606a"># then full write + read-back cycle on a fresh fs:</span>
-</span></span><span style="display:flex;"><span>sudo f3write /mnt/sd
-</span></span><span style="display:flex;"><span>sudo f3read  /mnt/sd
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a"># alternative: badblocks destructive write+read test</span>
-</span></span><span style="display:flex;"><span>sudo badblocks -wsv -b <span style="color:#0550ae">4096</span> /dev/sdX
-</span></span></code></pre></div><p>A <strong>failed</strong> test (any reported corrupted sector / bad block) is
-definitive: card is dead, bin it.</p>
-<h3 id="79aa492b-cc34-4be6-ad91-f270b98fe653">Why a passing test does not certify the card</h3>
-<p>The asymmetry matters: failure proves bad, success proves nothing.
-The reasons are fundamental to flash, not limitations of the tools:</p>
-<ul>
-<li><strong>No predictive value.</strong> SD health is a function of <em>future</em>
-behaviour under the real workload — retention over weeks, wear
-progression under writes, bit-flip rate at temperature. No
-point-in-time test can predict that.</li>
-<li><strong>No telemetry exposed.</strong> Consumer SD cards have no SMART, no
-reserve-block count, no wear-level counter, no retention metric.
-The controller hides everything behind the FTL; you are testing a
-black box that reveals nothing about its remaining life.</li>
-<li><strong>Tests refresh what they touch.</strong> Destructive write+read tests
-rewrite every sector. The controller may remap them to known-good
-blocks, so the test reads back fresh data. Real-world use writes
-once and reads months later — that is when retention failures
-appear, and the test cannot simulate it within seconds.</li>
-<li><strong>Probabilistic flips are under-sampled.</strong> A marginal cell might
-flip 1 read in 1000. Single-pass tests miss this; sustained
-workload doesn&rsquo;t.</li>
-<li><strong>Logical layer only.</strong> f3 / badblocks address LBAs. The FTL&rsquo;s
-remap is opaque — the cells that misbehaved earlier may never be
-re-addressed during the test.</li>
-</ul>
-<p>A retention soak (write, unpower for weeks, read back) under
-thermal/write stress matching the real workload would come closest,
-but even that only certifies the card <strong>up to that point</strong>.</p>
-<h3 id="130e4b45-5b32-46b1-99ff-dc697924e1b6">Conclusion</h3>
-<p>The rule &ldquo;definitive good, or drop it&rdquo; collapses cleanly:</p>
-<table>
-  <thead>
-      <tr>
-          <th>card state</th>
-          <th>definitive verdict possible?</th>
-          <th>action</th>
-      </tr>
-  </thead>
-  <tbody>
-      <tr>
-          <td>brand new, unused</td>
-          <td>yes — <code>f3probe</code> catches fakes / infant mortality</td>
-          <td>run f3probe before deploying</td>
-      </tr>
-      <tr>
-          <td>in service, no symptoms</td>
-          <td>no</td>
-          <td>leave alone, monitor with scrub</td>
-      </tr>
-      <tr>
-          <td>in service, has shown bit-flips</td>
-          <td>no — bad is definitive, &ldquo;good&rdquo; isn&rsquo;t</td>
-          <td>bin it</td>
-      </tr>
-  </tbody>
-</table>
-<p>For node-1&rsquo;s card: bit-flips observed → no test can recover
-it. Replace.</p>
-<p>For replacement cards: see
-<a class="internal-link" href="/braindump/posts/raspberry_pi_sd_card/">Raspberry Pi SD Card</a>.
-Combined with the btrfs root + weekly <code>btrfs scrub</code> setup, the next
-failure will be loud and immediate instead of silent.</p>
+<p>A destructive write+read test (<code>f3probe</code>, <code>badblocks</code>) can prove the
+card <strong>dead</strong> — any reported corruption is definitive. It cannot prove
+the card <strong>alive</strong>: consumer SD exposes no wear telemetry, and a passing
+run only certifies the cells it happened to touch, at that instant, not
+their retention weeks later. With bit-flips already observed there is no
+verdict left to chase — bin it.</p>
 <h2 id="7125e536-e649-4a71-9ae8-34d1a09d46c8">Periodic detection — nomad sysbatch sentinel</h2>
 <p>The cheapest reliable detector for the failure mode we hit is the
 same one that found it: read a static file twice with the page cache
 flushed between reads, alert on hash divergence. Add a 1 MiB
 write+read-back to also catch write-side rot.</p>
-<p>Shape: <code>type = &quot;sysbatch&quot;</code> (one alloc per node) + <code>periodic</code>
-(cron-style schedule) + <code>raw_exec</code> (host-level, root, so it can
-write to <code>/proc/sys/vm/drop_caches</code>). Failure is signalled by a
-non-zero exit; nomad will surface it via <code>clk nd status</code> and the
-alloc&rsquo;s stderr will contain the diagnostic line.</p>
-<p>The name keeps <code>sdrot</code> even though the probe is media-agnostic: the
-SD card is the medium most likely to fail this way in this fleet,
-and the check still runs harmlessly on SSD/HDD-backed nodes.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">job</span> <span style="color:#0a3069">&#34;sdrot&#34;</span> {
 </span></span><span style="display:flex;"><span>  datacenters <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;dc1&#34;</span><span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>  type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;sysbatch&#34;</span><span style="color:#57606a">
@@ -379,28 +275,7 @@ and the check still runs harmlessly on SSD/HDD-backed nodes.</p>
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>  }
 </span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><h2 id="c4a8fa5d-9457-4c1e-b168-9526f4e17ee9">Lessons / pointers</h2>
-<ul>
-<li><code>partners [0]</code> in <code>ipfs bitswap stat</code>, despite peers in
-<code>swarm peers</code>, means no peer currently has open bitswap sessions
-with us / acknowledges our wants. Always check this before
-blaming peers.</li>
-<li><code>Routing.Type = &quot;none&quot;</code> makes <code>ipfs routing findprovs</code> a no-op.</li>
-<li><code>GC</code> does not run automatically unless <code>ipfs daemon --enable-gc</code>
-and a threshold is exceeded — unpinning is not the same as
-deleting.</li>
-<li>For SD-card silent corruption: do not trust <code>dumpe2fs</code> &ldquo;clean&rdquo;,
-do not trust dmesg quiet. Do a <strong>read-stability test</strong> with
-<code>echo 3 &gt; /proc/sys/vm/drop_caches</code> between two reads of the
-same file. Differing hashes = storage is bad. This is also the
-cheapest fsck-equivalent for Docker on overlay2 (where layer
-blobs aren&rsquo;t content-addressable on disk).</li>
-<li>For Docker layer integrity, the in-disk story depends on the
-backend: <code>overlay2</code> = extracted, not addressable; the <strong>containerd
-snapshotter</strong> keeps blobs content-addressed and can be fsck&rsquo;d by
-recomputing each file&rsquo;s sha256 vs its filename.</li>
-</ul>
-<!--more-->
+</span></span></code></pre></div><!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/ipfs_get_hangs_on_the_empty_content_leaf_block/">ipfs get hangs on the empty-content leaf block</a></li>
