@@ -85,59 +85,14 @@ the data moves.</p>
 store, and every component reads it through the one <code>usePhotos</code> hook. Images take a
 separate path: thumbnails and full media load straight from the <code>/ipfs/</code> gateway,
 same origin.</p>
-<pre tabindex="0"><code class="language-plantuml" data-lang="plantuml">@startuml
-skinparam monochrome reverse
-skinparam componentStyle rectangle
-skinparam shadowing false
-
-database &#34;Postgres\n(docs)&#34; as pg
-component &#34;PostGraphile\n/graphql&#34; as pgraphile
-component &#34;urql client\n(normalised cache)&#34; as urql
-cloud &#34;IPFS gateway\n/ipfs/...&#34; as ipfs
-
-package &#34;Preact app&#34; {
-  component &#34;App\nwindow + open state&#34; as app
-  component &#34;SearchBox&#34; as search
-  component &#34;WindowControls&#34; as controls
-  component &#34;PhotoCount&#34; as count
-  component &#34;TimelineStrip\n→ Pin&#34; as strip
-  component &#34;Ruler&#34; as ruler
-  component &#34;Lightbox&#34; as lightbox
-}
-
-pg --&gt; pgraphile
-pgraphile --&gt; urql : GraphQL
-urql --&gt; app : usePhotos / useQuery
-app --&gt; search
-app --&gt; controls
-app --&gt; count
-app --&gt; strip
-app --&gt; ruler
-app --&gt; lightbox
-strip ..&gt; ipfs : thumbnail src
-lightbox ..&gt; ipfs : full media
-@enduml
-</code></pre><figure><img src="https://ipfs.konubinix.eu/p/bafkreicv46gjfp5ontglaraqlcs2rsmx2lu3vxdxj6p3hw25ip5xlq55h4?frise_components.png">
+<figure><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicv46gjfp5ontglaraqlcs2rsmx2lu3vxdxj6p3hw25ip5xlq55h4?frise-components.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreicv46gjfp5ontglaraqlcs2rsmx2lu3vxdxj6p3hw25ip5xlq55h4?frise-components.png"></a>
 </figure>
 
 <p><strong>One loop, one direction.</strong> The <code>App</code> shell holds the window; it flows <strong>down</strong> to the
 children as read-only props, and their events flow <strong>up</strong> through <code>onChange</code> / <code>onPan</code> /
 <code>onZoom</code> / <code>onOpen</code>. <code>App</code> folds each event into the window, mirrors it into the URL,
 and the URL seeds the initial state on load. No component drives itself.</p>
-<pre tabindex="0"><code class="language-plantuml" data-lang="plantuml">@startuml
-skinparam monochrome reverse
-skinparam shadowing false
-
-component &#34;App\nwin state&#34; as app
-component &#34;controls / strip / ruler / lightbox&#34; as kids
-component &#34;URL\n?from=&amp;to=&#34; as url
-
-app --&gt; kids : win (props, read-only)
-kids --&gt; app : onChange / onPan / onZoom / onOpen
-app --&gt; url : replaceState on every change
-url --&gt; app : initial state on load
-@enduml
-</code></pre><figure><img src="https://ipfs.konubinix.eu/p/bafkreiaztevx7garvk6su6jmqo644qg6ot73yt2wpthtaircllwm6yityi?frise_dataflow.png">
+<figure><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiaztevx7garvk6su6jmqo644qg6ot73yt2wpthtaircllwm6yityi?frise-dataflow.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreiaztevx7garvk6su6jmqo644qg6ot73yt2wpthtaircllwm6yityi?frise-dataflow.png"></a>
 </figure>
 
 <h2 id="0b1d2e3f-0003-4000-8000-000000000001">Boot into a titled shell</h2>
