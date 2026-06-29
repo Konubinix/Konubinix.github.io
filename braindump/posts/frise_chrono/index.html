@@ -65,17 +65,6 @@ date — stays a bespoke component on plain CSS. A timeline library would drag
 in its own DOM and its own data model: a second store to reconcile with
 urql&rsquo;s, the hand-written bridge again, for a layout that is a few lines of
 <code>date → x</code>.</p>
-<p><strong>One friction worth noting, since comparing the render techs is half the point.</strong>
-Binding a <code>wheel</code> listener here was surprisingly hard. The <code>onWheel</code> prop never
-fired (<code>onClick=/=onPointerDown</code> bind fine), and an effect-based <code>addEventListener</code>
-was racy under test. The <strong>exact same</strong> Shift+wheel lightbox navigation was a
-first-try, one-line success in <a class="internal-link" href="/braindump/posts/a_photos_videos_organiser_with_preact/">memories</a>, where Solid&rsquo;s <code>solid-js/html</code> binds
-<code>onWheel</code> synchronously at element creation. Not a verdict — I didn&rsquo;t root-cause
-whether it&rsquo;s <code>htm</code>&rsquo;s prop handling, Preact&rsquo;s event system, or the test&rsquo;s async
-wheel — but a real point in Solid&rsquo;s favour for terse event binding, and the kind
-of difference these three parallel apps exist to reveal. (The frise lightbox
-already navigates by buttons / arrows / swipe, so S-scroll was only a bonus; it&rsquo;s
-deferred — see TODO.)</p>
 <h2 id="0b1d2e3f-0002-4000-8000-000000000002">How the pieces fit</h2>
 <p>Before the build narrative starts naming components one at a time, here is the
 whole map in one glance. Two pictures carry it: what talks to what, and which way
@@ -85,54 +74,14 @@ the data moves.</p>
 store, and every component reads it through the one <code>usePhotos</code> hook. Images take a
 separate path: thumbnails and full media load straight from the <code>/ipfs/</code> gateway,
 same origin.</p>
-<pre tabindex="0"><code class="language-plantuml" data-lang="plantuml">@startuml
-
-database &#34;Postgres\n(docs)&#34; as pg
-component &#34;PostGraphile\n/graphql&#34; as pgraphile
-component &#34;urql client\n(normalised cache)&#34; as urql
-cloud &#34;IPFS gateway\n/ipfs/...&#34; as ipfs
-
-package &#34;Preact app&#34; {
-  component &#34;App\nwindow + open state&#34; as app
-  component &#34;SearchBox&#34; as search
-  component &#34;WindowControls&#34; as controls
-  component &#34;PhotoCount&#34; as count
-  component &#34;TimelineStrip\n→ Pin&#34; as strip
-  component &#34;Ruler&#34; as ruler
-  component &#34;Lightbox&#34; as lightbox
-}
-
-pg --&gt; pgraphile
-pgraphile --&gt; urql : GraphQL
-urql --&gt; app : usePhotos / useQuery
-app --&gt; search
-app --&gt; controls
-app --&gt; count
-app --&gt; strip
-app --&gt; ruler
-app --&gt; lightbox
-strip ..&gt; ipfs : thumbnail src
-lightbox ..&gt; ipfs : full media
-@enduml
-</code></pre><figure><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiho6dbdv7apxynwbwerfn4ylbmpxtjt4njv36ivevxctijzx2izsu?frise-components.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreiho6dbdv7apxynwbwerfn4ylbmpxtjt4njv36ivevxctijzx2izsu?frise-components.png"></a>
+<figure><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiho6dbdv7apxynwbwerfn4ylbmpxtjt4njv36ivevxctijzx2izsu?frise-components.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreiho6dbdv7apxynwbwerfn4ylbmpxtjt4njv36ivevxctijzx2izsu?frise-components.png"></a>
 </figure>
 
 <p><strong>One loop, one direction.</strong> The <code>App</code> shell holds the window; it flows <strong>down</strong> to the
 children as read-only props, and their events flow <strong>up</strong> through <code>onChange</code> / <code>onPan</code> /
 <code>onZoom</code> / <code>onOpen</code>. <code>App</code> folds each event into the window, mirrors it into the URL,
 and the URL seeds the initial state on load. No component drives itself.</p>
-<pre tabindex="0"><code class="language-plantuml" data-lang="plantuml">@startuml
-
-component &#34;App\nwin state&#34; as app
-component &#34;controls / strip / ruler / lightbox&#34; as kids
-component &#34;URL\n?from=&amp;to=&#34; as url
-
-app --&gt; kids : win (props, read-only)
-kids --&gt; app : onChange / onPan / onZoom / onOpen
-app --&gt; url : replaceState on every change
-url --&gt; app : initial state on load
-@enduml
-</code></pre><figure><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreidulvoyscpad2xsnn25efqdmqawdjifwucseuoux4d7pxq7sefm4q?frise-dataflow.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreidulvoyscpad2xsnn25efqdmqawdjifwucseuoux4d7pxq7sefm4q?frise-dataflow.png"></a>
+<figure><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreidulvoyscpad2xsnn25efqdmqawdjifwucseuoux4d7pxq7sefm4q?frise-dataflow.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreidulvoyscpad2xsnn25efqdmqawdjifwucseuoux4d7pxq7sefm4q?frise-dataflow.png"></a>
 </figure>
 
 <h2 id="0b1d2e3f-0003-4000-8000-000000000001">Boot into a titled shell</h2>
@@ -2901,7 +2850,22 @@ pass straight through.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">.</span><span style="color:#1f2328">mode</span> <span style="color:#0550ae">!==</span> <span style="color:#0a3069">&#39;navigate&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">return</span><span style="color:#1f2328">;</span>            <span style="color:#57606a">// data fetches: untouched
 </span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>    <span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">respondWith</span><span style="color:#1f2328">(</span><span style="color:#1f2328">fetch</span><span style="color:#1f2328">(</span><span style="color:#1f2328">e</span><span style="color:#1f2328">.</span><span style="color:#1f2328">request</span><span style="color:#1f2328">).</span><span style="color:#cf222e">catch</span><span style="color:#1f2328">(()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">caches</span><span style="color:#1f2328">.</span><span style="color:#1f2328">match</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;index.html&#39;</span><span style="color:#1f2328">)));</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">});</span>
-</span></span></code></pre></div><h2 id="0b1d2e3f-00a0-4000-8000-000000000001">Schema — labels + FTS on the docs DB</h2>
+</span></span></code></pre></div><h2 id="0b1d2e3f-001f-4000-8000-000000000001">What the Preact-and-Solid contrast revealed</h2>
+<p>Building the frise on Preact while <a class="internal-link" href="/braindump/posts/a_photos_videos_organiser_with_preact/">memories</a>
+reaches the same archive through Solid makes each a control for the other, and the
+sharpest difference surfaced around binding a <code>wheel</code> listener. It is a pointed one,
+because the strip binds <code>onWheel</code> without trouble — that is how Ctrl+wheel zooms and
+Shift+wheel pans. On the lightbox overlay, though, the same <code>onWheel</code> prop never
+fired, while <code>onClick</code> and <code>onPointerDown</code> bound fine on that very element; an
+effect-based <code>addEventListener</code> was racy under test. The exact same Shift+wheel
+navigation had been a first-try, one-line success in
+<a class="internal-link" href="/braindump/posts/a_photos_videos_organiser_with_preact/">memories</a>, where Solid&rsquo;s <code>solid-js/html</code>
+binds <code>onWheel</code> synchronously at element creation. Not a verdict — I never
+root-caused whether it was <code>htm</code>&rsquo;s prop handling, Preact&rsquo;s event system, or the
+test&rsquo;s async wheel — but a real point in Solid&rsquo;s favour for terse event binding. The
+lightbox already steps by buttons, arrows and swipe, so Shift+wheel there was only a
+bonus, and it stays deferred.</p>
+<h2 id="0b1d2e3f-00a0-4000-8000-000000000001">Schema — labels + FTS on the docs DB</h2>
 <p>Metadata is moving off the key-value <code>tag=/=tagmap</code> model onto a free-text
 <code>photovideo.labels</code> field with full-text search and completion. This DDL is
 <strong>additive</strong>: <code>tag</code>, <code>tagmap</code>, <code>ipfsdocs_tag_view</code> and <code>ipfsdocs_photovideo_view</code>
@@ -3740,7 +3704,7 @@ only reads. Run once.</p>
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 26 Jun 2026</time></aside>
+	  <aside class="date"><time>Last updated: 29 Jun 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 May 2026</time></aside>
     </div>
   </div>
