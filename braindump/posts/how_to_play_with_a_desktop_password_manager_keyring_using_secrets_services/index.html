@@ -57,6 +57,7 @@
 <p>This block aggregates all the code and tangles into the script.</p>
 <h3 id="e7a1ba1e-bbd1-4e95-86af-82977d9361a3">Dependencies</h3>
 <p>We use <code>nix-shell</code> in the shebang to pull in all dependencies automatically: <code>dbus-python</code> for the D-Bus bindings, <code>pygobject3</code> for the GLib main loop, and <code>cryptography</code> for AES and HKDF. This means the script is entirely self-contained — no virtualenv, no <code>pip install</code>, just <code>chmod +x</code> and run.</p>
+<div class="konix-block-name-marker" data-name="imports"></div>
 <p><a id="code-snippet--imports"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">hashlib</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
@@ -77,6 +78,7 @@
 </span></span></code></pre></div><h3 id="eff7ef70-3b43-426c-bbb2-cd902bb736ce">Constants</h3>
 <p>The Secret Service spec defines a set of well-known D-Bus names, object paths and interfaces. Our service claims <code>org.freedesktop.secrets</code> on the session bus and exposes a single collection at <code>/org/freedesktop/secrets/collection/default</code>.</p>
 <p>The DH prime is the RFC 2409 group 2 (1024-bit MODP), which is what the <code>dh-ietf1024-sha256-aes128-cbc-pkcs7</code> algorithm uses.</p>
+<div class="konix-block-name-marker" data-name="constants"></div>
 <p><a id="code-snippet--constants"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a"># DH parameters for dh-ietf1024-sha256-aes128-cbc-pkcs7 (RFC 2409 group 2)</span>
 </span></span><span style="display:flex;"><span>DH_PRIME <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>
@@ -111,6 +113,7 @@
 </span></span></code></pre></div><h3 id="e3889a66-d3eb-412a-bd28-34184ad8e343">JSON-backed storage</h3>
 <p><code>SecretDB</code> is a simple persistence layer. Each item has a label, a dict of attributes (used for searching) and the secret text. Items are identified by random 12-character hex IDs.</p>
 <p>Real password managers encrypt the storage at rest. We deliberately skip that: the whole point of a mock is to make the stored state trivially inspectable. You can <code>cat</code> the JSON file to verify what a client actually wrote, <code>jq</code> it in a test assertion, or simply <code>rm</code> it to start fresh. None of this is practical with an encrypted keyring.</p>
+<div class="konix-block-name-marker" data-name="secret-db"></div>
 <p><a id="code-snippet--secret-db"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">SecretDB</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Simple JSON-backed secret store.&#34;&#34;&#34;</span>
@@ -169,6 +172,7 @@
 </span></span></code></pre></div><h3 id="e483c77b-1e72-48ed-a80b-19d240d3dcdd">DH encryption helpers</h3>
 <p>One might wonder: if we only want to store and retrieve secrets, why bother with encryption at all? The answer is that the DH encryption protects secrets <strong>in transit over D-Bus</strong>, not at rest. D-Bus is an IPC bus — other processes running under the same user can potentially snoop on messages. The spec therefore offers <code>dh-ietf1024-sha256-aes128-cbc-pkcs7</code> as a transport encryption layer: after a Diffie-Hellman key exchange, both sides derive an AES-128 key and use it with CBC mode and PKCS7 padding.</p>
 <p>More importantly, in practice clients like <code>secret-tool</code> and <code>libsecret</code> <strong>always</strong> request a DH session and never fall back to <code>plain</code>. So even though our mock doesn&rsquo;t care about security, we must implement the full DH handshake or those standard tools will simply refuse to talk to us.</p>
+<div class="konix-block-name-marker" data-name="dh-helpers"></div>
 <p><a id="code-snippet--dh-helpers"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">dh_decrypt</span><span style="color:#1f2328">(</span>aes_key<span style="color:#1f2328">,</span> params_iv<span style="color:#1f2328">,</span> ciphertext<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Decrypt a secret received from a client using the negotiated AES key.&#34;&#34;&#34;</span>
@@ -191,22 +195,34 @@
 </span></span></code></pre></div><h3 id="0c975656-86a3-436b-8ae7-0ce699fdd70b">Sessions</h3>
 <p>A session is the first thing a client establishes before it can store or retrieve any secret. The client calls <code>OpenSession</code> on the service and negotiates either <code>plain</code> (no encryption, secrets sent as-is) or <code>dh-ietf1024-sha256-aes128-cbc-pkcs7</code> (encrypted transport).</p>
 <p>Since <code>secret-tool</code> and <code>libsecret</code> always request DH, we must support the full handshake. <code>MockSession</code> wraps the negotiated AES key (or <code>None</code> for plain) and provides encrypt/decrypt helpers that every subsequent <code>GetSecret</code> / <code>SetSecret</code> / <code>CreateItem</code> call uses transparently.</p>
+<div class="konix-block-name-marker" data-name="mock-session"></div>
 <p><a id="code-snippet--mock-session"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MockSession</span><span style="color:#1f2328">(</span>dbus<span style="color:#0550ae">.</span>service<span style="color:#0550ae">.</span>Object<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> bus<span style="color:#1f2328">,</span> path<span style="color:#1f2328">,</span> aes_key<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> bus<span style="color:#1f2328">,</span> path<span style="color:#1f2328">,</span> aes_keys<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_path <span style="color:#0550ae">=</span> path
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_key <span style="color:#0550ae">=</span> aes_key  <span style="color:#57606a"># None means plain, bytes means DH</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#57606a"># None =&gt; plain session. Otherwise a list of candidate DH keys (see</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#57606a"># OpenSession): clients disagree on the shared-secret encoding, so we</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#57606a"># keep both and pin whichever first decrypts.</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_keys <span style="color:#0550ae">=</span> aes_keys
 </span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">()</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span>bus<span style="color:#1f2328">,</span> path<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">decrypt_secret</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> params_iv<span style="color:#1f2328">,</span> ciphertext<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_key <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_keys <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#6639ba">bytes</span><span style="color:#1f2328">(</span>ciphertext<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> dh_decrypt<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_key<span style="color:#1f2328">,</span> params_iv<span style="color:#1f2328">,</span> ciphertext<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        last_err <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> key <span style="color:#0550ae">in</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_keys<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                plaintext <span style="color:#0550ae">=</span> dh_decrypt<span style="color:#1f2328">(</span>key<span style="color:#1f2328">,</span> params_iv<span style="color:#1f2328">,</span> ciphertext<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_keys <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>key<span style="color:#1f2328">]</span>  <span style="color:#57606a"># pin the encoding that worked</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> plaintext
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> ValueError <span style="color:#cf222e">as</span> err<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                last_err <span style="color:#0550ae">=</span> err
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> last_err
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">encrypt_secret</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> plaintext<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_key <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_keys <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> dbus<span style="color:#0550ae">.</span>ByteArray<span style="color:#1f2328">(</span><span style="color:#0a3069">b</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">),</span> dbus<span style="color:#0550ae">.</span>ByteArray<span style="color:#1f2328">(</span>plaintext<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        iv<span style="color:#1f2328">,</span> ciphertext <span style="color:#0550ae">=</span> dh_encrypt<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_key<span style="color:#1f2328">,</span> plaintext<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        iv<span style="color:#1f2328">,</span> ciphertext <span style="color:#0550ae">=</span> dh_encrypt<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>aes_keys<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">],</span> plaintext<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> dbus<span style="color:#0550ae">.</span>ByteArray<span style="color:#1f2328">(</span>iv<span style="color:#1f2328">),</span> dbus<span style="color:#0550ae">.</span>ByteArray<span style="color:#1f2328">(</span>ciphertext<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">@dbus.service.method</span><span style="color:#1f2328">(</span>SESSION_IFACE<span style="color:#1f2328">,</span> in_signature<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">,</span> out_signature<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span>
@@ -214,6 +230,7 @@
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>remove_from_connection<span style="color:#1f2328">()</span>
 </span></span></code></pre></div><h3 id="c280cfcd-2a62-4054-9b4e-e9790626e835">Prompts</h3>
 <p>The spec includes a <code>Prompt</code> interface for operations that require user confirmation (like unlocking a collection or authorizing a delete). A real password manager would pop up a dialog here — exactly the kind of interactive friction we want to avoid in a test harness. Since our mock never locks anything and requires no user interaction, our prompts always complete immediately with success — but they print a notification to stdout so you can see exactly when and where a real password manager would have prompted the user. This is one of the main ergonomic wins over gnome-keyring: no modal dialogs blocking your scripts, while still giving visibility into the interaction flow.</p>
+<div class="konix-block-name-marker" data-name="mock-prompt"></div>
 <p><a id="code-snippet--mock-prompt"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MockPrompt</span><span style="color:#1f2328">(</span>dbus<span style="color:#0550ae">.</span>service<span style="color:#0550ae">.</span>Object<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;No-op prompt — always completes immediately.&#34;&#34;&#34;</span>
@@ -238,6 +255,7 @@
 <p>Each secret is represented as a D-Bus object implementing <code>org.freedesktop.Secret.Item</code>. This is the core of the spec: every stored credential (a password, an API token, an SSH passphrase…) is an item with a label, a set of key/value attributes (used for searching) and the secret value itself, accessed via <code>GetSecret</code> / <code>SetSecret</code>.</p>
 <p>The <code>Properties</code> interface (<code>Get</code>, <code>Set</code>, <code>GetAll</code>) is how clients like Seahorse discover item metadata without fetching the secret itself.</p>
 <p>When an item is deleted, we mark it rather than unregistering it from D-Bus immediately. This prevents errors when a client (like Seahorse) retries a delete on a cached reference.</p>
+<div class="konix-block-name-marker" data-name="mock-item"></div>
 <p><a id="code-snippet--mock-item"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MockItem</span><span style="color:#1f2328">(</span>dbus<span style="color:#0550ae">.</span>service<span style="color:#0550ae">.</span>Object<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> bus<span style="color:#1f2328">,</span> path<span style="color:#1f2328">,</span> db<span style="color:#1f2328">,</span> item_id<span style="color:#1f2328">,</span> sessions<span style="color:#1f2328">,</span> collection<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
@@ -327,6 +345,7 @@
 <p>A collection groups items together — think of it as a keyring. Real password managers may have multiple keyrings (e.g. &ldquo;Login&rdquo;, &ldquo;Personal&rdquo;, &ldquo;Work&rdquo;), each potentially locked independently. Our mock keeps things simple with a single &ldquo;Default&rdquo; collection that is always unlocked. It handles <code>CreateItem</code> (decrypting the secret from the client session, storing it, and registering a new D-Bus item object) and <code>SearchItems</code> (matching by attributes).</p>
 <h4 id="ced29bc4-ab1b-43b6-bb55-afab1d5083b5">Signals</h4>
 <p>Seahorse and other GUI clients need to know when items change. The spec defines <code>ItemCreated</code>, <code>ItemDeleted</code>, and <code>ItemChanged</code> signals on the Collection interface. But that&rsquo;s not enough: Seahorse relies on the standard <code>org.freedesktop.DBus.Properties.PropertiesChanged</code> signal to update its item list. Without it, newly created items don&rsquo;t appear and deleted ones linger.</p>
+<div class="konix-block-name-marker" data-name="mock-collection"></div>
 <p><a id="code-snippet--mock-collection"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MockCollection</span><span style="color:#1f2328">(</span>dbus<span style="color:#0550ae">.</span>service<span style="color:#0550ae">.</span>Object<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A collection that owns items. Items are always registered under this path.&#34;&#34;&#34;</span>
@@ -442,6 +461,7 @@
 </span></span></code></pre></div><h3 id="d58aa0a6-b83a-4186-9373-3bd16985a2e7">Alias delegation</h3>
 <p>The spec defines aliases like <code>default</code> that point to a collection. Clients may access items via <code>/org/freedesktop/secrets/aliases/default</code> instead of the real path <code>/org/freedesktop/secrets/collection/default</code>.</p>
 <p>We need a thin D-Bus wrapper at the alias path that delegates every call to the real collection. Without this, items created through the alias path would be registered under a different D-Bus path than where <code>SearchItems</code> looks for them.</p>
+<div class="konix-block-name-marker" data-name="alias-collection"></div>
 <p><a id="code-snippet--alias-collection"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">AliasCollection</span><span style="color:#1f2328">(</span>dbus<span style="color:#0550ae">.</span>service<span style="color:#0550ae">.</span>Object<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Thin wrapper at the alias path that delegates to the real collection.&#34;&#34;&#34;</span>
@@ -484,12 +504,12 @@
 </ul>
 <h4 id="0baf1f18-3fac-4c80-86ad-48a0388f9af7">DH key exchange details</h4>
 <p>The client sends its public key as big-endian bytes. We generate our own keypair, compute the shared secret, and derive a 16-byte AES key using HKDF-SHA256 with no salt and no info.</p>
-<p>Two subtleties discovered by testing against <code>libsecret</code>:</p>
+<p>Two subtleties, both surfacing as &ldquo;invalid padding bytes&rdquo; on decrypt:</p>
 <ul>
-<li>The shared secret must be encoded as unsigned big-endian with <strong>no leading zero padding</strong> (not padded to 128 bytes).</li>
-<li>Key derivation must use <strong>HKDF</strong> (not plain SHA-256), otherwise decryption fails with &ldquo;invalid padding bytes&rdquo;.</li>
+<li>Clients disagree on the shared-secret encoding fed to HKDF: <code>libsecret</code> uses minimal unsigned big-endian (no leading zero padding), while <code>secret-service-rs</code> (used by <code>@napi-rs/keyring</code>) zero-pads to the modulus length (128 bytes). They differ only when the shared secret has a leading zero byte (~1/256 of sessions). We derive a key for <strong>both</strong> encodings and let the session try each on decrypt, pinning the one that works, so both client families interoperate.</li>
+<li>Key derivation must use <strong>HKDF</strong> (not plain SHA-256).</li>
 </ul>
-<!--listend-->
+<div class="konix-block-name-marker" data-name="mock-secret-service"></div>
 <p><a id="code-snippet--mock-secret-service"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MockSecretService</span><span style="color:#1f2328">(</span>dbus<span style="color:#0550ae">.</span>service<span style="color:#0550ae">.</span>Object<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> bus<span style="color:#1f2328">,</span> db<span style="color:#1f2328">):</span>
@@ -510,7 +530,7 @@
 </span></span><span style="display:flex;"><span>        session_path <span style="color:#0550ae">=</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>SS_PATH<span style="color:#0a3069">}</span><span style="color:#0a3069">/session/s</span><span style="color:#0a3069">{</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_session_counter<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> algorithm <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;plain&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            session <span style="color:#0550ae">=</span> MockSession<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_bus<span style="color:#1f2328">,</span> session_path<span style="color:#1f2328">,</span> aes_key<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            session <span style="color:#0550ae">=</span> MockSession<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_bus<span style="color:#1f2328">,</span> session_path<span style="color:#1f2328">,</span> aes_keys<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_sessions<span style="color:#1f2328">[</span>session_path<span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> session
 </span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  Session opened: </span><span style="color:#0a3069">{</span>session_path<span style="color:#0a3069">}</span><span style="color:#0a3069"> (plain)&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> dbus<span style="color:#0550ae">.</span>String<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">,</span> variant_level<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">),</span> dbus<span style="color:#0550ae">.</span>ObjectPath<span style="color:#1f2328">(</span>session_path<span style="color:#1f2328">)</span>
@@ -524,17 +544,23 @@
 </span></span><span style="display:flex;"><span>            server_privkey <span style="color:#0550ae">=</span> secrets<span style="color:#0550ae">.</span>randbelow<span style="color:#1f2328">(</span>DH_PRIME <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">+</span> <span style="color:#0550ae">1</span>
 </span></span><span style="display:flex;"><span>            server_pubkey <span style="color:#0550ae">=</span> <span style="color:#6639ba">pow</span><span style="color:#1f2328">(</span>DH_GENERATOR<span style="color:#1f2328">,</span> server_privkey<span style="color:#1f2328">,</span> DH_PRIME<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># Compute shared secret</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># Shared secret. Clients disagree on its HKDF encoding (see the prose</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># above): libsecret uses minimal big-endian, secret-service-rs pads to</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># 128 B. Derive both and let the session try each on decrypt.</span>
 </span></span><span style="display:flex;"><span>            shared <span style="color:#0550ae">=</span> <span style="color:#6639ba">pow</span><span style="color:#1f2328">(</span>client_pubkey<span style="color:#1f2328">,</span> server_privkey<span style="color:#1f2328">,</span> DH_PRIME<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># libsecret uses unsigned big-endian with no leading zero padding</span>
-</span></span><span style="display:flex;"><span>            shared_bytes <span style="color:#0550ae">=</span> shared<span style="color:#0550ae">.</span>to_bytes<span style="color:#1f2328">((</span>shared<span style="color:#0550ae">.</span>bit_length<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> <span style="color:#0550ae">7</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">//</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;big&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># Derive AES key via HKDF-SHA256 (no salt, no info), 16 bytes output</span>
-</span></span><span style="display:flex;"><span>            aes_key <span style="color:#0550ae">=</span> HKDF<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>                algorithm<span style="color:#0550ae">=</span>SHA256<span style="color:#1f2328">(),</span> length<span style="color:#0550ae">=</span><span style="color:#0550ae">16</span><span style="color:#1f2328">,</span> salt<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> info<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>derive<span style="color:#1f2328">(</span>shared_bytes<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">def</span> <span style="color:#6639ba">derive_key</span><span style="color:#1f2328">(</span>shared_bytes<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> HKDF<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>                    algorithm<span style="color:#0550ae">=</span>SHA256<span style="color:#1f2328">(),</span> length<span style="color:#0550ae">=</span><span style="color:#0550ae">16</span><span style="color:#1f2328">,</span> salt<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> info<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>derive<span style="color:#1f2328">(</span>shared_bytes<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>            session <span style="color:#0550ae">=</span> MockSession<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_bus<span style="color:#1f2328">,</span> session_path<span style="color:#1f2328">,</span> aes_key<span style="color:#0550ae">=</span>aes_key<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            minimal <span style="color:#0550ae">=</span> shared<span style="color:#0550ae">.</span>to_bytes<span style="color:#1f2328">((</span>shared<span style="color:#0550ae">.</span>bit_length<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> <span style="color:#0550ae">7</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">//</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;big&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            padded <span style="color:#0550ae">=</span> shared<span style="color:#0550ae">.</span>to_bytes<span style="color:#1f2328">(</span><span style="color:#0550ae">128</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;big&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            aes_keys <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>derive_key<span style="color:#1f2328">(</span>padded<span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> minimal <span style="color:#0550ae">!=</span> padded<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                aes_keys<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>derive_key<span style="color:#1f2328">(</span>minimal<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            session <span style="color:#0550ae">=</span> MockSession<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_bus<span style="color:#1f2328">,</span> session_path<span style="color:#1f2328">,</span> aes_keys<span style="color:#0550ae">=</span>aes_keys<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_sessions<span style="color:#1f2328">[</span>session_path<span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> session
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>            <span style="color:#57606a"># Return our public key as big-endian bytes</span>
@@ -620,6 +646,7 @@
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">pass</span>
 </span></span></code></pre></div><h3 id="6a120900-12d9-405e-bd5b-7787e2be85a3">Main entry point</h3>
 <p>We initialize the GLib main loop (required by <code>dbus-python</code>), claim the bus name <code>org.freedesktop.secrets</code>, and run until interrupted. The <code>do_not_queue=True</code> flag means we fail immediately if another service already owns the name — you&rsquo;ll get a clear error instead of silently waiting behind gnome-keyring.</p>
+<div class="konix-block-name-marker" data-name="main"></div>
 <p><a id="code-snippet--main"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">main</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    db_path <span style="color:#0550ae">=</span> DEFAULT_DB
@@ -665,8 +692,71 @@
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>secret-tool search service mock
 </span></span></code></pre></div><p>You can also use Seahorse (GNOME Passwords &amp; Keys) to browse, create and delete secrets in the &ldquo;Default&rdquo; keyring.</p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/1e6ec1f1-a52c-4191-9552-f520dc201da5?title=how_to_play_with_a_desktop_password_manager_keyring_using_secrets_services">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
       </div>
-	  <aside class="date"><time>Last updated: 21 Apr 2026</time></aside>
+	  <aside class="date"><time>Last updated: 03 Jul 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 10 Mar 2026</time></aside>
     </div>
   </div>
