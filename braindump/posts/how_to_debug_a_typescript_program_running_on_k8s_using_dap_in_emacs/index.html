@@ -359,28 +359,77 @@ workspace, deps may be hoisted to a different root locally than they
 are in the container, so <code>node_modules/dep/foo.js</code> won&rsquo;t resolve. With
 <code>sourceMapPathOverrides</code> alone (over-the-wire script fetch) this
 category of bug disappears.</p>
-<h2 id="269bad14-2e70-4fb0-b823-7c3d448bd1da">historical: copying source + source map locally — obsolete</h2>
-<p>Old approach: copy the remote <code>/app</code> tree locally so the adapter could
-read <code>.js</code> and <code>.js.map</code> from disk:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl <span style="color:#6639ba">exec</span> myapp -- tar -C /app -cf - . <span style="color:#1f2328">|</span> tar -C . -xf -
-</span></span></code></pre></div><p>Don&rsquo;t do this anymore. With <code>sourceMapPathOverrides</code> the adapter pulls
-script content from V8 via <code>Debugger.getScriptSource</code>, always in sync
-with the running process. The local-copy approach is also fragile around
-symlinks (<code>kubectl cp</code> alone fails on the symlinks node_modules is full
-of) and goes stale immediately after any deploy.</p>
-<h2 id="19f35469-8cc5-47be-820e-904f98d4f742">historical: dap-mode fork and <code>pwa-node</code> naming — obsolete</h2>
-<p>In 2024, a <a target="_blank" href="https://github.com/Konubinix/dap-mode">custom fork</a> of dap-mode was needed for vscode-js-debug
-support. As of 2026 mainline dap-mode handles <code>pwa-node</code> cleanly; the
-fork is no longer needed. <code>:type &quot;pwa-node&quot;</code> remains correct (mainline
-still reserves <code>node</code> for the legacy adapter).</p>
 <!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/ms_vscode_js_debug/">ms-vscode.js-debug</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/734c3172-2901-4add-9314-78c8c9569f6b?title=how_to_debug_a_typescript_program_running_on_k8s_using_dap_in_emacs">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
       </div>
-	  <aside class="date"><time>Last updated: 05 May 2026</time></aside>
+	  <aside class="date"><time>Last updated: 07 Jul 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Jan 2024</time></aside>
     </div>
   </div>
