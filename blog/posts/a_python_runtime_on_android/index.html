@@ -428,12 +428,15 @@ generate:
         -e &#34;s/#android.api =.+/android.api = 33/&#34; \
         -e &#34;s|^(#services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY)$|services = ${name}:./service.py:foreground:sticky|&#34; \
         -e &#39;s|#android.add_src =.*|android.add_src = java_src|&#39; \
+        -e &#34;/^\[app\]/a p4a.branch = v2024.01.21&#34; \
+        -e &#34;/^\[app\]/a p4a.local_recipes = ./p4a_recipes&#34; \
         buildozer.spec
 
      # -e &#34;s/#android.gradle_dependencies =.*/android.gradle_dependencies = androidx.core:core:1.12.0, androidx.work:work-runtime:2.9.0, androidx.lifecycle:lifecycle-runtime:2.6.2, androidx.security:security-crypto:1.1.0-alpha06, androidx.camera:camera-core:1.3.0, androidx.camera:camera-camera2:1.3.0, androidx.camera:camera-lifecycle:1.3.0, androidx.camera:camera-view:1.3.0, androidx.camera:camera-extensions:1.3.0/&#34; \
      # -e &#34;s|#android.add_jars =.+|android.add_jars = /extrajars/d2xx.jar|&#34; \
     # -e &#34;s/^(fullscreen = .+)$/fullscreen = 1/&#34; \ to get the app in fullscreen mode
-    # RUN echo &#34;p4a.branch = v2024.01.21&#34; &gt;&gt; buildozer.spec
+    # p4a pinned to the 2024 release (v2024.01.21, Python 3.11) via the sed above;
+    # the current release builds Python 3.14, which the toolchain can&#39;t handle yet.
 
     SAVE ARTIFACT buildozer.spec AS LOCAL buildozer.spec
 
@@ -443,7 +446,7 @@ apk:
     ARG extra_deps=&#34;ccache&#34;
     ARG lzma_deps=&#34;autopoint&#34;
     RUN apt update &amp;&amp; apt install -y ${lzma_deps} ${extra_deps} git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev wget
-    RUN pip3 install --upgrade buildozer Cython==0.29.33 # virtualenv  # the --user should be removed if you do this in a venv
+    RUN pip3 install --upgrade buildozer Cython==0.29.33
     WORKDIR /app
     CACHE --id root-buildozer /root/.buildozer
     CACHE /app/.buildozer
@@ -460,21 +463,57 @@ apk:
     IF test &#34;${cleanroot}&#34; = &#34;yes&#34;
        RUN --no-cache rm -rf /root/.buildozer/* /root/.gradle/*
     END
+    # force re-extraction of specific recipes when p4a&#39;s cache serves a stale/wrong-version source (space-separated names)
+    ARG cleanrecipes=&#34;&#34;
+    IF test -n &#34;${cleanrecipes}&#34;
+       RUN --no-cache for r in ${cleanrecipes}; do rm -rf /app/.buildozer/android/platform/build-*/build/other_builds/$r*; done
+    END
     ARG gen=yes
     IF test &#34;${gen}&#34; = &#34;yes&#34;
         COPY --dir +generate/buildozer.spec /app/
     ELSE
         COPY --dir ./buildozer.spec /app/
     END
-    COPY --dir java_src service.py main.py intent-filter.xml /app
+    COPY --dir java_src service.py main.py intent-filter.xml p4a_recipes /app
     RUN mkdir -p /extrajars
     RUN wget http://home/ipfs/bafkreihkwiy2gr4s62laco6ewtsvakoepnybl2kt3iguyqeowvbm62ur7y --output-document /extrajars/d2xx.jar
     # give some memory to java to avoid OOM
     RUN mkdir -p /root/.gradle &amp;&amp; printf &#39;org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m -XX:MaxDirectMemorySize=2g\norg.gradle.daemon=false\n&#39; &gt; /root/.gradle/gradle.properties
     # skip the download lines to avoid killing my pc with all the output
     RUN yes y | buildozer android debug | grep -vi download &amp;&amp; mv bin/*apk app.apk
+    # lockfile to reproduce a build: exact p4a commit (pins every recipe), host tools, and every python package installed into the apk
+    RUN echo &#34;python-for-android $(git -C /app/.buildozer/android/platform/python-for-android rev-parse HEAD)&#34; &gt; pins.txt \
+        &amp;&amp; pip3 freeze | grep -iE &#39;^(buildozer|cython)==&#39; &gt;&gt; pins.txt \
+        &amp;&amp; find /app/.buildozer/android/platform/build-*/build/python-installs \( -name &#39;*.dist-info&#39; -o -name &#39;*.egg-info&#39; \) -printf &#39;%f\n&#39; | sed -E &#39;s/(-py[0-9.]+)?\.(dist|egg)-info$//&#39; | sort -u &gt;&gt; pins.txt
+    SAVE ARTIFACT pins.txt AS LOCAL pins.txt
     SAVE ARTIFACT app.apk AS LOCAL app.apk
-</code></pre><p>Now, let&rsquo;s build it</p>
+</code></pre><p>Local recipe override (wired in via <code>p4a.local_recipes</code> above): matplotlib 3.5.2&rsquo;s
+<code>setup_requires</code> asks for <code>setuptools_scm&gt;=4</code> uncapped, so it fetches 10.x, which
+needs a newer setuptools than the 2024 hostpython ships. Cap it to <code>&lt;8</code>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">os.path</span> <span style="color:#cf222e">import</span> dirname<span style="color:#1f2328">,</span> join
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">pythonforandroid.recipes.matplotlib</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">_matplotlib_module</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">pythonforandroid.recipes.matplotlib</span> <span style="color:#cf222e">import</span> MatplotlibRecipe <span style="color:#cf222e">as</span> _MatplotlibRecipe
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MatplotlibRecipe</span><span style="color:#1f2328">(</span>_MatplotlibRecipe<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># data templates (setup.cfg.template, libfreetype.pc.template) stay in the built-in recipe dir</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">get_recipe_dir</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> dirname<span style="color:#1f2328">(</span>_matplotlib_module<span style="color:#0550ae">.</span><span style="color:#953800">__file__</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">prebuild_arch</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> arch<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>prebuild_arch<span style="color:#1f2328">(</span>arch<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        setup_py <span style="color:#0550ae">=</span> join<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>get_build_dir<span style="color:#1f2328">(</span>arch<span style="color:#0550ae">.</span>arch<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#39;setup.py&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>setup_py<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            content <span style="color:#0550ae">=</span> f<span style="color:#0550ae">.</span>read<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#39;setuptools_scm&gt;=4,&lt;8&#39;</span> <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> content<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            content <span style="color:#0550ae">=</span> content<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;setuptools_scm&gt;=4&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;setuptools_scm&gt;=4,&lt;8&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>setup_py<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;w&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            f<span style="color:#0550ae">.</span>write<span style="color:#1f2328">(</span>content<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>recipe <span style="color:#0550ae">=</span> MatplotlibRecipe<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><p>Now, let&rsquo;s build it</p>
 <p>Takes 35 minutes with no cache and 1 minute when the cache is warm and I only
 edited a python file. 25 minutes with a warn /root. It generates a 40M apk.</p>
 <p>And with all the dependencies:
@@ -707,9 +746,7 @@ keep it for later.</p>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>earthly --config /dev/null +generate --extra<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span> <span style="color:#0550ae">&amp;&amp;</span> ipfa buildozer.spec
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[[https://ipfs.konubinix.eu/p/bafkreiebn3xh4asnlfxe7ztxwj2wsscgrkihdhzbyimta4ozyij54thcwu?filename=buildozer.spec][buildozer.spec]]
 </span></span></code></pre></div><h4 id="633efb88-2314-418f-9593-844e916c0031">with extras</h4>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>earthly --config /dev/null +apk <span style="color:#0550ae">&amp;&amp;</span> ipfa app.apk <span style="color:#0550ae">&amp;&amp;</span> du -sh app.apk
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[[https://ipfs.konubinix.eu/p/bafybeigu5lnl5b62zi7mzkqfkl6c5hfvrxqsie77ehxoqzlflf5pjlltni?filename=app.apk][app.apk]]
-</span></span><span style="display:flex;"><span>148M	app.apk
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>earthly --config /dev/null +apk <span style="color:#0550ae">&amp;&amp;</span> ipfa app.apk <span style="color:#0550ae">&amp;&amp;</span> du -sh app.apk <span style="color:#0550ae">&amp;&amp;</span> ipfa pins.txt
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>earthly --config /dev/null +generate <span style="color:#0550ae">&amp;&amp;</span> ipfa buildozer.spec
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[[https://ipfs.konubinix.eu/p/bafkreic4gqlp65vdwlun4hlbzn4cdx6na5cyf2ef7n4cxara3gvwyds7za?filename=buildozer.spec][buildozer.spec]]
 </span></span></code></pre></div><p>I tried on my <a target="_blank" href="/braindump/posts/zte/?title=zte_blade_s6#zte-blade-s6">zte blade s6</a> running android 5, I could communicate with the <a class="internal-link" href="#1f4fc0a4-ceff-4973-9e09-a2bd5d9b3670">arduino board</a> easily.</p>
@@ -1059,7 +1096,7 @@ whatever the app framework provides to have a <a target="_blank" href="/braindum
 </ol>
 </div>
   </article>
-  <aside class="date"><time>Last updated: 06 Jul 2026</time></aside>
+  <aside class="date"><time>Last updated: 07 Jul 2026</time></aside>
   <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 25 Oct 2024</time></aside>
 </main>
 <hr/>
