@@ -53,45 +53,139 @@
 cap as a sphere and a cylinder that I cut in half.</p>
 <p>So first, the sphere with cap part.</p>
 <div class="konix-block-name-marker" data-name="sphere"></div>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreiamnlbopesl3dhqrbtgymekvf3deckii7u5wceuh7kzhofztxu5l4?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a id="code-snippet--sphere"></a></p>
+<pre tabindex="0"><code class="language-cadquery" data-lang="cadquery">
+
+sphere_workplane = cq.Workplane(&#34;XY&#34;, origin=(0, 0, -cap_height))
+
+sphere_cap = (
+    sphere_workplane.sphere(sphere_radius)
+    # with offset cylinder to make the cap
+    .composeunion(
+        cq.Workplane(&#34;XY&#34;, origin=(cap_length,0,0)).cylinder(cap_height*2, sphere_radius)
+    )
+)
+</code></pre><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreiamnlbopesl3dhqrbtgymekvf3deckii7u5wceuh7kzhofztxu5l4?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiamnlbopesl3dhqrbtgymekvf3deckii7u5wceuh7kzhofztxu5l4?outfile.glb"><i class="fas fa-download"></i></a></p>
 <p>Then, I cut it in half.</p>
 <div class="konix-block-name-marker" data-name="cut_sphere"></div>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreidkgy7aerjimbcieurnnq63434ccfhopixqu24qjjpa4desfibeqi?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a id="code-snippet--cut-sphere"></a></p>
+<pre tabindex="0"><code class="language-cadquery" data-lang="cadquery">
+
+cap_plain = (
+    sphere_cap
+    # keep only half of it
+    .composecut(
+        cq.Workplane(&#34;XY&#34;)
+        .box(20*sphere_radius, 20*sphere_radius, 20*sphere_radius, centered=(True, True, False))
+    )
+)
+</code></pre><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreidkgy7aerjimbcieurnnq63434ccfhopixqu24qjjpa4desfibeqi?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreidkgy7aerjimbcieurnnq63434ccfhopixqu24qjjpa4desfibeqi?outfile.glb"><i class="fas fa-download"></i></a></p>
 <p>Then, I can simply &ldquo;dig&rdquo; the cavity inside it, like this.</p>
 <div class="konix-block-name-marker" data-name="with_cavity"></div>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeihytk67gv7ns6ua66roo4jsptdofrhv2cwarrj733z2lqtdxgawii?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a id="code-snippet--with-cavity"></a></p>
+<pre tabindex="0"><code class="language-cadquery" data-lang="cadquery">
+
+cavity = sphere_workplane.sphere(sphere_radius-wall_width)
+
+with_cavity = cap_plain.composecut(cavity)
+</code></pre><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeihytk67gv7ns6ua66roo4jsptdofrhv2cwarrj733z2lqtdxgawii?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeihytk67gv7ns6ua66roo4jsptdofrhv2cwarrj733z2lqtdxgawii?outfile.glb"><i class="fas fa-download"></i></a></p>
 <h2 id="a059bba9-95e3-4d8e-983e-eceb7f29f38d">add the attach</h2>
 <p>Now, let&rsquo;s design that small cylindric part to stick with the flask.</p>
 <p>I start with a simple cylinder, at the correct position.</p>
 <div class="konix-block-name-marker" data-name="attach"></div>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreiczvqgzqig7ytmgutmv3oeqtnflirnrswlub2lk6rh3klahcfv4mi?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a id="code-snippet--attach"></a></p>
+<pre tabindex="0"><code class="language-cadquery" data-lang="cadquery">
+
+attach_worplane = cq.Workplane(&#34;XZ&#34;, origin=(- sphere_radius-cylinder_radius, 0, 0))
+
+attach = (
+    attach_worplane
+    .cylinder(cylinder_height, cylinder_radius)
+)
+
+with_attach = with_cavity.composeunion(attach)
+</code></pre><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreiczvqgzqig7ytmgutmv3oeqtnflirnrswlub2lk6rh3klahcfv4mi?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiczvqgzqig7ytmgutmv3oeqtnflirnrswlub2lk6rh3klahcfv4mi?outfile.glb"><i class="fas fa-download"></i></a></p>
 <p>Then, let&rsquo;s add a hole and an opening in it.</p>
 <div class="konix-block-name-marker" data-name="with_opening_and_hole"></div>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeidsf5fqkjdoj2oxxc4u4pxwyfpi65ujcx7ajlkgsqab6kmjs73dgu?outfile.stl" style="border:0;width:100%;height:500px;"></iframe>
+<p><a id="code-snippet--with-opening-and-hole"></a></p>
+<pre tabindex="0"><code class="language-cadquery" data-lang="cadquery">
+
+with_opening_and_hole = (
+    with_cavity
+    .union(attach)
+    # add a small bump to lock the cap open
+    .union(
+        cq.Workplane(&#34;XZ&#34;, origin=(- sphere_radius - cylinder_radius - bump_depth, 0, bump_z))
+        .cylinder(bump_height, bump_radius)
+    )
+    # dig a hole
+    .cut(
+        attach_worplane.circle(hole_radius).extrude(4*sphere_radius, both=True)
+    )
+    # open to fix the cap on the flask
+    .cut(
+        attach_worplane
+        .moveTo(-hole_radius / 2, 0)
+        .lineTo(hole_radius / 2, 0)
+        .lineTo(top_width / 2, 10)
+        .lineTo(-top_width / 2, 10)
+        .close()
+        .extrude(10, both=True)
+    )
+)
+</code></pre><iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeidsf5fqkjdoj2oxxc4u4pxwyfpi65ujcx7ajlkgsqab6kmjs73dgu?outfile.stl" style="border:0;width:100%;height:500px;"></iframe>
 <a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeidsf5fqkjdoj2oxxc4u4pxwyfpi65ujcx7ajlkgsqab6kmjs73dgu?outfile.stl"><i class="fas fa-download"></i></a>
 <h2 id="3fecc7ed-ee23-4c33-807d-4bb5b59343f7">put them together</h2>
 <p>Now, I need a small part that make both the attach and the cap stick together</p>
 <p>Because I don&rsquo;t want to compute exactly the size of that piece, it may go to
 far in the cap, so I just need to cut the cavity to get a clean room.</p>
 <div class="konix-block-name-marker" data-name="put_together"></div>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreifnvy4kbix7aaao7juzr4d2gny4jdelpyfeahovz4haep7p2aykzm?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a id="code-snippet--put-together"></a></p>
+<pre tabindex="0"><code class="language-cadquery" data-lang="cadquery">
+
+put_together = (
+    with_opening_and_hole
+    .composeunion(
+        attach_worplane
+        .moveTo(hole_radius * 1.4 ,0) # approx sqrt(2) to
+        .lineTo(0,-cylinder_radius)
+        .lineTo(2*cylinder_radius, -2*cylinder_radius)
+        .lineTo(2*cylinder_radius, 0)
+        .close()
+        .extrude(cylinder_height/2,both=True)
+    )
+    # dig the cavity again
+    .composecut(cavity)
+)
+</code></pre><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreifnvy4kbix7aaao7juzr4d2gny4jdelpyfeahovz4haep7p2aykzm?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreifnvy4kbix7aaao7juzr4d2gny4jdelpyfeahovz4haep7p2aykzm?outfile.glb"><i class="fas fa-download"></i></a></p>
 <h2 id="728171f9-5aa8-4d1d-bd60-f7d39c68b09a">and then, the snap holes</h2>
 <p>There are small holes in the cap to stick with the flask and avoid opening
 when traveling.</p>
 <p>I model them with small boxes that are cut in each side of the bottle.</p>
 <div class="konix-block-name-marker" data-name="with_snap_holes"></div>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreia6urbuyzj4wyqtrallmykc74bo7s57hqadxna4houjxct64wd4fi?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreia6urbuyzj4wyqtrallmykc74bo7s57hqadxna4houjxct64wd4fi?outfile.glb"><i class="fas fa-download"></i></a></p>
+<p><a id="code-snippet--with-snap-holes"></a></p>
+<pre tabindex="0"><code class="language-cadquery" data-lang="cadquery">
+def snap(direction=1):
+    return (
+        cq.Workplane(&#34;XY&#34;, origin=(0, direction * (sphere_radius - wall_width), - snap_z))
+        .box(snap_width, snap_depth, snap_height)
+    )
+
+with_snap_holes = put_together.composecut(
+    snap(direction=1)
+    .union(snap(direction=-1))
+)
+</code></pre><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreigwihiqcdbynts57oqdbxa4mb7rgfz2xqucitng2mmv3j3wcyu2qa?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreigwihiqcdbynts57oqdbxa4mb7rgfz2xqucitng2mmv3j3wcyu2qa?outfile.glb"><i class="fas fa-download"></i></a></p>
 <h2 id="0d6f2c1a-8e4b-4a6d-9c3f-2b7e5a1d4f60">the printable model</h2>
 <p>All the steps above render compositions for teaching.  This last block runs
 the real boolean chain and exports the actual, watertight STL to send to the
 printer.</p>
-<div class="konix-block-name-marker" data-name="printable"></div>
 <iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeifmmtqmtms2ptzuljkcp537dgujowlvfirry2tjbierqy4xa6nk4a?outfile.stl" style="border:0;width:100%;height:500px;"></iframe>
 <a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeifmmtqmtms2ptzuljkcp537dgujowlvfirry2tjbierqy4xa6nk4a?outfile.stl"><i class="fas fa-download"></i></a>
 <h2 id="permalink"><a class="internal-link" href="/braindump/8b4a24cc-1425-4067-92d2-0641981d4842?title=new_cap_for_a_flask">Permalink</a></h2>
