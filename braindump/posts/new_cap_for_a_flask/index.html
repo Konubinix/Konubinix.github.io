@@ -42,53 +42,83 @@
 		<p class="lead">
         <h1>New Cap for a Flask</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
-        <p>It&rsquo;s basically:</p>
+        <h2 id="c34276b3-7761-494c-ae07-331008fd8b95">the problem</h2>
+<p>I have a flask with a cap whose attach got broken.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeifhwj3lgihepl2up2zw7xh5npnuxrxn4unlh2nqvxb7wxcz7n4qta?a.png">
+</figure>
+
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeicjwmapz3e2m56nimb5vhlnr2bqtvr4vkdpuht4oz2ppgk2wdnjjq?a.png">
+</figure>
+
+<p>I tried gluing the attach, but it won&rsquo;t resist the day to day use of the
+flask.</p>
+<p>I want to try printing the whole cap in PETG now.</p>
+<h2 id="8610f3e7-4c7f-4981-9804-39affb8c0fd8">analysis of the geometry</h2>
+<p>Taking a look at the cap,</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeieco273hnp7fi4btg626mk3xttac6iquxxfayvgbgkvs3v3wz3bxu?a.png">
+</figure>
+
+<p>We can see that it&rsquo;s basically:</p>
 <ol>
 <li>a half-sphere shell</li>
-<li>with a small cap on one side</li>
+<li>with a small nose on one side</li>
 <li>and a clip on the other side</li>
 </ol>
-<h2 id="c1e48064-f474-4dda-98e8-7a7769a7c3c6">sphere + cap</h2>
-<p>The design I chose is to model the main half-spherical body with the small
-cap as a sphere and a cylinder, which I then cut in half.</p>
-<p>So first, the sphere-with-cap part.</p>
+<h2 id="c1e48064-f474-4dda-98e8-7a7769a7c3c6">sphere + nose</h2>
+<p>By definition, the half sphere is created from a sphere cut with a
+cavity. Looking more closely at the nose, I can model it as a cylinder
+slightly offset from the sphere. I chose to model them together so that the
+cavity can cut in both together.</p>
+<p>Let&rsquo;s get started, the sphere-with-offset-nose part is simply this.</p>
 <div class="konix-block-name-marker" data-name="sphere"></div>
 <p><a id="code-snippet--sphere"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sphere_workplane <span style="color:#0550ae">=</span> cq<span style="color:#0550ae">.</span>Workplane<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;XY&#34;</span><span style="color:#1f2328">,</span> origin<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">-</span>cap_height<span style="color:#1f2328">))</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sphere_workplane <span style="color:#0550ae">=</span> cq<span style="color:#0550ae">.</span>Workplane<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;XY&#34;</span><span style="color:#1f2328">,</span> origin<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">-</span>nose_height<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>sphere_cap <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>sphere_with_nose <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>    sphere_workplane<span style="color:#0550ae">.</span>sphere<span style="color:#1f2328">(</span>sphere_radius<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># with offset cylinder to make the cap</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>composeunion<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>        cq<span style="color:#0550ae">.</span>Workplane<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;XY&#34;</span><span style="color:#1f2328">,</span> origin<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>cap_length<span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>cylinder<span style="color:#1f2328">(</span>cap_height<span style="color:#0550ae">*</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> sphere_radius<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        cq<span style="color:#0550ae">.</span>Workplane<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;XY&#34;</span><span style="color:#1f2328">,</span> origin<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>nose_length<span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span><span style="color:#0550ae">0</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>cylinder<span style="color:#1f2328">(</span>nose_height<span style="color:#0550ae">*</span><span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> sphere_radius<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreiazd32gw2wzdstooezf6incgnatwq5gmnnopdbqbqiqooqodukw3u?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiazd32gw2wzdstooezf6incgnatwq5gmnnopdbqbqiqooqodukw3u?outfile.glb"><i class="fas fa-download"></i></a></p>
-<p>Then I cut it in half.</p>
+</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreian52eakc4cuuww5ystgmanujzpum3kobvztdgcgdspgio64f425q?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreian52eakc4cuuww5ystgmanujzpum3kobvztdgcgdspgio64f425q?outfile.glb"><i class="fas fa-download"></i></a></p>
+<p>Then I cut it in half by subtracting a big box from it.</p>
 <div class="konix-block-name-marker" data-name="cut_sphere"></div>
 <p><a id="code-snippet--cut-sphere"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>cap_plain <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>    sphere_cap
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># keep only half of it</span>
+</span></span><span style="display:flex;"><span>    sphere_with_nose
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>composecut<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        cq<span style="color:#0550ae">.</span>Workplane<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;XY&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">.</span>box<span style="color:#1f2328">(</span><span style="color:#0550ae">20</span><span style="color:#0550ae">*</span>sphere_radius<span style="color:#1f2328">,</span> <span style="color:#0550ae">20</span><span style="color:#0550ae">*</span>sphere_radius<span style="color:#1f2328">,</span> <span style="color:#0550ae">20</span><span style="color:#0550ae">*</span>sphere_radius<span style="color:#1f2328">,</span> centered<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">False</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">.</span>box<span style="color:#1f2328">(</span><span style="color:#0550ae">3</span><span style="color:#0550ae">*</span>sphere_radius<span style="color:#1f2328">,</span> <span style="color:#0550ae">3</span><span style="color:#0550ae">*</span>sphere_radius<span style="color:#1f2328">,</span> sphere_radius<span style="color:#1f2328">,</span> centered<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">False</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreiedtslhzxrh26ghyk56ibtvvn6eiwy36utg5ia7w33qktubanyssu?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiedtslhzxrh26ghyk56ibtvvn6eiwy36utg5ia7w33qktubanyssu?outfile.glb"><i class="fas fa-download"></i></a></p>
+</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeic4iycfejcvi435wrqvbu4k5nmqg4fdtw7eqrprzyiq3wenwjptmi?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeic4iycfejcvi435wrqvbu4k5nmqg4fdtw7eqrprzyiq3wenwjptmi?outfile.glb"><i class="fas fa-download"></i></a></p>
 <p>Then I can simply &ldquo;dig&rdquo; the cavity inside it, like this.</p>
 <div class="konix-block-name-marker" data-name="with_cavity"></div>
 <p><a id="code-snippet--with-cavity"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>cavity <span style="color:#0550ae">=</span> sphere_workplane<span style="color:#0550ae">.</span>sphere<span style="color:#1f2328">(</span>sphere_radius<span style="color:#0550ae">-</span>wall_width<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>with_cavity <span style="color:#0550ae">=</span> cap_plain<span style="color:#0550ae">.</span>composecut<span style="color:#1f2328">(</span>cavity<span style="color:#1f2328">)</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeifwyp2ba7fj7ewk4uaw2seuubwifnvquakmtzcj2ahidmmp7ahcpu?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeifwyp2ba7fj7ewk4uaw2seuubwifnvquakmtzcj2ahidmmp7ahcpu?outfile.glb"><i class="fas fa-download"></i></a></p>
+</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeiaw2ljjvnfotxhym5nvf7h6w4gz72hdniw2olgwg2jnnk3orskfpa?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeiaw2ljjvnfotxhym5nvf7h6w4gz72hdniw2olgwg2jnnk3orskfpa?outfile.glb"><i class="fas fa-download"></i></a></p>
 <h2 id="a059bba9-95e3-4d8e-983e-eceb7f29f38d">add the attach</h2>
-<p>Now, let&rsquo;s design the small cylindrical part that attaches to the flask.</p>
-<p>I start with a simple cylinder, at the correct position.</p>
+<p>Let&rsquo;s look closer at the attach.</p>
+<p>It&rsquo;s actually a simple holed cylinder with an opening at the top to clip with
+the flask.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeicmhfrovahhxlnqtmkpyfjewxpduj5iowf2wczldgdyupmkc4lwzy?a.png">
+</figure>
+
+<p>And looking at the other side, we can see that it has a small bump that locks
+the cap open. This looks like an offset cylinder with a smaller radius.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreihge26275hoccub222xfkhjbwe4ps4la2pjvi7oem4zpar67zgwze?a.png">
+</figure>
+
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeiarrgkwubsklqw5tcd73lt7fu7csxdz53ytirbvmzssnxtzxbbmti?a.png">
+</figure>
+
+<p>First thing, let&rsquo;s add the cylinder shape at the correct position relatively
+to the cap.</p>
 <div class="konix-block-name-marker" data-name="attach"></div>
 <p><a id="code-snippet--attach"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>attach_workplane <span style="color:#0550ae">=</span> cq<span style="color:#0550ae">.</span>Workplane<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;XZ&#34;</span><span style="color:#1f2328">,</span> origin<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">-</span> sphere_radius <span style="color:#0550ae">-</span> cylinder_radius <span style="color:#0550ae">-</span> cylinder_offset<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">))</span>
@@ -99,24 +129,22 @@ cap as a sphere and a cylinder, which I then cut in half.</p>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>with_attach <span style="color:#0550ae">=</span> with_cavity<span style="color:#0550ae">.</span>composeunion<span style="color:#1f2328">(</span>attach<span style="color:#1f2328">)</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreihq5qkupflfevu2et35n6f6qwmmlq2h3clfzwqrm46k4w7bvopbdy?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreihq5qkupflfevu2et35n6f6qwmmlq2h3clfzwqrm46k4w7bvopbdy?outfile.glb"><i class="fas fa-download"></i></a></p>
-<p>Then let&rsquo;s add a hole, a bump, and an opening in it.</p>
+</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreihrj2dxudbvyuhibhydwv3yse53yhhkmgrl4qp4ii7zvxqppiykim?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreihrj2dxudbvyuhibhydwv3yse53yhhkmgrl4qp4ii7zvxqppiykim?outfile.glb"><i class="fas fa-download"></i></a></p>
+<p>Then let&rsquo;s add the bump and cut the hole and the opening (using a trapezoidal
+form) from it.</p>
 <div class="konix-block-name-marker" data-name="with_opening_and_hole"></div>
 <p><a id="code-snippet--with-opening-and-hole"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>with_opening_and_hole <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>    with_cavity
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>attach<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># add a small bump to lock the cap open</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>composeunion<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        attach_workplane<span style="color:#0550ae">.</span>move<span style="color:#1f2328">(</span><span style="color:#0550ae">-</span>bump_depth<span style="color:#1f2328">,</span> bump_z<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#0550ae">.</span>cylinder<span style="color:#1f2328">(</span>bump_height<span style="color:#1f2328">,</span> bump_radius<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># dig a hole</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>composecut<span style="color:#1f2328">(</span>
-</span></span><span style="display:flex;"><span>        attach_workplane<span style="color:#0550ae">.</span>circle<span style="color:#1f2328">(</span>hole_radius<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>extrude<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#0550ae">*</span>sphere_radius<span style="color:#1f2328">,</span> both<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        attach_workplane<span style="color:#0550ae">.</span>circle<span style="color:#1f2328">(</span>hole_radius<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>extrude<span style="color:#1f2328">(</span>cylinder_height<span style="color:#1f2328">,</span> both<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># opening to fix the cap on the flask</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>composecut<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        attach_workplane
 </span></span><span style="display:flex;"><span>        <span style="color:#0550ae">.</span>moveTo<span style="color:#1f2328">(</span><span style="color:#0550ae">-</span>hole_radius <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
@@ -127,16 +155,19 @@ cap as a sphere and a cylinder, which I then cut in half.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#0550ae">.</span>extrude<span style="color:#1f2328">(</span><span style="color:#0550ae">10</span><span style="color:#1f2328">,</span> both<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreibewmqxrmivbhss2qt5faehxpp74tdsj3qqtyxzd45rpymdrh6t7e?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreibewmqxrmivbhss2qt5faehxpp74tdsj3qqtyxzd45rpymdrh6t7e?outfile.glb"><i class="fas fa-download"></i></a></p>
-<h2 id="3fecc7ed-ee23-4c33-807d-4bb5b59343f7">put them together</h2>
-<p>Now I need a small part that makes both the attach and the cap stick together.</p>
-<p>Because I don&rsquo;t want to compute the exact size of that piece, it may go too
-far into the cap, so I just need to cut the cavity again to get a clean
+</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeiegajanzt7hhng2fwtnyyrqcc5empvrvn23zdl74aflz2ckib4ciq?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeiegajanzt7hhng2fwtnyyrqcc5empvrvn23zdl74aflz2ckib4ciq?outfile.glb"><i class="fas fa-download"></i></a></p>
+<h2 id="3fecc7ed-ee23-4c33-807d-4bb5b59343f7">add the neck</h2>
+<p>The cap and the attach look quite good, but they are actually separate
+parts. There is a neck that glue them together.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreigauwbficytup5j7qagxz2ttvhc3qvjbojfnkybkbpueuszniakxa?a.png">
+</figure>
+
+<p>I chose to model it quite coarsely and cut again the cavity to get a clean
 interior.</p>
-<div class="konix-block-name-marker" data-name="put_together"></div>
-<p><a id="code-snippet--put-together"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>put_together <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
+<div class="konix-block-name-marker" data-name="with_neck"></div>
+<p><a id="code-snippet--with-neck"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>with_neck <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>    with_opening_and_hole
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>composeunion<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        attach_workplane
@@ -149,11 +180,19 @@ interior.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>composecut<span style="color:#1f2328">(</span>cavity<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreihcs7ooaz4rsgjew6q3qpdlperfsj3s2ihdqw6mrpnmd4di7u7ewu?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreihcs7ooaz4rsgjew6q3qpdlperfsj3s2ihdqw6mrpnmd4di7u7ewu?outfile.glb"><i class="fas fa-download"></i></a></p>
+</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafybeihybzf65ikgebsbswyyu7p6julukl3lfydxlcnjauq3qq6ugaerq4?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeihybzf65ikgebsbswyyu7p6julukl3lfydxlcnjauq3qq6ugaerq4?outfile.glb"><i class="fas fa-download"></i></a></p>
 <h2 id="728171f9-5aa8-4d1d-bd60-f7d39c68b09a">and then, the snap holes</h2>
-<p>There are small holes in the cap that clip onto the flask to prevent it from
-opening while traveling.</p>
+<p>Looking closer at the interior of the cap and the neck of the flask, we can
+see the snap mechanism.</p>
+<p>The small holes in the cap clip onto the flask to prevent it from opening
+while traveling.</p>
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeih6soux3qrjtv3pwvjcjgp4wqeckaokkqj22kcfcydjpc2cknppc4?a.png">
+</figure>
+
+<figure><img src="https://ipfs.konubinix.eu/p/bafybeie2isfe5633fwz7cw7b4ghaisyebsi63nnkzd2h2jn3w3oudnuqsm?a.png">
+</figure>
+
 <p>I model them with small boxes that are cut into each side of the bottle.</p>
 <div class="konix-block-name-marker" data-name="with_snap_holes"></div>
 <p><a id="code-snippet--with-snap-holes"></a></p>
@@ -163,16 +202,17 @@ opening while traveling.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#0550ae">.</span>box<span style="color:#1f2328">(</span>snap_width<span style="color:#1f2328">,</span> snap_depth<span style="color:#1f2328">,</span> snap_height<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>with_snap_holes <span style="color:#0550ae">=</span> put_together<span style="color:#0550ae">.</span>composecut<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>with_snap_holes <span style="color:#0550ae">=</span> with_neck<span style="color:#0550ae">.</span>composecut<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>    snap<span style="color:#1f2328">(</span>direction<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0550ae">.</span>union<span style="color:#1f2328">(</span>snap<span style="color:#1f2328">(</span>direction<span style="color:#0550ae">=-</span><span style="color:#0550ae">1</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreigcrxwdcct5ff577eblpua6mk6yawruixxnkn53gyxfs2dmgszcjq?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
-<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreigcrxwdcct5ff577eblpua6mk6yawruixxnkn53gyxfs2dmgszcjq?outfile.glb"><i class="fas fa-download"></i></a></p>
+</span></span></code></pre></div><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script><model-viewer src="https://ipfs.konubinix.eu/p/bafkreia4buqeyflkjhz4rsbfg4ngdkk6sieoxozxxg33loc74epn5gy6lu?outfile.glb" auto-rotate camera-controls style="width:100%;height:500px;background:#eee"></model-viewer>
+<p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreia4buqeyflkjhz4rsbfg4ngdkk6sieoxozxxg33loc74epn5gy6lu?outfile.glb"><i class="fas fa-download"></i></a></p>
 <h2 id="0d6f2c1a-8e4b-4a6d-9c3f-2b7e5a1d4f60">the printable model</h2>
-<p>The actual STL file that I will give to my printer is this:</p>
-<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeiczqhkn2zuol2jirmjvksgkqjtfttpefsdyr2p7rruen2rkoqhcpa?outfile.stl" style="border:0;width:100%;height:500px;"></iframe>
-<a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeiczqhkn2zuol2jirmjvksgkqjtfttpefsdyr2p7rruen2rkoqhcpa?outfile.stl"><i class="fas fa-download"></i></a>
+<p>The last think to do it to assemble the whole thing into a shinny STL file
+that I can feed to my printer.</p>
+<iframe src="https://www.viewstl.com/?embedded&url=https://ipfs.konubinix.eu/p/bafybeiabudpcntojvdoqo3rx6qeuoxxyrmeywagvsyika6bmcqzfkntofu?outfile.stl" style="border:0;width:100%;height:500px;"></iframe>
+<a target="_blank" href="https://ipfs.konubinix.eu/p/bafybeiabudpcntojvdoqo3rx6qeuoxxyrmeywagvsyika6bmcqzfkntofu?outfile.stl"><i class="fas fa-download"></i></a>
 <h2 id="permalink"><a class="internal-link" href="/braindump/8b4a24cc-1425-4067-92d2-0641981d4842?title=new_cap_for_a_flask">Permalink</a></h2>
 <style>
 .konix-block-name-marker { display: none; }
@@ -238,7 +278,7 @@ opening while traveling.</p>
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 08 Jul 2026</time></aside>
+	  <aside class="date"><time>Last updated: 09 Jul 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 07 Jul 2026</time></aside>
     </div>
   </div>
