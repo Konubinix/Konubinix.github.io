@@ -203,6 +203,33 @@ index probe on the event&rsquo;s narrow span instead.</p>
   <tbody>
   </tbody>
 </table>
+<p><code>events_at</code> answers one photo&rsquo;s question; a wall asks the window&rsquo;s. A view that shows many
+photos at once — <a class="internal-link" href="/braindump/posts/a_photos_videos_organiser_with_preact/">memories</a>&rsquo; grid — would otherwise call <code>events_at</code> once per row to name
+every tile, hundreds of round-trips for a single screen. <code>events_in_window</code> is the batched
+read instead: the confirmed events overlapping <code>[since, until]</code>, earliest first, returned
+whole so the caller pairs each photo with its own in the browser — one read names a whole
+wall. Unlike <code>event_completions</code> it needs no photo-<code>EXISTS</code> trim: the caller drops the
+eventless window-rows for free, and there are few of them. A cancelled event is skipped
+here too, the same reason <code>events_at</code> skips it: a call
+that didn&rsquo;t happen is no occasion. PostGraphile reflects it as the <code>eventsInWindow</code>
+connection; restart afterwards.</p>
+<div class="konix-block-name-marker" data-name="calendar-events-in-window"></div>
+<p><a id="code-snippet--calendar-events-in-window"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#cf222e">CREATE</span><span style="color:#fff"> </span><span style="color:#cf222e">OR</span><span style="color:#fff"> </span><span style="color:#cf222e">REPLACE</span><span style="color:#fff"> </span><span style="color:#cf222e">FUNCTION</span><span style="color:#fff"> </span>events_in_window<span style="color:#1f2328">(</span>since<span style="color:#fff"> </span>timestamptz<span style="color:#1f2328">,</span><span style="color:#fff"> </span><span style="color:#cf222e">until</span><span style="color:#fff"> </span>timestamptz<span style="color:#1f2328">)</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#cf222e">RETURNS</span><span style="color:#fff"> </span><span style="color:#cf222e">SETOF</span><span style="color:#fff"> </span>calendar_event<span style="color:#fff"> </span><span style="color:#cf222e">LANGUAGE</span><span style="color:#fff"> </span><span style="color:#cf222e">sql</span><span style="color:#fff"> </span><span style="color:#cf222e">STABLE</span><span style="color:#fff"> </span><span style="color:#cf222e">AS</span><span style="color:#fff"> </span><span style="color:#f6f8fa;background-color:#82071e">$$</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#cf222e">SELECT</span><span style="color:#fff"> </span><span style="color:#0550ae">*</span><span style="color:#fff"> </span><span style="color:#cf222e">FROM</span><span style="color:#fff"> </span>calendar_event<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#cf222e">WHERE</span><span style="color:#fff"> </span>status<span style="color:#fff"> </span><span style="color:#0550ae">&lt;&gt;</span><span style="color:#fff"> </span><span style="color:#0a3069">&#39;cancelled&#39;</span><span style="color:#fff"> </span><span style="color:#cf222e">AND</span><span style="color:#fff"> </span>starttime<span style="color:#fff"> </span><span style="color:#0550ae">&lt;=</span><span style="color:#fff"> </span><span style="color:#cf222e">until</span><span style="color:#fff"> </span><span style="color:#cf222e">AND</span><span style="color:#fff"> </span>endtime<span style="color:#fff"> </span><span style="color:#0550ae">&gt;=</span><span style="color:#fff"> </span>since<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#cf222e">ORDER</span><span style="color:#fff"> </span><span style="color:#cf222e">BY</span><span style="color:#fff"> </span>starttime<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff"></span><span style="color:#f6f8fa;background-color:#82071e">$$</span><span style="color:#1f2328">;</span><span style="color:#fff">
+</span></span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>CREATE FUNCTION</th>
+      </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
 <h2 id="5e1a0d00-0004-4000-8000-000000000001">The GraphQL contract</h2>
 <p>The apps never touch Postgres directly. <strong>PostGraphile</strong> (the <code>konubinix/postgraphile</code>
 image) reflects the <code>public</code> schema into a GraphQL API at <code>/graphql</code>, and that single
@@ -677,8 +704,8 @@ don&rsquo;t take a <code>-</code>; a recurring window would need a server-side <
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 07 Jul 2026</time></aside>
-	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 07 Jul 2026</time></aside>
+	  <aside class="date"><time>Last updated: 09 Jul 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Jul 2026</time></aside>
     </div>
   </div>
 </div>
