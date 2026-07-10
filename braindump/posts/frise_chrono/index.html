@@ -2672,7 +2672,7 @@ and <code>type:video</code>.</p>
 </span></span><span style="display:flex;"><span>    vals <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>eval_on_selector_all<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-completion]&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;els =&gt; els.map(e =&gt; e.textContent)&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#0a3069">&#34;month:march&#34;</span> <span style="color:#0550ae">in</span> vals <span style="color:#0550ae">and</span> <span style="color:#0a3069">&#34;month:may&#34;</span> <span style="color:#0550ae">in</span> vals<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;expected month names, got </span><span style="color:#0a3069">{</span>vals<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: month completion&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p><code>since:</code>, <code>until:</code> and <code>year:</code> are the one place the frise parts from memories: in a timeline
+</span></span></code></pre></div><p><code>since:</code>, <code>until:</code>, <code>year:</code> and <code>date:</code> are the one place the frise parts from memories: in a timeline
 the date range already lives in the window, so in the box they&rsquo;re <strong>commands</strong>, not standing
 filters. Pressing Enter jumps the window to them and consumes the tokens — the other filters
 stay — so there is one date authority and no stale token to drift when you next pan. Which
@@ -2708,6 +2708,22 @@ window token added there works here untouched.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>input_value<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-search]&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;zzkeep&#34;</span><span style="color:#1f2328">,</span> \
 </span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;year token wasn&#39;t consumed: </span><span style="color:#0a3069">{</span>page<span style="color:#0550ae">.</span>input_value<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;[data-search]&#39;</span><span style="color:#1f2328">)</span><span style="color:#0a3069">!r}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: year token moves the window&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>A <code>date:</code> token is the same kind of command at finer grain — Enter jumps the window to the
+whole month or day it names, just as <code>year:</code> does for a year.</p>
+<div class="konix-block-name-marker" data-name="test-date-window"></div>
+<p><a id="code-snippet--test-date-window"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_date_token_moves_the_window</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Enter on a date: token jumps the window to that whole month and clears the token.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    open_app<span style="color:#1f2328">(</span>page<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>fill<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-search]&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;zzkeep; date:2020-06&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>press<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-search]&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;Enter&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_function<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;() =&gt; document.querySelector(&#39;[data-win-from]&#39;).value === &#39;2020-06-01&#39;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34; &amp;&amp; document.querySelector(&#39;[data-win-to]&#39;).value === &#39;2020-06-30&#39;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>input_value<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-search]&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;zzkeep&#34;</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;date token wasn&#39;t consumed: </span><span style="color:#0a3069">{</span>page<span style="color:#0550ae">.</span>input_value<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;[data-search]&#39;</span><span style="color:#1f2328">)</span><span style="color:#0a3069">!r}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: date token moves the window&#34;</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><p>The check: type a term <strong>after an operator and an earlier word</strong> and check the
 trailing token still completes, replacing only itself.</p>
 <div class="konix-block-name-marker" data-name="test-completion-token"></div>
@@ -3768,7 +3784,7 @@ only reads. Run once.</p>
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 09 Jul 2026</time></aside>
+	  <aside class="date"><time>Last updated: 10 Jul 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 May 2026</time></aside>
     </div>
   </div>
