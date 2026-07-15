@@ -17,49 +17,6 @@ if(new URLSearchParams(location.search).has('purge')&&'serviceWorker'in navigato
 
 <meta name="theme-color" content="#1a1a2e">
 <title>Tally</title>
-<script>
-if (location.pathname.indexOf('/debug') !== -1) {
-  var YStub = `
-    var _doc = null;
-    function _save(){if(_doc)_doc._save();}
-    class YArray {
-      constructor(){this._=[];}
-      get length(){return this._.length;}
-      push(a){for(var i=0;i<a.length;i++)this._.push(a[i]);_save();}
-      get(i){return this._[i];}
-      delete(i,l){this._.splice(i,l||1);_save();}
-      insert(i,a){for(var j=a.length-1;j>=0;j--)this._.splice(i,0,a[j]);_save();}
-      toArray(){return this._.slice();}
-      toJSON(){return this._.map(function(v){return v&&v.toJSON?v.toJSON():v});}
-      forEach(f){this._.forEach(f);}
-      observe(){} unobserve(){}
-    }
-    class YMap {
-      constructor(){this._m={};}
-      set(k,v){this._m[k]=v;_save();}
-      get(k){return this._m[k];}
-      delete(k){delete this._m[k];_save();}
-      toJSON(){return Object.assign({},this._m);}
-      has(k){return k in this._m;}
-      observe(){} unobserve(){}
-    }
-    class Doc {
-      constructor(){this._a={};this._m={};this._k='ystub_tally';_doc=this;this._load();}
-      getArray(n){if(!this._a[n])this._a[n]=new YArray();return this._a[n];}
-      getMap(n){if(!this._m[n])this._m[n]=new YMap();return this._m[n];}
-      on(){} off(){} transact(f){f();}
-      _save(){try{var o={a:{},m:{}};for(var k in this._a)o.a[k]=this._a[k].toJSON();for(var k in this._m)o.m[k]=this._m[k].toJSON();localStorage.setItem(this._k,JSON.stringify(o));}catch(e){}}
-      _load(){try{var s=localStorage.getItem(this._k);if(!s)return;var o=JSON.parse(s);for(var k in o.a){var arr=this.getArray(k);o.a[k].forEach(function(v){if(v&&typeof v==='object'&&!Array.isArray(v)){var m=new YMap();for(var p in v)m._m[p]=v[p];arr._.push(m);}else{arr._.push(v);}});}for(var k in o.m){var map=this.getMap(k);for(var p in o.m[k])map._m[p]=o.m[k][p];}}catch(e){}}
-    }
-    export { Doc, YArray as Array, YMap as Map };
-    export default { Doc, Array: YArray, Map: YMap };
-  `;
-  var Persistence = 'export class IndexeddbPersistence { constructor(){} on(e,f){if(e==="synced")setTimeout(f,0);} once(e,f){this.on(e,f);} }';
-  var WsProvider = 'export class WebsocketProvider { constructor(){} on(){} disconnect(){} destroy(){} }';
-  var b = function(s){return 'data:text/javascript;base64,'+btoa(s);};
-  document.write('<script type="importmap">{"imports":{"yjs":"'+b(YStub)+'","y-indexeddb":"'+b(Persistence)+'","y-websocket":"'+b(WsProvider)+'"}}<\/script>');
-}
-</script>
 <script type="importmap">
 {"imports":{
   "yjs":"https://esm.sh/yjs@13.6.29",
@@ -393,7 +350,7 @@ window.addEventListener('appinstalled', function() {
   <a class="sync-dot" id="syncDot" title="Sync status" onclick="if(document.body.getAttribute('data-ws')==='connected'&&confirm('Clear authorization?')){location.href='/authorizationserver/clear-cookie?resource=ywebsocket/'+_roomName}"></a>
   <input type="text" class="game-name-input" id="gameName" placeholder="Game name&#x2026;" spellcheck="false"
     @input="setGameName($el.value)">
-  <span class="build-hash" title="Build">c96fa27</span>
+  <span class="build-hash" title="Build">99f686b</span>
   <div class="header-actions">
     <button class="icon-btn" id="btnInstall" title="Install" style="display:none" @click="installApp()">&#x1f4f2;</button>
     <button class="icon-btn" id="btnScoreboard" title="Scoreboard" @click="openScoreboard()">&#x1f3c6;</button>
@@ -524,15 +481,15 @@ window.addEventListener('appinstalled', function() {
     <h2>&#x1f4c2; Saved Games</h2>
     <div id="gamesList">
       <p x-show="$store.game.savedGames.length === 0" class="no-games">No saved games.</p>
-      <template x-for="(g, ri) in $store.game.savedGames" :key="'sg'+ri">
-        <div class="game-entry" :data-gidx="g._idx">
+      <template x-for="g in $store.game.savedGames" :key="g._id">
+        <div class="game-entry">
           <div class="game-entry-header">
             <span class="game-entry-name" x-text="g.gameName"></span>
             <span class="game-entry-date" x-text="g._dateStr"></span>
-            <button class="game-entry-load" :data-gloadidx="g._idx"
-              @click="loadGame(g._idx)">&#x25b6;</button>
-            <button class="game-entry-delete" :data-gdelidx="g._idx"
-              @click="deleteGame(g._idx)">&#x1f5d1;</button>
+            <button class="game-entry-load"
+              @click="loadGame(g._id)">&#x25b6;</button>
+            <button class="game-entry-delete"
+              @click="deleteGame(g._id)">&#x1f5d1;</button>
           </div>
           <div class="game-entry-players" x-text="g._summary"></div>
         </div>
@@ -681,7 +638,8 @@ var ydoc = new Y.Doc();
 var persistence = new IndexeddbPersistence(_roomName, ydoc);
 var yPlayers = ydoc.getArray('currentPlayers'); // Y.Map {name}
 var yRounds  = ydoc.getArray('rounds');         // [[d0, d1, ...], ...]
-var yGames   = ydoc.getArray('savedGames');     // [{id,date,gameName,players,rounds}]
+var yGames       = ydoc.getMap('savedGamesById'); // id -> {id,date,gameName,players,rounds}
+var yGamesLegacy = ydoc.getArray('savedGames');   // pre-map archives, still read, never grown
 var yRoster  = ydoc.getArray('sc_roster');      // [{name:'...'}] persistent player roster
 var yMeta    = ydoc.getMap('meta');              // gameName
 var COLORS   = ['#e94560','#4ecca3','#533483','#f9a826','#3fc1c9','#fc5185','#8dc6ff','#6c5ce7'];
@@ -739,13 +697,25 @@ function flushDraft(){
   yRounds.delete(yRounds.length - 1, 1);
   yRounds.push([row]);
 }
-function getSavedGames(){
+function legacyGames(){
   var a = [];
-  for(var i=0;i<yGames.length;i++){
-    var v = yGames.get(i);
+  for(var i=0;i<yGamesLegacy.length;i++){
+    var v = yGamesLegacy.get(i);
     a.push(v && typeof v.toJSON === 'function' ? v.toJSON() : v);
   }
   return a;
+}
+// The archive is the id-keyed map, plus any pre-map entries still in the
+// legacy array whose id the map hasn't superseded; newest first.
+function getSavedGames(){
+  var out = [], seen = {};
+  yGames.forEach(function(v, k){
+    seen[k] = true;
+    out.push(v && typeof v.toJSON === 'function' ? v.toJSON() : v);
+  });
+  legacyGames().forEach(function(g){ if(g && !seen[g.id]) out.push(g); });
+  out.sort(function(a,b){ return String(b && b.date || '').localeCompare(String(a && a.date || '')); });
+  return out;
 }
 
 // ── Custom rule caches ──
@@ -1104,6 +1074,7 @@ function startGame() {
   yMeta.set('lowWins', $('pickLowWins').checked);
   yMeta.set('scoreTransform', $('pickScoreTransform').value);
   yMeta.set('endCondition', $('pickEndCondition').value);
+  yMeta.set('currentGameId', '');
   _cachedTransformFn = null;
   _cachedEndFn = null;
   $('gameName').value = gn;
@@ -1288,13 +1259,16 @@ function showWinToast(names){
 }
 
 // ── Save ──
+function newGameId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
 function saveGame(){
   if(yPlayers.length === 0) return;
   var players = getPlayers();
   var rounds = committedRounds();
   var t = totals();
-  var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  yGames.push([{
+  var id = yMeta.get('currentGameId') || newGameId();
+  yMeta.set('currentGameId', id);
+  yGames.set(id, {
     id: id,
     date: new Date().toISOString(),
     gameName: yMeta.get('gameName') || 'Untitled',
@@ -1303,7 +1277,7 @@ function saveGame(){
     endCondition: yMeta.get('endCondition') || yMeta.get('winCondition') || '',
     players: players.map(function(p,i){ return {name:p.name, score:t[i]}; }),
     rounds: JSON.parse(JSON.stringify(rounds))
-  }]);
+  });
 }
 
 // ── Load ──
@@ -1340,15 +1314,16 @@ function exportCSV(){
   URL.revokeObjectURL(a.href);
 };
 
-function loadGame(idx){
-  var g = getSavedGames()[idx];
+function loadGame(id){
+  var g = null;
+  getSavedGames().forEach(function(s){ if(s && s.id === id) g = s; });
   if(!g) return;
   var hasScores = committedRounds().length > 0;
   if(hasScores){
     if(!confirm('Save current game before loading?')) return;
     saveGame();
   }
-  yGames.delete(idx, 1);
+  yMeta.set('currentGameId', id);
   yPlayers.delete(0, yPlayers.length);
   yRounds.delete(0, yRounds.length);
   (g.players||[]).forEach(function(p){
@@ -1385,9 +1360,14 @@ function loadGame(idx){
   render();
 }
 
-function deleteGame(idx){
+function deleteGame(id){
   if(confirm('Delete this saved game?')){
-    yGames.delete(idx, 1);
+    yGames.delete(id);
+    for(var i=yGamesLegacy.length-1;i>=0;i--){
+      var v = yGamesLegacy.get(i);
+      var vid = v && v.get ? v.get('id') : (v ? v.id : null);
+      if(vid === id) yGamesLegacy.delete(i, 1);
+    }
     openLoadModal();
   }
 }
@@ -1809,14 +1789,13 @@ function syncFromYjs(){
   while(g.draft.length < players.length) g.draft.push('');
   while(g.draft.length > players.length) g.draft.pop();
   g.roster = getRoster().map(function(r){ return { name: r.get ? r.get('name') : r.name }; });
-  var games = getSavedGames();
-  g.savedGames = games.slice().reverse().map(function(gm, ri){
-    var idx = games.length - 1 - ri;
+  // getSavedGames() already returns the archive newest-first, keyed by id.
+  g.savedGames = getSavedGames().map(function(gm){
     var d = new Date(gm.date);
     var dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     var pStr = (gm.players||[]).map(function(p){ return esc(p.name)+': '+(p.score!==undefined?p.score:(p.finalScore||0)); }).join(', ');
     var nRounds = (gm.rounds||[]).length;
-    return { gameName: gm.gameName||'Untitled', _dateStr: dateStr, _summary: pStr+' ('+nRounds+' rounds)', _idx: idx, _raw: gm };
+    return { gameName: gm.gameName||'Untitled', _dateStr: dateStr, _summary: pStr+' ('+nRounds+' rounds)', _id: gm.id, _raw: gm };
   });
 }
 var render = syncFromYjs;

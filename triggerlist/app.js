@@ -50,6 +50,7 @@ function confirmExit(){
     if(document.querySelector('.exit-sheet')) return;   // already asking
     const back = document.createElement('div');
     back.className = 'sheet-back exit-sheet';
+    back.onclick = backdropClose(() => back.remove());
     render(back, html`
       <div class="sheet" role="dialog" aria-label="Quitter">
         <p class="sheet-msg">Quitter l'application ?</p>
@@ -88,6 +89,7 @@ document.body.setAttribute('data-app-ready', '1');
 startSync();
 armGuard();   // the base entry Back lands on, so leaving the app asks first
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+function backdropClose(close){ return e => { if(e.target === e.currentTarget) close(); }; }
 function slug(s){
     return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
             .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -426,7 +428,7 @@ function wizAddItem(){
 }
 function wizardPanel(){
     const outs = Object.entries(outings.toJSON());
-    return html`<div class="sheet-back"><div class="sheet wizard" role="dialog" aria-label="Planifier une sortie">
+    return html`<div class="sheet-back" onclick=${backdropClose(goBack)}><div class="sheet wizard" role="dialog" aria-label="Planifier une sortie">
       ${wiz.step === 1 ? html`
         <h2 class="wiz-title">Planifier une sortie</h2>
         <div class="wizrow">
@@ -588,7 +590,7 @@ function selectionBar(){
 
 function pickerPanel(){
     const verb = picker === 'move' ? 'Déplacer' : 'Copier';
-    return html`<div class="sheet-back"><div class="sheet picker" role="dialog" aria-label=${verb}>
+    return html`<div class="sheet-back" onclick=${backdropClose(goBack)}><div class="sheet picker" role="dialog" aria-label=${verb}>
       <p class="sheet-msg">${verb} vers…</p>
       ${Object.entries(sections.toJSON()).map(([id, v]) => html`
         <button class="pick-target" onclick=${() => applyPick(id)}>${v.name}</button>`)}
