@@ -3,7 +3,7 @@ import { render, html } from 'uhtml';
 import { get, set } from 'idb-keyval';
 
 // the doc, its maps, and its undo manager are created at boot, once Loro's WASM has loaded.
-let doc, items, sections, itemSections, outings, outingSections, outingItems, checked, undo;
+let doc, items, sections, itemSections, outings, outingSections, outingItems, checked, order, undo;
 
 // view vs edit is per-device UI state — it is not synced and starts off.
 // editing holds the "kind:id" being renamed in place, editingText its buffer,
@@ -14,14 +14,20 @@ let doc, items, sections, itemSections, outings, outingSections, outingItems, ch
 // label contains it; picker holds the pending 'move'/'copy' while its target
 // sheet is up (or null); wiz holds the planning assistant's state (or null);
 // focusId the outing shown alone in its packing view (or null for the catalog);
-// toast is the current notification { text } (or null).
+// toast is the current notification { text } (or null); hideChecked hides the
+// ticked things (view mode) so only what is left to pack shows.
 let editMode = false, editing = null, editingText = '', folded = new Set(), selected = new Set();
 let adding = null, filter = '', picker = null;
-let wiz = null, focusId = null, toast = null;
+let wiz = null, focusId = null, toast = null, hideChecked = false;
 
 // the sync layer's handles: the live socket, the room url, the toolbar state,
 // the status code behind a refusal, and the growing wait between reconnects.
 let ws, syncUrl, syncState = 'off', syncCode = '', retryDelay;
+
+// the screen-memory key and the debounce timer coalescing its snapshot writes,
+// declared here (before boot) so the first paint can save through them.
+const UI_KEY = 'triggerlist.ui';
+let uiTimer;
 const DOC_KEY = 'triggerlist-doc';
 
 async function loadDoc(){
@@ -69,7 +75,7 @@ window.addEventListener('popstate', () => {
 });
 const app = document.getElementById('app');
 
-function paint(){ document.body.toggleAttribute('data-edit', editMode); render(app, view(buildModel())); }
+function paint(){ document.body.toggleAttribute('data-edit', editMode); render(app, view(buildModel())); saveUi(); }
 
 const { LoroDoc, UndoManager } = await import('loro-crdt');
 doc = new LoroDoc();
@@ -80,16 +86,202 @@ outings = doc.getMap('outings');
 outingSections = doc.getMap('outingSections');
 outingItems = doc.getMap('outingItems');
 checked = doc.getMap('checked');
+order = doc.getMap('order');
 undo = new UndoManager(doc, { mergeInterval: 0 });
 
 await loadDoc();
+const savedUi = restoreUi();   // return to the screen we were on before the reload
 doc.subscribe(() => { paint(); persist(); });
 paint();
 document.body.setAttribute('data-app-ready', '1');
+if(savedUi.scrollY) requestAnimationFrame(() => window.scrollTo(0, savedUi.scrollY));
 startSync();
 armGuard();   // the base entry Back lands on, so leaving the app asks first
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+function saveUi(){
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(() => localStorage.setItem(UI_KEY,
+        JSON.stringify({ focusId, scrollY: window.scrollY })), 150);
+}
+function restoreUi(){
+    let u = {};
+    try { u = JSON.parse(localStorage.getItem(UI_KEY) || '{}'); } catch {}
+    if(u.focusId && outings.get(u.focusId)) focusId = u.focusId;
+    return u;
+}
+window.addEventListener('scroll', saveUi, { passive: true });
 function backdropClose(close){ return e => { if(e.target === e.currentTarget) close(); }; }
+// ── Drag-and-drop reorder engine (framework-agnostic) ──
+// Binds once on document. Handles any =.reorder-list= with =.reorder-item=
+// children and a =.reorder-grip= handle on each item. Fires
+// =reorder:move= on the list (bubbling CustomEvent with
+// =detail = {from, to}=) when the cursor crosses into a new slot during
+// drag. Consumers listen and update their own state; the engine never
+// mutates the consumer's store.
+(function initReorderEngine() {
+    var dragging = null;
+
+    function fireMove(list, fromIdx, toIdx) {
+        list.dispatchEvent(new CustomEvent('reorder:move', {
+            detail: { from: fromIdx, to: toIdx },
+            bubbles: true,
+        }));
+    }
+
+    function markPlaceholder() {
+        var items = dragging.list.querySelectorAll('.reorder-item');
+        items.forEach(function(el) {
+            el.classList.toggle('drag-placeholder', el === dragging.itemEl);
+        });
+    }
+
+    function stripFrameworkAttrs(root) {
+        root.querySelectorAll('*').forEach(function(el) {
+            Array.from(el.attributes).forEach(function(a) {
+                if (a.name.indexOf('x-') === 0 ||
+                    a.name.indexOf('v-') === 0 ||
+                    a.name.indexOf(':') === 0 ||
+                    a.name.indexOf('@') === 0) {
+                    el.removeAttribute(a.name);
+                }
+            });
+        });
+    }
+
+    function onStart(e) {
+        var grip = e.target.closest('.reorder-grip');
+        if (!grip) return;
+        var list = grip.closest('.reorder-list');
+        var item = grip.closest('.reorder-item');
+        if (!list || !item) return;
+        var idx = parseInt(item.dataset.idx, 10);
+        var rect = item.getBoundingClientRect();
+        var clientX = e.clientX;
+        var clientY = e.clientY;
+
+        var clone = document.createElement('div');
+        clone.className = 'drag-clone';
+        clone.style.width = rect.width + 'px';
+        clone.innerHTML = item.innerHTML;
+        stripFrameworkAttrs(clone);
+        clone.style.left = rect.left + 'px';
+        clone.style.top = rect.top + 'px';
+        document.body.appendChild(clone);
+
+        dragging = {
+            list: list, curIdx: idx, itemEl: item, clone: clone,
+            offsetX: clientX - rect.left, offsetY: clientY - rect.top,
+            clientX: clientX, clientY: clientY, scrollRaf: 0,
+        };
+        markPlaceholder();
+        e.preventDefault();
+    }
+
+    function applyPointer(clientX, clientY) {
+        dragging.clone.style.left = (clientX - dragging.offsetX) + 'px';
+        dragging.clone.style.top = (clientY - dragging.offsetY) + 'px';
+        var items = dragging.list.querySelectorAll('.reorder-item');
+        for (var i = 0; i < items.length; i++) {
+            if (i === dragging.curIdx) continue;
+            var rect = items[i].getBoundingClientRect();
+            if (clientX >= rect.left && clientX <= rect.right &&
+                clientY >= rect.top  && clientY <= rect.bottom) {
+                fireMove(dragging.list, dragging.curIdx, i);
+                dragging.curIdx = i;
+                markPlaceholder();
+                var rank = dragging.clone.querySelector('.reorder-rank');
+                if (rank) rank.textContent = i + 1;
+                break;
+            }
+        }
+    }
+
+    function autoScrollTick() {
+        if (!dragging) return;
+        var margin = 80;
+        var y = dragging.clientY;
+        var dy = 0;
+        if (y < margin) dy = -Math.ceil((margin - y) / 6);
+        else if (y > window.innerHeight - margin)
+            dy = Math.ceil((y - (window.innerHeight - margin)) / 6);
+        if (dy) {
+            window.scrollBy(0, dy);
+            applyPointer(dragging.clientX, y);
+        }
+        dragging.scrollRaf = requestAnimationFrame(autoScrollTick);
+    }
+
+    function onMove(e) {
+        if (!dragging) return;
+        e.preventDefault();
+        dragging.clientX = e.clientX;
+        dragging.clientY = e.clientY;
+        applyPointer(e.clientX, e.clientY);
+        if (!dragging.scrollRaf)
+            dragging.scrollRaf = requestAnimationFrame(autoScrollTick);
+    }
+
+    function onEnd() {
+        if (!dragging) return;
+        if (dragging.scrollRaf) cancelAnimationFrame(dragging.scrollRaf);
+        dragging.clone.remove();
+        dragging.list.querySelectorAll('.drag-placeholder').forEach(function(el) {
+            el.classList.remove('drag-placeholder');
+        });
+        dragging = null;
+    }
+
+    document.addEventListener('pointerdown', function(e) {
+        if (e.target.closest('.reorder-grip')) onStart(e);
+    });
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onEnd);
+    document.addEventListener('pointercancel', onEnd);
+    document.addEventListener('contextmenu', function(e) {
+        if (e.target.closest('.reorder-item')) e.preventDefault();
+    });
+})();
+let dragOrder = null;
+
+document.addEventListener('reorder:move', (e) => {
+    const key = e.target.closest('.reorder-list')?.dataset.reorder;
+    if(!key) return;
+    if(!dragOrder || dragOrder.key !== key) dragOrder = { key, from: e.detail.from, to: e.detail.to };
+    else dragOrder.to = e.detail.to;
+});
+document.addEventListener('pointerup', () => {
+    if(!dragOrder) return;
+    const { key, from, to } = dragOrder;
+    dragOrder = null;
+    if(from === to) return;
+    if(key === 'sections'){
+        const kf = (id) => 's:' + id;
+        applyReorder(sortByOrder(Object.keys(sections.toJSON()), kf), kf, from, to);
+    } else if(key.startsWith('section:')){
+        const sec = key.slice(8), kf = (id) => 'i:' + id + ':' + sec;
+        applyReorder(sortByOrder(sectionItemIds(sec), kf), kf, from, to);
+    }
+});
+function sectionItemIds(sec){
+    return Object.keys(itemSections.toJSON()).filter(k => after(k) === sec && items.get(before(k))).map(before);
+}
+function sortByOrder(ids, keyOf){
+    return ids.map((id, i) => ({ id, pos: order.get(keyOf(id)) ?? i })).sort((a, b) => a.pos - b.pos).map(x => x.id);
+}
+function applyReorder(ids, keyOf, from, to){
+    if(from < 0 || from >= ids.length) return;
+    const [moved] = ids.splice(from, 1);
+    ids.splice(to, 0, moved);
+    ids.forEach((id, i) => order.set(keyOf(id), i));
+    doc.commit();
+}
+function sortSectionAlpha(sec){
+    const ids = sectionItemIds(sec)
+        .sort((a, b) => (items.get(a)?.label || '').localeCompare(items.get(b)?.label || '', 'fr'));
+    ids.forEach((id, i) => order.set('i:' + id + ':' + sec, i));
+    doc.commit();
+}
+function toggleHideChecked(){ hideChecked = !hideChecked; paint(); }
 function slug(s){
     return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
             .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -120,7 +312,12 @@ function toggleCheck(itemId){
 }
 
 function uncheck(ids){ ids.forEach(id => checked.delete(id)); doc.commit(); }
-function uncheckAll(){ uncheck(Object.keys(checked.toJSON())); }
+function uncheckAll(){
+    const ids = Object.keys(checked.toJSON());
+    if(!ids.length) return;
+    uncheck(ids);
+    notify('Tout décoché');
+}
 function openAdd(target){
     adding = (adding === target) ? null : target;
     if(adding && target !== ':orphan' && target !== ':section') folded.delete('section:' + target);
@@ -230,7 +427,7 @@ function removeSectionHere(id, name, srcOuting){
 }
 
 function removeOutingHere(id, name){ deleteOuting(id); notify('« ' + name + ' » supprimé'); }
-function collect(map, its, chk, placed){
+function collect(map, its, chk, placed, ord){
     const byContainer = {};
     for(const k of Object.keys(map.toJSON())){
         const id = before(k);
@@ -238,11 +435,15 @@ function collect(map, its, chk, placed){
         (byContainer[after(k)] ||= []).push({ id, label: its[id].label, done: !!chk[id] });
         placed[id] = true;
     }
+    for(const c in byContainer){
+        byContainer[c].forEach((it, i) => { it.pos = ord ? (ord.get('i:' + it.id + ':' + c) ?? i) : i; });
+        byContainer[c].sort((a, b) => a.pos - b.pos);
+    }
     return byContainer;
 }
 function buildModel(){
     const its = items.toJSON(), secs = sections.toJSON(), chk = checked.toJSON(), placed = {};
-    const secItems = collect(itemSections, its, chk, placed);
+    const secItems = collect(itemSections, its, chk, placed, order);
     const looseOf = collect(outingItems, its, chk, {});
     const section = (id) => ({ id, name: secs[id]?.name, items: secItems[id] || [] });
 
@@ -253,7 +454,10 @@ function buildModel(){
     }
     const outingList = Object.entries(outings.toJSON()).map(([id, v]) =>
         ({ id, name: v.name, sections: (ofOuting[id] || []).map(section), items: looseOf[id] || [] }));
-    const catalog = Object.keys(secs).map(section);
+    const catalog = Object.keys(secs)
+        .map((id, i) => ({ id, pos: order.get('s:' + id) ?? i }))
+        .sort((a, b) => a.pos - b.pos)
+        .map(x => section(x.id));
     const orphans = Object.entries(its).filter(([id]) => !placed[id])
         .map(([id, v]) => ({ id, label: v.label, done: !!chk[id] }));
     return { outingList, catalog, orphans };
@@ -291,12 +495,17 @@ function renameField(rename, id){
 }
 
 function itemRows(list, srcSection, srcOuting){
-    return html`<ul class="items">${list.map(it => {
+    const reorderable = editMode && !!srcSection;   // drag order lives on a section membership
+    const shown = (!editMode && hideChecked) ? list.filter(it => !it.done) : list;
+    return html`<ul class=${'items' + (reorderable ? ' reorder-list' : '')}
+                     data-reorder=${reorderable ? 'section:' + srcSection : null}>${shown.map((it, i) => {
       const ek = 'item:' + it.id;                                   // rename key — the thing itself
       const sk = it.id + '|' + (srcSection || '') + '|' + (srcOuting || '');  // select key — this placement
       return html`
-      <li class=${(it.done ? 'done' : '') + (selected.has(sk) ? ' selected' : '')}>
+      <li class=${(it.done ? 'done' : '') + (selected.has(sk) ? ' selected' : '') + (reorderable ? ' reorder-item' : '')}
+          data-idx=${reorderable ? i : null}>
         ${editing === ek ? renameField(renameItem, it.id) : html`
+          ${reorderable ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}
           ${editMode && editing !== ek ? html`
             <input type="checkbox" class="select" aria-label="Sélectionner"
                 .checked=${selected.has(sk)} onchange=${() => toggleSelect(sk)}>` : ''}
@@ -314,11 +523,11 @@ function foldAll(){
     paint();
 }
 
-function foldTitle(k, name){
+function foldTitle(k, name, trailing){
     const open = !folded.has(k);
     return html`<span class="fold-title" role="button" tabindex="0"
       aria-expanded=${open ? 'true' : 'false'} onclick=${() => toggleFold(k)}
-      ><span class="caret" aria-hidden="true">${open ? '▾' : '▸'}</span>${name}</span>`;
+      ><span class="caret" aria-hidden="true">${open ? '▾' : '▸'}</span>${name}${trailing || ''}</span>`;
 }
 function countBadge(list){
     if(!list.length) return '';
@@ -331,14 +540,17 @@ function uncheckButton(label, list){
     return html`<button class="row-btn reset" aria-label=${label}
       onclick=${() => uncheck(list.map(it => it.id))}>↺</button>`;
 }
-function sectionCard(s, srcOuting){
+function sectionCard(s, srcOuting, idx){
     const k = 'section:' + s.id;
+    const reorderable = editMode && !srcOuting;   // catalog sections drag; outing-gathered ones do not
+    const complete = !editMode && s.items.length > 0 && s.items.every(it => it.done);
     return html`
-      <section>
-        <h3>${countBadge(s.items)}${editing === k ? renameField(renameSection, s.id)
-            : html`${foldTitle(k, s.name)}${editMode ? html`${editButtons(() => startEdit(k, s.name),
+      <section class=${(reorderable ? 'reorder-item' : '') + (complete ? ' complete' : '')} data-idx=${reorderable ? idx : null}>
+        <h3>${reorderable ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}${editing === k ? renameField(renameSection, s.id)
+            : html`${foldTitle(k, s.name, countBadge(s.items))}${editMode ? html`${editButtons(() => startEdit(k, s.name),
                                                      () => removeSectionHere(s.id, s.name, srcOuting))}
-                     <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(s.id)}>+</button>` : ''}`}${uncheckButton('Décocher la section', s.items)}</h3>
+                     <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(s.id)}>+</button>
+                     ${s.items.length > 1 ? html`<button class="row-btn" aria-label="Trier de A à Z" onclick=${() => sortSectionAlpha(s.id)}>A↓</button>` : ''}` : ''}`}${uncheckButton('Décocher la section', s.items)}</h3>
         ${folded.has(k) ? '' : html`
           ${editMode && adding === s.id ? addField(s.id, 'Nouvelle chose', 'Créer la chose') : ''}
           ${itemRows(s.items, s.id)}`}</section>`;
@@ -347,10 +559,11 @@ function sectionCard(s, srcOuting){
 function outingCard(o){
     const k = 'outing:' + o.id;
     const its = [...o.sections.flatMap(x => x.items), ...o.items];
+    const complete = !editMode && its.length > 0 && its.every(it => it.done);
     return html`
-      <article class="outing">
-        <h2>${countBadge(its)}${editing === k ? renameField(renameOuting, o.id)
-            : html`<span class="grow">${o.name}</span>${editMode ? editButtons(() => startEdit(k, o.name),
+      <article class=${'outing' + (complete ? ' complete' : '')}>
+        <h2>${editing === k ? renameField(renameOuting, o.id)
+            : html`<span class="grow">${o.name}${countBadge(its)}</span>${editMode ? editButtons(() => startEdit(k, o.name),
                                                     () => removeOutingHere(o.id, o.name)) : ''}`}${uncheckButton('Décocher la sortie', its)}</h2>
         ${o.sections.map(s => sectionCard(s, o.id))}
         ${o.items.length ? html`<h3>Sans section</h3>${itemRows(o.items, '', o.id)}` : ''}</article>`;
@@ -360,7 +573,7 @@ function orphanCard(orphans){
     if(!orphans.length && !editMode) return '';   // nothing loose, nothing to add — hide it
     return html`
       <section>
-        <h3>${countBadge(orphans)}<span class="grow">Sans section</span>${editMode ? html`
+        <h3><span class="grow">Sans section${countBadge(orphans)}</span>${editMode ? html`
           <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(':orphan')}>+</button>` : ''}${uncheckButton('Décocher', orphans)}</h3>
         ${editMode && adding === ':orphan' ? addField(':orphan', 'Nouvelle chose', 'Créer la chose') : ''}
         ${itemRows(orphans, '')}</section>`;
@@ -480,6 +693,11 @@ function outingChip(o){
 }
 
 function focusView(m){
+    const o = m.outingList.find(x => x.id === focusId);
+    const q = filter.trim().toLowerCase();
+    const match = it => it.label.toLowerCase().includes(q);
+    const fo = q ? { ...o, sections: o.sections.map(s => ({ ...s, items: s.items.filter(match) })).filter(s => s.items.length),
+                     items: o.items.filter(match) } : o;
     return html`
       <div class="toolbar">
         <button class="edit-toggle" aria-label="Retour" onclick=${() => goBack()}>← Retour</button>
@@ -487,13 +705,16 @@ function focusView(m){
           <button class="row-btn" aria-label="Modifier la sortie" onclick=${() => modifyOuting(focusId)}>✎</button>
           <button class="row-btn" aria-label=${folded.size ? 'Tout déplier' : 'Tout plier'}
                   onclick=${foldAll}>${folded.size ? '⊞' : '⊟'}</button>
+          <button class="row-btn" aria-label=${hideChecked ? 'Afficher les choses cochées' : 'Masquer les choses cochées'}
+                  onclick=${toggleHideChecked}>${hideChecked ? '☐' : '☑'}</button>
           <button class="row-btn" aria-label="Défaire" ?disabled=${!undo.canUndo()} onclick=${doUndo}>↶</button>
           <button class="row-btn" aria-label="Refaire" ?disabled=${!undo.canRedo()} onclick=${doRedo}>↷</button>
           <button class="edit-toggle" onclick=${toggleEdit}>${editMode ? 'Terminé' : 'Modifier'}</button>
         </span>
       </div>
       ${selected.size ? selectionBar() : ''}
-      ${outingCard(m.outingList.find(o => o.id === focusId))}
+      ${filterBar()}
+      ${outingCard(fo)}
       ${wiz ? wizardPanel() : ''}
       ${picker ? pickerPanel() : ''}
       ${toast ? toastView() : ''}`;
@@ -534,6 +755,8 @@ function view(m){
         <span class="toolbar-actions">
           <button class="row-btn" aria-label=${folded.size ? 'Tout déplier' : 'Tout plier'}
                   onclick=${foldAll}>${folded.size ? '⊞' : '⊟'}</button>
+          <button class="row-btn" aria-label=${hideChecked ? 'Afficher les choses cochées' : 'Masquer les choses cochées'}
+                  onclick=${toggleHideChecked}>${hideChecked ? '☐' : '☑'}</button>
           <button class="row-btn" aria-label="Défaire" ?disabled=${!undo.canUndo()}
                   onclick=${doUndo}>↶</button>
           <button class="row-btn" aria-label="Refaire" ?disabled=${!undo.canRedo()}
@@ -547,7 +770,7 @@ function view(m){
       ${m.outingList.length ? html`<div class="outings">${m.outingList.map(outingChip)}</div>` : ''}
       ${empty && !editMode ? html`<p class="empty">Rien à prendre pour l'instant.</p>` : html`
         ${empty ? '' : filterBar()}
-        ${catalog.map(s => sectionCard(s, ''))}
+        <div class=${editMode ? 'reorder-list' : ''} data-reorder=${editMode ? 'sections' : null}>${catalog.map((s, i) => sectionCard(s, '', i))}</div>
         ${orphanCard(orphans)}
         ${editMode ? addSectionActuator() : ''}`}
       ${wiz ? wizardPanel() : ''}
