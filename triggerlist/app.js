@@ -1,6 +1,6 @@
 // [[id:4f21ee3e-33b2-40ec-aae8-d45eb8fb38cf][How it all fits together:8]]
 import { render, html } from 'uhtml';
-import { get, set } from 'idb-keyval';
+import { get, set, del } from 'idb-keyval';
 
 // the doc, its maps, and its undo manager are created at boot, once Loro's WASM has loaded.
 let doc, items, sections, itemSections, outings, outingSections, outingItems, checked, order, undo;
@@ -22,23 +22,28 @@ let wiz = null, focusId = null, toast = null, hideChecked = false;
 
 // the sync layer's handles: the live socket, the room url, the toolbar state,
 // the status code behind a refusal, and the growing wait between reconnects.
-let ws, syncUrl, syncState = 'off', syncCode = '', retryDelay;
+// syncUrlShown reveals the room url under the toolbar when the status pill is tapped.
+let ws, syncUrl, syncState = 'off', syncCode = '', retryDelay, syncUrlShown = false;
 
 // the screen-memory key and the debounce timer coalescing its snapshot writes,
 // declared here (before boot) so the first paint can save through them.
 const UI_KEY = 'triggerlist.ui';
 let uiTimer;
-const DOC_KEY = 'triggerlist-doc';
+function docKey(){ return 'triggerlist-doc:' + (syncUrl || 'local'); }
 
 async function loadDoc(){
-    const saved = await get(DOC_KEY);
+    let saved = await get(docKey());
+    if(!saved){                                   // an install from before per-room keying
+        const legacy = await get('triggerlist-doc');
+        if(legacy){ saved = legacy; await del('triggerlist-doc'); }
+    }
     if(saved) doc.import(saved);
 }
 
 let saveTimer;
 function persist(){
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => set(DOC_KEY, doc.export({ mode: 'snapshot' })), 100);
+    saveTimer = setTimeout(() => set(docKey(), doc.export({ mode: 'snapshot' })), 100);
 }
 const backStack = [];
 let leaving = false;
@@ -89,6 +94,7 @@ checked = doc.getMap('checked');
 order = doc.getMap('order');
 undo = new UndoManager(doc, { mergeInterval: 0 });
 
+resolveSyncUrl();              // know the room before loading its (per-room) cache
 await loadDoc();
 const savedUi = restoreUi();   // return to the screen we were on before the reload
 doc.subscribe(() => { paint(); persist(); });
@@ -97,6 +103,7 @@ document.body.setAttribute('data-app-ready', '1');
 if(savedUi.scrollY) requestAnimationFrame(() => window.scrollTo(0, savedUi.scrollY));
 startSync();
 armGuard();   // the base entry Back lands on, so leaving the app asks first
+if(focusId) openScreen(() => { focusId = null; paint(); });   // a restored focus needs its history entry, so Back reaches the catalog
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 function saveUi(){
     clearTimeout(uiTimer);
@@ -281,6 +288,12 @@ function sortSectionAlpha(sec){
     ids.forEach((id, i) => order.set('i:' + id + ':' + sec, i));
     doc.commit();
 }
+function flashItem(id){
+    requestAnimationFrame(() => document.querySelectorAll('[data-item="' + CSS.escape(id) + '"]')
+        .forEach(el => el.animate(
+            [{ boxShadow: '0 0 0 3px #f6c453' }, { boxShadow: '0 0 0 0 rgba(246,196,83,0)' }],
+            { duration: 500, easing: 'ease-out' })));
+}
 function toggleHideChecked(){ hideChecked = !hideChecked; paint(); }
 function slug(s){
     return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -307,8 +320,11 @@ function addOuting(name){
 }
 
 function toggleCheck(itemId){
-    checked.get(itemId) ? checked.delete(itemId) : checked.set(itemId, 1);
+    const nowChecked = !checked.get(itemId);
+    nowChecked ? checked.set(itemId, 1) : checked.delete(itemId);
     doc.commit();
+    flashItem(itemId);
+    if(nowChecked && hideChecked) notify('« ' + items.get(itemId)?.label + ' » coché');
 }
 
 function uncheck(ids){ ids.forEach(id => checked.delete(id)); doc.commit(); }
@@ -503,7 +519,7 @@ function itemRows(list, srcSection, srcOuting){
       const sk = it.id + '|' + (srcSection || '') + '|' + (srcOuting || '');  // select key — this placement
       return html`
       <li class=${(it.done ? 'done' : '') + (selected.has(sk) ? ' selected' : '') + (reorderable ? ' reorder-item' : '')}
-          data-idx=${reorderable ? i : null}>
+          data-idx=${reorderable ? i : null} data-item=${it.id}>
         ${editing === ek ? renameField(renameItem, it.id) : html`
           ${reorderable ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}
           ${editMode && editing !== ek ? html`
@@ -535,10 +551,10 @@ function countBadge(list){
     return html`<span class="count">${done}/${list.length}</span>`;
 }
 
-function uncheckButton(label, list){
+function uncheckButton(label, list, msg){
     if(!list.some(it => it.done)) return '';
     return html`<button class="row-btn reset" aria-label=${label}
-      onclick=${() => uncheck(list.map(it => it.id))}>↺</button>`;
+      onclick=${() => { uncheck(list.map(it => it.id)); notify(msg); }}>↺</button>`;
 }
 function sectionCard(s, srcOuting, idx){
     const k = 'section:' + s.id;
@@ -550,7 +566,7 @@ function sectionCard(s, srcOuting, idx){
             : html`${foldTitle(k, s.name, countBadge(s.items))}${editMode ? html`${editButtons(() => startEdit(k, s.name),
                                                      () => removeSectionHere(s.id, s.name, srcOuting))}
                      <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(s.id)}>+</button>
-                     ${s.items.length > 1 ? html`<button class="row-btn" aria-label="Trier de A à Z" onclick=${() => sortSectionAlpha(s.id)}>A↓</button>` : ''}` : ''}`}${uncheckButton('Décocher la section', s.items)}</h3>
+                     ${s.items.length > 1 ? html`<button class="row-btn" aria-label="Trier de A à Z" onclick=${() => sortSectionAlpha(s.id)}>A↓</button>` : ''}` : ''}`}${uncheckButton('Décocher la section', s.items, 'Section décochée')}</h3>
         ${folded.has(k) ? '' : html`
           ${editMode && adding === s.id ? addField(s.id, 'Nouvelle chose', 'Créer la chose') : ''}
           ${itemRows(s.items, s.id)}`}</section>`;
@@ -564,7 +580,7 @@ function outingCard(o){
       <article class=${'outing' + (complete ? ' complete' : '')}>
         <h2>${editing === k ? renameField(renameOuting, o.id)
             : html`<span class="grow">${o.name}${countBadge(its)}</span>${editMode ? editButtons(() => startEdit(k, o.name),
-                                                    () => removeOutingHere(o.id, o.name)) : ''}`}${uncheckButton('Décocher la sortie', its)}</h2>
+                                                    () => removeOutingHere(o.id, o.name)) : ''}`}${uncheckButton('Décocher la sortie', its, 'Sortie décochée')}</h2>
         ${o.sections.map(s => sectionCard(s, o.id))}
         ${o.items.length ? html`<h3>Sans section</h3>${itemRows(o.items, '', o.id)}` : ''}</article>`;
 }
@@ -574,7 +590,7 @@ function orphanCard(orphans){
     return html`
       <section>
         <h3><span class="grow">Sans section${countBadge(orphans)}</span>${editMode ? html`
-          <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(':orphan')}>+</button>` : ''}${uncheckButton('Décocher', orphans)}</h3>
+          <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(':orphan')}>+</button>` : ''}${uncheckButton('Décocher', orphans, 'Décoché')}</h3>
         ${editMode && adding === ':orphan' ? addField(':orphan', 'Nouvelle chose', 'Créer la chose') : ''}
         ${itemRows(orphans, '')}</section>`;
 }
@@ -639,8 +655,23 @@ function wizAddItem(){
     input.value = ''; input.focus();
     paint();
 }
+function wizItemGroups(){
+    const secOf = {};
+    for(const k of Object.keys(itemSections.toJSON())) (secOf[before(k)] ||= []).push(after(k));
+    const q = wiz.itemFilter.trim().toLowerCase();
+    const rows = Object.entries(items.toJSON()).filter(([id, v]) => v.label.toLowerCase().includes(q));
+    return {
+        orphans: rows.filter(([id]) => !(secOf[id] || []).length),
+        otherSec: rows.filter(([id]) => (secOf[id] || []).length && !secOf[id].some(s => wiz.picks.has(s))),
+    };
+}
+function wizPick([id, v]){
+    return html`<label class="pick"><input type="checkbox" aria-label=${v.label} .checked=${wiz.itemPicks.has(id)}
+      onchange=${() => { wiz.itemPicks.has(id) ? wiz.itemPicks.delete(id) : wiz.itemPicks.add(id); paint(); }}>${v.label}</label>`;
+}
 function wizardPanel(){
     const outs = Object.entries(outings.toJSON());
+    const groups = wizItemGroups();
     return html`<div class="sheet-back" onclick=${backdropClose(goBack)}><div class="sheet wizard" role="dialog" aria-label="Planifier une sortie">
       ${wiz.step === 1 ? html`
         <h2 class="wiz-title">Planifier une sortie</h2>
@@ -663,11 +694,8 @@ function wizardPanel(){
         <h2 class="wiz-title">Quelles choses ?</h2>
         <input type="search" class="wiz-filter" placeholder="Filtrer" aria-label="Filtrer les choses"
                oninput=${e => { wiz.itemFilter = e.target.value; paint(); }}>
-        ${Object.entries(items.toJSON())
-          .filter(([id, v]) => v.label.toLowerCase().includes(wiz.itemFilter.trim().toLowerCase()))
-          .map(([id, v]) => html`
-          <label class="pick"><input type="checkbox" aria-label=${v.label} .checked=${wiz.itemPicks.has(id)}
-            onchange=${() => { wiz.itemPicks.has(id) ? wiz.itemPicks.delete(id) : wiz.itemPicks.add(id); paint(); }}>${v.label}</label>`)}
+        ${groups.orphans.length ? html`<h3 class="wiz-group">Sans section</h3>${groups.orphans.map(wizPick)}` : ''}
+        ${groups.otherSec.length ? html`<h3 class="wiz-group">Dans d'autres sections</h3>${groups.otherSec.map(wizPick)}` : ''}
         <div class="add wiz-add">
           <input class="wiz-add-input" placeholder="Nouvelle chose"
                  onkeydown=${e => { if(e.key === 'Enter') wizAddItem(); }}>
@@ -751,7 +779,8 @@ function view(m){
                         offline: 'Hors ligne' + (syncCode ? ' ' + syncCode : '') }[syncState];
     return html`
       <div class="toolbar">
-        <span class="sync" data-sync=${syncState}>${syncLabel}</span>
+        <button class="sync" data-sync=${syncState} aria-label="État de synchronisation"
+                onclick=${() => { syncUrlShown = !syncUrlShown; paint(); }}>${syncLabel}</button>
         <span class="toolbar-actions">
           <button class="row-btn" aria-label=${folded.size ? 'Tout déplier' : 'Tout plier'}
                   onclick=${foldAll}>${folded.size ? '⊞' : '⊟'}</button>
@@ -766,6 +795,7 @@ function view(m){
           <button class="row-btn" aria-label="Tout décocher" onclick=${uncheckAll}>↺</button>
         </span>
       </div>
+      ${syncUrlShown ? html`<div class="sync-url">${syncUrl || 'Local — pas de synchronisation'}</div>` : ''}
       ${selected.size ? selectionBar() : ''}
       ${m.outingList.length ? html`<div class="outings">${m.outingList.map(outingChip)}</div>` : ''}
       ${empty && !editMode ? html`<p class="empty">Rien à prendre pour l'instant.</p>` : html`
@@ -844,7 +874,7 @@ function connect(){
         retryDelay = Math.min(retryDelay * 2, RECONNECT_MAX);
     };
 }
-function startSync(){
+function resolveSyncUrl(){
     const params = new URLSearchParams(location.search);
     let url = params.get('sync_url');
     if(url){
@@ -855,8 +885,11 @@ function startSync(){
     } else {
         url = localStorage.getItem('triggerlist.sync_url');
     }
-    if(!url) return;
-    syncUrl = url;
+    syncUrl = url || undefined;
+}
+
+function startSync(){
+    if(!syncUrl) return;
     doc.subscribe((batch) => {
         if(batch.by === 'local' && ws && ws.readyState === WebSocket.OPEN)
             ws.send(doc.export({ mode: 'update' }));
