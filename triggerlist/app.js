@@ -18,7 +18,7 @@ let doc, items, sections, itemSections, outings, outingSections, outingItems, ch
 // ticked things (view mode) so only what is left to pack shows.
 let editMode = false, editing = null, editingText = '', folded = new Set(), selected = new Set();
 let adding = null, filter = '', picker = null;
-let wiz = null, focusId = null, toast = null, hideChecked = false;
+let wiz = null, focusId = null, toast = null, hideChecked = false, historyOpen = false;
 
 // the sync layer's handles: the live socket, the room url, the toolbar state,
 // the status code behind a refusal, and the growing wait between reconnects.
@@ -33,6 +33,8 @@ function docKey(){ return 'triggerlist-doc:' + (syncUrl || 'local'); }
 
 async function loadDoc(){
     let saved = await get(docKey());
+    if(!saved && syncUrl)                         // a room joined for the first time
+        saved = await get('triggerlist-doc:local');   // seeds from the offline list, not from other rooms
     if(!saved){                                   // an install from before per-room keying
         const legacy = await get('triggerlist-doc');
         if(legacy){ saved = legacy; await del('triggerlist-doc'); }
@@ -84,6 +86,7 @@ function paint(){ document.body.toggleAttribute('data-edit', editMode); render(a
 
 const { LoroDoc, UndoManager } = await import('loro-crdt');
 doc = new LoroDoc();
+doc.setRecordTimestamp(true);   // so each change carries a time for the history
 items = doc.getMap('items');
 sections = doc.getMap('sections');
 itemSections = doc.getMap('itemSections');
@@ -280,13 +283,13 @@ function applyReorder(ids, keyOf, from, to){
     const [moved] = ids.splice(from, 1);
     ids.splice(to, 0, moved);
     ids.forEach((id, i) => order.set(keyOf(id), i));
-    doc.commit();
+    commit('réordonné');
 }
 function sortSectionAlpha(sec){
     const ids = sectionItemIds(sec)
         .sort((a, b) => (items.get(a)?.label || '').localeCompare(items.get(b)?.label || '', 'fr'));
     ids.forEach((id, i) => order.set('i:' + id + ':' + sec, i));
-    doc.commit();
+    commit('section « ' + (sections.get(sec)?.name || sec) + ' » triée A→Z');
 }
 function flashItem(id){
     requestAnimationFrame(() => document.querySelectorAll('[data-item="' + CSS.escape(id) + '"]')
@@ -295,10 +298,28 @@ function flashItem(id){
             { duration: 500, easing: 'ease-out' })));
 }
 function toggleHideChecked(){ hideChecked = !hideChecked; paint(); }
+function collapseThenCheck(itemId){
+    const rows = [...document.querySelectorAll('[data-item="' + CSS.escape(itemId) + '"]')];
+    if(!rows.length){ applyCheck(itemId, true); return; }
+    let pending = rows.length;
+    const done = () => { if(--pending === 0) applyCheck(itemId, true); };
+    rows.forEach(el => {
+        const h = el.offsetHeight;
+        el.style.overflow = 'hidden';
+        const anim = el.animate(
+            [{ backgroundColor: '#f6c453', maxHeight: h + 'px', opacity: 1 },
+             { backgroundColor: '#f6c453', maxHeight: h + 'px', opacity: 1, offset: .3 },
+             { backgroundColor: 'transparent', maxHeight: '0px', opacity: 0, transform: 'scale(.9)' }],
+            { duration: 380, easing: 'ease-in' });
+        anim.onfinish = anim.oncancel = done;   // a repaint that cancels the animation still lands the tick
+    });
+}
 function slug(s){
     return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
             .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
+
+function commit(message){ doc.commit({ message }); }   // the message names the step in the history
 
 function addItem(label, sectionId){
     label = (label || '').trim();
@@ -306,32 +327,36 @@ function addItem(label, sectionId){
     const id = slug(label);
     items.set(id, { label });
     if(sectionId) itemSections.set(id + ':' + sectionId, 1);
-    doc.commit();
+    commit('« ' + label + ' » ajouté');
 }
 
 function addSection(name){
     name = (name || '').trim();
-    if(name){ sections.set(slug(name), { name }); doc.commit(); }
+    if(name){ sections.set(slug(name), { name }); commit('section « ' + name + ' » ajoutée'); }
 }
 
 function addOuting(name){
     name = (name || '').trim();
-    if(name){ outings.set(slug(name), { name }); doc.commit(); }
+    if(name){ outings.set(slug(name), { name }); commit('sortie « ' + name + ' » ajoutée'); }
 }
 
 function toggleCheck(itemId){
     const nowChecked = !checked.get(itemId);
-    nowChecked ? checked.set(itemId, 1) : checked.delete(itemId);
-    doc.commit();
+    if(nowChecked && hideChecked && !editMode){ collapseThenCheck(itemId); return; }
+    applyCheck(itemId, nowChecked);
     flashItem(itemId);
-    if(nowChecked && hideChecked) notify('« ' + items.get(itemId)?.label + ' » coché');
 }
 
-function uncheck(ids){ ids.forEach(id => checked.delete(id)); doc.commit(); }
+function applyCheck(itemId, on){
+    on ? checked.set(itemId, 1) : checked.delete(itemId);
+    commit('« ' + items.get(itemId)?.label + ' » ' + (on ? 'coché' : 'décoché'));
+}
+
+function uncheck(ids, message){ ids.forEach(id => checked.delete(id)); commit(message); }
 function uncheckAll(){
     const ids = Object.keys(checked.toJSON());
     if(!ids.length) return;
-    uncheck(ids);
+    uncheck(ids, 'Tout décoché');
     notify('Tout décoché');
 }
 function openAdd(target){
@@ -351,6 +376,10 @@ function submitAdd(target){
 
 function closeAdd(){ adding = null; paint(); }
 
+document.addEventListener('pointerdown', e => {   // a press outside the open field dismisses it, default mode only
+    if(adding && !editMode && !e.target.closest('.section-add')) closeAdd();
+});
+
 function addField(target, placeholder, submitLabel){
     return html`
       <div class="add section-add">
@@ -360,6 +389,14 @@ function addField(target, placeholder, submitLabel){
         <button aria-label=${submitLabel} onclick=${() => submitAdd(target)}>+</button>
       </div>`;
 }
+let pressTimer, pressFired = false;
+function longPressStart(action){
+    pressFired = false;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => { pressFired = true; action(); }, 500);
+}
+function longPressCancel(){ clearTimeout(pressTimer); }
+function longPressed(){ const was = pressFired; pressFired = false; return was; }
 function before(k){ return k.slice(0, k.indexOf(':')); }
 function after(k){ return k.slice(k.indexOf(':') + 1); }
 function nameTaken(map, id, name){
@@ -373,22 +410,22 @@ function mergeItems(from, into){
     if(checked.get(from)) checked.set(into, 1);
     checked.delete(from);
     items.delete(from);
-    doc.commit();
+    commit('« ' + (items.get(into)?.label || into) + ' » fusionné');
 }
 function renameItem(id, label){
     label = (label || '').trim();
     if(!label) return;
     const twin = Object.keys(items.toJSON()).find(i => i !== id && items.get(i).label === label);
     if(twin) mergeItems(id, twin);
-    else { items.set(id, { label }); doc.commit(); }
+    else { items.set(id, { label }); commit('renommé « ' + label + ' »'); }
 }
 function renameSection(id, name){
     name = (name || '').trim();
-    if(name && !nameTaken(sections, id, name)){ sections.set(id, { name }); doc.commit(); }
+    if(name && !nameTaken(sections, id, name)){ sections.set(id, { name }); commit('section renommée « ' + name + ' »'); }
 }
 function renameOuting(id, name){
     name = (name || '').trim();
-    if(name && !nameTaken(outings, id, name)){ outings.set(id, { name }); doc.commit(); }
+    if(name && !nameTaken(outings, id, name)){ outings.set(id, { name }); commit('sortie renommée « ' + name + ' »'); }
 }
 
 function startEdit(key, current){
@@ -407,42 +444,42 @@ function removeKeys(map, part, id){
     for(const k of Object.keys(map.toJSON())) if(part(k) === id) map.delete(k);
 }
 
-function deleteItem(id){
+function deleteItem(id, msg){
     items.delete(id); checked.delete(id);
     removeKeys(itemSections, before, id);
     removeKeys(outingItems, before, id);
-    doc.commit();
+    commit(msg);
 }
 
-function deleteSection(id){
+function deleteSection(id, msg){
     sections.delete(id);
     removeKeys(itemSections, after, id);
     removeKeys(outingSections, after, id);
-    doc.commit();
+    commit(msg);
 }
 
-function deleteOuting(id){
+function deleteOuting(id, msg){
     outings.delete(id);
     removeKeys(outingSections, before, id);
     removeKeys(outingItems, after, id);
-    doc.commit();
+    commit(msg);
 }
-function unlinkItemFromSection(id, sectionId){ itemSections.delete(id + ':' + sectionId); doc.commit(); }
-function unlinkItemFromOuting(id, outingId){ outingItems.delete(id + ':' + outingId); doc.commit(); }
-function unlinkSectionFromOuting(id, outingId){ outingSections.delete(outingId + ':' + id); doc.commit(); }
+function unlinkItemFromSection(id, sectionId, msg){ itemSections.delete(id + ':' + sectionId); commit(msg); }
+function unlinkItemFromOuting(id, outingId, msg){ outingItems.delete(id + ':' + outingId); commit(msg); }
+function unlinkSectionFromOuting(id, outingId, msg){ outingSections.delete(outingId + ':' + id); commit(msg); }
 
 function removeItemHere(id, name, srcSection, srcOuting){
-    if(srcSection){ unlinkItemFromSection(id, srcSection); notify('« ' + name + ' » retiré'); }
-    else if(srcOuting){ unlinkItemFromOuting(id, srcOuting); notify('« ' + name + ' » retiré de la sortie'); }
-    else { deleteItem(id); notify('« ' + name + ' » supprimé'); }
+    if(srcSection){ const m = '« ' + name + ' » retiré'; unlinkItemFromSection(id, srcSection, m); notify(m); }
+    else if(srcOuting){ const m = '« ' + name + ' » retiré de la sortie'; unlinkItemFromOuting(id, srcOuting, m); notify(m); }
+    else { const m = '« ' + name + ' » supprimé'; deleteItem(id, m); notify(m); }
 }
 
 function removeSectionHere(id, name, srcOuting){
-    if(srcOuting){ unlinkSectionFromOuting(id, srcOuting); notify('« ' + name + ' » retiré de la sortie'); }
-    else { deleteSection(id); notify('« ' + name + ' » supprimé'); }
+    if(srcOuting){ const m = '« ' + name + ' » retiré de la sortie'; unlinkSectionFromOuting(id, srcOuting, m); notify(m); }
+    else { const m = '« ' + name + ' » supprimé'; deleteSection(id, m); notify(m); }
 }
 
-function removeOutingHere(id, name){ deleteOuting(id); notify('« ' + name + ' » supprimé'); }
+function removeOutingHere(id, name){ const m = '« ' + name + ' » supprimé'; deleteOuting(id, m); notify(m); }
 function collect(map, its, chk, placed, ord){
     const byContainer = {};
     for(const k of Object.keys(map.toJSON())){
@@ -539,10 +576,14 @@ function foldAll(){
     paint();
 }
 
-function foldTitle(k, name, trailing){
+function foldTitle(k, name, trailing, onLong){
     const open = !folded.has(k);
     return html`<span class="fold-title" role="button" tabindex="0"
-      aria-expanded=${open ? 'true' : 'false'} onclick=${() => toggleFold(k)}
+      aria-expanded=${open ? 'true' : 'false'}
+      onpointerdown=${onLong ? () => longPressStart(onLong) : null}
+      onpointerup=${onLong ? longPressCancel : null}
+      onpointercancel=${onLong ? longPressCancel : null}
+      onclick=${() => { if(longPressed()) return; toggleFold(k); }}
       ><span class="caret" aria-hidden="true">${open ? '▾' : '▸'}</span>${name}${trailing || ''}</span>`;
 }
 function countBadge(list){
@@ -554,7 +595,7 @@ function countBadge(list){
 function uncheckButton(label, list, msg){
     if(!list.some(it => it.done)) return '';
     return html`<button class="row-btn reset" aria-label=${label}
-      onclick=${() => { uncheck(list.map(it => it.id)); notify(msg); }}>↺</button>`;
+      onclick=${() => { uncheck(list.map(it => it.id), msg); notify(msg); }}>↺</button>`;
 }
 function sectionCard(s, srcOuting, idx){
     const k = 'section:' + s.id;
@@ -563,12 +604,12 @@ function sectionCard(s, srcOuting, idx){
     return html`
       <section class=${(reorderable ? 'reorder-item' : '') + (complete ? ' complete' : '')} data-idx=${reorderable ? idx : null}>
         <h3>${reorderable ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}${editing === k ? renameField(renameSection, s.id)
-            : html`${foldTitle(k, s.name, countBadge(s.items))}${editMode ? html`${editButtons(() => startEdit(k, s.name),
+            : html`${foldTitle(k, s.name, countBadge(s.items), () => openAdd(s.id))}${editMode ? html`${editButtons(() => startEdit(k, s.name),
                                                      () => removeSectionHere(s.id, s.name, srcOuting))}
                      <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(s.id)}>+</button>
                      ${s.items.length > 1 ? html`<button class="row-btn" aria-label="Trier de A à Z" onclick=${() => sortSectionAlpha(s.id)}>A↓</button>` : ''}` : ''}`}${uncheckButton('Décocher la section', s.items, 'Section décochée')}</h3>
         ${folded.has(k) ? '' : html`
-          ${editMode && adding === s.id ? addField(s.id, 'Nouvelle chose', 'Créer la chose') : ''}
+          ${adding === s.id ? addField(s.id, 'Nouvelle chose', 'Créer la chose') : ''}
           ${itemRows(s.items, s.id)}`}</section>`;
 }
 
@@ -621,7 +662,7 @@ function composeOuting(id, picks, itemPicks){
     for(const k of Object.keys(outingItems.toJSON()))
         if(after(k) === id && !itemPicks.has(before(k))) outingItems.delete(k);
     itemPicks.forEach(iid => outingItems.set(iid + ':' + id, 1));
-    doc.commit();
+    commit('sortie « ' + (outings.get(id)?.name || id) + ' » composée');
 }
 
 function wizardNext(){
@@ -779,7 +820,7 @@ function view(m){
                         offline: 'Hors ligne' + (syncCode ? ' ' + syncCode : '') }[syncState];
     return html`
       <div class="toolbar">
-        <button class="sync" data-sync=${syncState} aria-label="État de synchronisation"
+        <button class=${'sync' + (onProd() ? '' : ' offprod')} data-sync=${syncState} aria-label="État de synchronisation"
                 onclick=${() => { syncUrlShown = !syncUrlShown; paint(); }}>${syncLabel}</button>
         <span class="toolbar-actions">
           <button class="row-btn" aria-label=${folded.size ? 'Tout déplier' : 'Tout plier'}
@@ -790,6 +831,7 @@ function view(m){
                   onclick=${doUndo}>↶</button>
           <button class="row-btn" aria-label="Refaire" ?disabled=${!undo.canRedo()}
                   onclick=${doRedo}>↷</button>
+          <button class="row-btn" aria-label="Historique" onclick=${openHistory}>🕘</button>
           <button class="row-btn" aria-label="Planifier une sortie" onclick=${openWizard}>🧳</button>
           <button class="edit-toggle" onclick=${toggleEdit}>${editMode ? 'Terminé' : 'Modifier'}</button>
           <button class="row-btn" aria-label="Tout décocher" onclick=${uncheckAll}>↺</button>
@@ -805,6 +847,7 @@ function view(m){
         ${editMode ? addSectionActuator() : ''}`}
       ${wiz ? wizardPanel() : ''}
       ${picker ? pickerPanel() : ''}
+      ${historyOpen ? historyView() : ''}
       ${toast ? toastView() : ''}`;
 }
 function applyPlacement(key, dstSection, mode){
@@ -820,7 +863,7 @@ function applyPlacement(key, dstSection, mode){
 function moveOrCopySelected(dstSection, mode){
     [...selected].forEach(k => applyPlacement(k, dstSection, mode));
     selected.clear();
-    doc.commit();
+    commit((mode === 'move' ? 'déplacé vers « ' : 'copié vers « ') + (sections.get(dstSection)?.name || dstSection) + ' »');
     paint();
 }
 function openPicker(mode){ picker = mode; openScreen(() => { picker = null; paint(); }); paint(); }
@@ -888,6 +931,8 @@ function resolveSyncUrl(){
     syncUrl = url || undefined;
 }
 
+function onProd(){ return !!syncUrl && syncUrl.endsWith('lorosync/triggerlist'); }
+
 function startSync(){
     if(!syncUrl) return;
     doc.subscribe((batch) => {
@@ -895,5 +940,29 @@ function startSync(){
             ws.send(doc.export({ mode: 'update' }));
     });
     connect();
+}
+function relativeTime(ts){
+    if(!ts) return '';
+    const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+    if(s < 60) return "à l'instant";
+    if(s < 3600) return 'il y a ' + Math.floor(s / 60) + ' min';
+    if(s < 86400) return 'il y a ' + Math.floor(s / 3600) + ' h';
+    return 'il y a ' + Math.floor(s / 86400) + ' j';
+}
+
+function openHistory(){ historyOpen = true; openScreen(() => { historyOpen = false; paint(); }); paint(); }
+
+function historyView(){
+    const changes = doc.exportJsonUpdates().changes;
+    const shown = changes.slice(-50).reverse();
+    const more = changes.length - shown.length;
+    return html`<div class="sheet-back" onclick=${backdropClose(goBack)}><div class="sheet history" role="dialog" aria-label="Historique">
+      <p class="sheet-msg">Historique</p>
+      ${shown.map(c => html`<div class="hist-row">
+        <span class="hist-msg">${c.msg || 'modification'}</span>
+        <span class="hist-time">${relativeTime(c.timestamp)}</span></div>`)}
+      ${more > 0 ? html`<p class="hist-more">+ ${more} plus anciennes</p>` : ''}
+      <button class="wiz-off" onclick=${() => goBack()}>Fermer</button>
+    </div></div>`;
 }
 // How it all fits together:8 ends here
