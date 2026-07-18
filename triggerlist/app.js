@@ -1,5 +1,5 @@
 // [[id:4f21ee3e-33b2-40ec-aae8-d45eb8fb38cf][How it all fits together:8]]
-import { render, html } from 'uhtml';
+import { render, html, svg } from 'uhtml';
 import { get, set, del } from 'idb-keyval';
 
 // the doc, its maps, and its undo manager are created at boot, once Loro's WASM has loaded.
@@ -15,10 +15,16 @@ let doc, items, sections, itemSections, outings, outingSections, outingItems, ch
 // sheet is up (or null); wiz holds the planning assistant's state (or null);
 // focusId the outing shown alone in its packing view (or null for the catalog);
 // toast is the current notification { text } (or null); hideChecked hides the
-// ticked things (view mode) so only what is left to pack shows.
+// ticked things (view mode) so only what is left to pack shows; activeItem is the
+// one placement whose controls a long press has revealed in view mode (or null).
 let editMode = false, editing = null, editingText = '', folded = new Set(), selected = new Set();
 let adding = null, filter = '', picker = null;
-let wiz = null, focusId = null, toast = null, hideChecked = false, historyOpen = false;
+let wiz = null, focusId = null, toast = null, hideChecked = false, historyOpen = false, activeItem = null;
+let viewingFrontier = null, viewingLabel = '', previewDoc = null;   // a fork rendered while previewing a past point
+let histRowHeights = null;   // measured heights of the open history rows, so the rail's dots land on their centres
+let pageShown;   // the page onArrival last settled, so it runs once per arrival, not on every repaint
+let floatSet = null;   // when few things are left, the ids to float to the top of their card (or null)
+const FLOAT_MAX = 15;   // once fewer than this remain on a page, arriving floats the last stragglers up
 
 // the sync layer's handles: the live socket, the room url, the toolbar state,
 // the status code behind a refusal, and the growing wait between reconnects.
@@ -28,6 +34,7 @@ let ws, syncUrl, syncState = 'off', syncCode = '', retryDelay, syncUrlShown = fa
 // the screen-memory key and the debounce timer coalescing its snapshot writes,
 // declared here (before boot) so the first paint can save through them.
 const UI_KEY = 'triggerlist.ui';
+const PEER_KEY = 'triggerlist.peer';   // this device's stable Loro identity
 let uiTimer;
 function docKey(){ return 'triggerlist-doc:' + (syncUrl || 'local'); }
 
@@ -82,10 +89,11 @@ window.addEventListener('popstate', () => {
 });
 const app = document.getElementById('app');
 
-function paint(){ document.body.toggleAttribute('data-edit', editMode); render(app, view(buildModel())); saveUi(); }
+function paint(){ document.body.toggleAttribute('data-edit', editMode); document.body.toggleAttribute('data-viewing', !!viewingFrontier); render(app, view(buildModel())); saveUi(); if(historyOpen) requestAnimationFrame(relayoutHistory); }
 
 const { LoroDoc, UndoManager } = await import('loro-crdt');
 doc = new LoroDoc();
+doc.setPeerId(devicePeerId());  // one stable identity per device, so a reload is the same peer, not a new one
 doc.setRecordTimestamp(true);   // so each change carries a time for the history
 items = doc.getMap('items');
 sections = doc.getMap('sections');
@@ -120,6 +128,16 @@ function restoreUi(){
     return u;
 }
 window.addEventListener('scroll', saveUi, { passive: true });
+
+function devicePeerId(){
+    let p = localStorage.getItem(PEER_KEY);
+    if(!p){
+        const r = new Uint32Array(2); crypto.getRandomValues(r);
+        p = ((BigInt(r[0]) << 31n) | BigInt(r[1] >>> 1)).toString();   // 63 bits, inside Loro's peer-id range
+        localStorage.setItem(PEER_KEY, p);
+    }
+    return BigInt(p);
+}
 function backdropClose(close){ return e => { if(e.target === e.currentTarget) close(); }; }
 // ── Drag-and-drop reorder engine (framework-agnostic) ──
 // Binds once on document. Handles any =.reorder-list= with =.reorder-item=
@@ -495,6 +513,12 @@ function collect(map, its, chk, placed, ord){
     return byContainer;
 }
 function buildModel(){
+    // a preview reads a detached fork; everything else reads the live doc
+    const src = previewDoc || doc;
+    const items = src.getMap('items'), sections = src.getMap('sections'),
+          checked = src.getMap('checked'), itemSections = src.getMap('itemSections'),
+          order = src.getMap('order'), outings = src.getMap('outings'),
+          outingSections = src.getMap('outingSections'), outingItems = src.getMap('outingItems');
     const its = items.toJSON(), secs = sections.toJSON(), chk = checked.toJSON(), placed = {};
     const secItems = collect(itemSections, its, chk, placed, order);
     const looseOf = collect(outingItems, its, chk, {});
@@ -548,32 +572,68 @@ function renameField(rename, id){
 }
 
 function itemRows(list, srcSection, srcOuting){
-    const reorderable = editMode && !!srcSection;   // drag order lives on a section membership
-    const shown = (!editMode && hideChecked) ? list.filter(it => !it.done) : list;
-    return html`<ul class=${'items' + (reorderable ? ' reorder-list' : '')}
+    const skOf = it => it.id + '|' + (srcSection || '') + '|' + (srcOuting || '');
+    const activeHere = !!srcSection && list.some(it => skOf(it) === activeItem);
+    const reorderable = (editMode || (activeHere && !hideChecked)) && !!srcSection;
+    const kept = (!editMode && hideChecked) ? list.filter(it => !it.done) : list;
+    const shown = (floatSet && !reorderable)   // arrival left a floatSet: lift its stragglers up, but never mid-drag
+        ? [...kept].sort((a, b) => floatSet.has(b.id) - floatSet.has(a.id)) : kept;
+    return html`<ul class=${'items' + (reorderable ? ' reorder-list' : '') + (activeHere ? ' solo' : '')}
                      data-reorder=${reorderable ? 'section:' + srcSection : null}>${shown.map((it, i) => {
       const ek = 'item:' + it.id;                                   // rename key — the thing itself
-      const sk = it.id + '|' + (srcSection || '') + '|' + (srcOuting || '');  // select key — this placement
+      const sk = skOf(it);                                          // select key — this placement
+      const controls = editMode || sk === activeItem || selected.has(sk);
+      const grip = reorderable && (editMode || sk === activeItem);
       return html`
-      <li class=${(it.done ? 'done' : '') + (selected.has(sk) ? ' selected' : '') + (reorderable ? ' reorder-item' : '')}
+      <li class=${(it.done ? 'done' : '') + (selected.has(sk) ? ' selected' : '') + (reorderable ? ' reorder-item' : '') + (sk === activeItem ? ' active' : '')}
           data-idx=${reorderable ? i : null} data-item=${it.id}>
         ${editing === ek ? renameField(renameItem, it.id) : html`
-          ${reorderable ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}
-          ${editMode && editing !== ek ? html`
+          ${grip ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}
+          ${controls && editing !== ek ? html`
             <input type="checkbox" class="select" aria-label="Sélectionner"
                 .checked=${selected.has(sk)} onchange=${() => toggleSelect(sk)}>` : ''}
-          <span class="check" role="checkbox" aria-checked=${it.done ? 'true' : 'false'}
-                onclick=${() => toggleCheck(it.id)}>${it.label}</span>
-          ${editMode ? editButtons(() => startEdit(ek, it.label),
+          <span class="check" role="checkbox" aria-checked=${it.done ? 'true' : 'false'} aria-label=${it.label}
+                onpointerdown=${editMode ? null : () => longPressStart(() => activate(sk))}
+                onpointerup=${editMode ? null : longPressCancel}
+                onpointercancel=${editMode ? null : longPressCancel}
+                onclick=${() => { if(longPressed()) return; toggleCheck(it.id); }}></span>
+          <span class="label"
+                onpointerdown=${editMode ? null : () => longPressStart(() => activate(sk))}
+                onpointerup=${editMode ? null : longPressCancel}
+                onpointercancel=${editMode ? null : longPressCancel}>${it.label}</span>
+          ${controls ? editButtons(() => startEdit(ek, it.label),
                                    () => removeItemHere(it.id, it.label, srcSection, srcOuting)) : ''}`}
       </li>`; })}</ul>`;
 }
+function activate(sk){ activeItem = sk; paint(); }
+
+document.addEventListener('pointerdown', e => {   // a press away from the revealed row puts it back to plain
+    if(activeItem && !editMode && !e.target.closest('li.active')){ activeItem = null; paint(); }
+});
 function toggleFold(k){ folded.has(k) ? folded.delete(k) : folded.add(k); paint(); }
 
 function foldAll(){
     if(folded.size) folded.clear();
     else Object.keys(sections.toJSON()).forEach(id => folded.add('section:' + id));
     paint();
+}
+
+function sectionComplete(s){ return s.items.length > 0 && s.items.every(it => it.done); }
+
+function pageRemaining(m){
+    // the still-unticked things on the page arrived at — the outing's, or the whole catalog's
+    const o = focusId && m.outingList.find(x => x.id === focusId);
+    const its = o ? [...o.sections.flatMap(s => s.items), ...o.items] : [...m.catalog.flatMap(s => s.items), ...m.orphans];
+    return new Set(its.filter(it => !it.done).map(it => it.id));
+}
+
+function onArrival(m){
+    if(focusId === pageShown) return;   // still on the same page — nothing arrived at
+    pageShown = focusId;
+    if(editMode){ floatSet = null; return; }   // curating, not packing — leave the view as it is
+    for(const s of m.catalog) if(sectionComplete(s)) folded.add('section:' + s.id);   // done sections fold away
+    const remaining = pageRemaining(m);
+    floatSet = remaining.size < FLOAT_MAX ? remaining : null;   // few left: float them up; otherwise leave the order alone
 }
 
 function foldTitle(k, name, trailing, onLong){
@@ -600,7 +660,7 @@ function uncheckButton(label, list, msg){
 function sectionCard(s, srcOuting, idx){
     const k = 'section:' + s.id;
     const reorderable = editMode && !srcOuting;   // catalog sections drag; outing-gathered ones do not
-    const complete = !editMode && s.items.length > 0 && s.items.every(it => it.done);
+    const complete = !editMode && sectionComplete(s);
     return html`
       <section class=${(reorderable ? 'reorder-item' : '') + (complete ? ' complete' : '')} data-idx=${reorderable ? idx : null}>
         <h3>${reorderable ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}${editing === k ? renameField(renameSection, s.id)
@@ -804,11 +864,12 @@ function toastView(){
       <button class="toast-undo" onclick=${undoToast}>Annuler</button>
     </div>`;
 }
-function leaveEdit(){ editMode = false; editing = null; selected.clear(); adding = null; picker = null; paint(); }
+function leaveEdit(){ editMode = false; editing = null; selected.clear(); adding = null; picker = null; activeItem = null; paint(); }
 
-function toggleEdit(){ if(editMode) leaveEdit(); else { editMode = true; paint(); } }
+function toggleEdit(){ if(editMode) leaveEdit(); else { editMode = true; activeItem = null; paint(); } }
 
 function view(m){
+    onArrival(m);   // on arriving at a page, settle it: fold the done sections, float up the last stragglers
     if(focusId && m.outingList.some(o => o.id === focusId)) return focusView(m);
     focusId = null;   // no outing focused, or the focused one is gone — show the catalog
     const empty = !m.outingList.length && !m.catalog.length && !m.orphans.length;
@@ -847,6 +908,7 @@ function view(m){
         ${editMode ? addSectionActuator() : ''}`}
       ${wiz ? wizardPanel() : ''}
       ${picker ? pickerPanel() : ''}
+      ${viewingFrontier ? viewingBar() : ''}
       ${historyOpen ? historyView() : ''}
       ${toast ? toastView() : ''}`;
 }
@@ -950,19 +1012,133 @@ function relativeTime(ts){
     return 'il y a ' + Math.floor(s / 86400) + ' j';
 }
 
-function openHistory(){ historyOpen = true; openScreen(() => { historyOpen = false; paint(); }); paint(); }
+function historyChanges(){
+    const out = [];
+    for(const [, changes] of doc.getAllChanges())
+        for(const c of changes)
+            out.push({ msg: c.message, ts: c.timestamp, lamport: c.lamport,
+                       peer: String(c.peer), counter: c.counter, length: c.length, deps: c.deps,
+                       frontier: [{ peer: c.peer, counter: c.counter + c.length - 1 }] });
+    return out.sort((a, b) => (a.lamport ?? a.ts) - (b.lamport ?? b.ts));
+}
+function endPreview(){ previewDoc = null; viewingFrontier = null; }
 
+function openHistory(){
+    if(!viewingFrontier) openScreen(() => { historyOpen = false; histRowHeights = null; endPreview(); paint(); });
+    historyOpen = true;
+    paint();
+}
+
+function sameFrontier(a, b){
+    return a.length === b.length && a.every((x, i) => b[i] && x.peer === b[i].peer && x.counter === b[i].counter);
+}
+
+function goToPoint(c){
+    const all = historyChanges();
+    const latest = all.length ? all[all.length - 1].frontier : null;
+    if(latest && sameFrontier(c.frontier, latest)){ backToPresent(); return; }
+    const fork = new LoroDoc();
+    fork.import(doc.export({ mode: 'snapshot' }));   // a preview reads a fork, never the live doc
+    fork.checkout(c.frontier);
+    previewDoc = fork;
+    viewingFrontier = c.frontier;
+    viewingLabel = c.msg || 'modification';
+    historyOpen = false;
+    paint();
+}
+
+function backToPresent(){ goBack(); }   // the closer drops the preview and repaints
+
+function restoreHere(){
+    const f = viewingFrontier;
+    endPreview();
+    doc.revertTo(f);
+    goBack();
+    notify('État restauré');
+}
+const PEER_COLORS = ['#4c6ef5', '#e8590c', '#0ca678', '#ae3ec9', '#f08c00', '#1098ad'];
+const HIST_ROW_H = 40, HIST_LANE_W = 20, HIST_PAD = 14, HIST_DOT_R = 5;
+
+function historyGraph(shown, here, heights){
+    const rows = shown.slice().reverse();                 // newest first (row 0 at the top)
+    const peers = [...new Set(shown.map(n => n.peer))];    // colour is per device; the lane is per branch
+    const color = p => PEER_COLORS[peers.indexOf(p) % PEER_COLORS.length];
+    const rowH = i => (heights && heights[i]) || HIST_ROW_H;   // a row's measured height, or the default before layout
+    const top = []; for(let i = 0; i < rows.length; i++) top[i] = i ? top[i-1] + rowH(i-1) : 0;
+    const rowY = i => top[i] + rowH(i) / 2;                // a dot sits on its row's centre, whatever its height
+    const laneX = c => HIST_PAD + c * HIST_LANE_W;
+    const rowOf = new Map(rows.map((n, i) => [n, i]));
+    const depNode = d => rows.find(n => n.peer === String(d.peer) && d.counter >= n.counter && d.counter < n.counter + n.length);
+
+    const lanes = [], col = new Map();
+    let maxCol = 0;
+    for(const n of rows){
+        let c = lanes.indexOf(n);
+        if(c === -1){ c = lanes.indexOf(null); if(c === -1) c = lanes.length; }
+        else for(let k = c + 1; k < lanes.length; k++) if(lanes[k] === n) lanes[k] = null;   // children converging on a fork
+        col.set(n, c);
+        const parents = (n.deps || []).map(depNode).filter(Boolean);
+        lanes[c] = parents[0] || null;                    // the first parent continues this lane
+        for(let k = 1; k < parents.length; k++){          // a merge: each extra parent claims a lane
+            let pk = lanes.indexOf(parents[k]);
+            if(pk === -1){ pk = lanes.indexOf(null); if(pk === -1) pk = lanes.length; lanes[pk] = parents[k]; }
+        }
+        maxCol = Math.max(maxCol, c, lanes.length - 1);
+    }
+
+    const edges = [];
+    rows.forEach((n, i) => {
+        for(const d of (n.deps || [])){
+            const p = depNode(d);
+            if(!p) continue;                              // parent off the top of the list
+            edges.push({ x1: laneX(col.get(p)), y1: rowY(rowOf.get(p)), x2: laneX(col.get(n)), y2: rowY(i), color: color(n.peer) });
+        }
+    });
+    const dots = rows.map((n, i) => ({ cx: laneX(col.get(n)), cy: rowY(i), color: color(n.peer),
+                                       cur: sameFrontier(n.frontier, here) }));
+    const height = rows.length ? top[rows.length-1] + rowH(rows.length-1) : 0;
+    return { rows, edges, dots, width: HIST_PAD * 2 + maxCol * HIST_LANE_W, height };
+}
 function historyView(){
-    const changes = doc.exportJsonUpdates().changes;
-    const shown = changes.slice(-50).reverse();
-    const more = changes.length - shown.length;
+    const all = historyChanges();
+    const shown = all.slice(-50);                       // oldest to newest, in order for the edges
+    const more = all.length - shown.length;
+    const here = viewingFrontier || doc.frontiers();
+    const g = historyGraph(shown, here, histRowHeights);
     return html`<div class="sheet-back" onclick=${backdropClose(goBack)}><div class="sheet history" role="dialog" aria-label="Historique">
       <p class="sheet-msg">Historique</p>
-      ${shown.map(c => html`<div class="hist-row">
-        <span class="hist-msg">${c.msg || 'modification'}</span>
-        <span class="hist-time">${relativeTime(c.timestamp)}</span></div>`)}
+      <div class="hist-graph-wrap" style=${`min-height:${g.height}px`}>
+        <svg class="hist-graph" width=${g.width} height=${g.height} style=${`width:${g.width}px;height:${g.height}px`}>
+          ${g.edges.map(e => svg`<line class="hist-edge" x1=${e.x1} y1=${e.y1} x2=${e.x2} y2=${e.y2} stroke=${e.color} stroke-width="2"/>`)}
+          ${g.dots.map(d => svg`<circle cx=${d.cx} cy=${d.cy} r=${HIST_DOT_R} fill=${d.color} stroke=${d.cur ? '#1b1d2e' : d.color} stroke-width=${d.cur ? 3 : 1}/>`)}
+        </svg>
+        <div class="hist-rows" style=${`margin-left:${g.width}px`}>
+          ${g.rows.map(c => { const cur = sameFrontier(c.frontier, here); return html`<button class=${'hist-row' + (cur ? ' hist-here' : '')} onclick=${() => goToPoint(c)}>
+            <span class="hist-msg">${cur ? '▸ ' : ''}${c.msg || 'modification'}</span>
+            <span class="hist-time">${relativeTime(c.ts)}</span></button>`; })}
+        </div>
+      </div>
       ${more > 0 ? html`<p class="hist-more">+ ${more} plus anciennes</p>` : ''}
       <button class="wiz-off" onclick=${() => goBack()}>Fermer</button>
     </div></div>`;
+}
+
+function relayoutHistory(){
+    const hs = [...app.querySelectorAll('.hist-row')].map(r => r.offsetHeight);
+    if(histRowHeights && hs.length === histRowHeights.length
+       && hs.every((v, i) => Math.abs(v - histRowHeights[i]) < 1)) return;   // the rail already fits these rows
+    histRowHeights = hs;
+    paint();                                             // repaint the rail against the just-measured rows
+}
+
+function viewingBar(){
+    return html`<div class="viewing-bar" role="dialog" aria-label="Aperçu">
+      <span class="viewing-msg">Aperçu — ${viewingLabel}</span>
+      <span class="viewing-acts">
+        <button onclick=${() => { historyOpen = true; paint(); }}>Historique</button>
+        <button onclick=${restoreHere}>Restaurer ici</button>
+        <button onclick=${backToPresent}>Revenir au présent</button>
+      </span>
+    </div>`;
 }
 // How it all fits together:8 ends here

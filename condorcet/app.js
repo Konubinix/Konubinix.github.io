@@ -627,6 +627,7 @@ function shuffled(arr){
 
 Object.assign(voteStore.ui, {
     ranking: [],
+    confirmingSubmit: false,
     ballotLayout: localStorage.getItem('condorcet.ballot-layout') || 'grid',
 });
 
@@ -710,6 +711,7 @@ Object.assign(voteStore, {
     _doCancelBallot(){
         this.currentVoter = null;
         this.ui.ranking = [];
+        this.ui.confirmingSubmit = false;
         if(this.scrutin && this.scrutin.mode === 'per-device'){
             this.identity = null;
             localStorage.removeItem(this.identityKey());
@@ -718,7 +720,15 @@ Object.assign(voteStore, {
     },
 
     submitBallot(){
-        if(!confirm("Tu valides ce classement ?")) return;
+        this.ui.confirmingSubmit = true;
+    },
+
+    cancelSubmit(){
+        this.ui.confirmingSubmit = false;
+    },
+
+    confirmSubmit(){
+        this.ui.confirmingSubmit = false;
         const ranking = this.ui.ranking.slice();
         const voter = this.currentVoter;
         this.change(d => {

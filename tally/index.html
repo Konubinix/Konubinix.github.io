@@ -146,6 +146,7 @@ tfoot td:first-child{z-index:4;background:var(--surface)}
 .winner{color:#ffd700}
 .game-won{color:#ffd700;text-shadow:0 0 8px #ffd700}
 .preset-btn{padding:6px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,.15);background:var(--surface);color:var(--text);font-size:.8rem;cursor:pointer}
+.preset-btn.suggested{border-color:var(--accent);box-shadow:0 0 0 2px rgba(233,69,96,.35);color:#fff}
 #headerRow th:first-child{padding:2px 1px}
 .corner-controls{display:flex;flex-direction:column;align-items:center;gap:3px}
 .corner-btn{
@@ -350,7 +351,7 @@ window.addEventListener('appinstalled', function() {
   <a class="sync-dot" id="syncDot" title="Sync status" onclick="if(document.body.getAttribute('data-ws')==='connected'&&confirm('Clear authorization?')){location.href='/authorizationserver/clear-cookie?resource=ywebsocket/'+_roomName}"></a>
   <input type="text" class="game-name-input" id="gameName" placeholder="Game name&#x2026;" spellcheck="false"
     @input="setGameName($el.value)">
-  <span class="build-hash" title="Build">99f686b</span>
+  <span class="build-hash" title="Build">bd63561</span>
   <div class="header-actions">
     <button class="icon-btn" id="btnInstall" title="Install" style="display:none" @click="installApp()">&#x1f4f2;</button>
     <button class="icon-btn" id="btnScoreboard" title="Scoreboard" @click="openScoreboard()">&#x1f3c6;</button>
@@ -505,8 +506,13 @@ window.addEventListener('appinstalled', function() {
 <div class="modal-overlay" id="modalPick" :class="{ 'open': $store.app.showPick }" @click.self="$store.app.showPick = false">
   <div class="modal">
     <h2>New Game</h2>
-    <input type="text" class="game-name-input" id="pickGameName" placeholder="Game name&#x2026;" spellcheck="false" style="width:100%;box-sizing:border-box;margin-bottom:12px"
+    <input type="text" class="game-name-input" id="pickGameName" placeholder="Game name&#x2026;" spellcheck="false" list="gameNameSuggestions" style="width:100%;box-sizing:border-box;margin-bottom:12px"
       @input="onPickGameNameInput()">
+    <datalist id="gameNameSuggestions">
+      <template x-for="s in $store.app.gameNameSuggestions" :key="s">
+        <option :value="s"></option>
+      </template>
+    </datalist>
     <div id="pickList" x-show="$store.game.roster.length > 0">
       <div class="pick-chips">
         <template x-for="(p, i) in $store.game.roster" :key="'pk'+i">
@@ -548,8 +554,8 @@ window.addEventListener('appinstalled', function() {
         style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:var(--bg);color:var(--text);font-family:monospace;font-size:.85rem">
     </label>
     <div style="margin:8px 0;display:flex;gap:8px">
-      <button class="preset-btn" id="pickPresetMolkky" @click="applyPickPreset('molkky')">M&#xF6;lkky</button>
-      <button class="preset-btn" id="pickPresetOdin" @click="applyPickPreset('odin')">Odin</button>
+      <button class="preset-btn" id="pickPresetMolkky" :class="{ suggested: $store.app.suggestedPreset === 'molkky' }" @click="applyPickPreset('molkky')">M&#xF6;lkky</button>
+      <button class="preset-btn" id="pickPresetOdin" :class="{ suggested: $store.app.suggestedPreset === 'odin' }" @click="applyPickPreset('odin')">Odin</button>
     </div>
     <button class="modal-close" id="pickStart" x-show="$store.game.roster.length > 0" @click="startGame()">Start Game</button>
     <button class="modal-close" id="pickCancel" style="background:var(--muted);margin-top:8px" @click="$store.app.showPick = false">Cancel</button>
@@ -742,6 +748,12 @@ function getEndFn(expr){
     _cachedEndExpr = expr;
     return _cachedEndFn;
   } catch(e){ return null; }
+}
+
+// A cleared rule ('') is a real value; only an unset field (null/undefined)
+// defers to the legacy winCondition.
+function effectiveEndCondition(endCondition, winCondition){
+  return endCondition == null ? (winCondition || '') : endCondition;
 }
 
 function totals(){
@@ -1054,10 +1066,10 @@ function openPickModal() {
   $('pickGameName').value = yMeta.get('gameName') || '';
   $('pickLowWins').checked = !!yMeta.get('lowWins');
   $('pickScoreTransform').value = yMeta.get('scoreTransform') || '';
-  $('pickEndCondition').value = yMeta.get('endCondition') || yMeta.get('winCondition') || '';
+  $('pickEndCondition').value = effectiveEndCondition(yMeta.get('endCondition'), yMeta.get('winCondition'));
   $('rosterInput').value = '';
   syncFromYjs();
-  updatePickStartEnabled();
+  onPickGameNameInput();
   Alpine.store('app').showPick = true;
 }
 
@@ -1212,14 +1224,21 @@ function setEndCondition(v){
   _cachedEndFn = null;
   render();
 }
-// A preset fully describes a game — transform, end condition, victory
-// direction — in one place, so the two apply paths and the name-match
-// below all read the same source. The 'names' are what a player types.
+function showWinToast(names){
+  var el = $('winToast');
+  var verb = names.length > 1 ? ' win!' : ' wins!';
+  el.textContent = '\uD83C\uDFC6 ' + names.join(', ') + verb;
+  el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 4000);
+}
+
+// ── Presets ──
 var PRESETS = {
-  molkky: { names: ['molkky', 'mölkky'], scoreTransform: 'total > 50 ? 25 : total', endCondition: 'total === 50', lowWins: false },
-  odin:   { names: ['odin'],             scoreTransform: '',                        endCondition: 'total >= 10',   lowWins: true  }
+  molkky: { label: 'Mölkky', names: ['molkky', 'mölkky'], scoreTransform: 'total > 50 ? 25 : total', endCondition: 'total === 50', lowWins: false },
+  odin:   { label: 'Odin',   names: ['odin'],             scoreTransform: '',                        endCondition: 'total >= 10',   lowWins: true  }
 };
-function applyPreset(key){
+
+function applyPreset(key){        // scoreboard modal --- live game
   var p = PRESETS[key];
   if(!p) return;
   $('scoreTransformInput').value = p.scoreTransform;
@@ -1228,16 +1247,27 @@ function applyPreset(key){
   setEndCondition(p.endCondition);
   toggleLowWins(p.lowWins);
 }
-function applyPickPreset(key){
+function applyPickPreset(key){     // setup modal --- seeds the fields
   var p = PRESETS[key];
   if(!p) return;
   $('pickScoreTransform').value = p.scoreTransform;
   $('pickEndCondition').value = p.endCondition;
   $('pickLowWins').checked = p.lowWins;
 }
-// A preset's name is also the game's name, so typing it is enough to set
-// the game up — no need to reach for the button. The match ignores case
-// and the Mölkky umlaut.
+
+function gameNameSuggestions(){
+  var out = [], seen = {};
+  getSavedGames().forEach(function(g){
+    var n = (g.gameName || '').trim();
+    if(n && !seen[n.toLowerCase()]){ seen[n.toLowerCase()] = true; out.push(n); }
+  });
+  for(var key in PRESETS){
+    var lbl = PRESETS[key].label;
+    if(!seen[lbl.toLowerCase()]){ seen[lbl.toLowerCase()] = true; out.push(lbl); }
+  }
+  return out;
+}
+
 function presetForName(name){
   var n = (name || '').trim().toLowerCase();
   for(var key in PRESETS){
@@ -1247,15 +1277,9 @@ function presetForName(name){
 }
 function onPickGameNameInput(){
   updatePickStartEnabled();
-  var preset = presetForName($('pickGameName').value);
-  if(preset) applyPickPreset(preset);
-}
-function showWinToast(names){
-  var el = $('winToast');
-  var verb = names.length > 1 ? ' win!' : ' wins!';
-  el.textContent = '\uD83C\uDFC6 ' + names.join(', ') + verb;
-  el.classList.add('show');
-  setTimeout(function(){ el.classList.remove('show'); }, 4000);
+  var app = Alpine.store('app');
+  app.suggestedPreset = presetForName($('pickGameName').value);
+  app.gameNameSuggestions = gameNameSuggestions();
 }
 
 // ── Save ──
@@ -1274,7 +1298,7 @@ function saveGame(){
     gameName: yMeta.get('gameName') || 'Untitled',
     lowWins: !!yMeta.get('lowWins'),
     scoreTransform: yMeta.get('scoreTransform') || '',
-    endCondition: yMeta.get('endCondition') || yMeta.get('winCondition') || '',
+    endCondition: effectiveEndCondition(yMeta.get('endCondition'), yMeta.get('winCondition')),
     players: players.map(function(p,i){ return {name:p.name, score:t[i]}; }),
     rounds: JSON.parse(JSON.stringify(rounds))
   });
@@ -1352,7 +1376,7 @@ function loadGame(id){
   yMeta.set('gameName', g.gameName || '');
   yMeta.set('lowWins', !!g.lowWins);
   yMeta.set('scoreTransform', g.scoreTransform || '');
-  yMeta.set('endCondition', g.endCondition || g.winCondition || '');
+  yMeta.set('endCondition', effectiveEndCondition(g.endCondition, g.winCondition));
   _cachedTransformFn = null;
   _cachedEndFn = null;
   ensureDraft();
@@ -1688,6 +1712,8 @@ Alpine.store('app', {
   showReorder: false,
   reorderList: [],
   pickOrder: [],
+  suggestedPreset: null,
+  gameNameSuggestions: [],
 });
 
 Alpine.store('game', {
@@ -1781,8 +1807,7 @@ function syncFromYjs(){
   g.gameName = yMeta.get('gameName') || '';
   g.lowWins = !!yMeta.get('lowWins');
   g.scoreTransform = yMeta.get('scoreTransform') || '';
-  // 'winCondition' is the key older saves used before end and victory were split.
-  g.endCondition = yMeta.get('endCondition') || yMeta.get('winCondition') || '';
+  g.endCondition = effectiveEndCondition(yMeta.get('endCondition'), yMeta.get('winCondition'));
   if(document.activeElement !== $('gameName')) $('gameName').value = g.gameName;
   // The draft is the trailing round; resize it to the player count.
   g.draft = draftRow();

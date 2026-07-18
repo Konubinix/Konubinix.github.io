@@ -56,7 +56,7 @@ async function startSync(){
 const ui = {
     formOpen: null,
     boxForm: {photo: '', editingId: ''},
-    itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false, boxId: ''},
+    itemForm: {name: '', image: '', bgColor: '', whereabouts: '', editingId: '', nameError: false, boxId: ''},
     searchQuery: '',
     syncStatus: 'off',
     dragEnabled: false,
@@ -93,6 +93,7 @@ function installAppRootHandlers(root){
     on('edit-item', e => openItemEdit(e.detail.itemId, e.detail.item));
     on('delete-item', () => onItemFormDelete());
     on('item-colour-pick', e => setItemFormColour(e.detail.value));
+    on('item-whereabouts-input', e => onItemWhereaboutsInput(e.detail.value));
     on('toggle-drag', () => setUI({dragEnabled: !ui.dragEnabled, contextMenu: null}));
     on('add-item-here', e => openItemForm({boxId: e.detail.boxId}));
     on('open-catalog', () => setUI({catalogOpen: true}));
@@ -283,6 +284,7 @@ function itemFormMarkup(form){
           <img class="item-image-preview" src=${image} alt="Image preview">
         ` : ''}
         ${itemFormColour(form)}
+        ${itemFormWhereabouts(form)}
         <div class="add-form-actions">
           <sl-button type="submit" variant="primary">Save</sl-button>
           <sl-button @click=${() =>
@@ -299,11 +301,13 @@ class ItemChip extends LitElement {
         const { itemId: id, item } = this;
         return html`
           <li class="item" data-item-id=${id} ?data-draggable=${ui.dragEnabled}
+              ?data-away=${!!item.whereabouts}
               style=${item.bgColor ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}` : ''}
               @click=${() => this.dispatchEvent(new CustomEvent('edit-item',
                   {bubbles: true, detail: {itemId: id, item}}))}>
             ${item.image ? html`<img class="item-thumb" src=${item.image} alt=${item.name}>` : ''}
             <span class="item-name">${item.name}</span>
+            ${itemAwayBadge(item)}
           </li>
         `;
     }
@@ -378,6 +382,21 @@ function itemFormColour(form){
       </div>
     `;
 }
+function itemFormWhereabouts(form){
+    return html`
+      <label>Where has it gone?
+        <input type="text" placeholder="e.g. lent to Paul, in the living room"
+               .value=${ui.itemForm.whereabouts || ''}
+               @input=${e => form.dispatchEvent(new CustomEvent('item-whereabouts-input',
+                   {bubbles: true, detail: {value: e.target.value}}))}>
+      </label>
+    `;
+}
+function itemAwayBadge(item){
+    return item.whereabouts
+        ? html`<span class="item-away">${item.whereabouts}</span>`
+        : '';
+}
 function itemNameError(form){
     return ui.itemForm.nameError ? html`
       <p class="form-error" role="alert">An item with this name already exists.</p>
@@ -423,39 +442,40 @@ class CatalogButton extends LitElement {
     }
 }
 customElements.define('catalog-button', CatalogButton);
+function catalogItemIds(itemsTable, query){
+    return Object.keys(itemsTable)
+        .filter(id => !query ||
+                      itemsTable[id].name.toLowerCase().includes(query))
+        .sort((a, b) => itemsTable[a].name.localeCompare(itemsTable[b].name));
+}
+function catalogChip(host, item){
+    const style = item.bgColor
+        ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}`
+        : '';
+    return html`
+      <button type="button" class="all-items-chip"
+              data-name=${item.name}
+              aria-label=${item.name}
+              style=${style}
+              @click=${() => host.dispatchEvent(new CustomEvent('catalog-jump',
+                  {bubbles: true, detail: {boxId: item.boxId}}))}>
+      </button>
+    `;
+}
 class CatalogOverlay extends LitElement {
     static properties = { open: {}, items: {}, query: {} };
     createRenderRoot(){ return this; }
     render(){
         if(!this.open) return '';
-        const itemsTable = this.items;
         const query = (this.query || '').trim().toLowerCase();
-        const ids = Object.keys(itemsTable)
-            .filter(id => !query ||
-                          itemsTable[id].name.toLowerCase().includes(query))
-            .sort((a, b) =>
-                itemsTable[a].name.localeCompare(itemsTable[b].name));
+        const ids = catalogItemIds(this.items, query);
         return html`
           <sl-dialog label="All items" open
                      style="--width: 480px;"
                      @sl-request-close=${() =>
                          this.dispatchEvent(new CustomEvent('close-catalog', {bubbles: true}))}>
             <section class="all-items" aria-label="All items">
-              ${ids.map(id => {
-                  const item = itemsTable[id];
-                  const style = item.bgColor
-                      ? `background:${item.bgColor};color:${readableForeground(item.bgColor)}`
-                      : '';
-                  return html`
-                    <button type="button" class="all-items-chip"
-                            data-name=${item.name}
-                            aria-label=${item.name}
-                            style=${style}
-                            @click=${() => this.dispatchEvent(new CustomEvent('catalog-jump',
-                                {bubbles: true, detail: {boxId: item.boxId}}))}>
-                    </button>
-                  `;
-              })}
+              ${ids.map(id => catalogChip(this, this.items[id]))}
             </section>
           </sl-dialog>
         `;
@@ -485,12 +505,6 @@ await persister.startAutoLoad();
 store.addTablesListener(renderApp);
 renderApp();
 await persister.startAutoSave();
-
-let _persistSeq = 0;
-persister.addStatusListener((_, status) => {
-    if(status === 0) document.body.setAttribute(
-        'data-persist-seq', String(++_persistSeq));
-});
 
 document.body.setAttribute('data-app-ready', '1');
 startSync();
@@ -545,7 +559,7 @@ function closeForm(){
     setUI({
         formOpen: null,
         boxForm: {photo: '', editingId: ''},
-        itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false},
+        itemForm: {name: '', image: '', bgColor: '', whereabouts: '', editingId: '', nameError: false},
     });
 }
 function onBoxFormSubmit(){
@@ -597,17 +611,20 @@ function usedItemColours(){
 function setItemFormColour(value){
     setUI({itemForm: {...ui.itemForm, bgColor: value || ''}});
 }
+function onItemWhereaboutsInput(value){
+    setUI({itemForm: {...ui.itemForm, whereabouts: value}});
+}
 
 function openItemForm(opts = {}){
     setUI({
         formOpen: 'item',
-        itemForm: {name: '', image: '', bgColor: '', editingId: '', nameError: false,
-                   boxId: opts.boxId || ''},
+        itemForm: {name: '', image: '', bgColor: '', whereabouts: '', editingId: '',
+                   nameError: false, boxId: opts.boxId || ''},
         contextMenu: null,
     });
 }
 function onItemFormSubmit(){
-    const {name: raw, image, bgColor, editingId, boxId} = ui.itemForm;
+    const {name: raw, image, bgColor, whereabouts, editingId, boxId} = ui.itemForm;
     const name = raw.trim();
     if(!name) return;
     if(itemNameExists(name, editingId)){
@@ -617,16 +634,16 @@ function onItemFormSubmit(){
     if(editingId){
         const existing = store.getRow('items', editingId);
         store.setRow('items', editingId, {
-            name, image, bgColor, boxId: existing?.boxId || '',
+            name, image, bgColor, whereabouts, boxId: existing?.boxId || '',
         });
         closeForm();
         return;
     }
     store.setRow('items', crypto.randomUUID(), {
-        name, image, bgColor, boxId: boxId || '',
+        name, image, bgColor, whereabouts, boxId: boxId || '',
     });
     if(boxId){
-        setUI({itemForm: {name: '', image: '', bgColor: '', editingId: '',
+        setUI({itemForm: {name: '', image: '', bgColor: '', whereabouts: '', editingId: '',
                           nameError: false, boxId}});
     } else {
         closeForm();
@@ -666,6 +683,7 @@ function openItemEdit(id, item){
             name: item.name || '',
             image: item.image || '',
             bgColor: item.bgColor || '',
+            whereabouts: item.whereabouts || '',
             editingId: id,
             nameError: false,
         },

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script>
+if(new URLSearchParams(location.search).has('purge')&&'serviceWorker'in navigator){
+  caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});
+  navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(s){s.unregister()})});
+  location.replace(location.pathname);
+}
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#20232f">
+<title>Vignettes</title>
+<script type="importmap">
+  {
+    "imports": {
+      "mithril": "https://esm.sh/mithril@2",
+      "pdf-lib": "https://esm.sh/pdf-lib@1"
+    }
+  }
+</script>
+<style>
+:root{ --bg:#20232f; --fg:#e8e8f0; --accent:#7cb3e8; }
+body{ background:var(--bg); color:var(--fg); font-family:system-ui,sans-serif; margin:0; padding:12px; }
+h1{ font-size:18px; margin:0 0 12px; }
+.bar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; font-size:14px; }
+.bar button, .pick, .bar select{ background:#2d3142; color:var(--fg); border:1px solid #444a63;
+                                 border-radius:6px; padding:8px 12px; font-size:14px; }
+.bar button:disabled{ opacity:.4; }
+.bar label{ display:flex; gap:6px; align-items:center; }
+.bar input[type=number]{ width:4em; background:#2d3142; color:var(--fg);
+                         border:1px solid #444a63; border-radius:6px; padding:6px; }
+.pick{ cursor:pointer; }
+.pick input{ position:absolute; width:1px; height:1px; opacity:0;
+             overflow:hidden; clip:rect(0 0 0 0); }
+.pages{ display:flex; flex-direction:column; gap:16px; max-width:480px; }
+.page{ position:relative; width:100%; background:#fff;
+       border-radius:2px; box-shadow:0 2px 12px rgba(0,0,0,.5); }
+.tile{ position:absolute; margin:0; padding:0; border:0; background:none; cursor:pointer; }
+.tile img{ width:100%; height:100%; object-fit:contain; display:block; }
+.tile.selected{ outline:3px solid var(--accent); outline-offset:1px; }
+.build-tag{ position:fixed; top:calc(env(safe-area-inset-top) + 4px); right:6px; z-index:50;
+            pointer-events:none; font:10px/1 monospace; color:#5b6080; }
+</style>
+<script>
+  if('serviceWorker' in navigator
+     && location.hostname !== 'localhost'
+     && location.hostname !== '127.0.0.1'){
+      navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'});
+  }
+</script>
+</head>
+<body>
+<div id="app"></div>
+<span class="build-tag" title="Build">40ba03a</span>
+<script type="module">
+import m from 'mithril';
+import { PDFDocument } from 'pdf-lib';
+
+const byId = (vignettes, id) => vignettes.find(v => v.id === id);
+
+const MESSAGES = {
+  en: { choose: 'choose photos', longSide: 'long side (mm)', format: 'page format',
+        clone: 'clone', download: 'download the pdf', generating: 'generating…', lang: 'FR' },
+  fr: { choose: 'choisir des photos', longSide: 'grand côté (mm)', format: 'format de page',
+        clone: 'cloner', download: 'télécharger le pdf', generating: 'génération…', lang: 'EN' },
+};
+
+const FORMATS = { A4: { w: 210, h: 297 }, A5: { w: 148, h: 210 },
+                  A6: { w: 105, h: 148 }, Letter: { w: 216, h: 279 } };   // mm
+
+function scaled(v, size){
+  const r = v.w / v.h;
+  return r >= 1 ? { w: size, h: size / r } : { w: size * r, h: size };
+}
+
+const MARGIN = 10, GAP = 2;   // mm
+const pc = (v, total) => (v / total * 100).toFixed(3) + '%';
+
+function layout(vignettes, sizeMm, paper){
+  const usable = { w: paper.w - 2 * MARGIN, h: paper.h - 2 * MARGIN };
+  const size = Math.min(Math.max(sizeMm, 10), usable.w);
+  const items = vignettes.map(v => ({ id: v.id, ...scaled(v, size) }))
+                         .sort((a, b) => b.h - a.h);
+  const pages = [{ placed: [], shelves: [] }];
+  for(const it of items){
+    let page = pages[pages.length - 1];
+    let shelf = page.shelves.find(s => s.x + it.w <= usable.w);
+    if(!shelf){
+      const last = page.shelves[page.shelves.length - 1];
+      let y = last ? last.y + last.h + GAP : 0;
+      if(y + it.h > usable.h){ page = { placed: [], shelves: [] }; pages.push(page); y = 0; }
+      shelf = { y, h: it.h, x: 0 };
+      page.shelves.push(shelf);
+    }
+    page.placed.push({ id: it.id, x: MARGIN + shelf.x, y: MARGIN + shelf.y, w: it.w, h: it.h });
+    shelf.x += it.w + GAP;
+  }
+  return pages.map(p => p.placed);
+}
+
+const DPI = 300, MM = 72 / 25.4;
+async function asJpeg(v, sizeMm){
+  const px = sizeMm / 25.4 * DPI;
+  const k = Math.min(1, px / Math.max(v.w, v.h));   // jamais agrandi
+  const c = new OffscreenCanvas(Math.round(v.w * k), Math.round(v.h * k));
+  c.getContext('2d').drawImage(v.bitmap, 0, 0, c.width, c.height);
+  const blob = await c.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+async function buildPdf(vignettes, size, paper){
+  const pdf = await PDFDocument.create();
+  const embedded = new Map();                       // une photo → un seul objet, clones compris
+  for(const placed of layout(vignettes, size, paper)){
+    const page = pdf.addPage([paper.w * MM, paper.h * MM]);
+    for(const t of placed){
+      const v = byId(vignettes, t.id);
+      if(!embedded.has(v.url)) embedded.set(v.url, await pdf.embedJpg(await asJpeg(v, size)));
+      page.drawImage(embedded.get(v.url), { x: t.x * MM, y: (paper.h - t.y - t.h) * MM,
+                                            width: t.w * MM, height: t.h * MM });
+    }
+  }
+  return pdf.save();
+}
+
+function App(){
+  let lang = 'en';
+  let format = 'A4';
+  let size = 50;
+  let vignettes = [];
+  const selected = new Set();
+  let building = false;
+  let nextId = 1;
+
+  const t = k => MESSAGES[lang][k];
+  async function pick(e){
+    const files = [...e.target.files];
+    const added = await Promise.all(files.map(async f => {
+      const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+      return { id: nextId++, name: f.name, url: URL.createObjectURL(f),
+               w: bmp.width, h: bmp.height, bitmap: bmp };
+    }));
+    vignettes = [...vignettes, ...added];
+    e.target.value = '';        // re-choisir le même fichier redéclenche l'événement
+    m.redraw();
+  }
+  function toggle(id){
+    selected.has(id) ? selected.delete(id) : selected.add(id);   // Mithril repeint après le clic
+  }
+  function clone(){
+    const copies = vignettes.filter(v => selected.has(v.id))
+                            .map(v => ({ ...v, id: nextId++ }));
+    vignettes = [...vignettes, ...copies];
+  }
+  async function download(){
+    building = true; m.redraw();
+    try {
+      const bytes = await buildPdf(vignettes, size, FORMATS[format]);
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      const a = Object.assign(document.createElement('a'), { href: url, download: 'vignettes.pdf' });
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      building = false; m.redraw();
+    }
+  }
+
+  return {
+    view: () => {
+      const paper = FORMATS[format];
+      return [
+        m('h1', 'Vignettes'),
+        m('.bar', [
+          m('button', { onclick: () => { lang = lang === 'en' ? 'fr' : 'en'; } }, t('lang')),
+          m('label.pick', [t('choose'),
+            m('input[type=file]', { accept: 'image/*', multiple: true, onchange: pick })]),
+          m('label', [t('longSide'),
+            m('input[type=number]', { min: 10, max: paper.w - 2 * MARGIN, value: size,
+              oninput: e => { const n = e.target.valueAsNumber; if(Number.isFinite(n)) size = n; } })]),
+          m('label', [t('format'),
+            m('select', { onchange: e => format = e.target.value },
+              Object.keys(FORMATS).map(f => m('option', { value: f, selected: f === format }, f)))]),
+          m('button', { onclick: clone, disabled: !selected.size },
+            selected.size ? `${t('clone')} (${selected.size})` : t('clone')),
+          m('button', { onclick: download, disabled: !vignettes.length || building },
+            building ? t('generating') : t('download')),
+        ]),
+        m('.pages', layout(vignettes, size, paper).map((placed, i) =>
+          m('section.page', { 'aria-label': `page ${i + 1}`, style: `aspect-ratio:${paper.w}/${paper.h}` },
+            placed.map(pl =>
+              m('button.tile', {
+                class: selected.has(pl.id) ? 'selected' : '',
+                'aria-pressed': String(selected.has(pl.id)),
+                onclick: () => toggle(pl.id),
+                style: `left:${pc(pl.x, paper.w)}; top:${pc(pl.y, paper.h)};
+                        width:${pc(pl.w, paper.w)}; height:${pc(pl.h, paper.h)}`,
+              }, m('img', { src: byId(vignettes, pl.id).url, alt: byId(vignettes, pl.id).name }))
+            ))))
+      ];
+    },
+  };
+}
+
+m.mount(document.getElementById('app'), App);
+document.body.setAttribute('data-app-ready', '1');
+</script>
+</body>
+</html>

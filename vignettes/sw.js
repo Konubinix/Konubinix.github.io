@@ -1,10 +1,5 @@
-const CACHES = [
-    { pattern: /\.wasm$|\.bundle\.js$/,
-      name:    'condorcet-vendor-07bc425' },
-    { name:    'condorcet-app-e5e1584' },
-];
+const CACHES = [{ name: 'vignettes-v1' }];
 const ASSETS = ['./', './index.html'];
-
 function cacheNameFor(request){
     const url = new URL(request.url);
     for(const c of CACHES){
