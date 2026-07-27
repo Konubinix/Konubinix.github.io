@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html><title>an app to measure the volume of ambiant sound</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>An App to Measure the Volume of Ambiant Sound</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a class="internal-link" href="#1b7c4e02-9d38-4a51-8f6b-2c05e7a91d34">Hearing the room</a></li>
+<li><a class="internal-link" href="#4e8a1f63-5c27-4b09-9d34-7f1e2a6b80c5">Too loud, and for long enough</a></li>
+<li><a class="internal-link" href="#9f2d5b81-3a64-4c17-b0e9-6d81c4f37a25">Two halves, one message</a></li>
+<li><a class="internal-link" href="#6c3f8a05-7b19-4e2d-91a4-58e0b2d6f713">Landing it on the phone</a></li>
+<li><a class="internal-link" href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>We want to stay quiet when camping, and this is what will tell my kid when they
+are speaking too loud. The telling should reach everybody at once rather than
+tap one person on the shoulder, so it is not a phone anybody holds or pockets:
+it lies on the table, where a phone that starts to vibrate is heard by the
+whole group. That buzz is the message. <code>hussshh</code> on the screen is for whoever
+looks up.</p>
+<p>The phone is an old Android already running my <a target="_blank" href="/blog/posts/a_python_runtime_on_android/?title=a_python_runtime_on_android#">python runtime on android</a>, and
+that is what makes this worth doing at all: a feature there is a python file
+dropped on the sdcard of a phone that is already running, with nothing to
+rebuild between an idea and it sitting on the table.</p>
+<h2 id="1b7c4e02-9d38-4a51-8f6b-2c05e7a91d34">Hearing the room</h2>
+<p>What we are after is a room that <em>stays</em> loud, not the loudest instant in it.
+Android offers a shortcut to the microphone —
+<a target="_blank" href="https://developer.android.com/reference/android/media/MediaRecorder#getMaxAmplitude()"><code>MediaRecorder.getMaxAmplitude()</code></a>
+— but it answers the other question: the largest sample since the previous
+call. Two moments with the same largest sample can hold wildly different
+amounts of noise, a single dropped fork or a table of shouting, and telling
+those two apart is the entire job here. It is also not free to ask: a
+recorder only answers once it has been prepared and started, which means
+<a target="_blank" href="/blog/posts/use_the_camera_with_kivy_on_android/?title=use_the_camera_with_kivy_on_android#">handing it an output file</a> and encoding a stream we would immediately throw
+away.</p>
+<p><a target="_blank" href="https://developer.android.com/reference/android/media/AudioRecord"><code>AudioRecord</code></a>
+hands over the raw samples instead, and the amount of noise in a stretch of
+raw samples is exactly their root mean square. So we open the microphone in
+mono, sixteen bits a sample, at the one rate the API guarantees every device
+supports — and with several times the buffer the device says it needs, so the
+driver always has room to keep filling while we are busy with the samples it
+handed over last.</p>
+<div class="konix-block-name-marker" data-name="soundmeter-open"></div>
+<p><a id="code-snippet--soundmeter-open"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>AudioRecord <span style="color:#0550ae">=</span> autoclass<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;android.media.AudioRecord&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>AudioFormat <span style="color:#0550ae">=</span> autoclass<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;android.media.AudioFormat&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>AudioSource <span style="color:#0550ae">=</span> autoclass<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;android.media.MediaRecorder$AudioSource&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>RATE <span style="color:#0550ae">=</span> <span style="color:#0550ae">44100</span>          <span style="color:#57606a"># the only rate AudioRecord guarantees everywhere</span>
+</span></span><span style="display:flex;"><span>CHANNEL <span style="color:#0550ae">=</span> AudioFormat<span style="color:#0550ae">.</span>CHANNEL_IN_MONO
+</span></span><span style="display:flex;"><span>ENCODING <span style="color:#0550ae">=</span> AudioFormat<span style="color:#0550ae">.</span>ENCODING_PCM_16BIT
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_open_mic</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    size <span style="color:#0550ae">=</span> AudioRecord<span style="color:#0550ae">.</span>getMinBufferSize<span style="color:#1f2328">(</span>RATE<span style="color:#1f2328">,</span> CHANNEL<span style="color:#1f2328">,</span> ENCODING<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    rec <span style="color:#0550ae">=</span> AudioRecord<span style="color:#1f2328">(</span>AudioSource<span style="color:#0550ae">.</span>MIC<span style="color:#1f2328">,</span> RATE<span style="color:#1f2328">,</span> CHANNEL<span style="color:#1f2328">,</span> ENCODING<span style="color:#1f2328">,</span> size <span style="color:#0550ae">*</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    rec<span style="color:#0550ae">.</span>startRecording<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> rec
+</span></span></code></pre></div><p>The apk was built asking for the microphone, but asking is not holding:
+recording is one of the permissions a user grants, and on this package it
+starts out ungranted — so the phone does have to change once, and
+<a class="internal-link" href="/braindump/posts/android/#cbfe0d76-9ce7-4b78-82d9-e56dac2f6cfe">granting it from the command line</a> is the whole of the change. The vibrator
+needs no such ceremony; the apk asks for that one too, and it is handed over
+at install.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb shell pm grant eu.konubinix.konixpoc android.permission.RECORD_AUDIO
+</span></span></code></pre></div><p>Those samples then have to be cut into stretches, and the length of a stretch
+decides what the number means. A tenth of a second is the compromise: long
+enough to hold ten or so cycles of the lowest pitch a human voice reaches, so
+the figure is an energy rather than an accident of where the wave happened to
+be, and short enough that speech is followed instead of averaged away.</p>
+<div class="konix-block-name-marker" data-name="soundmeter-window"></div>
+<p><a id="code-snippet--soundmeter-window"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>WINDOW <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.1</span>                            <span style="color:#57606a"># seconds of sound behind one figure</span>
+</span></span><span style="display:flex;"><span>FRAMES <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>RATE <span style="color:#0550ae">*</span> WINDOW<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>SILENCE <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">90.0</span>                         <span style="color:#57606a"># what we call a window with no signal</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_level</span><span style="color:#1f2328">(</span>rec<span style="color:#1f2328">,</span> buf<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    got <span style="color:#0550ae">=</span> rec<span style="color:#0550ae">.</span>read<span style="color:#1f2328">(</span>buf<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>buf<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> got <span style="color:#0550ae">&lt;=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> SILENCE
+</span></span><span style="display:flex;"><span>    rms <span style="color:#0550ae">=</span> audioop<span style="color:#0550ae">.</span>rms<span style="color:#1f2328">(</span><span style="color:#6639ba">bytes</span><span style="color:#1f2328">(</span>buf<span style="color:#1f2328">[:</span>got<span style="color:#1f2328">]),</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0550ae">20</span> <span style="color:#0550ae">*</span> log10<span style="color:#1f2328">(</span>rms <span style="color:#0550ae">/</span> <span style="color:#0550ae">32768.0</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">if</span> rms <span style="color:#cf222e">else</span> SILENCE
+</span></span></code></pre></div><p><em>Under the hood</em>, that reads back into a buffer Java filled: <code>rec.read</code> is
+handed a <code>bytearray</code> and pyjnius copies the java <code>byte[]</code> back into it when
+the call returns — the same write-back <a target="_blank" href="/blog/posts/streaming_the_tc001n_thermal_camera_with_python_on_android/?title=streaming_the_tc001n_thermal_camera_with_python_on_android#">the thermal camera&rsquo;s control transfers</a>
+depend on.</p>
+<p>A read can also come back with nothing at all — the microphone taken by
+something else, or failing mid-stream — and a window still has to be given
+some figure. It is given one far below anything a room ever reaches, so a
+microphone that has gone quiet on us reads as quiet rather than as noise.</p>
+<p>A refused permission is the case I have not pinned down: it may look exactly
+like that, or it may stop the microphone opening at all. The two are worth
+telling apart, because one is silence that passes for a well-behaved family
+and the other is a microphone that refuses to start — a minute with the phone
+settles it.</p>
+<p>One thing that number is not is a measurement of the room. It is a ratio
+against the largest value the converter can represent — a full-scale figure,
+dBFS — and there is no calibrated microphone anywhere in the chain to turn it
+into the decibels a sound level meter would show. That is fine. We never
+needed to know how loud the tent is in absolute terms; we need to know when
+it is louder than it was.</p>
+<h2 id="4e8a1f63-5c27-4b09-9d34-7f1e2a6b80c5">Too loud, and for long enough</h2>
+<p>Ten figures a second is far more opinion than we want. A fork on a plate
+clears any line we could draw and means nothing; a raised voice clears the
+same line and means everything. What separates them is not how loud they are
+but how long they last, so a level has to hold above the line for a while
+before it counts as the room being loud.</p>
+<p>Coming back down needs a patience of its own, and a line of its own. The
+patience first: the quiet between two sentences is real quiet, so a room let
+off on its first calm window would have the same conversation tripping the
+buzz again on every breath. It only counts as settled once it has stayed
+quiet for a few seconds together.</p>
+<p>And a level that has dropped a hair under the shouting line has not settled
+at all — it is still a table of people shouting, just barely less so. If that
+counted toward the few seconds, a room sitting steadily just under the line
+would spend them all and be declared calm with nobody lowering their voice.
+So the
+line a room has to fall under to start earning that patience sits well below
+the line it had to cross to be called loud in the first place.</p>
+<p>So what we are building is a detector fed one level per window, carrying the
+upper line it must cross to call the room loud and the lower line it must
+drop back under to call it calm. In the promises that follow, a window at
+−20 dBFS is a voice well over the upper line and one at −50 is a room well
+under the lower one.</p>
+<p>A single loud window is a noise, not a conversation, and must leave the room
+quiet.</p>
+<div class="konix-block-name-marker" data-name="check-spike"></div>
+<p><a id="code-snippet--check-spike"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>d <span style="color:#0550ae">=</span> Detector<span style="color:#1f2328">(</span>upper_db<span style="color:#0550ae">=-</span><span style="color:#0550ae">30</span><span style="color:#1f2328">,</span> lower_db<span style="color:#0550ae">=-</span><span style="color:#0550ae">36</span><span style="color:#1f2328">,</span> attack<span style="color:#0550ae">=</span><span style="color:#0550ae">15</span><span style="color:#1f2328">,</span> release<span style="color:#0550ae">=</span><span style="color:#0550ae">30</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>d<span style="color:#0550ae">.</span>feed<span style="color:#1f2328">(</span>lvl<span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> lvl <span style="color:#0550ae">in</span> <span style="color:#1f2328">[</span><span style="color:#0550ae">-</span><span style="color:#0550ae">50</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">20</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">50</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">50</span><span style="color:#1f2328">])</span>
+</span></span></code></pre></div><p>Held long enough, though, the same level is somebody shouting, and it should
+announce itself exactly once however long the shouting goes on — the buzz is
+a reminder, not an alarm.</p>
+<div class="konix-block-name-marker" data-name="check-sustained"></div>
+<p><a id="code-snippet--check-sustained"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#1f2328">[</span>d<span style="color:#0550ae">.</span>feed<span style="color:#1f2328">(</span><span style="color:#0550ae">-</span><span style="color:#0550ae">20</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">60</span><span style="color:#1f2328">)]</span><span style="color:#0550ae">.</span>count<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">1</span>
+</span></span></code></pre></div><p>Somebody drawing breath mid-rant is not the room calming down. A short gap
+followed by more shouting — more than enough on its own to set the thing off
+from cold — must earn no second buzz.</p>
+<div class="konix-block-name-marker" data-name="check-breath"></div>
+<p><a id="code-snippet--check-breath"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>d<span style="color:#0550ae">.</span>feed<span style="color:#1f2328">(</span><span style="color:#0550ae">-</span><span style="color:#0550ae">50</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">10</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>d<span style="color:#0550ae">.</span>feed<span style="color:#1f2328">(</span><span style="color:#0550ae">-</span><span style="color:#0550ae">20</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">20</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><p>A group that actually settles, on the other hand, gets its slate wiped, and
+the next outburst is worth a fresh buzz.</p>
+<div class="konix-block-name-marker" data-name="check-settled"></div>
+<p><a id="code-snippet--check-settled"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>d<span style="color:#0550ae">.</span>feed<span style="color:#1f2328">(</span><span style="color:#0550ae">-</span><span style="color:#0550ae">50</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">30</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#1f2328">[</span>d<span style="color:#0550ae">.</span>feed<span style="color:#1f2328">(</span><span style="color:#0550ae">-</span><span style="color:#0550ae">20</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">15</span><span style="color:#1f2328">)]</span><span style="color:#0550ae">.</span>count<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">1</span>
+</span></span></code></pre></div><p>The detector behind those four promises is a handful of counters and no clock
+of its own. It is fed one figure per window and counts windows, which is what
+lets the promises be made about a stream of numbers rather than about the
+passage of an afternoon.</p>
+<div class="konix-block-name-marker" data-name="detector"></div>
+<p><a id="code-snippet--detector"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">Detector</span><span style="color:#1f2328">(</span><span style="color:#6639ba">object</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> upper_db<span style="color:#1f2328">,</span> lower_db<span style="color:#1f2328">,</span> attack<span style="color:#1f2328">,</span> release<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>upper_db<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>lower_db <span style="color:#0550ae">=</span> upper_db<span style="color:#1f2328">,</span> lower_db
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>attack<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>release <span style="color:#0550ae">=</span> attack<span style="color:#1f2328">,</span> release
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>loud <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">feed</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> db<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;&#34;&#34;One window&#39;s level in; True on the window the room turns loud.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>loud<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">+</span> <span style="color:#0550ae">1</span> <span style="color:#cf222e">if</span> db <span style="color:#0550ae">&lt;</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>lower_db <span style="color:#cf222e">else</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">&gt;=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>release<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>loud<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">+</span> <span style="color:#0550ae">1</span> <span style="color:#cf222e">if</span> db <span style="color:#0550ae">&gt;=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>upper_db <span style="color:#cf222e">else</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">&gt;=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>attack<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>loud<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>run <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#cf222e">False</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>the four promises hold
+</span></span></code></pre></div><p>The four numbers those promises are run with are placeholders. Where the
+lines actually sit depends on
+the phone, the table it lies on and how far away the voices are, so they are
+to be found by trial on the spot; a second and a half of shouting before the
+buzz, and three seconds of calm to forget it, are the starting points.</p>
+<div class="konix-block-name-marker" data-name="soundmeter-settings"></div>
+<p><a id="code-snippet--soundmeter-settings"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>UPPER_DB <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">30.0</span>                        <span style="color:#57606a"># to trial: the room is too loud</span>
+</span></span><span style="display:flex;"><span>LOWER_DB <span style="color:#0550ae">=</span> <span style="color:#0550ae">-</span><span style="color:#0550ae">36.0</span>                        <span style="color:#57606a"># to trial: and the room is calm again</span>
+</span></span><span style="display:flex;"><span>ATTACK <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span><span style="color:#0550ae">1.5</span> <span style="color:#0550ae">/</span> WINDOW<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>RELEASE <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span><span style="color:#0550ae">3.0</span> <span style="color:#0550ae">/</span> WINDOW<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h2 id="9f2d5b81-3a64-4c17-b0e9-6d81c4f37a25">Two halves, one message</h2>
+<p>The runtime this rides on comes in two halves. One is a foreground service
+that keeps running whether or not anything is on screen; the other is the
+kivy app that owns the screen. They are separate processes and talk to each
+other by sending named messages over a local socket, which is how every
+feature of the phone is already wired.</p>
+<p>That split decides where the listening goes. A phone lying on a camping table
+has its screen off and the app long since backgrounded, so anything that has
+to keep hearing belongs in the service — and the service is also what shakes
+the phone, which is the part of the message that matters. The word on the
+screen is the app&rsquo;s job, and it has to still be there whenever somebody gets
+round to looking.</p>
+<p>The read is what paces that loop. It does not return until the window is
+full, so the service needs neither a sleep nor a clock to keep to ten
+judgements a second. Both edges of the verdict are worth passing on: the
+buzz goes out when the room turns loud, and the app is told when it settles
+so the screen can stop saying otherwise. The settling has no window of its
+own to announce it, though, so the loop watches the state across the
+judgement to catch it. The loop runs for as long as the listening lasts.</p>
+<p>And the end of the listening has to be believed on the spot. Nobody ends it in
+a silent tent: the listening gets stopped because the table is mid-shout and
+the buzz is coming, which is the very moment the loop is a window away from
+firing. So the window it was already reading when the listening ended may
+still be judged, but it must not be allowed to speak.</p>
+<div class="konix-block-name-marker" data-name="soundmeter-loop"></div>
+<p><a id="code-snippet--soundmeter-loop"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>listening <span style="color:#0550ae">=</span> threading<span style="color:#0550ae">.</span>Event<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_listen</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    rec <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        rec <span style="color:#0550ae">=</span> _open_mic<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        listening<span style="color:#0550ae">.</span>set<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        buf <span style="color:#0550ae">=</span> <span style="color:#6639ba">bytearray</span><span style="color:#1f2328">(</span>FRAMES <span style="color:#0550ae">*</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        detector <span style="color:#0550ae">=</span> Detector<span style="color:#1f2328">(</span>UPPER_DB<span style="color:#1f2328">,</span> LOWER_DB<span style="color:#1f2328">,</span> ATTACK<span style="color:#1f2328">,</span> RELEASE<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">while</span> listening<span style="color:#0550ae">.</span>is_set<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            was_loud <span style="color:#0550ae">=</span> detector<span style="color:#0550ae">.</span>loud
+</span></span><span style="display:flex;"><span>            turned_loud <span style="color:#0550ae">=</span> detector<span style="color:#0550ae">.</span>feed<span style="color:#1f2328">(</span>_level<span style="color:#1f2328">(</span>rec<span style="color:#1f2328">,</span> buf<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> listening<span style="color:#0550ae">.</span>is_set<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> turned_loud<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                logger<span style="color:#0550ae">.</span>info<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;soundmeter: too loud&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                plyer<span style="color:#0550ae">.</span>vibrator<span style="color:#0550ae">.</span>vibrate<span style="color:#1f2328">(</span>VIBRATION<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                to_app<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;hussshh&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">elif</span> was_loud <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> detector<span style="color:#0550ae">.</span>loud<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                to_app<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;hussshh:over&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">finally</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        listening<span style="color:#0550ae">.</span>clear<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> rec <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            rec<span style="color:#0550ae">.</span>stop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            rec<span style="color:#0550ae">.</span>release<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><p>A buzz has to be long enough to be a sound in the room rather than a click,
+and short enough not to become the noise it is complaining about. Six tenths
+of a second is the guess to start from.</p>
+<div class="konix-block-name-marker" data-name="soundmeter-buzz"></div>
+<p><a id="code-snippet--soundmeter-buzz"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>VIBRATION <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.6</span>                         <span style="color:#57606a"># seconds of buzz, to trial</span>
+</span></span></code></pre></div><p>None of this should run all day — the microphone is open the whole time it
+is on, and we only want it during a meal. Whoever switches it on is sitting
+at that table with nothing but the phone in reach, so the switch lives in the
+app, and the app asks the service to start or stop listening.</p>
+<p>The listening is a single flag, and the thread owns it: it goes up only once
+the microphone is in hand, and comes down on the way out however the loop
+ends, so it never claims a loop that is not running. That is what makes it
+worth answering a request with — starting waits a couple of seconds for it to
+go up, so a microphone that cannot be opened at all answers no rather than yes
+to a loop that died on its first line.</p>
+<div class="konix-block-name-marker" data-name="soundmeter-handlers"></div>
+<p><a id="code-snippet--soundmeter-handlers"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>OPENING <span style="color:#0550ae">=</span> <span style="color:#0550ae">2.0</span>                           <span style="color:#57606a"># seconds to wait for the microphone</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;sound:start&#34;</span><span style="color:#1f2328">,</span> answer<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> listening<span style="color:#0550ae">.</span>is_set<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        thread <span style="color:#0550ae">=</span> threading<span style="color:#0550ae">.</span>Thread<span style="color:#1f2328">(</span>target<span style="color:#0550ae">=</span>_listen<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        thread<span style="color:#0550ae">.</span>daemon <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>        thread<span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        listening<span style="color:#0550ae">.</span>wait<span style="color:#1f2328">(</span>OPENING<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> listening<span style="color:#0550ae">.</span>is_set<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;sound:stop&#34;</span><span style="color:#1f2328">,</span> answer<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    listening<span style="color:#0550ae">.</span>clear<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> listening<span style="color:#0550ae">.</span>is_set<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><p>On the app&rsquo;s side there is one screen, and it does both jobs. The word is
+read at arm&rsquo;s length by somebody who has just been buzzed at, so it is one
+word as large as the screen allows, and it is put there and taken away by the
+two messages rather than by a timer — the screen then says what the room is
+doing now, and nobody has to wonder whether the <code>hussshh</code> they are looking at
+is still true. Below it sits the switch. Which way to toggle, it reads off its
+own label; what to say afterwards, it takes from the service&rsquo;s answer. A
+screen built while the service is already listening therefore opens saying
+<em>listen</em>, and one press puts the two back in step.</p>
+<div class="konix-block-name-marker" data-name="hussshh-screen"></div>
+<p><a id="code-snippet--hussshh-screen"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>OFF<span style="color:#1f2328">,</span> ON <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;listen&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;stop listening&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">SoundMeterScreen</span><span style="color:#1f2328">(</span>Screen<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>args<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">(</span>SoundMeterScreen<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>args<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>word <span style="color:#0550ae">=</span> Label<span style="color:#1f2328">(</span>text<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">,</span> font_size<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;120sp&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>switch <span style="color:#0550ae">=</span> Button<span style="color:#1f2328">(</span>text<span style="color:#0550ae">=</span>OFF<span style="color:#1f2328">,</span> font_size<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;40sp&#34;</span><span style="color:#1f2328">,</span> size_hint<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.2</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>switch<span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_press<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>toggle<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        box <span style="color:#0550ae">=</span> BoxLayout<span style="color:#1f2328">(</span>orientation<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;vertical&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        box<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>word<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        box<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>switch<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>box<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">toggle</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        starting <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>switch<span style="color:#0550ae">.</span>text <span style="color:#0550ae">==</span> OFF
+</span></span><span style="display:flex;"><span>        now_listening <span style="color:#0550ae">=</span> to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;sound:start&#34;</span> <span style="color:#cf222e">if</span> starting <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;sound:stop&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                   wait_for_answer<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>switch<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> ON <span style="color:#cf222e">if</span> now_listening <span style="color:#cf222e">else</span> OFF
+</span></span></code></pre></div><p>The word can arrive while the app is showing something else entirely, or
+while it has never shown this screen at all, so receiving it also means
+building the screen if need be and bringing it to the front. The room
+settling only touches the word: whoever has wandered off to another screen
+since should not be yanked back for good news.</p>
+<div class="konix-block-name-marker" data-name="hussshh-arrives"></div>
+<p><a id="code-snippet--hussshh-arrives"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">populate</span><span style="color:#1f2328">(</span>sm<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> sm<span style="color:#0550ae">.</span>get_screen<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;soundmeter&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> ScreenManagerException<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        screen <span style="color:#0550ae">=</span> SoundMeterScreen<span style="color:#1f2328">(</span>name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;soundmeter&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        sm<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>screen<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> screen
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;hussshh&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    app <span style="color:#0550ae">=</span> App<span style="color:#0550ae">.</span>get_running_app<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    populate<span style="color:#1f2328">(</span>app<span style="color:#0550ae">.</span>sm<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>word<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;hussshh&#34;</span>
+</span></span><span style="display:flex;"><span>    app<span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;soundmeter&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;hussshh:over&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    populate<span style="color:#1f2328">(</span>App<span style="color:#0550ae">.</span>get_running_app<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>sm<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>word<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;&#34;</span>
+</span></span></code></pre></div><h2 id="6c3f8a05-7b19-4e2d-91a4-58e0b2d6f713">Landing it on the phone</h2>
+<p>The listener and the screen go onto the sdcard as <code>soundmeter.py</code> and
+<code>soundmeterscreen.py</code>, tangled straight over adb. The service imports the
+listener at boot the way it imports its other features, and the app&rsquo;s front
+screen grows one more button, which opens the screen above.</p>
+<p>What is left is to sit at the table with it and find the two lines. Speak
+normally and nothing should happen; talk over each other and the table should
+buzz, once, a second and a half in.</p>
+<h2 id="permalink"><a class="internal-link" href="/braindump/d6c3babd-659b-45bc-80ac-3691e5443098?title=an_app_to_measure_the_volume_of_ambiant_sound">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+      </div>
+	  <aside class="date"><time>Last updated: 26 Jul 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 26 Jul 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

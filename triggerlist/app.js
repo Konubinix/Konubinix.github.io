@@ -1,4 +1,4 @@
-// [[id:4f21ee3e-33b2-40ec-aae8-d45eb8fb38cf][How it all fits together:8]]
+// [[id:4f21ee3e-33b2-40ec-aae8-d45eb8fb38cf][How it all fits together:9]]
 import { render, html, svg } from 'uhtml';
 import { get, set, del } from 'idb-keyval';
 
@@ -10,7 +10,8 @@ let doc, items, sections, itemSections, outings, outingSections, outingItems, ch
 // folded the "kind:id" of every collapsed card, selected the placements picked
 // for a batch move/copy (each key is a thing tied to where it sits, so a linked
 // thing is picked in one place, not everywhere); adding the section id whose
-// inline add-a-thing field is open; filter narrows the catalog to things whose
+// inline add-a-thing field is open, addText the text that field currently holds;
+// filter narrows the catalog to things whose
 // label contains it; picker holds the pending 'move'/'copy' while its target
 // sheet is up (or null); wiz holds the planning assistant's state (or null);
 // focusId the outing shown alone in its packing view (or null for the catalog);
@@ -18,7 +19,7 @@ let doc, items, sections, itemSections, outings, outingSections, outingItems, ch
 // ticked things (view mode) so only what is left to pack shows; activeItem is the
 // one placement whose controls a long press has revealed in view mode (or null).
 let editMode = false, editing = null, editingText = '', folded = new Set(), selected = new Set();
-let adding = null, filter = '', picker = null;
+let adding = null, addText = '', filter = '', picker = null;
 let wiz = null, focusId = null, toast = null, hideChecked = false, historyOpen = false, activeItem = null;
 let viewingFrontier = null, viewingLabel = '', previewDoc = null;   // a fork rendered while previewing a past point
 let histRowHeights = null;   // measured heights of the open history rows, so the rail's dots land on their centres
@@ -110,7 +111,7 @@ await loadDoc();
 const savedUi = restoreUi();   // return to the screen we were on before the reload
 doc.subscribe(() => { paint(); persist(); });
 paint();
-document.body.setAttribute('data-app-ready', '1');
+document.getElementById('loading')?.remove();
 if(savedUi.scrollY) requestAnimationFrame(() => window.scrollTo(0, savedUi.scrollY));
 startSync();
 armGuard();   // the base entry Back lands on, so leaving the app asks first
@@ -348,6 +349,16 @@ function addItem(label, sectionId){
     commit('« ' + label + ' » ajouté');
 }
 
+function moveItemHere(label, sectionId){
+    label = (label || '').trim();
+    const id = slug(label);
+    if(!label || !items.get(id)) return;                    // only a thing already known moves
+    for(const k of Object.keys(itemSections.toJSON()))      // out of every section it sat in,
+        if(before(k) === id) itemSections.delete(k);
+    if(sectionId) itemSections.set(id + ':' + sectionId, 1);   // and into the one chosen (none, if orphan)
+    commit('« ' + label + ' » déplacé ici');
+}
+
 function addSection(name){
     name = (name || '').trim();
     if(name){ sections.set(slug(name), { name }); commit('section « ' + name + ' » ajoutée'); }
@@ -379,32 +390,62 @@ function uncheckAll(){
 }
 function openAdd(target){
     adding = (adding === target) ? null : target;
+    addText = '';
     if(adding && target !== ':orphan' && target !== ':section') folded.delete('section:' + target);
     paint();
     const box = document.querySelector('.section-add-input');
     if(box) box.focus();
 }
 
+function closeAdd(){ adding = null; addText = ''; paint(); }
 function submitAdd(target){
     const box = document.querySelector('.section-add-input');
-    if(target === ':section') addSection(box.value);
-    else addItem(box.value, target === ':orphan' ? '' : target);
-    box.value = ''; box.focus();
+    const val = box.value;
+    box.value = ''; addText = '';
+    if(target === ':section') addSection(val);
+    else addItem(val, target === ':orphan' ? '' : target);
+    box.focus();
 }
 
-function closeAdd(){ adding = null; paint(); }
-
-document.addEventListener('pointerdown', e => {   // a press outside the open field dismisses it, default mode only
+function submitMove(target){
+    const box = document.querySelector('.section-add-input');
+    const val = box.value;
+    box.value = ''; addText = '';
+    moveItemHere(val, target === ':orphan' ? '' : target);
+    box.focus();
+}
+document.addEventListener('pointerdown', e => {
     if(adding && !editMode && !e.target.closest('.section-add')) closeAdd();
 });
+function addSuggestions(){
+    const q = slug(addText);
+    if(!q) return '';                                       // an empty field has no spelling to steer
+    const hits = Object.values(items.toJSON()).filter(v => slug(v.label).includes(q));
+    return hits.length ? html`
+      <ul class="section-suggest">
+        ${hits.map(v => html`<li><button type="button" onclick=${() => pickSuggestion(v.label)}>${v.label}</button></li>`)}
+      </ul>` : '';
+}
 
+function pickSuggestion(label){
+    const box = document.querySelector('.section-add-input');
+    if(box){ box.value = label; box.focus(); }
+    addText = label; paint();
+}
 function addField(target, placeholder, submitLabel){
+    const thing = target !== ':section';                    // sections have no catalog to complete against, and no move
+    const known = thing && !!items.get(slug(addText));       // the text already names a thing the list holds
     return html`
-      <div class="add section-add">
-        <input class="section-add-input" placeholder=${placeholder}
-               onkeydown=${e => e.key === 'Enter' ? submitAdd(target)
-                              : e.key === 'Escape' ? closeAdd() : null}>
-        <button aria-label=${submitLabel} onclick=${() => submitAdd(target)}>+</button>
+      <div class="section-add">
+        <div class="add">
+          <input class="section-add-input" placeholder=${placeholder}
+                 oninput=${e => { addText = e.target.value; paint(); }}
+                 onkeydown=${e => e.key === 'Enter' ? submitAdd(target)
+                                : e.key === 'Escape' ? closeAdd() : null}>
+          <button aria-label=${submitLabel} onclick=${() => submitAdd(target)}>+</button>
+          ${known ? html`<button aria-label="Déplacer ici" onclick=${() => submitMove(target)}>→</button>` : ''}
+        </div>
+        ${thing ? addSuggestions() : ''}
       </div>`;
 }
 let pressTimer, pressFired = false;
@@ -539,6 +580,13 @@ function buildModel(){
         .map(([id, v]) => ({ id, label: v.label, done: !!chk[id] }));
     return { outingList, catalog, orphans };
 }
+function foldText(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+
+function matchesFilter(label, query){
+    const hay = foldText(label);
+    return foldText(query).split(/\s+/).filter(Boolean).every(word => hay.includes(word));
+}
+
 function filterBar(){
     return html`
       <div class="filter">
@@ -759,8 +807,8 @@ function wizAddItem(){
 function wizItemGroups(){
     const secOf = {};
     for(const k of Object.keys(itemSections.toJSON())) (secOf[before(k)] ||= []).push(after(k));
-    const q = wiz.itemFilter.trim().toLowerCase();
-    const rows = Object.entries(items.toJSON()).filter(([id, v]) => v.label.toLowerCase().includes(q));
+    const q = wiz.itemFilter.trim();
+    const rows = Object.entries(items.toJSON()).filter(([id, v]) => matchesFilter(v.label, q));
     return {
         orphans: rows.filter(([id]) => !(secOf[id] || []).length),
         otherSec: rows.filter(([id]) => (secOf[id] || []).length && !secOf[id].some(s => wiz.picks.has(s))),
@@ -823,8 +871,8 @@ function outingChip(o){
 
 function focusView(m){
     const o = m.outingList.find(x => x.id === focusId);
-    const q = filter.trim().toLowerCase();
-    const match = it => it.label.toLowerCase().includes(q);
+    const q = filter.trim();
+    const match = it => matchesFilter(it.label, q);
     const fo = q ? { ...o, sections: o.sections.map(s => ({ ...s, items: s.items.filter(match) })).filter(s => s.items.length),
                      items: o.items.filter(match) } : o;
     return html`
@@ -873,8 +921,8 @@ function view(m){
     if(focusId && m.outingList.some(o => o.id === focusId)) return focusView(m);
     focusId = null;   // no outing focused, or the focused one is gone — show the catalog
     const empty = !m.outingList.length && !m.catalog.length && !m.orphans.length;
-    const q = filter.trim().toLowerCase();
-    const match = it => it.label.toLowerCase().includes(q);
+    const q = filter.trim();
+    const match = it => matchesFilter(it.label, q);
     const catalog = q ? m.catalog.map(s => ({ ...s, items: s.items.filter(match) })).filter(s => s.items.length) : m.catalog;
     const orphans = q ? m.orphans.filter(match) : m.orphans;
     const syncLabel = { off: 'Local', connecting: 'Connexion…', online: 'Synchronisé',
@@ -1141,4 +1189,4 @@ function viewingBar(){
       </span>
     </div>`;
 }
-// How it all fits together:8 ends here
+// How it all fits together:9 ends here

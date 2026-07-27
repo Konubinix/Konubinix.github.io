@@ -940,6 +940,7 @@ and the naming to indicate that it was about brushing the teeths.</p>
 </span></span></code></pre></div><p>This is hosted at <a target="_blank" href="https://konubinix.eu/brossage-dents">https://konubinix.eu/brossage-dents</a></p>
 <h2 id="887c6b43-0363-429d-9bc7-6b1492cc262e">doing again, with old python2 kivy, to reuse my <a class="internal-link" href="/braindump/posts/afterlife_for_my_old_phones/#02cd4fce-c616-4231-86f3-fee6b2ca1fc3">wiko cink peax</a></h2>
 <p>Shows how to <a class="internal-link" href="/braindump/posts/android/#8ae7a0d0-1650-45a6-a096-74436f997f6b">change fullscreen settings</a>,</p>
+<div class="konix-block-name-marker" data-name="main"></div>
 <p><a id="code-snippet--main"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
 </span></span><span style="display:flex;"><span>
@@ -1400,6 +1401,508 @@ and the naming to indicate that it was about brushing the teeths.</p>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">run</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    IntervalTimerApp<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>run<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><h2 id="5b646fc6-912b-4c6b-9693-6d45ea747433">a clone of moodbrush, with my python2 kivy runtime, on the <a class="internal-link" href="/braindump/posts/afterlife_for_my_old_phones/#02cd4fce-c616-4231-86f3-fee6b2ca1fc3">wiko cink peax</a></h2>
+<p>A clone of <a target="_blank" href="https://play.google.com/store/apps/details?id=com.ahancer.moodbrush&amp;hl=en-US">moodbrush</a>: pick one of six moods (Bright, Calm, Power, Love,
+Bedtime, Jazz), then brush along a 2 minutes cycle (4 zones of 30s) with the
+mood music playing, and get an uplifting message at the end. A canvas-drawn
+mouth shows the zone being brushed, with a wiggling toothbrush and a few
+sparkles, as a cheap stand-in for the shiny sprites of the original.</p>
+<p>Same idea as <a class="internal-link" href="#887c6b43-0363-429d-9bc7-6b1492cc262e">the interval timer above</a>, on top of <a target="_blank" href="/blog/posts/a_python_runtime_on_android/?title=a_python_runtime_on_android#">a python runtime on android</a>.</p>
+<div class="konix-block-name-marker" data-name="moodbrush"></div>
+<p><a id="code-snippet--moodbrush"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">math</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">random</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.app</span> <span style="color:#cf222e">import</span> App
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.clock</span> <span style="color:#cf222e">import</span> Clock
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.graphics</span> <span style="color:#cf222e">import</span> Color<span style="color:#1f2328">,</span> Rectangle
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.boxlayout</span> <span style="color:#cf222e">import</span> BoxLayout
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.button</span> <span style="color:#cf222e">import</span> Button
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.gridlayout</span> <span style="color:#cf222e">import</span> GridLayout
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.label</span> <span style="color:#cf222e">import</span> Label
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.screenmanager</span> <span style="color:#cf222e">import</span> Screen<span style="color:#1f2328">,</span> ScreenManager<span style="color:#1f2328">,</span> ScreenManagerException
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.widget</span> <span style="color:#cf222e">import</span> Widget
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.core.audio</span> <span style="color:#cf222e">import</span> SoundLoader
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers.osc</span> <span style="color:#cf222e">import</span> oschandler<span style="color:#1f2328">,</span> to_service
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">android.runnable</span> <span style="color:#cf222e">import</span> run_on_ui_thread
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">logging</span> <span style="color:#cf222e">import</span> getLogger
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>logger <span style="color:#0550ae">=</span> getLogger<span style="color:#1f2328">(</span><span style="color:#953800">__name__</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>here <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>dirname<span style="color:#1f2328">(</span><span style="color:#953800">__file__</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>grey <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0.3</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.3</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.3</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>moods <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Bright&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.85</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.3</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;bright.ogg&#34;</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Calm&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0.55</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;calm.ogg&#34;</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Power&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.45</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.25</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;power.ogg&#34;</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Love&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.6</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;love.ogg&#34;</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Bedtime&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0.45</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.4</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.7</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;bedtime.ogg&#34;</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Jazz&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0.4</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.75</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.65</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;jazz.ogg&#34;</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>zone_time <span style="color:#0550ae">=</span> <span style="color:#0550ae">30</span>
+</span></span><span style="display:flex;"><span>zones <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;En bas a gauche&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;En bas a droite&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;En haut a gauche&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;En haut a droite&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>messages <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;Bravo, quel sourire !&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;Dents toutes propres !&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;Super brossage !&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;Continue comme ca !&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MouthWidget</span><span style="color:#1f2328">(</span>Widget<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;The teeth, a wiggling toothbrush and a few sparkles.&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">(</span>MouthWidget<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>phase <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sparkles <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ticking <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>size<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>trigger_redraw<span style="color:#1f2328">,</span> pos<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>trigger_redraw<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">trigger_redraw</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>redraw<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">start</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>stop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ticking <span style="color:#0550ae">=</span> Clock<span style="color:#0550ae">.</span>schedule_interval<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>tick<span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">15.</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">stop</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ticking<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            Clock<span style="color:#0550ae">.</span>unschedule<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ticking<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ticking <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">tick</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> dt<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>phase <span style="color:#0550ae">+=</span> dt <span style="color:#0550ae">*</span> <span style="color:#0550ae">8</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#0550ae">and</span> random<span style="color:#0550ae">.</span>random<span style="color:#1f2328">()</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">0.4</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            x0<span style="color:#1f2328">,</span> y0<span style="color:#1f2328">,</span> qw<span style="color:#1f2328">,</span> qh <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>quadrant_rect<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sparkles<span style="color:#0550ae">.</span>append<span style="color:#1f2328">([</span>x0 <span style="color:#0550ae">+</span> random<span style="color:#0550ae">.</span>random<span style="color:#1f2328">()</span> <span style="color:#0550ae">*</span> qw<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                  y0 <span style="color:#0550ae">+</span> random<span style="color:#0550ae">.</span>random<span style="color:#1f2328">()</span> <span style="color:#0550ae">*</span> qh<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                  <span style="color:#1f2328">(</span><span style="color:#0550ae">0.05</span> <span style="color:#0550ae">+</span> random<span style="color:#0550ae">.</span>random<span style="color:#1f2328">()</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.08</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>height<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                  <span style="color:#0550ae">1.0</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> sparkle <span style="color:#0550ae">in</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sparkles<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            sparkle<span style="color:#1f2328">[</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-=</span> dt <span style="color:#0550ae">*</span> <span style="color:#0550ae">1.5</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sparkles <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>s <span style="color:#cf222e">for</span> s <span style="color:#0550ae">in</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sparkles <span style="color:#cf222e">if</span> s<span style="color:#1f2328">[</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>redraw<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">mouth_rect</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        width <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>width <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.8</span>
+</span></span><span style="display:flex;"><span>        height <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>height <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.8</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>x <span style="color:#0550ae">+</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>width <span style="color:#0550ae">-</span> width<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>y <span style="color:#0550ae">+</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>height <span style="color:#0550ae">-</span> height<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                width<span style="color:#1f2328">,</span> height<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">quadrant_rect</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> zone<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        mx<span style="color:#1f2328">,</span> my<span style="color:#1f2328">,</span> mw<span style="color:#1f2328">,</span> mh <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth_rect<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        row <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span> <span style="color:#cf222e">if</span> zone <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span> <span style="color:#cf222e">else</span> <span style="color:#0550ae">1</span>  <span style="color:#57606a"># 0 is at the bottom</span>
+</span></span><span style="display:flex;"><span>        column <span style="color:#0550ae">=</span> zone <span style="color:#0550ae">%</span> <span style="color:#0550ae">2</span>  <span style="color:#57606a"># 0 is at the left</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#1f2328">(</span>mx <span style="color:#0550ae">+</span> column <span style="color:#0550ae">*</span> mw <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                my <span style="color:#0550ae">+</span> row <span style="color:#0550ae">*</span> mh <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                mw <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> mh <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">redraw</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>canvas<span style="color:#0550ae">.</span>clear<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>canvas<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">for</span> zone <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>zones<span style="color:#1f2328">)):</span>
+</span></span><span style="display:flex;"><span>                x0<span style="color:#1f2328">,</span> y0<span style="color:#1f2328">,</span> qw<span style="color:#1f2328">,</span> qh <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>quadrant_rect<span style="color:#1f2328">(</span>zone<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> zone <span style="color:#0550ae">==</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    Color<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    Color<span style="color:#1f2328">(</span><span style="color:#0550ae">0.8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                tooth_w <span style="color:#0550ae">=</span> qw <span style="color:#0550ae">/</span> <span style="color:#0550ae">4</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.7</span>
+</span></span><span style="display:flex;"><span>                tooth_h <span style="color:#0550ae">=</span> qh <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.5</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#57606a"># top row teeth hang from the top, bottom row teeth</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#57606a"># stand on the bottom</span>
+</span></span><span style="display:flex;"><span>                ty <span style="color:#0550ae">=</span> y0 <span style="color:#0550ae">+</span> qh <span style="color:#0550ae">-</span> tooth_h <span style="color:#cf222e">if</span> zone <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">2</span> <span style="color:#cf222e">else</span> y0
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                    tx <span style="color:#0550ae">=</span> x0 <span style="color:#0550ae">+</span> <span style="color:#1f2328">(</span>i <span style="color:#0550ae">+</span> <span style="color:#0550ae">0.15</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> qw <span style="color:#0550ae">/</span> <span style="color:#0550ae">4</span>
+</span></span><span style="display:flex;"><span>                    Rectangle<span style="color:#1f2328">(</span>pos<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>tx<span style="color:#1f2328">,</span> ty<span style="color:#1f2328">),</span> size<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>tooth_w<span style="color:#1f2328">,</span> tooth_h<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>draw_brush<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">for</span> x<span style="color:#1f2328">,</span> y<span style="color:#1f2328">,</span> size<span style="color:#1f2328">,</span> alpha <span style="color:#0550ae">in</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>sparkles<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                Color<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.5</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">max</span><span style="color:#1f2328">(</span>alpha<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                Rectangle<span style="color:#1f2328">(</span>pos<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>x <span style="color:#0550ae">-</span> size <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> y <span style="color:#0550ae">-</span> size <span style="color:#0550ae">/</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>                          size<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>size<span style="color:#1f2328">,</span> size <span style="color:#0550ae">/</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                Rectangle<span style="color:#1f2328">(</span>pos<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>x <span style="color:#0550ae">-</span> size <span style="color:#0550ae">/</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">,</span> y <span style="color:#0550ae">-</span> size <span style="color:#0550ae">/</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>                          size<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>size <span style="color:#0550ae">/</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">,</span> size<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">draw_brush</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        x0<span style="color:#1f2328">,</span> y0<span style="color:#1f2328">,</span> qw<span style="color:#1f2328">,</span> qh <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>quadrant_rect<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        shift <span style="color:#0550ae">=</span> math<span style="color:#0550ae">.</span>sin<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>phase<span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> qw <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.15</span>
+</span></span><span style="display:flex;"><span>        head_w <span style="color:#0550ae">=</span> qw <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.6</span>
+</span></span><span style="display:flex;"><span>        head_h <span style="color:#0550ae">=</span> qh <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.22</span>
+</span></span><span style="display:flex;"><span>        bristle_h <span style="color:#0550ae">=</span> qh <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.18</span>
+</span></span><span style="display:flex;"><span>        head_x <span style="color:#0550ae">=</span> x0 <span style="color:#0550ae">+</span> qw <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.2</span> <span style="color:#0550ae">+</span> shift
+</span></span><span style="display:flex;"><span>        tooth_h <span style="color:#0550ae">=</span> qh <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.5</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>  <span style="color:#57606a"># top row, brushing from below</span>
+</span></span><span style="display:flex;"><span>            bristles_y <span style="color:#0550ae">=</span> y0 <span style="color:#0550ae">+</span> qh <span style="color:#0550ae">-</span> tooth_h <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.7</span> <span style="color:#0550ae">-</span> bristle_h
+</span></span><span style="display:flex;"><span>            head_y <span style="color:#0550ae">=</span> bristles_y <span style="color:#0550ae">-</span> head_h
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>  <span style="color:#57606a"># bottom row, brushing from above</span>
+</span></span><span style="display:flex;"><span>            bristles_y <span style="color:#0550ae">=</span> y0 <span style="color:#0550ae">+</span> tooth_h <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.7</span>
+</span></span><span style="display:flex;"><span>            head_y <span style="color:#0550ae">=</span> bristles_y <span style="color:#0550ae">+</span> bristle_h
+</span></span><span style="display:flex;"><span>        Color<span style="color:#1f2328">(</span><span style="color:#0550ae">0.6</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.85</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> i <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            Rectangle<span style="color:#1f2328">(</span>pos<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>head_x <span style="color:#0550ae">+</span> <span style="color:#1f2328">(</span>i <span style="color:#0550ae">+</span> <span style="color:#0550ae">0.15</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> head_w <span style="color:#0550ae">/</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">,</span> bristles_y<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>                      size<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>head_w <span style="color:#0550ae">/</span> <span style="color:#0550ae">4</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.7</span><span style="color:#1f2328">,</span> bristle_h<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        Color<span style="color:#1f2328">(</span><span style="color:#0550ae">0.2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.5</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        Rectangle<span style="color:#1f2328">(</span>pos<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>head_x<span style="color:#1f2328">,</span> head_y<span style="color:#1f2328">),</span> size<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>head_w<span style="color:#1f2328">,</span> head_h<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#57606a"># the handle leaves toward the nearest corner of the mouth</span>
+</span></span><span style="display:flex;"><span>        handle_w <span style="color:#0550ae">=</span> qw <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.5</span>
+</span></span><span style="display:flex;"><span>        handle_x <span style="color:#0550ae">=</span> head_x <span style="color:#0550ae">-</span> handle_w <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone <span style="color:#0550ae">%</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span> <span style="color:#cf222e">else</span> head_x <span style="color:#0550ae">+</span> head_w
+</span></span><span style="display:flex;"><span>        Rectangle<span style="color:#1f2328">(</span>pos<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>handle_x<span style="color:#1f2328">,</span> head_y <span style="color:#0550ae">+</span> head_h <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.25</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>                  size<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>handle_w<span style="color:#1f2328">,</span> head_h <span style="color:#0550ae">*</span> <span style="color:#0550ae">0.5</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MoodScreen</span><span style="color:#1f2328">(</span>Screen<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">_update_rect</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> instance<span style="color:#1f2328">,</span> value<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>rect<span style="color:#0550ae">.</span>pos <span style="color:#0550ae">=</span> instance<span style="color:#0550ae">.</span>pos
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>rect<span style="color:#0550ae">.</span>size <span style="color:#0550ae">=</span> instance<span style="color:#0550ae">.</span>size
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">(</span>MoodScreen<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>canvas<span style="color:#0550ae">.</span>before<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> Color<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>rect <span style="color:#0550ae">=</span> Rectangle<span style="color:#1f2328">(</span>size<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>size<span style="color:#1f2328">,</span> pos<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pos<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>size<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_update_rect<span style="color:#1f2328">,</span> pos<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_update_rect<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout <span style="color:#0550ae">=</span> GridLayout<span style="color:#1f2328">(</span>cols<span style="color:#0550ae">=</span><span style="color:#0550ae">2</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> mood_name<span style="color:#1f2328">,</span> color<span style="color:#1f2328">,</span> _ <span style="color:#0550ae">in</span> moods<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            button <span style="color:#0550ae">=</span> Button<span style="color:#1f2328">(</span>text<span style="color:#0550ae">=</span>mood_name<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                            font_size<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;30sp&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                            background_normal<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                            background_color<span style="color:#0550ae">=</span>color <span style="color:#0550ae">+</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,),</span>
+</span></span><span style="display:flex;"><span>                            color<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            button<span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_press<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>make_starter<span style="color:#1f2328">(</span>mood_name<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            layout<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>button<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>layout<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;moodbrush:start&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>config<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">(</span>config<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;mood&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_enter<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>enter_handler<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">enter_handler</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;moodbrush:moods&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">make_starter</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> mood_name<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">def</span> <span style="color:#6639ba">starter</span><span style="color:#1f2328">(</span>instance<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">(</span>mood_name<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> starter
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">start</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> mood_name<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        brush <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>manager<span style="color:#0550ae">.</span>get_screen<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;moodbrush:timer&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        Clock<span style="color:#0550ae">.</span>schedule_once<span style="color:#1f2328">(</span><span style="color:#cf222e">lambda</span> dt<span style="color:#1f2328">:</span> brush<span style="color:#0550ae">.</span>start_session<span style="color:#1f2328">(</span>mood_name<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">BrushScreen</span><span style="color:#1f2328">(</span>Screen<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">_update_rect</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> instance<span style="color:#1f2328">,</span> value<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>rect<span style="color:#0550ae">.</span>pos <span style="color:#0550ae">=</span> instance<span style="color:#0550ae">.</span>pos
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>rect<span style="color:#0550ae">.</span>size <span style="color:#0550ae">=</span> instance<span style="color:#0550ae">.</span>size
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">super</span><span style="color:#1f2328">(</span>BrushScreen<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span><span style="color:#6639ba">__init__</span><span style="color:#1f2328">(</span><span style="color:#0550ae">**</span>kwargs<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>canvas<span style="color:#0550ae">.</span>before<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> Color<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>rect <span style="color:#0550ae">=</span> Rectangle<span style="color:#1f2328">(</span>size<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>size<span style="color:#1f2328">,</span> pos<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pos<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>size<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_update_rect<span style="color:#1f2328">,</span> pos<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_update_rect<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout <span style="color:#0550ae">=</span> GridLayout<span style="color:#1f2328">(</span>cols<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone_label <span style="color:#0550ae">=</span> Label<span style="color:#1f2328">(</span>text<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">,</span> font_size<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;40sp&#39;</span><span style="color:#1f2328">,</span> color<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        layout<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone_label<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>time_label <span style="color:#0550ae">=</span> Label<span style="color:#1f2328">(</span>text<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">,</span> font_size<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;80sp&#39;</span><span style="color:#1f2328">,</span> color<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        layout<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>time_label<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth <span style="color:#0550ae">=</span> MouthWidget<span style="color:#1f2328">(</span>size_hint<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">2.</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        layout<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>progress_label <span style="color:#0550ae">=</span> Label<span style="color:#1f2328">(</span>text<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">,</span> font_size<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;40sp&#39;</span><span style="color:#1f2328">,</span> color<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        layout<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>progress_label<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        button_layout <span style="color:#0550ae">=</span> BoxLayout<span style="color:#1f2328">(</span>size_hint<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.7</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pause_button <span style="color:#0550ae">=</span> Button<span style="color:#1f2328">(</span>text<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Pause&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                   background_color<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>                                   color<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pause_button<span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_press<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>toggle_clock<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        button_layout<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pause_button<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        layout<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>button_layout<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>layout<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>gong <span style="color:#0550ae">=</span> SoundLoader<span style="color:#0550ae">.</span>load<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>here<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;gong.ogg&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end <span style="color:#0550ae">=</span> SoundLoader<span style="color:#0550ae">.</span>load<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>here<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;end.ogg&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>finished <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wanted_color <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_pre_enter<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pre_enter_handler<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_pre_leave<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pre_leave_handler<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">keep_screen_on</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> revert<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">from</span> <span style="color:#24292e">android</span> <span style="color:#cf222e">import</span> mActivity
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">from</span> <span style="color:#24292e">jnius</span> <span style="color:#cf222e">import</span> autoclass
+</span></span><span style="display:flex;"><span>        LayoutParams <span style="color:#0550ae">=</span> autoclass<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;android.view.WindowManager$LayoutParams&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">def</span> <span style="color:#6639ba">do</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> revert<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                mActivity<span style="color:#0550ae">.</span>getWindow<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>clearFlags<span style="color:#1f2328">(</span>LayoutParams<span style="color:#0550ae">.</span>FLAG_KEEP_SCREEN_ON<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                mActivity<span style="color:#0550ae">.</span>getWindow<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>addFlags<span style="color:#1f2328">(</span>LayoutParams<span style="color:#0550ae">.</span>FLAG_KEEP_SCREEN_ON<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        do<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">pre_leave_handler</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>args<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>stop_clock<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#0550ae">.</span>stop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>keep_screen_on<span style="color:#1f2328">(</span>revert<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">from</span> <span style="color:#24292e">jnius</span> <span style="color:#cf222e">import</span> autoclass
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">from</span> <span style="color:#24292e">android</span> <span style="color:#cf222e">import</span> mActivity
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        View <span style="color:#0550ae">=</span> autoclass<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;android.view.View&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        option <span style="color:#0550ae">=</span> View<span style="color:#0550ae">.</span>SYSTEM_UI_FLAG_VISIBLE
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">def</span> <span style="color:#6639ba">fs</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            logger<span style="color:#0550ae">.</span>debug<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Leaving fullscreen mode&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            mActivity<span style="color:#0550ae">.</span>getWindow<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>getDecorView<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>setSystemUiVisibility<span style="color:#1f2328">(</span>option<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        fs<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">pre_enter_handler</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>args<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>keep_screen_on<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">from</span> <span style="color:#24292e">jnius</span> <span style="color:#cf222e">import</span> autoclass
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">from</span> <span style="color:#24292e">android</span> <span style="color:#cf222e">import</span> mActivity
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        View <span style="color:#0550ae">=</span> autoclass<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;android.view.View&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        option <span style="color:#0550ae">=</span> View<span style="color:#0550ae">.</span>SYSTEM_UI_FLAG_FULLSCREEN
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">@run_on_ui_thread</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">def</span> <span style="color:#6639ba">fs</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            logger<span style="color:#0550ae">.</span>debug<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Entering fullscreen mode&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            mActivity<span style="color:#0550ae">.</span>getWindow<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>getDecorView<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>setSystemUiVisibility<span style="color:#1f2328">(</span>option<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        fs<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">start_session</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> mood_name<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        mood <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>m <span style="color:#cf222e">for</span> m <span style="color:#0550ae">in</span> moods <span style="color:#cf222e">if</span> m<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> mood_name<span style="color:#1f2328">][</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wanted_color <span style="color:#0550ae">=</span> mood<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wanted_color
+</span></span><span style="display:flex;"><span>        App<span style="color:#0550ae">.</span>get_running_app<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;moodbrush:timer&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_zone <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>remaining_time <span style="color:#0550ae">=</span> zone_time
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>finished <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth<span style="color:#0550ae">.</span>zone <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#0550ae">.</span>stop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music <span style="color:#0550ae">=</span> SoundLoader<span style="color:#0550ae">.</span>load<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>here<span style="color:#1f2328">,</span> mood<span style="color:#1f2328">[</span><span style="color:#0550ae">2</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#0550ae">.</span>loop <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#0550ae">.</span>play<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start_clock<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">update_display</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>finished<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone_label<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>time_label<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>progress_label<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>message
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>zone_label<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> zones<span style="color:#1f2328">[</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_zone<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>time_label<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>remaining_time<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>progress_label<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">/</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_zone <span style="color:#0550ae">+</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>zones<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>wanted_color
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pause_button<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;Pause&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> grey
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pause_button<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;Continue&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">countdown</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> dt<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>remaining_time <span style="color:#0550ae">-=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>remaining_time <span style="color:#0550ae">&lt;=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_zone <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_zone <span style="color:#0550ae">&gt;=</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>zones<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>finish<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth<span style="color:#0550ae">.</span>zone <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>current_zone
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>gong<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>gong<span style="color:#0550ae">.</span>play<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>remaining_time <span style="color:#0550ae">=</span> zone_time
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>update_display<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">start_clock</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;moodbrush:clock-started&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock <span style="color:#0550ae">=</span> Clock<span style="color:#0550ae">.</span>schedule_interval<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>countdown<span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth<span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music <span style="color:#0550ae">and</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#0550ae">.</span>state <span style="color:#0550ae">!=</span> <span style="color:#0a3069">&#39;play&#39;</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#0550ae">.</span>play<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>update_display<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">stop_clock</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        Clock<span style="color:#0550ae">.</span>unschedule<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth<span style="color:#0550ae">.</span>stop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>update_display<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">toggle_clock</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> instance<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>finished<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>stop_clock<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#0550ae">.</span>stop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start_clock<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">finish</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>finished <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>message <span style="color:#0550ae">=</span> random<span style="color:#0550ae">.</span>choice<span style="color:#1f2328">(</span>messages<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>stop_clock<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth<span style="color:#0550ae">.</span>zone <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth<span style="color:#0550ae">.</span>sparkles <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mouth<span style="color:#0550ae">.</span>redraw<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>music<span style="color:#0550ae">.</span>stop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end<span style="color:#0550ae">.</span>play<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        Clock<span style="color:#0550ae">.</span>schedule_once<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>leave<span style="color:#1f2328">,</span> <span style="color:#0550ae">5</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">leave</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> instance<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        App<span style="color:#0550ae">.</span>get_running_app<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>back<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">MoodBrushApp</span><span style="color:#1f2328">(</span>App<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">goto</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> screen<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>manager<span style="color:#0550ae">.</span>current <span style="color:#0550ae">=</span> screen
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">back</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>manager<span style="color:#0550ae">.</span>current <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;moodbrush:moods&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">@staticmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">populate</span><span style="color:#1f2328">(</span>sm<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            sm<span style="color:#0550ae">.</span>get_screen<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;moodbrush:moods&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> ScreenManagerException<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">pass</span> <span style="color:#57606a"># not populated yet</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        sm<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>MoodScreen<span style="color:#1f2328">(</span>name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;moodbrush:moods&#39;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        sm<span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span>BrushScreen<span style="color:#1f2328">(</span>name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;moodbrush:timer&#39;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">build</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>manager <span style="color:#0550ae">=</span> ScreenManager<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>populate<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>manager<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>manager
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">run</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    MoodBrushApp<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>run<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><p>The music files are expected next to <code>main.py</code>. I don&rsquo;t have the moodbrush
+tracks (and could not ship them anyway), so I generate placeholder loops with
+sox, one flavor per mood: a plucked arpeggio for bright, pad chord
+progressions for calm and bedtime, an overdriven square riff for power,
+strummed chords for love and a walking bass for jazz, plus the zone change
+gong and the end jingle. The music can be replaced by real tracks later, but
+this way the whole app, sounds included, is fully reproducible from this
+note: nothing binary to keep around.</p>
+<div class="konix-block-name-marker" data-name="moodbrush-assets"></div>
+<p><a id="code-snippet--moodbrush-assets"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir -p /tmp/moodbrush
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">cd</span> /tmp/moodbrush
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>bar <span style="color:#0550ae">()</span> <span style="color:#0550ae">{</span> <span style="color:#57606a"># out dur wave note...</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">out</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">;</span> <span style="color:#6639ba">shift</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">dur</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">;</span> <span style="color:#6639ba">shift</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">wave</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">;</span> <span style="color:#6639ba">shift</span>
+</span></span><span style="display:flex;"><span>    rm -f part_*.wav
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">i</span><span style="color:#0550ae">=</span><span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> note in <span style="color:#0a3069">&#34;</span><span style="color:#953800">$@</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>        sox -n -r <span style="color:#0550ae">22050</span> -c <span style="color:#0550ae">1</span> <span style="color:#0a3069">&#34;part_</span><span style="color:#cf222e">$(</span><span style="color:#6639ba">printf</span> <span style="color:#0a3069">&#39;%02d&#39;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$i</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">.wav&#34;</span> synth <span style="color:#0a3069">&#34;</span><span style="color:#953800">$dur</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$wave</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$note</span><span style="color:#0a3069">&#34;</span> fade t 0.01 <span style="color:#0a3069">&#34;</span><span style="color:#953800">$dur</span><span style="color:#0a3069">&#34;</span> 0.05
+</span></span><span style="display:flex;"><span>        <span style="color:#953800">i</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$((</span>i+1<span style="color:#cf222e">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">done</span>
+</span></span><span style="display:flex;"><span>    sox part_*.wav <span style="color:#0a3069">&#34;</span><span style="color:#953800">$out</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    rm -f part_*.wav
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pad <span style="color:#0550ae">()</span> <span style="color:#0550ae">{</span> <span style="color:#57606a"># out dur note... (a chord faded in and out)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">out</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">;</span> <span style="color:#6639ba">shift</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">dur</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">;</span> <span style="color:#6639ba">shift</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">args</span><span style="color:#0550ae">=()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> note in <span style="color:#0a3069">&#34;</span><span style="color:#953800">$@</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#953800">args</span><span style="color:#0550ae">+=(</span>sine <span style="color:#0a3069">&#34;</span><span style="color:#953800">$note</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">done</span>
+</span></span><span style="display:flex;"><span>    sox -n -r <span style="color:#0550ae">22050</span> -c <span style="color:#0550ae">1</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$out</span><span style="color:#0a3069">&#34;</span> synth <span style="color:#0a3069">&#34;</span><span style="color:#953800">$dur</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">args</span><span style="color:#1f2328">[@]</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> remix - fade t <span style="color:#0550ae">2</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$dur</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># bright: a happy plucked arpeggio, 2s bar</span>
+</span></span><span style="display:flex;"><span>bar bar.wav 0.25 pluck C5 E5 G5 C6 G5 E5 G5 E5
+</span></span><span style="display:flex;"><span>sox bar.wav bright.ogg repeat <span style="color:#0550ae">59</span> vol 0.5
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># calm: a slow pad progression, 4 chords of 4s</span>
+</span></span><span style="display:flex;"><span>pad c1.wav <span style="color:#0550ae">4</span> C4 E4 G4
+</span></span><span style="display:flex;"><span>pad c2.wav <span style="color:#0550ae">4</span> A3 C4 E4
+</span></span><span style="display:flex;"><span>pad c3.wav <span style="color:#0550ae">4</span> F3 A3 C4
+</span></span><span style="display:flex;"><span>pad c4.wav <span style="color:#0550ae">4</span> G3 B3 D4
+</span></span><span style="display:flex;"><span>sox c1.wav c2.wav c3.wav c4.wav calm_bar.wav
+</span></span><span style="display:flex;"><span>sox calm_bar.wav calm.ogg repeat <span style="color:#0550ae">7</span> trim <span style="color:#0550ae">0</span> <span style="color:#0550ae">120</span> vol 0.4 reverb
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># power: a driving overdriven square riff, 1.6s bar</span>
+</span></span><span style="display:flex;"><span>bar bar.wav 0.2 square C3 C3 G3 C3 F3 C3 G3 E3
+</span></span><span style="display:flex;"><span>sox bar.wav power.ogg repeat <span style="color:#0550ae">74</span> overdrive <span style="color:#0550ae">15</span> vol 0.25
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># love: soft strummed chords, 8s bar</span>
+</span></span><span style="display:flex;"><span>sox -n -r <span style="color:#0550ae">22050</span> -c <span style="color:#0550ae">1</span> l1.wav synth <span style="color:#0550ae">4</span> pluck C4 pluck E4 pluck G4 pluck C5 delay <span style="color:#0550ae">0</span> .1 .2 .3 remix - fade t 0.05 <span style="color:#0550ae">4</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>sox -n -r <span style="color:#0550ae">22050</span> -c <span style="color:#0550ae">1</span> l2.wav synth <span style="color:#0550ae">4</span> pluck F3 pluck A3 pluck C4 pluck F4 delay <span style="color:#0550ae">0</span> .1 .2 .3 remix - fade t 0.05 <span style="color:#0550ae">4</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>sox l1.wav l2.wav love_bar.wav
+</span></span><span style="display:flex;"><span>sox love_bar.wav love.ogg repeat <span style="color:#0550ae">14</span> chorus 0.7 0.9 <span style="color:#0550ae">55</span> 0.4 0.25 <span style="color:#0550ae">2</span> -t vol 0.4
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># bedtime: low slow pads, 2 chords of 8s</span>
+</span></span><span style="display:flex;"><span>pad b1.wav <span style="color:#0550ae">8</span> C3 G3
+</span></span><span style="display:flex;"><span>pad b2.wav <span style="color:#0550ae">8</span> A2 E3
+</span></span><span style="display:flex;"><span>sox b1.wav b2.wav bedtime_bar.wav
+</span></span><span style="display:flex;"><span>sox bedtime_bar.wav bedtime.ogg repeat <span style="color:#0550ae">7</span> trim <span style="color:#0550ae">0</span> <span style="color:#0550ae">120</span> vol 0.3 reverb <span style="color:#0550ae">70</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># jazz: a walking bass, 3.2s bar</span>
+</span></span><span style="display:flex;"><span>bar bar.wav 0.4 pluck C2 E2 G2 A2 B2 A2 G2 E2
+</span></span><span style="display:flex;"><span>sox bar.wav jazz.ogg repeat <span style="color:#0550ae">36</span> tempo 1.1 vol 0.5
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># the zone change gong: inharmonic partials, long decay</span>
+</span></span><span style="display:flex;"><span>sox -n -r <span style="color:#0550ae">22050</span> -c <span style="color:#0550ae">1</span> gong.ogg synth <span style="color:#0550ae">3</span> sine <span style="color:#0550ae">220</span> sine <span style="color:#0550ae">331</span> sine <span style="color:#0550ae">447</span> sine <span style="color:#0550ae">587</span> remix - fade t 0.002 <span style="color:#0550ae">3</span> 2.9 vol 0.5
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># the end jingle: a happy ascending strum</span>
+</span></span><span style="display:flex;"><span>sox -n -r <span style="color:#0550ae">22050</span> -c <span style="color:#0550ae">1</span> end.ogg synth <span style="color:#0550ae">2</span> pluck C5 pluck E5 pluck G5 pluck C6 delay <span style="color:#0550ae">0</span> .15 .3 .45 remix - fade t 0.01 <span style="color:#0550ae">2</span> <span style="color:#0550ae">1</span> vol 0.6
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>rm -f bar.wav c?.wav l?.wav b?.wav *_bar.wav
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>clk android -d cinkpeax adb shell mkdir -p /sdcard/poc/moodbrush/
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> f in *.ogg
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>    clk android -d cinkpeax adb push <span style="color:#0a3069">&#34;</span><span style="color:#953800">$f</span><span style="color:#0a3069">&#34;</span> /sdcard/poc/moodbrush/
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
 </span></span></code></pre></div><!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
@@ -1411,8 +1914,71 @@ and the naming to indicate that it was about brushing the teeths.</p>
 <li><a class="internal-link" href="/braindump/posts/afterlife_for_my_old_phones/#02cd4fce-c616-4231-86f3-fee6b2ca1fc3">wiko cink peax 2</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/2390f52f-dcae-4318-a1fb-ed1536aaeadd?title=interval_timer">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
       </div>
-	  <aside class="date"><time>Last updated: 29 Sep 2025</time></aside>
+	  <aside class="date"><time>Last updated: 25 Jul 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Apr 2021</time></aside>
     </div>
   </div>

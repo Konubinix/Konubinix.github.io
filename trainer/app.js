@@ -170,7 +170,7 @@ else if(DEMO === 'summary')
                     gaps:[5200,7800,4100,6300,9100,3400,8800,4700,7200,5900] };
 if(DEMO !== 'loading'){
     van.add(document.getElementById('app'), App());
-    document.body.setAttribute('data-app-ready', '1');
+    document.getElementById('loading')?.remove();
 }
 if(DEMO === 'flash'){
     const f = document.getElementById('flash');

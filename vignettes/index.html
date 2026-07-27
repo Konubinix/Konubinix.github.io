@@ -58,7 +58,7 @@ h1{ font-size:18px; margin:0 0 12px; }
 </head>
 <body>
 <div id="app"></div>
-<span class="build-tag" title="Build">88366f9</span>
+<span class="build-tag" title="Build">0aba650</span>
 <script type="module">
 import m from 'mithril';
 import { PDFDocument } from 'pdf-lib';
@@ -67,9 +67,9 @@ const byId = (vignettes, id) => vignettes.find(v => v.id === id);
 
 const MESSAGES = {
   en: { choose: 'choose photos', longSide: 'long side (mm)', format: 'page format',
-        clone: 'clone', download: 'download the pdf', generating: 'generating…', lang: 'FR' },
+        copies: 'copies', clone: 'clone', download: 'download the pdf', generating: 'generating…', lang: 'FR' },
   fr: { choose: 'choisir des photos', longSide: 'grand côté (mm)', format: 'format de page',
-        clone: 'cloner', download: 'télécharger le pdf', generating: 'génération…', lang: 'EN' },
+        copies: 'exemplaires', clone: 'cloner', download: 'télécharger le pdf', generating: 'génération…', lang: 'EN' },
 };
 
 const FORMATS = { A4: { w: 210, h: 297 }, A5: { w: 148, h: 210 },
@@ -108,7 +108,7 @@ function layout(vignettes, sizeMm, paper){
 const DPI = 300, MM = 72 / 25.4;
 async function asJpeg(v, sizeMm){
   const px = sizeMm / 25.4 * DPI;
-  const k = Math.min(1, px / Math.max(v.w, v.h));   // jamais agrandi
+  const k = Math.min(1, px / Math.max(v.w, v.h));   // never enlarged
   const c = new OffscreenCanvas(Math.round(v.w * k), Math.round(v.h * k));
   c.getContext('2d').drawImage(v.bitmap, 0, 0, c.width, c.height);
   const blob = await c.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
@@ -117,7 +117,7 @@ async function asJpeg(v, sizeMm){
 
 async function buildPdf(vignettes, size, paper){
   const pdf = await PDFDocument.create();
-  const embedded = new Map();                       // une photo → un seul objet, clones compris
+  const embedded = new Map();                       // one photo → a single object, clones included
   for(const placed of layout(vignettes, size, paper)){
     const page = pdf.addPage([paper.w * MM, paper.h * MM]);
     for(const t of placed){
@@ -136,6 +136,7 @@ function App(){
   let size = 50;
   let vignettes = [];
   const selected = new Set();
+  let copies = 1;
   let building = false;
   let nextId = 1;
 
@@ -148,16 +149,17 @@ function App(){
                w: bmp.width, h: bmp.height, bitmap: bmp };
     }));
     vignettes = [...vignettes, ...added];
-    e.target.value = '';        // re-choisir le même fichier redéclenche l'événement
+    e.target.value = '';        // re-picking the same file re-triggers the event
     m.redraw();
   }
   function toggle(id){
-    selected.has(id) ? selected.delete(id) : selected.add(id);   // Mithril repeint après le clic
+    selected.has(id) ? selected.delete(id) : selected.add(id);   // Mithril repaints after the click
   }
   function clone(){
-    const copies = vignettes.filter(v => selected.has(v.id))
-                            .map(v => ({ ...v, id: nextId++ }));
-    vignettes = [...vignettes, ...copies];
+    const picked = vignettes.filter(v => selected.has(v.id));
+    const made = [];
+    for(let i = 0; i < copies; i++) made.push(...picked.map(v => ({ ...v, id: nextId++ })));
+    vignettes = [...vignettes, ...made];
   }
   async function download(){
     building = true; m.redraw();
@@ -187,8 +189,10 @@ function App(){
           m('label', [t('format'),
             m('select', { onchange: e => format = e.target.value },
               Object.keys(FORMATS).map(f => m('option', { value: f, selected: f === format }, f)))]),
-          m('button', { onclick: clone, disabled: !selected.size },
-            selected.size ? `${t('clone')} (${selected.size})` : t('clone')),
+          m('label', [t('copies'),
+            m('input[type=number]', { min: 1, value: copies,
+              oninput: e => { const n = e.target.valueAsNumber; if(Number.isFinite(n)) copies = Math.max(1, n); } })]),
+          m('button', { onclick: clone, disabled: !selected.size }, t('clone')),
           m('button', { onclick: download, disabled: !vignettes.length || building },
             building ? t('generating') : t('download')),
         ]),
@@ -209,7 +213,6 @@ function App(){
 }
 
 m.mount(document.getElementById('app'), App);
-document.body.setAttribute('data-app-ready', '1');
 </script>
 </body>
 </html>

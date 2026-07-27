@@ -1228,5 +1228,5 @@ window.addEventListener('popstate', () => syncOverlaysFromHistory(reactiveStore)
         if(hasNonEmptyDraft()) reactiveStore.openCreate();
     }
 
-    document.body.setAttribute('data-app-ready', '1');
+    document.getElementById('loading')?.remove();
 })();

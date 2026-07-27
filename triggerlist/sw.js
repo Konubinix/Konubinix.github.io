@@ -1,4 +1,4 @@
-// [[id:4f21ee3e-33b2-40ec-aae8-d45eb8fb38cf][How it all fits together:14]]
+// [[id:4f21ee3e-33b2-40ec-aae8-d45eb8fb38cf][How it all fits together:15]]
 const CACHE = 'triggerlist-<<build-hash()>>';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(
@@ -20,4 +20,4 @@ self.addEventListener('fetch', (e) => {
             .catch(() => caches.match(e.request))
     );
 });
-// How it all fits together:14 ends here
+// How it all fits together:15 ends here

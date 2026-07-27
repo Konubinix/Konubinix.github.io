@@ -108,12 +108,12 @@ is rebuilt when a beep lands or a run ends; the rest of the page is built once.<
 </span></span><span style="display:flex;"><span>            <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">session</span><span style="color:#1f2328">.</span><span style="color:#1f2328">val</span> <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#1f2328">session</span><span style="color:#1f2328">.</span><span style="color:#1f2328">val</span><span style="color:#1f2328">.</span><span style="color:#1f2328">running</span> <span style="color:#0550ae">?</span> <span style="color:#1f2328">RunningView</span><span style="color:#1f2328">()</span> <span style="color:#0550ae">:</span> <span style="color:#1f2328">IdleView</span><span style="color:#1f2328">()),</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">];</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
-</span></span></code></pre></div><p>Boot mounts the view into <code>#app</code> and raises the <code>data-app-ready</code> flag the tests
-wait on.</p>
+</span></span></code></pre></div><p>Boot mounts the view into <code>#app</code> and removes the loading overlay; the app-bar heading
+it paints is what the tests wait on.</p>
 <div class="konix-block-name-marker" data-name="init"></div>
 <p><a id="code-snippet--init"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#1f2328">van</span><span style="color:#1f2328">.</span><span style="color:#1f2328">add</span><span style="color:#1f2328">(</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getElementById</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;app&#39;</span><span style="color:#1f2328">),</span> <span style="color:#1f2328">App</span><span style="color:#1f2328">());</span>
-</span></span><span style="display:flex;"><span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">body</span><span style="color:#1f2328">.</span><span style="color:#1f2328">setAttribute</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;data-app-ready&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;1&#39;</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">getElementById</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;loading&#39;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">?</span><span style="color:#1f2328">.</span><span style="color:#1f2328">remove</span><span style="color:#1f2328">();</span>
 </span></span></code></pre></div><h2 id="a1000000-0000-4000-9000-000000000004">Visual basics</h2>
 <p>The same dark palette as the organiser, pinned to CSS custom properties so the
 feature chapters reach for <code>var(--accent)</code> or <code>var(--danger)</code> by name. One
@@ -638,7 +638,7 @@ already written to <code>localStorage</code> on every edit (<a class="internal-l
 read back at boot (<a class="internal-link" href="#a1000000-0000-4000-9000-000000000005">Open the app</a>); this chapter is the regression test that
 the round-trip holds.</p>
 <p>The test changes all three fields, reloads, and checks the fields come back
-with what I left them — waiting on the same <code>data-app-ready</code> flag the rest of
+with what I left them — waiting on the same readiness signal the rest of
 the suite uses so it reads the form only once the loader has run.</p>
 <div class="konix-block-name-marker" data-name="test-config-persists"></div>
 <p><a id="code-snippet--test-config-persists"></a></p>
@@ -648,7 +648,7 @@ the suite uses so it reads the form only once the loader has run.</p>
 </span></span><span style="display:flex;"><span>    clear_state<span style="color:#1f2328">(</span>page<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    set_config<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0550ae">7</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>reload<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_selector<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-app-ready]&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>get_by_role<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;heading&#34;</span><span style="color:#1f2328">,</span> name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Karate beep trainer&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>wait_for<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>get_by_label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Number of beeps&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>input_value<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;7&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;count not persisted&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>get_by_label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Minimum delay (s)&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>input_value<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;4&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;min not persisted&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> page<span style="color:#0550ae">.</span>get_by_label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Maximum delay (s)&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>input_value<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;8&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;max not persisted&#34;</span>
@@ -692,8 +692,8 @@ activation instead of leaving my phone on last week&rsquo;s build.</p>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">nil</span>
 </span></span></code></pre></div><p>A <strong>loading ring</strong> covers the gap between tapping the icon and the JS being
-ready, so a cold launch never looks broken. It disappears the moment
-<code>data-app-ready</code> flips on the body — the same signal the tests wait on.</p>
+ready, so a cold launch never looks broken. Boot removes it the moment the app
+mounts its UI — the app-bar heading the tests wait on.</p>
 <div class="konix-block-name-marker" data-name="loading-ring"></div>
 <p><a id="code-snippet--loading-ring"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#1f2328">id</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;loading&#34;</span><span style="color:#1f2328">&gt;</span>Loading…<span style="color:#1f2328">&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
@@ -701,7 +701,6 @@ ready, so a cold launch never looks broken. It disappears the moment
 <p><a id="code-snippet--css-loading-ring"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-css" data-lang="css"><span style="display:flex;"><span><span style="color:#1f2328">#</span><span style="color:#24292e">loading</span><span style="color:#1f2328">{</span><span style="color:#cf222e">position</span><span style="color:#1f2328">:</span><span style="color:#cf222e">fixed</span><span style="color:#1f2328">;</span>inset<span style="color:#1f2328">:</span><span style="color:#0550ae">0</span><span style="color:#1f2328">;</span><span style="color:#cf222e">display</span><span style="color:#1f2328">:</span><span style="color:#cf222e">flex</span><span style="color:#1f2328">;</span><span style="color:#cf222e">align-items</span><span style="color:#1f2328">:</span><span style="color:#cf222e">center</span><span style="color:#1f2328">;</span><span style="color:#cf222e">justify-content</span><span style="color:#1f2328">:</span><span style="color:#cf222e">center</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span>         <span style="color:#cf222e">background</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>bg<span style="color:#1f2328">);</span><span style="color:#cf222e">color</span><span style="color:#1f2328">:</span><span style="color:#6639ba">var</span><span style="color:#1f2328">(</span><span style="color:#0550ae">--</span>muted<span style="color:#1f2328">);</span><span style="color:#cf222e">z-index</span><span style="color:#1f2328">:</span><span style="color:#0550ae">9999</span><span style="color:#1f2328">}</span>
-</span></span><span style="display:flex;"><span><span style="color:#0550ae">body</span><span style="color:#0550ae">[</span><span style="color:#0550ae">data-app-ready</span><span style="color:#0550ae">]</span> <span style="color:#1f2328">#</span><span style="color:#24292e">loading</span><span style="color:#1f2328">{</span><span style="color:#cf222e">display</span><span style="color:#1f2328">:</span><span style="color:#cf222e">none</span><span style="color:#1f2328">}</span>
 </span></span></code></pre></div><p>The cold-launch ring, held on the screen before the JS takes over.</p>
 <iframe class="trainer-demo" src="https://sam.konubinix.eu/trainer/?demo=loading" title="The cold-launch loading ring" loading="lazy" style="width:100%;max-width:360px;height:260px;border:1px solid #2a2d44;border-radius:10px;background:#1b1d2e;display:block;margin:12px auto"></iframe>
 <p>And the build tag in the corner, so after a deploy I can read at a glance which
@@ -732,15 +731,15 @@ feature and the runner finds it in source order.</p>
 </span></span></code></pre></div><p>Each test starts from a clean slate. The only persistent state is the config in
 <code>localStorage</code>, so the reset wipes it after a first navigation (so there&rsquo;s a
 document to wipe against) and reloads so the loader boots against an empty
-store, then waits on <code>data-app-ready</code>.</p>
+store, then waits for the app-bar heading.</p>
 <div class="konix-block-name-marker" data-name="test-helpers-clear-state"></div>
 <p><a id="code-snippet--test-helpers-clear-state"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">clear_state</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span>BASE_URL<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_selector<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-app-ready]&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>get_by_role<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;heading&#34;</span><span style="color:#1f2328">,</span> name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Karate beep trainer&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>wait_for<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;() =&gt; localStorage.clear()&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span>BASE_URL<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_selector<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;[data-app-ready]&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>get_by_role<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;heading&#34;</span><span style="color:#1f2328">,</span> name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Karate beep trainer&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>wait_for<span style="color:#1f2328">()</span>
 </span></span></code></pre></div><p>Most tests set the three fields before pressing Start, so that&rsquo;s one helper.
 Filling a field fires the <code>oninput</code> handler that both stores and persists the
 value, exactly as a typing user would.</p>
@@ -778,6 +777,7 @@ asked for.</p>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/simple_pwa_piano_hero/">simple pwa piano hero</a></li>
+<li><a class="internal-link" href="/braindump/posts/testing_render_and_sync_stacks_for_local_first_pwas/">testing render and sync stacks for local-first PWAs</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/e2a7c4d9-3b8f-4c16-9d20-1a2b3c4d5e6f?title=simple_pwa_karate_beep_trainer">Permalink</a></h2>
 <style>

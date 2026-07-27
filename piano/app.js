@@ -68,11 +68,11 @@ function Readout(){
 function App(){
     return [
         header({ class: 'app-bar' }, h1('Piano hero')),
-        main({ class: 'screen' }, Readout()),
+        main({ class: 'screen' }, Readout(), Targets()),
     ];
 }
 
 van.add(document.getElementById('app'), App());
-document.body.setAttribute('data-app-ready', '1');
+document.getElementById('loading')?.remove();
 const synth = new URLSearchParams(location.search).get('synth');
 if(synth !== null) startListening(synth);

@@ -506,7 +506,7 @@ store.addTablesListener(renderApp);
 renderApp();
 await persister.startAutoSave();
 
-document.body.setAttribute('data-app-ready', '1');
+document.getElementById('loading')?.remove();
 startSync();
 
 function modalShellTemplate(form){

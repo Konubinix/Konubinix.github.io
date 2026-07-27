@@ -456,6 +456,14 @@ build pulls from several blocks (HTML root + service worker +
 manifest, say), a consumer can wrap the splice in a <code>let</code> that binds
 <code>build-hash-blocks</code> to a list of block names, and the bodies are
 concatenated before hashing.</p>
+<p>An app also loads shared ES modules through <code>import '../shared/*.js'</code>.
+Those are fetched at runtime, not noweb-spliced, and are tangled from a
+sibling note, so expanding the caller&rsquo;s blocks never sees their text —
+yet an edit to one must still change the build so a device refetches.
+The body therefore reads its own expansion for <code>../shared/</code> imports,
+follows them (and any they import in turn), and folds each file into the
+hash.  The files are looked up under the common tangle root
+<code>/var/run/user/1000/shared/</code>, overridable with <code>build-hash-shared-dir</code>.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>(let ((build-hash-blocks &#39;(&#34;root&#34; &#34;manifest&#34; &#34;sw&#34;)))
 </span></span><span style="display:flex;"><span>  [[shared_blocks.org:build-hash-body-ex()]])
 </span></span></code></pre></div><h2 id="cadquery-helpers">CadQuery pipe and sleeve</h2>
@@ -580,10 +588,17 @@ imports, its <code>BASE_URL</code>, its viewport — and splices these for the p
 <code>pw-run-simple</code> expects <code>TESTS</code>, <code>PHONE_VIEWPORT</code>, <code>sync_playwright</code>, <code>time</code>, <code>BASE_URL</code>
 and <code>dump_failure</code> in scope. It prints timestamped per-test progress, collects console
 and page errors on the shared page, forwards unhandled promise rejections to the console
-so they surface too, and on a failure calls <code>dump_failure</code> (the url, the events, and a
-screenshot named from <code>APP</code> or <code>BASE_URL</code>&rsquo;s last path segment). It also runs an optional
-<code>warmup()</code> before the loop and <code>setup_context(ctx)</code> on the context when the caller
-defines them (for a suite that must boot a fixture or seed every context).</p>
+so they surface too, and on a failure prints the full Python traceback — so the exact
+failing line and exception type are always in the log — then calls <code>dump_failure</code> (the
+runner page&rsquo;s url and readiness, the events, and a screenshot named from <code>APP</code> or
+<code>BASE_URL</code>&rsquo;s last path segment). It also runs an optional <code>warmup()</code> before the loop and
+<code>setup_context(ctx)</code> on the context when the caller defines them (for a suite that must
+boot a fixture or seed every context).</p>
+<p>The console/page-error hooks bind to the runner&rsquo;s own shared page. A test that opens its
+own context — two devices syncing, a second viewport — sees none of them captured, so on
+such a failure the traceback is the signal: it names the line and the exception, while the
+dumped url and body describe the runner page, which is not the page that failed. The dump
+labels itself <em>runner page</em> for that reason, and points back to the traceback.</p>
 <div class="konix-block-name-marker" data-name="pw-browser-path"></div>
 <p><a id="code-snippet--pw-browser-path"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;PLAYWRIGHT_BROWSERS_PATH&#34;</span> <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> os<span style="color:#0550ae">.</span>environ<span style="color:#1f2328">:</span>
@@ -635,7 +650,9 @@ defines them (for a suite that must boot a fixture or seed every context).</p>
 </span></span><span style="display:flex;"><span>                t<span style="color:#1f2328">(</span>page<span style="color:#1f2328">);</span> passed <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;[</span><span style="color:#0a3069">{</span>now<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">] PASS  </span><span style="color:#0a3069">{</span>t<span style="color:#0550ae">.</span><span style="color:#953800">__name__</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> (</span><span style="color:#0a3069">{</span>time<span style="color:#0550ae">.</span>time<span style="color:#1f2328">()</span><span style="color:#0550ae">-</span>t0<span style="color:#0a3069">:</span><span style="color:#0a3069">.1f</span><span style="color:#0a3069">}</span><span style="color:#0a3069">s)&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;[</span><span style="color:#0a3069">{</span>now<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">] FAIL  </span><span style="color:#0a3069">{</span>t<span style="color:#0550ae">.</span><span style="color:#953800">__name__</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> (</span><span style="color:#0a3069">{</span>time<span style="color:#0550ae">.</span>time<span style="color:#1f2328">()</span><span style="color:#0550ae">-</span>t0<span style="color:#0a3069">:</span><span style="color:#0a3069">.1f</span><span style="color:#0a3069">}</span><span style="color:#0a3069">s): </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">);</span> failed <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">import</span> <span style="color:#24292e">traceback</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;[</span><span style="color:#0a3069">{</span>now<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">] FAIL  </span><span style="color:#0a3069">{</span>t<span style="color:#0550ae">.</span><span style="color:#953800">__name__</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> (</span><span style="color:#0a3069">{</span>time<span style="color:#0550ae">.</span>time<span style="color:#1f2328">()</span><span style="color:#0550ae">-</span>t0<span style="color:#0a3069">:</span><span style="color:#0a3069">.1f</span><span style="color:#0a3069">}</span><span style="color:#0a3069">s): </span><span style="color:#0a3069">{</span><span style="color:#6639ba">type</span><span style="color:#1f2328">(</span>e<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span><span style="color:#953800">__name__</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>e<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">);</span> failed <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>traceback<span style="color:#0550ae">.</span>format_exc<span style="color:#1f2328">(),</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>                dump_failure<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> t<span style="color:#0550ae">.</span><span style="color:#953800">__name__</span><span style="color:#1f2328">,</span> app<span style="color:#1f2328">,</span> events<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> stop_on_fail<span style="color:#1f2328">:</span> <span style="color:#cf222e">break</span>
 </span></span><span style="display:flex;"><span>        browser<span style="color:#0550ae">.</span>close<span style="color:#1f2328">()</span>
@@ -647,11 +664,23 @@ defines them (for a suite that must boot a fixture or seed every context).</p>
 </span></span></code></pre></div><div class="konix-block-name-marker" data-name="pw-dump-failure"></div>
 <p><a id="code-snippet--pw-dump-failure"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">dump_failure</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">,</span> app<span style="color:#1f2328">,</span> events<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;           ↳ url: </span><span style="color:#0a3069">{</span>page<span style="color:#0550ae">.</span>url<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;           ↳ runner page url: </span><span style="color:#0a3069">{</span>page<span style="color:#0550ae">.</span>url<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> ev <span style="color:#0550ae">in</span> events<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;           ↳ </span><span style="color:#0a3069">{</span>ev<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> events<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;           ↳ (no console errors — a timing/state flake; the screenshot shows the page)&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;           ↳ (no console/network events on the runner page — a test using&#34;</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#0a3069">&#34; its own context captures none; read the traceback above)&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        state <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;() =&gt; ({ready: document.readyState,&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34; appRendered: !!((document.getElementById(&#39;app&#39;) || </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">).childElementCount&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;                  || document.querySelector(&#39;h1, main, [role=main]&#39;)),&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34; landmark: ((document.querySelector(&#39;h1, main, [role=main]&#39;) || </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">).textContent || &#39;&#39;).slice(0, 60),&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34; body: (document.body ? document.body.innerText : &#39;&#39;).slice(0, 200)})&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;           ↳ runner page: readyState=</span><span style="color:#0a3069">{</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#39;ready&#39;</span><span style="color:#1f2328">]</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> appRendered=</span><span style="color:#0a3069">{</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#39;appRendered&#39;</span><span style="color:#1f2328">]</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> landmark=</span><span style="color:#0a3069">{</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#39;landmark&#39;</span><span style="color:#1f2328">]</span><span style="color:#0a3069">!r}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;           ↳ runner page body: </span><span style="color:#0a3069">{</span>state<span style="color:#1f2328">[</span><span style="color:#0a3069">&#39;body&#39;</span><span style="color:#1f2328">]</span><span style="color:#0a3069">!r}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> pe<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;           ↳ (runner page state unavailable: </span><span style="color:#0a3069">{</span>pe<span style="color:#0a3069">}</span><span style="color:#0a3069">)&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        shot <span style="color:#0550ae">=</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;/tmp/</span><span style="color:#0a3069">{</span>app<span style="color:#0a3069">}</span><span style="color:#0a3069">-fail-</span><span style="color:#0a3069">{</span>name<span style="color:#0a3069">}</span><span style="color:#0a3069">.png&#34;</span><span style="color:#1f2328">;</span> page<span style="color:#0550ae">.</span>screenshot<span style="color:#1f2328">(</span>path<span style="color:#0550ae">=</span>shot<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;           ↳ screenshot: </span><span style="color:#0a3069">{</span>shot<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
@@ -732,15 +761,94 @@ hang. The probe drives a real upgrade from Python and only declares ready on an 
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">pass</span>
 </span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.2</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> last_status
-</span></span></code></pre></div><!--more-->
+</span></span></code></pre></div><h2 id="checkbox-list-control">Checkbox list control</h2>
+<p>For a note that <em>is</em> a checkbox list — a trigger list of things to take, a
+procedure to follow step by step. Exported org checkboxes are inert HTML: a tick
+is gone on the next reload, which is no use for a list meant to be run again and
+again. So each tick is kept in the device&rsquo;s own <code>localStorage</code>, and the whole list can
+be swung in one gesture: <em>all off</em> clears it for the next run, <em>all on</em> fills it in for
+the times when only a couple of things are left to think about.</p>
+<p>There is nothing to key that tick by: the published page carries no identifier per
+item, only its text. So an item is recognised by its place in the list and a hash of
+what it says — which means a reworded item comes back unticked, the safe way round,
+rather than inheriting a tick that was about something else.</p>
+<p>Anything the setup throws is shown rather than swallowed, so the initial pass is
+fired at the element as an event instead of running inline: that way it lands in the
+same <code>on exception</code> handler as every later change.</p>
+<p>A consumer note pulls it in with
+<code>#+transclude: [[file:shared_blocks.org::checkbox-control]]</code>.</p>
+<p>In practice all of it stays one block, long as it is, rather than being cut along those
+three ideas: transclusion copies the named element verbatim and never runs babel, so a
+composition would reach its consumers as literal <code>&lt;&lt;…&gt;&gt;</code> and the checkboxes would stop
+working.</p>
+<script src="https://ipfs.konubinix.eu/p/bafkreignon7jsbfh53i65frzw5pla6ivxkwzffqvq3ikd7lntggsif454y?orig=https://unpkg.com/hyperscript.org@0.9.12"></script>
+<script>
+  String.prototype.hashCode = function() {
+      var hash = 0,
+          i, chr;
+      if (this.length === 0) return hash;
+      for (i = 0; i < this.length; i++) {
+          chr = this.charCodeAt(i);
+          hash = ((hash << 5) - hash) + chr;
+          hash |= 0; // Convert to 32bit integer
+      }
+      return hash;
+  }
+</script>
+<div _="
+        on exception(error)
+          alert(error)
+        end
+<pre><code>    init
+      send a to me
+    end
+
+    on a
+      repeat in &lt;li/&gt; index n
+        set input to the first &lt;input/&gt; in it
+        if the input is null then continue end
+        put it's innerHTML's hashCode() into hash
+        set identifier to `${n}_${hash}`
+        set the input's identifier to identifier
+        set the input's checked to the localStorage's getItem(identifier)
+      end
+    end
+
+    on change from &lt;input/&gt;
+      if it's checked
+        call localStorage.setItem(it's identifier, true)
+      else
+        call localStorage.removeItem(it's identifier)
+      end
+    end
+    &quot;&gt;
+</code></pre>
+<p><button _="on click
+set <input/>'s checked to true
+then send change to <input/>
+end
+"
+>all on</button>
+<button _="on click
+set <input/>'s checked to false
+then send change to <input/>
+end
+"
+>all off</button></p>
+</div>
+<!--more-->
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/cascade_overflow_gutter/#03aff5be-ca07-4b93-bdc3-2adab9cf6e9d">Netto to Mieuxa adapter</a></li>
 <li><a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/#c0d07c0c-0098-4000-8000-000000000098">Playwright tests</a></li>
+<li><a class="internal-link" href="/braindump/posts/pwa_to_create_printable_thumbnails/">pwa to create printable thumbnails</a></li>
 <li><a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/">scrutin de Condorcet randomisé entre amis</a></li>
 <li><a class="internal-link" href="/braindump/posts/simple_pwa_karate_beep_trainer/">simple pwa karate beep trainer</a></li>
 <li><a class="internal-link" href="/braindump/posts/simple_pwa_organiser/">simple pwa organiser</a></li>
 <li><a class="internal-link" href="/braindump/posts/simple_pwa_piano_hero/">simple pwa piano hero</a></li>
+<li><a class="internal-link" href="/braindump/posts/testing_render_and_sync_stacks_for_local_first_pwas/">testing render and sync stacks for local-first PWAs</a></li>
+<li><a class="internal-link" href="/braindump/posts/argdown_in_org_mode/#1f7c3a2b-0012-0000-0000-00000000000a">The browser suite</a></li>
+<li><a class="internal-link" href="/braindump/posts/trigger_list_pwa/">trigger list pwa</a></li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/f7a3c1d8-4e2b-4f89-9a1c-shared-blocks?title=shared_blocks">Permalink</a></h2>
 <style>
@@ -1038,7 +1146,7 @@ the page keeps its normal contextmenu.</p>
 </ol>
 </div>
       </div>
-	  <aside class="date"><time>Last updated: 19 Jun 2026</time></aside>
+	  <aside class="date"><time>Last updated: 27 Jul 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 Mar 2026</time></aside>
     </div>
   </div>

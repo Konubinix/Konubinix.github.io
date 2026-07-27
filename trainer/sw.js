@@ -1,5 +1,5 @@
 const CACHES = [
-    { name: 'trainer-f125c1f' },
+    { name: 'trainer-8cbb9d3' },
 ];
 const ASSETS = ['./', './index.html', './app.js', './manifest.json'];
 
