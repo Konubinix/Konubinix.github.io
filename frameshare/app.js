@@ -1,19 +1,15 @@
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 
-const at = new URLSearchParams(location.search);
-const remembered = key => {
-    const given = at.get(key);
-    if(given) localStorage.setItem('frameshare.' + key, given);
-    return localStorage.getItem('frameshare.' + key);
-};
-const SYNC_URL = remembered('sync_url');
-const SYNC_ROOM = remembered('room') || 'memories-nowshowing';
-if(at.get('sync_url') || at.get('room')){
+const SYNC_ROOM = 'memories-nowshowing';
+const given = new URLSearchParams(location.search).get('sync_url');
+if(given){
+    localStorage.setItem('frameshare.sync_url', given);
     const clean = new URL(location.href);
-    clean.searchParams.delete('sync_url'); clean.searchParams.delete('room');
+    clean.searchParams.delete('sync_url');
     history.replaceState(null, '', clean);
 }
+const SYNC_URL = localStorage.getItem('frameshare.sync_url');
 
 const shared = new Y.Doc();
 if(SYNC_URL) new WebsocketProvider(SYNC_URL, SYNC_ROOM, shared);
