@@ -58,4 +58,10 @@ function look(){
 }
 room.observe(look);
 look();
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if('serviceWorker' in navigator){
+    const wasControlled = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if(wasControlled) location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+}
