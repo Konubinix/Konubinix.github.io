@@ -12,8 +12,12 @@ if(given){
 const SYNC_URL = localStorage.getItem('frameshare.sync_url');
 
 const shared = new Y.Doc();
-if(SYNC_URL) new WebsocketProvider(SYNC_URL, SYNC_ROOM, shared);
+const provider = SYNC_URL ? new WebsocketProvider(SYNC_URL, SYNC_ROOM, shared) : null;
 const room = shared.getMap('showing');
+const linkState = document.getElementById('link');
+const showLink = word => { linkState.textContent = word; linkState.dataset.state = word; };
+showLink(provider ? 'connecting' : 'offline');
+if(provider) provider.on('status', e => showLink(e.status === 'connected' ? 'live' : 'offline'));
 const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/heic': '.heic',
               'video/mp4': '.mp4', 'video/quicktime': '.mov', 'video/webm': '.webm' };
 const hash = address => String(address).split('/').filter(Boolean).pop();
