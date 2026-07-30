@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html><title>how to debug a typescript program running on k8s using dap in emacs?</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>How to Debug a Typescript Program Running on K8s Using Dap in Emacs?</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <ul>
+<li>see,
+<ul>
+<li><a class="internal-link" href="/braindump/posts/debug_node_typescript_dap_emacs/">debug node typescript dap emacs</a>,</li>
+<li><a class="internal-link" href="/braindump/posts/debug_cucumber_tests_in_emacs/">debug cucumber tests in emacs</a>,</li>
+</ul>
+</li>
+</ul>
+<p>how to debug a <a class="internal-link" href="/braindump/posts/typescript/">typescript</a> program running on <a class="internal-link" href="/braindump/posts/kubernetes/">k8s</a>, using <a class="internal-link" href="/braindump/posts/ms_vscode_js_debug/">ms-vscode.js-debug</a> and <a class="internal-link" href="/braindump/posts/dap_mode/">dap-mode</a>?</p>
+<h2 id="tldr-recipe">TL;DR — recipe</h2>
+<ol>
+<li>
+<p><code>tsconfig.json</code> has <code>&quot;inlineSourceMap&quot;: true</code> (NOT just
+<code>&quot;sourceMap&quot;: true</code>). External <code>.js.map</code> files require the adapter to
+read them from your local filesystem at the remote path, which forces
+you into <code>localRoot=/=remoteRoot</code> and the stale-<code>dist/</code> class of bugs.
+Inline maps are extracted from the script content fetched over the
+inspector wire — no filesystem dependency. See <a class="internal-link" href="#why-inline-sourcemaps">why inline</a>.</p>
+</li>
+<li>
+<p>Inspector reachable on localhost:9229:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -s http://127.0.0.1:9229/json/version
+</span></span></code></pre></div><p>Empty/timeout means the port-forward isn&rsquo;t up or the pod isn&rsquo;t running
+<code>node --inspect</code>. Fix this first.</p>
+</li>
+<li>
+<p>Repo has <code>.vscode/launch.json</code> committed in the canonical shape (see
+<a class="internal-link" href="#canonical-launch-json">canonical launch.json</a>). dap-mode auto-discovers it via
+<code>dap-launch-find-parse-launch-json</code>; nothing to register in personal
+config.</p>
+</li>
+<li>
+<p><code>sourceMapPathOverrides</code> keys MUST start with <code>file:///</code>. Plain
+<code>/app/*</code> does NOT match. Use <code>file:///app/*</code> → local path.</p>
+</li>
+<li>
+<p><code>M-x dap-breakpoint-add</code> in a buffer, then <code>M-x dap-debug</code> → pick the
+launch.json entry. Fringe should turn solid; session pauses on hit.</p>
+</li>
+<li>
+<p>If the fringe stays hollow: <code>M-x konix-dap-js/toggle-trace</code>, redo, then
+check <code>/tmp/vscode-js-debug.log</code> — see <a class="internal-link" href="#diagnose-hollow-bp">diagnose hollow BP</a>.</p>
+</li>
+</ol>
+<h2 id="canonical-launch-json">canonical <code>launch.json</code></h2>
+<p>Lives at <code>&lt;repo&gt;/.vscode/launch.json</code>. Read automatically by dap-mode and
+by VS Code when the workspace is opened at the repo root.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#34;version&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;0.2.0&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#34;configurations&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;type&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;pwa-node&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;request&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;attach&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;name&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;Attach to &lt;service&gt;&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;address&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;localhost&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;port&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">9229</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;cwd&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;${workspaceFolder}/&lt;package-dir&gt;&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;sourceMaps&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;sourceMapPathOverrides&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">&#34;file:///&lt;remote-prefix&gt;/*&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;${workspaceFolder}/&lt;package-dir&gt;/*&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Substitute:</p>
+<ul>
+<li><code>&lt;package-dir&gt;</code> = workspace package containing the running code.
+<code>${workspaceFolder}</code> expands to <code>lsp-workspace-root</code>.</li>
+<li><code>&lt;remote-prefix&gt;</code> = absolute path inside the pod where the code runs
+(typically the container <code>WORKDIR</code>, e.g. <code>/app</code>).</li>
+</ul>
+<p>Do not set <code>localRoot=/=remoteRoot</code>. Those make vscode-js-debug load the
+running <code>.js</code> and any external <code>.js.map</code> from the local filesystem at the
+mapped path; if a stale local <code>dist/</code> exists, the adapter reads it and
+silently misses any module added since. <code>sourceMapPathOverrides</code> alone
+makes vscode-js-debug fetch script content from V8 over the wire, always
+in sync with the running process.</p>
+<p>Use <code>pwa-node</code>, not <code>node</code>. dap-mode reserves <code>node</code> for the legacy
+<code>ms-vscode.node-debug2</code>; vscode-js-debug binds to <code>pwa-node</code>.</p>
+<h2 id="pitfalls">pitfalls</h2>
+<h3 id="ed1ee2fb-87ca-47a5-b1f6-1dbbb2757b3b"><code>sourceMapPathOverrides</code> key without <code>file:///</code> scheme</h3>
+<p>The matcher applies patterns against the resolved <code>file://</code> URL.
+<code>/app/*</code> never matches; <code>file:///app/*</code> does. (<code>../../../../*</code> also
+matches against the raw <code>sources</code> entry of TS-emitted maps, but it&rsquo;s
+depth-dependent and not portable across files.)</p>
+<h3 id="18542e2a-26bf-4001-8bec-75fdc99f8245"><code>resolveSourceMapLocations</code> filters too aggressively</h3>
+<p>Globs are interpreted relative to the workspace folder, but the running
+script URLs are <code>file:///app/dist/...</code> (outside any workspace). Even
+<code>[&quot;**&quot;, &quot;!**/node_modules/**&quot;]</code> filters them all out and source maps
+never register. Leave it unset (default null = unrestricted).</p>
+<h3 id="f1f59b7f-840e-4aca-88f2-c4d0baa35c71">stale local <code>dist/</code></h3>
+<p>If a stale build of <code>dist/</code> exists locally and <code>localRoot=/=remoteRoot</code>
+is set, the adapter reads the stale file and silently fails to bind BPs
+on any newer code. Either delete local <code>dist/</code> or stick to
+<code>sourceMapPathOverrides</code> (recommended).</p>
+<h3 id="2c3c8ba5-de93-4383-8287-5b8ec6ac4ac4"><code>--watch</code> drops the inspector on every save</h3>
+<p><code>nest start --debug --watch</code> and similar restart node on every source
+change → the inspector port closes and reopens → the attached dap
+session dies. Reattach (<code>M-x dap-debug</code>) after each save.</p>
+<h3 id="a5be6b13-d03d-45d2-9f7d-d3730dc56a17">breakpoints are bound asynchronously</h3>
+<p>The first <code>setBreakpoints</code> response often comes back with empty
+<code>breakpoints: []</code> — that&rsquo;s normal. The adapter sends a later
+<code>breakpoint</code> event with <code>verified: true</code> once the matching script
+loads. If that event never arrives, the BP didn&rsquo;t bind.</p>
+<h3 id="8430af90-0c8c-4a63-93b7-4cc78234cc7a">the request URL must reach the handler</h3>
+<p>A 400 from a guard or pipe (e.g., <code>ParseUUIDPipe</code> rejecting a non-UUID
+path param) means the handler body never runs regardless of the debug
+config. Always <code>curl -i</code> first to check the status code.</p>
+<h2 id="diagnose-hollow-bp">diagnose a hollow BP</h2>
+<p>When the BP marker stays hollow / V8 doesn&rsquo;t pause:</p>
+<ol>
+<li><code>M-x konix-dap-js/toggle-trace</code> to enable the verbose CDP log.</li>
+<li><code>M-x dap-debug</code> → reattach.</li>
+<li>Trigger the code path.</li>
+<li>Read <code>/tmp/vscode-js-debug.log</code> (overwritten on each new session).</li>
+</ol>
+<p>Most useful: <code>runtime.sourcecreate</code> for your file:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>grep <span style="color:#0a3069">&#39;Creating source from source map&#39;</span> /tmp/vscode-js-debug.log <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  <span style="color:#1f2328">|</span> grep &lt;your-file&gt;.controller <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  <span style="color:#1f2328">|</span> head -1 <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span>  <span style="color:#1f2328">|</span> python3 -c <span style="color:#0a3069">&#39;import sys,json; [print(json.dumps(json.loads(l)[&#34;metadata&#34;], indent=2)) for l in sys.stdin]&#39;</span>
+</span></span></code></pre></div><p>Read <code>metadata.absolutePath</code>:</p>
+<ul>
+<li><strong>Remote path</strong> (e.g. <code>/app/src/...</code>): override didn&rsquo;t match. Most often,
+key is missing the <code>file:///</code> scheme.</li>
+<li><strong>Local path that doesn&rsquo;t exist</strong> (often with stray <code>../</code>): replacement
+value is wrong; the captured <code>*</code> is being substituted where it
+shouldn&rsquo;t.</li>
+<li><strong>Correct local path</strong>: the override works; the issue is elsewhere.
+Inspect <code>setBreakpoints</code> in the same log:
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>grep <span style="color:#0a3069">&#39;&#34;command&#34;:&#34;setBreakpoints&#34;&#39;</span> /tmp/vscode-js-debug.log
+</span></span></code></pre></div>The response should have <code>breakpoints[].verified: true</code> (possibly via a
+later <code>breakpoint</code> event). If it stays <code>[]</code> or <code>verified: false</code>, the
+adapter found no script the source maps to — usually a script-load
+timing issue or a <code>resolveSourceMapLocations</code> filter.</li>
+</ul>
+<p>Also useful, in <code>*Messages*</code> (with <code>dap-print-io</code> on):</p>
+<ul>
+<li><code>setBreakpoints</code> request body: confirm <code>source.path</code> is what you expect.</li>
+<li><code>breakpoint</code> events: <code>reason: &quot;changed&quot;</code> with <code>verified: true</code> = bound.</li>
+</ul>
+<h2 id="prerequisites-emacs">prerequisites in personal Emacs config</h2>
+<p>In <code>KONIX_AL-dap-js.el</code> (or equivalent):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-elisp" data-lang="elisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">dap-js-debug-program</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;dap-js-debug-server.sh&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">dap-print-io</span> <span style="color:#0550ae">t</span>  <span style="color:#953800">dap-inhibit-io</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">message-log-max</span> <span style="color:#0550ae">200000</span><span style="color:#1f2328">)</span>  <span style="color:#57606a">; otherwise DAP traffic rolls out fast</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">;; Trace toggle - keeps :trace out of the committed launch.json.</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">konix-dap-js/trace-log-file</span> <span style="color:#0a3069">&#34;/tmp/vscode-js-debug.log&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix-dap-js/inject-trace</span> <span style="color:#1f2328">(</span><span style="color:#953800">orig</span> <span style="color:#953800">conf</span> <span style="color:#cf222e">&amp;rest</span> <span style="color:#953800">args</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">conf</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#1f2328">(</span><span style="color:#953800">string=</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">plist-get</span> <span style="color:#953800">conf</span> <span style="color:#6639ba">:type</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;pwa-node&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                       <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">plist-member</span> <span style="color:#953800">conf</span> <span style="color:#6639ba">:trace</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">(</span><span style="color:#6639ba">append</span> <span style="color:#953800">conf</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#6639ba">:trace</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#6639ba">:console</span> <span style="color:#0550ae">t</span> <span style="color:#6639ba">:stdio</span> <span style="color:#0550ae">t</span>
+</span></span><span style="display:flex;"><span>                                             <span style="color:#6639ba">:logFile</span> <span style="color:#953800">konix-dap-js/trace-log-file</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#953800">conf</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">apply</span> <span style="color:#953800">orig</span> <span style="color:#953800">conf</span> <span style="color:#953800">args</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix-dap-js/toggle-trace</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">&amp;optional</span> <span style="color:#953800">arg</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">interactive</span> <span style="color:#0a3069">&#34;P&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">on</span> <span style="color:#1f2328">(</span><span style="color:#953800">advice-member-p</span> <span style="color:#032f62">&#39;konix-dap-js/inject-trace</span> <span style="color:#032f62">&#39;dap-debug</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">turn-on</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cond</span> <span style="color:#1f2328">((</span><span style="color:#6639ba">null</span> <span style="color:#953800">arg</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#953800">on</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#1f2328">((</span><span style="color:#6639ba">&lt;=</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">prefix-numeric-value</span> <span style="color:#953800">arg</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#1f2328">(</span><span style="color:#0550ae">t</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#953800">turn-on</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span> <span style="color:#1f2328">(</span><span style="color:#953800">advice-add</span> <span style="color:#032f62">&#39;dap-debug</span> <span style="color:#6639ba">:around</span> <span style="color:#6639ba">#&#39;</span><span style="color:#953800">konix-dap-js/inject-trace</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#6639ba">message</span> <span style="color:#0a3069">&#34;dap-js trace ON -&gt; %s&#34;</span> <span style="color:#953800">konix-dap-js/trace-log-file</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#953800">advice-remove</span> <span style="color:#032f62">&#39;dap-debug</span> <span style="color:#6639ba">#&#39;</span><span style="color:#953800">konix-dap-js/inject-trace</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">message</span> <span style="color:#0a3069">&#34;dap-js trace OFF&#34;</span><span style="color:#1f2328">))))</span>
+</span></span></code></pre></div><ul>
+<li>Do NOT register a project-specific <code>dap-register-debug-template</code>.
+launch.json is the source of truth.</li>
+<li>The trace advice is OFF by default; toggle on only when investigating.</li>
+<li><code>message-log-max</code> must be set BEFORE the session if you want to read
+DAP traffic from <code>*Messages*</code> afterwards (default 1000 lines rolls
+fast).</li>
+</ul>
+<h2 id="trace-toggle">trace toggle</h2>
+<p><code>M-x konix-dap-js/toggle-trace</code> flips the advice that injects <code>:trace</code>
+into any pwa-node config that doesn&rsquo;t already specify one.</p>
+<ul>
+<li>No prefix: toggle.</li>
+<li><code>C-u 1 M-x …</code>: force ON.</li>
+<li><code>C-u 0 M-x …</code>: force OFF.</li>
+</ul>
+<p>When ON, every fresh session writes a CDP log to
+<code>/tmp/vscode-js-debug.log</code> containing every <code>Debugger.scriptParsed</code>,
+source-map fetch, <code>setBreakpointByUrl</code> attempt, and <code>breakpointResolved</code>
+event. The file is overwritten on each new session — read it (or copy
+it) before reattaching.</p>
+<h2 id="7af7b747-0745-476d-9c24-69ab080bb545">port forwarding</h2>
+<p>Create a <a class="internal-link" href="/braindump/posts/port_forward/">port forward</a> on 9229 to communicate with the remote node over
+the inspector protocol. With Tilt: <code>k8s_resource(&quot;&lt;deployment&gt;&quot;, port_forwards</code>[&ldquo;9229:9229&rdquo;])= in the Tiltfile. Otherwise:
+<code>kubectl port-forward deploy/&lt;deployment&gt; 9229:9229</code>.</p>
+<p><code>Error: Could not connect to debug target at http://localhost:9229: Could not find any debuggable target</code> means the connection is broken.
+Confirm the inspector is reachable:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -s http://127.0.0.1:9229/json/version
+</span></span></code></pre></div><p>Healthy response: <code>{ &quot;Browser&quot;: &quot;node.js/v...&quot;, &quot;Protocol-Version&quot;: &quot;1.1&quot; }</code>.</p>
+<p>Restarting the pod is sometimes the fastest fix; refreshing code while a
+debugger is attached can wedge the inspector. <code>nestjs --watch</code> is
+particularly prone to <code>Starting inspector on 127.0.0.1:9229 failed: address already in use</code> after rapid reloads.</p>
+<h2 id="fddcac8a-9958-4a3f-819d-53558653b5e9">clean slate</h2>
+<p>When dap-mode and vscode-js-debug processes wedge across reloads:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-elisp" data-lang="elisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">when</span> <span style="color:#1f2328">(</span><span style="color:#953800">dap--session-running</span> <span style="color:#1f2328">(</span><span style="color:#953800">dap--cur-session</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">dap-disconnect</span> <span style="color:#1f2328">(</span><span style="color:#953800">dap--cur-session-or-die</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#953800">konix/dap-delete-all-sessions</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>And, last resort, from the shell:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pkill -f js-debug
+</span></span><span style="display:flex;"><span>pkill -f ms-vscode
+</span></span></code></pre></div><h2 id="why-inline-sourcemaps">why inline source maps</h2>
+<p>vscode-js-debug fetches a script&rsquo;s source map in one of three ways:</p>
+<ol>
+<li><strong>Inline</strong>: the <code>.js</code> contains a <code>//# sourceMappingURL=data:application/json;base64,…</code>
+line. The adapter extracts the map directly from the script content
+it gets via <code>Debugger.getScriptSource</code> over the inspector wire. No
+filesystem access is needed.</li>
+<li><strong>External <code>.js.map</code></strong>: the <code>.js</code> contains a relative URL like
+<code>//# sourceMappingURL=foo.js.map</code>. The adapter resolves it against the
+<code>.js</code>&rsquo;s <code>file://</code> URL and reads the <code>.js.map</code> <strong>from disk</strong>. There is
+no CDP method to fetch a sidecar map over the wire — V8 only ships
+the script content.</li>
+<li><strong>HTTP-served map</strong>: the URL in the <code>sourceMappingURL</code> comment is
+<code>http(s)://...</code> and the adapter fetches it via HTTP. Doesn&rsquo;t apply
+to the typical k8s/Tilt setup.</li>
+</ol>
+<p>For a remote pod, option 2 means the adapter looks for
+<code>/&lt;remote-prefix&gt;/dist/.../X.js.map</code> on <strong>your local filesystem</strong>. That
+forces <code>localRoot=/=remoteRoot</code> mapping back into the picture, with
+every problem that brings (stale <code>dist/</code>, hoisted <code>node_modules</code>
+layout, divergence after deploy). Inline maps remove the entire
+category by carrying the mapping inside the script V8 already has.</p>
+<p>Set <code>&quot;inlineSourceMap&quot;: true</code> in <code>tsconfig.json</code> (mutually exclusive
+with <code>&quot;sourceMap&quot;: true</code>). Optionally <code>&quot;inlineSources&quot;: true</code> embeds
+the original <code>.ts</code> content too — useful if the local checkout might
+not match the running build (e.g., stepping through code committed
+before you switched branches).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#34;compilerOptions&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;target&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;ES2024&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;module&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;nodenext&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;outDir&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;./dist&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">&#34;inlineSourceMap&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">// &#34;inlineSources&#34;: true,  // optional: embed the .ts content too
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a">// Make sure these are NOT set, or set to false:
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>    <span style="color:#57606a">// &#34;sourceMap&#34;: false,
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>    <span style="color:#57606a">// &#34;removeComments&#34;: false  // (irrelevant to debug, but keeps the
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>    <span style="color:#57606a">//                              embedded `// # sourceMappingURL=...`
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>    <span style="color:#57606a">//                              line readable in the .js)
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"></span>  <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Verify on a built file:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a"># Should print a single line ending in a base64 &#34;data:&#34; URL</span>
+</span></span><span style="display:flex;"><span>tail -c <span style="color:#0550ae">200</span> dist/path/to/file.js <span style="color:#1f2328">|</span> grep -o <span style="color:#0a3069">&#39;sourceMappingURL=[^ ]*&#39;</span>
+</span></span></code></pre></div><p>Healthy output looks like
+<code>sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjoz…</code>. If
+it instead points to a relative <code>.js.map</code> file (e.g.,
+<code>sourceMappingURL=file.js.map</code>) you have the external-map shape and
+the recipe in this doc won&rsquo;t work without <code>localRoot=/=remoteRoot</code>.</p>
+<h2 id="worked-example-nest">worked example: NestJS in <code>/app</code></h2>
+<p>Typical setup the recipe matches:</p>
+<ul>
+<li>Pod runs <code>pnpm run start:debug</code> (= <code>nest start --debug --watch</code>). Nest
+compiles TS to <code>/app/dist/</code> and runs <code>node /app/dist/src/main.js</code> with
+<code>--inspect</code> on.</li>
+<li><code>tsconfig.json</code> sets <code>&quot;inlineSourceMap&quot;: true</code> — no external <code>.js.map</code>
+files exist; the base64 sourceMappingURL is embedded in each <code>.js</code>.</li>
+<li>The container <code>WORKDIR</code> is <code>/app</code>. The repo is checked out locally at
+<code>${workspaceFolder}</code>, with the Nest package under
+<code>${workspaceFolder}/backend/nestjs</code>.</li>
+</ul>
+<p>Concrete <code>.vscode/launch.json</code> for that setup:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#34;version&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;0.2.0&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&#34;configurations&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;type&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;pwa-node&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;request&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;attach&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;name&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;Attach to backend&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;address&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;localhost&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;port&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">9229</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;cwd&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;${workspaceFolder}/backend/nestjs&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;sourceMaps&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0550ae">&#34;sourceMapPathOverrides&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">&#34;file:///app/*&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;${workspaceFolder}/backend/nestjs/*&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Source map &ldquo;sources&rdquo; entry resolution chain for a controller at
+<code>backend/nestjs/src/foo/bar.controller.ts</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>raw entry:        ../../../../src/foo/bar.controller.ts
+</span></span><span style="display:flex;"><span>resolved against: file:///app/dist/src/foo/bar.controller.js
+</span></span><span style="display:flex;"><span>resolves to:      file:///app/src/foo/bar.controller.ts
+</span></span><span style="display:flex;"><span>override applies: file:///app/* -&gt; ${workspaceFolder}/backend/nestjs/*
+</span></span><span style="display:flex;"><span>final local path: &lt;repo&gt;/backend/nestjs/src/foo/bar.controller.ts
+</span></span></code></pre></div><p>The number of <code>../</code> in the raw entry depends on the depth of the file
+inside <code>src/</code>, which is why a depth-anchored override key (<code>../../../../*</code>)
+is brittle while a scheme-anchored one (<code>file:///app/*</code>) is not.</p>
+<h2 id="79737ecc-e907-42a3-af56-bfcb659f14ee">historical: trace log shape</h2>
+<p>Useful events in the trace log (format unchanged since 2024):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Debugger.scriptParsed   - V8 told the adapter a script loaded.
+</span></span><span style="display:flex;"><span>                          Confirms the .js you care about is visible.
+</span></span><span style="display:flex;"><span>sourcemap.parsing       - adapter parsing a source map (inline or otherwise).
+</span></span><span style="display:flex;"><span>runtime.sourcecreate    - adapter registering a source. Look at
+</span></span><span style="display:flex;"><span>                          metadata.absolutePath - that&#39;s THE path
+</span></span><span style="display:flex;"><span>                          dap-mode&#39;s setBreakpoints will be matched against.
+</span></span><span style="display:flex;"><span>loadedSource event      - adapter telling dap-mode about a source.
+</span></span><span style="display:flex;"><span>breakpoint event        - verified true/false; the BP-binding answer.
+</span></span><span style="display:flex;"><span>stopped event           - V8 paused.
+</span></span></code></pre></div><h3 id="e95ebd42-b3e1-459d-aaf5-f6f9ab64f0cc">beware the location of node_modules — only with <code>localRoot=/=remoteRoot</code></h3>
+<p>When using <code>localRoot=/=remoteRoot</code> (no longer recommended), the local
+path of dependencies must mirror the remote layout. In a yarn/pnpm
+workspace, deps may be hoisted to a different root locally than they
+are in the container, so <code>node_modules/dep/foo.js</code> won&rsquo;t resolve. With
+<code>sourceMapPathOverrides</code> alone (over-the-wire script fetch) this
+category of bug disappears.</p>
+<!--more-->
+<h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a class="internal-link" href="/braindump/posts/ms_vscode_js_debug/">ms-vscode.js-debug</a></li>
+</ul>
+<h2 id="permalink"><a class="internal-link" href="/braindump/734c3172-2901-4add-9314-78c8c9569f6b?title=how_to_debug_a_typescript_program_running_on_k8s_using_dap_in_emacs">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+      </div>
+	  <aside class="date"><time>Last updated: 07 Jul 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 06 Jan 2024</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
