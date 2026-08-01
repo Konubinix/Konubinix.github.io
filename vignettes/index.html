@@ -20,7 +20,8 @@ if(new URLSearchParams(location.search).has('purge')&&'serviceWorker'in navigato
   {
     "imports": {
       "mithril": "https://esm.sh/mithril@2",
-      "pdf-lib": "https://esm.sh/pdf-lib@1"
+      "pdf-lib": "https://esm.sh/pdf-lib@1",
+      "idb-keyval": "https://esm.sh/idb-keyval@6"
     }
   }
 </script>
@@ -36,6 +37,7 @@ h1{ font-size:18px; margin:0 0 12px; }
 .bar input[type=number]{ width:4em; background:#2d3142; color:var(--fg);
                          border:1px solid #444a63; border-radius:6px; padding:6px; }
 .pick{ cursor:pointer; }
+.pick:has(input:disabled){ opacity:.4; }
 .pick input{ position:absolute; width:1px; height:1px; opacity:0;
              overflow:hidden; clip:rect(0 0 0 0); }
 .pages{ display:flex; flex-direction:column; gap:16px; max-width:480px; }
@@ -45,6 +47,9 @@ h1{ font-size:18px; margin:0 0 12px; }
 .tile img{ width:100%; height:100%; object-fit:contain; display:block; }
 .tile.selected{ outline:3px solid var(--accent); outline-offset:1px; }
 .bar button.lang{ background:none; border:0; padding:4px; color:#5b6080; font-size:12px; }
+.loading{ display:flex; gap:6px; align-items:center; color:#9aa0bf; }
+.loading progress{ width:96px; }
+.bar button.empty{ background:none; border:0; color:#8a8faf; }
 .build-tag{ position:fixed; top:calc(env(safe-area-inset-top) + 4px); right:6px; z-index:50;
             pointer-events:none; font:10px/1 monospace; color:#5b6080; }
 </style>
@@ -58,18 +63,21 @@ h1{ font-size:18px; margin:0 0 12px; }
 </head>
 <body>
 <div id="app"></div>
-<span class="build-tag" title="Build">0aba650</span>
+<span class="build-tag" title="Build">4aeb6b5</span>
 <script type="module">
 import m from 'mithril';
 import { PDFDocument } from 'pdf-lib';
+import { get as dbGet, set as dbSet, clear as dbClear } from 'idb-keyval';
 
 const byId = (vignettes, id) => vignettes.find(v => v.id === id);
 
 const MESSAGES = {
   en: { choose: 'choose photos', longSide: 'long side (mm)', format: 'page format',
-        copies: 'copies', clone: 'clone', download: 'download the pdf', generating: 'generating…', lang: 'FR' },
+        copies: 'copies', clone: 'clone', download: 'download the pdf', generating: 'generating…',
+        empty: 'empty the sheet', lang: 'FR' },
   fr: { choose: 'choisir des photos', longSide: 'grand côté (mm)', format: 'format de page',
-        copies: 'exemplaires', clone: 'cloner', download: 'télécharger le pdf', generating: 'génération…', lang: 'EN' },
+        copies: 'exemplaires', clone: 'cloner', download: 'télécharger le pdf', generating: 'génération…',
+        empty: 'vider la feuille', lang: 'EN' },
 };
 
 const FORMATS = { A4: { w: 210, h: 297 }, A5: { w: 148, h: 210 },
@@ -141,16 +149,31 @@ function App(){
   let nextId = 1;
 
   const t = k => MESSAGES[lang][k];
+  async function decode(blob){
+    const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+    return { blob, url: URL.createObjectURL(blob),
+             w: bmp.width, h: bmp.height, bitmap: bmp };
+  }
+  let progress = null;
+
   async function pick(e){
     const files = [...e.target.files];
-    const added = await Promise.all(files.map(async f => {
-      const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
-      return { id: nextId++, name: f.name, url: URL.createObjectURL(f),
-               w: bmp.width, h: bmp.height, bitmap: bmp };
-    }));
-    vignettes = [...vignettes, ...added];
     e.target.value = '';        // re-picking the same file re-triggers the event
-    m.redraw();
+    progress = { done: 0, total: files.length };
+    try {
+      for(const f of files){
+        try {
+          vignettes = [...vignettes, { id: nextId++, name: f.name, ...await decode(f) }];
+        } catch(err){
+          console.warn('photo left out:', f.name, err);
+        }
+        progress.done++;
+        m.redraw.sync();
+      }
+    } finally {
+      progress = null;
+      m.redraw();
+    }
   }
   function toggle(id){
     selected.has(id) ? selected.delete(id) : selected.add(id);   // Mithril repaints after the click
@@ -173,8 +196,56 @@ function App(){
       building = false; m.redraw();
     }
   }
+  const photoKey = new Map();      // a photo's bytes → the key they are filed under
+  let nextKey = 1;
+
+  async function persist(){
+    for(const v of vignettes){
+      if(photoKey.has(v.blob)) continue;
+      const key = nextKey++;
+      photoKey.set(v.blob, key);
+      await dbSet('photo:' + key, v.blob);
+    }
+    await dbSet('sheet', { size, format, nextId, nextKey,
+                           items: vignettes.map(v => ({ id: v.id, name: v.name,
+                                                        key: photoKey.get(v.blob) })) });
+  }
+  async function readBack(){
+    const sheet = await dbGet('sheet');
+    if(!sheet) return;
+    ({ size, format, nextId, nextKey } = sheet);
+    progress = { done: 0, total: sheet.items.length };
+    try {
+      const photos = new Map();
+      for(const it of sheet.items){
+        if(!photos.has(it.key)){
+          const photo = await decode(await dbGet('photo:' + it.key));
+          photos.set(it.key, photo);
+          photoKey.set(photo.blob, it.key);
+        }
+        vignettes = [...vignettes, { id: it.id, name: it.name, ...photos.get(it.key) }];
+        progress.done++;
+        m.redraw.sync();
+      }
+    } finally {
+      progress = null;
+      m.redraw();
+    }
+  }
+  let queue = Promise.resolve();
+  const enqueue = job => { queue = queue.then(job).catch(e => console.warn('storage', e)); };
+  const save = () => enqueue(persist);
+  const restore = () => enqueue(readBack);
+  function empty(){
+    vignettes = [];
+    selected.clear();
+    photoKey.clear();
+    enqueue(dbClear);
+  }
 
   return {
+    oninit: restore,
+    onupdate: save,
     view: () => {
       const paper = FORMATS[format];
       return [
@@ -182,7 +253,12 @@ function App(){
         m('.bar', [
           m('button.lang', { onclick: () => { lang = lang === 'en' ? 'fr' : 'en'; } }, t('lang')),
           m('label.pick', [t('choose'),
-            m('input[type=file]', { accept: 'image/*', multiple: true, onchange: pick })]),
+            m('input[type=file]', { accept: 'image/*', multiple: true, onchange: pick,
+                                    disabled: !!progress })]),
+          progress && m('.loading', [
+            m('progress', { value: progress.done, max: progress.total }),
+            `${progress.done} / ${progress.total}`,
+          ]),
           m('label', [t('longSide'),
             m('input[type=number]', { min: 10, max: paper.w - 2 * MARGIN, value: size,
               oninput: e => { const n = e.target.valueAsNumber; if(Number.isFinite(n)) size = n; } })]),
@@ -195,11 +271,13 @@ function App(){
           m('button', { onclick: clone, disabled: !selected.size }, t('clone')),
           m('button', { onclick: download, disabled: !vignettes.length || building },
             building ? t('generating') : t('download')),
+          m('button.empty', { onclick: empty, disabled: !vignettes.length || !!progress }, t('empty')),
         ]),
         m('.pages', layout(vignettes, size, paper).map((placed, i) =>
           m('section.page', { 'aria-label': `page ${i + 1}`, style: `aspect-ratio:${paper.w}/${paper.h}` },
             placed.map(pl =>
               m('button.tile', {
+                key: pl.id,
                 class: selected.has(pl.id) ? 'selected' : '',
                 'aria-pressed': String(selected.has(pl.id)),
                 onclick: () => toggle(pl.id),
