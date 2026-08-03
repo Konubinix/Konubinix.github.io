@@ -57,14 +57,17 @@ being run so that node has the time to exit. And the only way to explicitly
 wait is to use a timer, that nodejs will wait to resolve<sup id="fnref:2"><a class="internal-link" href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</p>
 <p>You can maybe craft something using .unref()<sup id="fnref:3"><a class="internal-link" href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup></p>
 <p>You can for instance, create a promise with a timer that does not make nodejs wait for it.</p>
+<div class="konix-block-name-marker" data-name="delay"></div>
 <p><a id="code-snippet--delay"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">delay</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">ms</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#cf222e">new</span> <span style="color:#6639ba">Promise</span><span style="color:#1f2328">(</span><span style="color:#1f2328">res</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">setTimeout</span><span style="color:#1f2328">(</span><span style="color:#1f2328">res</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">ms</span><span style="color:#1f2328">).</span><span style="color:#1f2328">unref</span><span style="color:#1f2328">());</span>
 </span></span></code></pre></div><p>And then start this promise.</p>
+<div class="konix-block-name-marker" data-name="start"></div>
 <p><a id="code-snippet--start"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#1f2328">delay</span><span style="color:#1f2328">(</span><span style="color:#1f2328">time</span><span style="color:#1f2328">).</span><span style="color:#1f2328">then</span><span style="color:#1f2328">(()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">console</span><span style="color:#1f2328">.</span><span style="color:#1f2328">log</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;I fulfilled my promise!&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">console</span><span style="color:#1f2328">.</span><span style="color:#1f2328">log</span><span style="color:#1f2328">(</span><span style="color:#0a3069">`I promised I would wait for </span><span style="color:#0a3069">${</span><span style="color:#1f2328">time</span><span style="color:#0a3069">}</span><span style="color:#0a3069">`</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><p>In order to realize that nodejs can still wait, let&rsquo;s add an artificial wait
 timer.</p>
+<div class="konix-block-name-marker" data-name="waiting"></div>
 <p><a id="code-snippet--waiting"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#1f2328">setTimeout</span><span style="color:#1f2328">(()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span><span style="color:#1f2328">console</span><span style="color:#1f2328">.</span><span style="color:#1f2328">log</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;done with it&#39;</span><span style="color:#1f2328">);},</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><p>In the end, the program will wait for one second and totally ignore the promise
@@ -81,6 +84,7 @@ the time to wait for it.</p>
 </span></span></code></pre></div><h2 id="5e2b9be5-68dd-4648-88db-978a5070964c">Not that obvious to reproduce</h2>
 <p>You can try having an async function that always wait for another. Both don&rsquo;t
 use either asynchronous operations or timers.</p>
+<div class="konix-block-name-marker" data-name="promisebomb"></div>
 <p><a id="code-snippet--promisebomb"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">function</span> <span style="color:#1f2328">outer</span> <span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">{</span>
@@ -103,6 +107,69 @@ very specific occasions.</p>
 <p>In by chance I get into this trap in the future in real life, I might add this
 real life example in here.</p>
 <h2 id="permalink"><a class="internal-link" href="/blog/33b252ae-c3aa-4210-a0b2-d68868fc4a84?title=does_nodejs_wait_for_all_promises_before_exiting">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
 <div class="footnotes" role="doc-endnotes">
 <hr>
 <ol>

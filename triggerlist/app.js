@@ -2,40 +2,19 @@
 import { render, html, svg } from 'uhtml';
 import { get, set, del } from 'idb-keyval';
 
-// the doc, its maps, and its undo manager are created at boot, once Loro's WASM has loaded.
-let doc, items, sections, itemSections, outings, outingSections, outingItems, checked, order, undo;
-
-// view vs edit is per-device UI state — it is not synced and starts off.
-// editing holds the "kind:id" being renamed in place, editingText its buffer,
-// folded the "kind:id" of every collapsed card, selected the placements picked
-// for a batch move/copy (each key is a thing tied to where it sits, so a linked
-// thing is picked in one place, not everywhere); adding the section id whose
-// inline add-a-thing field is open, addText the text that field currently holds;
-// filter narrows the catalog to things whose
-// label contains it; picker holds the pending 'move'/'copy' while its target
-// sheet is up (or null); wiz holds the planning assistant's state (or null);
-// focusId the outing shown alone in its packing view (or null for the catalog);
-// toast is the current notification { text } (or null); hideChecked hides the
-// ticked things (view mode) so only what is left to pack shows; activeItem is the
-// one placement whose controls a long press has revealed in view mode (or null).
+// created at boot, once Loro's WASM has loaded
+let doc, items, tags, tagged, gathers, checked, order, undo;
 let editMode = false, editing = null, editingText = '', folded = new Set(), selected = new Set();
 let adding = null, addText = '', filter = '', picker = null;
-let wiz = null, focusId = null, toast = null, hideChecked = false, historyOpen = false, activeItem = null;
-let viewingFrontier = null, viewingLabel = '', previewDoc = null;   // a fork rendered while previewing a past point
-let histRowHeights = null;   // measured heights of the open history rows, so the rail's dots land on their centres
-let pageShown;   // the page onArrival last settled, so it runs once per arrival, not on every repaint
-let floatSet = null;   // when few things are left, the ids to float to the top of their card (or null)
-const FLOAT_MAX = 15;   // once fewer than this remain on a page, arriving floats the last stragglers up
-
-// the sync layer's handles: the live socket, the room url, the toolbar state,
-// the status code behind a refusal, and the growing wait between reconnects.
-// syncUrlShown reveals the room url under the toolbar when the status pill is tapped.
+let plan = null, focusId = null, toast = null, hideChecked = false, historyOpen = false, activeItem = null;
+let viewingFrontier = null, viewingLabel = '', previewDoc = null;
+let histRowHeights = null;
+let pageShown;      // set by onArrival
+let floatSet = null;   // set by onArrival, read by itemRows
 let ws, syncUrl, syncState = 'off', syncCode = '', retryDelay, syncUrlShown = false;
 
-// the screen-memory key and the debounce timer coalescing its snapshot writes,
-// declared here (before boot) so the first paint can save through them.
 const UI_KEY = 'triggerlist.ui';
-const PEER_KEY = 'triggerlist.peer';   // this device's stable Loro identity
+const PEER_KEY = 'triggerlist.peer';
 let uiTimer;
 function docKey(){ return 'triggerlist-doc:' + (syncUrl || 'local'); }
 
@@ -54,6 +33,25 @@ let saveTimer;
 function persist(){
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => set(docKey(), doc.export({ mode: 'snapshot' })), 100);
+}
+const LEGACY = ['sections', 'outings', 'itemSections', 'outingItems', 'outingSections'];
+
+function adoptTags(){
+    const old = {};
+    for(const n of LEGACY) old[n] = doc.getMap(n).toJSON();   // getMap first: an unclaimed root reads as nothing
+    if(!LEGACY.some(n => Object.keys(old[n]).length)) return;
+
+    for(const [id, v] of Object.entries(old.sections))
+        if(!tags.get(id)) tags.set(id, { name: v.name });
+    for(const [id, v] of Object.entries(old.outings))
+        if(!tags.get(id)?.trip) tags.set(id, { name: v.name, trip: 1 });
+    for(const k of Object.keys(old.itemSections)) tagged.set(k, 1);
+    for(const k of Object.keys(old.outingItems)) tagged.set(k, 1);   // itemId:outingId, already the right way round
+    for(const k of Object.keys(old.outingSections)) gathers.set(k, 1);
+
+    for(const n of LEGACY){ const m = doc.getMap(n); for(const k of Object.keys(old[n])) m.delete(k); }
+    commit('liste reprise en étiquettes');
+    persist();   // the subscribe that saves is not wired yet
 }
 const backStack = [];
 let leaving = false;
@@ -88,35 +86,6 @@ window.addEventListener('popstate', () => {
     armGuard();           // no screen left: stay put and ask before leaving
     confirmExit();
 });
-const app = document.getElementById('app');
-
-function paint(){ document.body.toggleAttribute('data-edit', editMode); document.body.toggleAttribute('data-viewing', !!viewingFrontier); render(app, view(buildModel())); saveUi(); if(historyOpen) requestAnimationFrame(relayoutHistory); }
-
-const { LoroDoc, UndoManager } = await import('loro-crdt');
-doc = new LoroDoc();
-doc.setPeerId(devicePeerId());  // one stable identity per device, so a reload is the same peer, not a new one
-doc.setRecordTimestamp(true);   // so each change carries a time for the history
-items = doc.getMap('items');
-sections = doc.getMap('sections');
-itemSections = doc.getMap('itemSections');
-outings = doc.getMap('outings');
-outingSections = doc.getMap('outingSections');
-outingItems = doc.getMap('outingItems');
-checked = doc.getMap('checked');
-order = doc.getMap('order');
-undo = new UndoManager(doc, { mergeInterval: 0 });
-
-resolveSyncUrl();              // know the room before loading its (per-room) cache
-await loadDoc();
-const savedUi = restoreUi();   // return to the screen we were on before the reload
-doc.subscribe(() => { paint(); persist(); });
-paint();
-document.getElementById('loading')?.remove();
-if(savedUi.scrollY) requestAnimationFrame(() => window.scrollTo(0, savedUi.scrollY));
-startSync();
-armGuard();   // the base entry Back lands on, so leaving the app asks first
-if(focusId) openScreen(() => { focusId = null; paint(); });   // a restored focus needs its history entry, so Back reaches the catalog
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 function saveUi(){
     clearTimeout(uiTimer);
     uiTimer = setTimeout(() => localStorage.setItem(UI_KEY,
@@ -125,7 +94,7 @@ function saveUi(){
 function restoreUi(){
     let u = {};
     try { u = JSON.parse(localStorage.getItem(UI_KEY) || '{}'); } catch {}
-    if(u.focusId && outings.get(u.focusId)) focusId = u.focusId;
+    if(u.focusId && tags.get(u.focusId)) focusId = u.focusId;
     return u;
 }
 window.addEventListener('scroll', saveUi, { passive: true });
@@ -139,6 +108,34 @@ function devicePeerId(){
     }
     return BigInt(p);
 }
+const app = document.getElementById('app');
+
+function paint(){ document.body.toggleAttribute('data-edit', editMode); document.body.toggleAttribute('data-viewing', !!viewingFrontier); render(app, view(buildModel())); saveUi(); if(historyOpen) requestAnimationFrame(relayoutHistory); }
+
+const { LoroDoc, UndoManager } = await import('loro-crdt');
+doc = new LoroDoc();
+doc.setPeerId(devicePeerId());
+doc.setRecordTimestamp(true);   // each change carries a time
+items = doc.getMap('items');
+tags = doc.getMap('tags');
+tagged = doc.getMap('tagged');
+gathers = doc.getMap('gathers');
+checked = doc.getMap('checked');
+order = doc.getMap('order');
+undo = new UndoManager(doc, { mergeInterval: 0 });
+
+resolveSyncUrl();
+await loadDoc();
+adoptTags();
+const savedUi = restoreUi();
+doc.subscribe(() => { paint(); persist(); });
+paint();
+document.getElementById('loading')?.remove();
+if(savedUi.scrollY) requestAnimationFrame(() => window.scrollTo(0, savedUi.scrollY));
+startSync();
+armGuard();
+if(focusId) openScreen(() => { focusId = null; paint(); });   // the restored screen needs its entry too
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 function backdropClose(close){ return e => { if(e.target === e.currentTarget) close(); }; }
 // ── Drag-and-drop reorder engine (framework-agnostic) ──
 // Binds once on document. Handles any =.reorder-list= with =.reorder-item=
@@ -283,16 +280,17 @@ document.addEventListener('pointerup', () => {
     const { key, from, to } = dragOrder;
     dragOrder = null;
     if(from === to) return;
-    if(key === 'sections'){
-        const kf = (id) => 's:' + id;
-        applyReorder(sortByOrder(Object.keys(sections.toJSON()), kf), kf, from, to);
-    } else if(key.startsWith('section:')){
-        const sec = key.slice(8), kf = (id) => 'i:' + id + ':' + sec;
-        applyReorder(sortByOrder(sectionItemIds(sec), kf), kf, from, to);
+    if(key === 'tags'){
+        const kf = (id) => 't:' + id;
+        const ids = Object.keys(tags.toJSON()).filter(id => !tags.get(id).trip);
+        applyReorder(sortByOrder(ids, kf), kf, from, to);
+    } else if(key.startsWith('tag:')){
+        const tag = key.slice(4), kf = (id) => 'i:' + id + ':' + tag;
+        applyReorder(sortByOrder(taggedWith(tag), kf), kf, from, to);
     }
 });
-function sectionItemIds(sec){
-    return Object.keys(itemSections.toJSON()).filter(k => after(k) === sec && items.get(before(k))).map(before);
+function taggedWith(tag){
+    return Object.keys(tagged.toJSON()).filter(k => after(k) === tag && items.get(before(k))).map(before);
 }
 function sortByOrder(ids, keyOf){
     return ids.map((id, i) => ({ id, pos: order.get(keyOf(id)) ?? i })).sort((a, b) => a.pos - b.pos).map(x => x.id);
@@ -304,11 +302,11 @@ function applyReorder(ids, keyOf, from, to){
     ids.forEach((id, i) => order.set(keyOf(id), i));
     commit('réordonné');
 }
-function sortSectionAlpha(sec){
-    const ids = sectionItemIds(sec)
+function sortTagAlpha(tag){
+    const ids = taggedWith(tag)
         .sort((a, b) => (items.get(a)?.label || '').localeCompare(items.get(b)?.label || '', 'fr'));
-    ids.forEach((id, i) => order.set('i:' + id + ':' + sec, i));
-    commit('section « ' + (sections.get(sec)?.name || sec) + ' » triée A→Z');
+    ids.forEach((id, i) => order.set('i:' + id + ':' + tag, i));
+    commit('« ' + (tags.get(tag)?.name || tag) + ' » trié A→Z');
 }
 function flashItem(id){
     requestAnimationFrame(() => document.querySelectorAll('[data-item="' + CSS.escape(id) + '"]')
@@ -340,33 +338,29 @@ function slug(s){
 
 function commit(message){ doc.commit({ message }); }   // the message names the step in the history
 
-function addItem(label, sectionId){
+function addItem(label, tagId){
     label = (label || '').trim();
     if(!label) return;
     const id = slug(label);
     items.set(id, { label });
-    if(sectionId) itemSections.set(id + ':' + sectionId, 1);
+    if(tagId) tagged.set(id + ':' + tagId, 1);
     commit('« ' + label + ' » ajouté');
 }
 
-function moveItemHere(label, sectionId){
-    label = (label || '').trim();
-    const id = slug(label);
-    if(!label || !items.get(id)) return;                    // only a thing already known moves
-    for(const k of Object.keys(itemSections.toJSON()))      // out of every section it sat in,
-        if(before(k) === id) itemSections.delete(k);
-    if(sectionId) itemSections.set(id + ':' + sectionId, 1);   // and into the one chosen (none, if orphan)
-    commit('« ' + label + ' » déplacé ici');
+function addTag(name, trip){
+    name = (name || '').trim();
+    if(!name) return '';
+    const id = slug(name);
+    tags.set(id, trip ? { name, trip: 1 } : { name });
+    commit((trip ? 'sortie « ' : 'étiquette « ') + name + ' » ajoutée');
+    return id;
 }
 
-function addSection(name){
-    name = (name || '').trim();
-    if(name){ sections.set(slug(name), { name }); commit('section « ' + name + ' » ajoutée'); }
-}
-
-function addOuting(name){
-    name = (name || '').trim();
-    if(name){ outings.set(slug(name), { name }); commit('sortie « ' + name + ' » ajoutée'); }
+function toggleTag(itemId, tagId){
+    const k = itemId + ':' + tagId;
+    const label = items.get(itemId)?.label, name = tags.get(tagId)?.name;
+    if(tagged.get(k)){ tagged.delete(k); commit('« ' + label + " » n'est plus « " + name + ' »'); }
+    else { tagged.set(k, 1); commit('« ' + label + ' » étiqueté « ' + name + ' »'); }
 }
 
 function toggleCheck(itemId){
@@ -391,27 +385,19 @@ function uncheckAll(){
 function openAdd(target){
     adding = (adding === target) ? null : target;
     addText = '';
-    if(adding && target !== ':orphan' && target !== ':section') folded.delete('section:' + target);
+    if(adding && target !== ':untagged' && target !== ':tag') folded.delete('tag:' + target);
     paint();
     const box = document.querySelector('.section-add-input');
     if(box) box.focus();
 }
 
 function closeAdd(){ adding = null; addText = ''; paint(); }
-function submitAdd(target){
-    const box = document.querySelector('.section-add-input');
+function submitAdd(target, sel){
+    const box = document.querySelector(sel || '.section-add-input');
     const val = box.value;
     box.value = ''; addText = '';
-    if(target === ':section') addSection(val);
-    else addItem(val, target === ':orphan' ? '' : target);
-    box.focus();
-}
-
-function submitMove(target){
-    const box = document.querySelector('.section-add-input');
-    const val = box.value;
-    box.value = ''; addText = '';
-    moveItemHere(val, target === ':orphan' ? '' : target);
+    if(target === ':tag') addTag(val);
+    else addItem(val, target === ':untagged' ? '' : target);
     box.focus();
 }
 document.addEventListener('pointerdown', e => {
@@ -433,8 +419,7 @@ function pickSuggestion(label){
     addText = label; paint();
 }
 function addField(target, placeholder, submitLabel){
-    const thing = target !== ':section';                    // sections have no catalog to complete against, and no move
-    const known = thing && !!items.get(slug(addText));       // the text already names a thing the list holds
+    const thing = target !== ':tag';   // a tag name has no catalog to complete against
     return html`
       <div class="section-add">
         <div class="add">
@@ -443,9 +428,17 @@ function addField(target, placeholder, submitLabel){
                  onkeydown=${e => e.key === 'Enter' ? submitAdd(target)
                                 : e.key === 'Escape' ? closeAdd() : null}>
           <button aria-label=${submitLabel} onclick=${() => submitAdd(target)}>+</button>
-          ${known ? html`<button aria-label="Déplacer ici" onclick=${() => submitMove(target)}>→</button>` : ''}
         </div>
         ${thing ? addSuggestions() : ''}
+      </div>`;
+}
+function mainAddField(){
+    return html`
+      <div class="add main-add">
+        <input class="main-add-input" placeholder="Ajouter une chose" aria-label="Ajouter une chose"
+               onkeydown=${e => { if(e.key === 'Enter') submitAdd(focusId || ':untagged', '.main-add-input'); }}>
+        <button aria-label="Ajouter la chose"
+                onclick=${() => submitAdd(focusId || ':untagged', '.main-add-input')}>+</button>
       </div>`;
 }
 let pressTimer, pressFired = false;
@@ -462,10 +455,8 @@ function nameTaken(map, id, name){
     return Object.entries(map.toJSON()).some(([i, v]) => i !== id && (v.label || v.name) === name);
 }
 function mergeItems(from, into){
-    for(const k of Object.keys(itemSections.toJSON()))
-        if(before(k) === from){ itemSections.set(into + ':' + after(k), 1); itemSections.delete(k); }
-    for(const k of Object.keys(outingItems.toJSON()))
-        if(before(k) === from){ outingItems.set(into + ':' + after(k), 1); outingItems.delete(k); }
+    for(const k of Object.keys(tagged.toJSON()))
+        if(before(k) === from){ tagged.set(into + ':' + after(k), 1); tagged.delete(k); }
     if(checked.get(from)) checked.set(into, 1);
     checked.delete(from);
     items.delete(from);
@@ -478,13 +469,11 @@ function renameItem(id, label){
     if(twin) mergeItems(id, twin);
     else { items.set(id, { label }); commit('renommé « ' + label + ' »'); }
 }
-function renameSection(id, name){
+function renameTag(id, name){
     name = (name || '').trim();
-    if(name && !nameTaken(sections, id, name)){ sections.set(id, { name }); commit('section renommée « ' + name + ' »'); }
-}
-function renameOuting(id, name){
-    name = (name || '').trim();
-    if(name && !nameTaken(outings, id, name)){ outings.set(id, { name }); commit('sortie renommée « ' + name + ' »'); }
+    if(!name || nameTaken(tags, id, name)) return;
+    tags.set(id, { ...tags.get(id), name });   // keep the trip flag: a rename is not a change of kind
+    commit('étiquette renommée « ' + name + ' »');
 }
 
 function startEdit(key, current){
@@ -505,80 +494,61 @@ function removeKeys(map, part, id){
 
 function deleteItem(id, msg){
     items.delete(id); checked.delete(id);
-    removeKeys(itemSections, before, id);
-    removeKeys(outingItems, before, id);
+    removeKeys(tagged, before, id);
     commit(msg);
 }
 
-function deleteSection(id, msg){
-    sections.delete(id);
-    removeKeys(itemSections, after, id);
-    removeKeys(outingSections, after, id);
+function deleteTag(id, msg){
+    tags.delete(id);
+    removeKeys(tagged, after, id);
+    removeKeys(gathers, before, id);   // the tags it gathered
+    removeKeys(gathers, after, id);    // and the trips that gathered it
     commit(msg);
 }
-
-function deleteOuting(id, msg){
-    outings.delete(id);
-    removeKeys(outingSections, before, id);
-    removeKeys(outingItems, after, id);
-    commit(msg);
-}
-function unlinkItemFromSection(id, sectionId, msg){ itemSections.delete(id + ':' + sectionId); commit(msg); }
-function unlinkItemFromOuting(id, outingId, msg){ outingItems.delete(id + ':' + outingId); commit(msg); }
-function unlinkSectionFromOuting(id, outingId, msg){ outingSections.delete(outingId + ':' + id); commit(msg); }
-
-function removeItemHere(id, name, srcSection, srcOuting){
-    if(srcSection){ const m = '« ' + name + ' » retiré'; unlinkItemFromSection(id, srcSection, m); notify(m); }
-    else if(srcOuting){ const m = '« ' + name + ' » retiré de la sortie'; unlinkItemFromOuting(id, srcOuting, m); notify(m); }
+function removeItemHere(id, name, srcTag){
+    if(srcTag){ const m = '« ' + name + ' » retiré'; tagged.delete(id + ':' + srcTag); commit(m); notify(m); }
     else { const m = '« ' + name + ' » supprimé'; deleteItem(id, m); notify(m); }
 }
 
-function removeSectionHere(id, name, srcOuting){
-    if(srcOuting){ const m = '« ' + name + ' » retiré de la sortie'; unlinkSectionFromOuting(id, srcOuting, m); notify(m); }
-    else { const m = '« ' + name + ' » supprimé'; deleteSection(id, m); notify(m); }
+function removeTagHere(id, name, srcTrip){
+    if(srcTrip){ const m = '« ' + name + ' » retiré de la sortie'; gathers.delete(srcTrip + ':' + id); commit(m); notify(m); }
+    else { const m = '« ' + name + ' » supprimé'; deleteTag(id, m); notify(m); }
 }
-
-function removeOutingHere(id, name){ const m = '« ' + name + ' » supprimé'; deleteOuting(id, m); notify(m); }
-function collect(map, its, chk, placed, ord){
-    const byContainer = {};
-    for(const k of Object.keys(map.toJSON())){
+function collect(tgd, its, chk, carried, ord){
+    const byTag = {};
+    for(const k of Object.keys(tgd.toJSON())){
         const id = before(k);
         if(!its[id]) continue;
-        (byContainer[after(k)] ||= []).push({ id, label: its[id].label, done: !!chk[id] });
-        placed[id] = true;
+        (byTag[after(k)] ||= []).push({ id, label: its[id].label, done: !!chk[id] });
+        carried[id] = true;
     }
-    for(const c in byContainer){
-        byContainer[c].forEach((it, i) => { it.pos = ord ? (ord.get('i:' + it.id + ':' + c) ?? i) : i; });
-        byContainer[c].sort((a, b) => a.pos - b.pos);
+    for(const t in byTag){
+        byTag[t].forEach((it, i) => { it.pos = ord.get('i:' + it.id + ':' + t) ?? i; });
+        byTag[t].sort((a, b) => a.pos - b.pos);
     }
-    return byContainer;
+    return byTag;
 }
 function buildModel(){
     // a preview reads a detached fork; everything else reads the live doc
     const src = previewDoc || doc;
-    const items = src.getMap('items'), sections = src.getMap('sections'),
-          checked = src.getMap('checked'), itemSections = src.getMap('itemSections'),
-          order = src.getMap('order'), outings = src.getMap('outings'),
-          outingSections = src.getMap('outingSections'), outingItems = src.getMap('outingItems');
-    const its = items.toJSON(), secs = sections.toJSON(), chk = checked.toJSON(), placed = {};
-    const secItems = collect(itemSections, its, chk, placed, order);
-    const looseOf = collect(outingItems, its, chk, {});
-    const section = (id) => ({ id, name: secs[id]?.name, items: secItems[id] || [] });
+    const items = src.getMap('items'), tags = src.getMap('tags'), checked = src.getMap('checked'),
+          tagged = src.getMap('tagged'), gathers = src.getMap('gathers'), order = src.getMap('order');
+    const its = items.toJSON(), tgs = tags.toJSON(), chk = checked.toJSON(), carried = {};
+    const ofTag = collect(tagged, its, chk, carried, order);
+    const card = (id) => ({ id, name: tgs[id]?.name, items: ofTag[id] || [] });
 
-    const ofOuting = {};
-    for(const k of Object.keys(outingSections.toJSON())){
-        const sec = after(k);
-        if(secs[sec]) (ofOuting[before(k)] ||= []).push(sec);
-    }
-    const outingList = Object.entries(outings.toJSON()).map(([id, v]) =>
-        ({ id, name: v.name, sections: (ofOuting[id] || []).map(section), items: looseOf[id] || [] }));
-    const catalog = Object.keys(secs)
-        .map((id, i) => ({ id, pos: order.get('s:' + id) ?? i }))
+    const gathered = {};
+    for(const k of Object.keys(gathers.toJSON()))
+        if(tgs[after(k)]) (gathered[before(k)] ||= []).push(after(k));
+    const trips = Object.entries(tgs).filter(([, v]) => v.trip).map(([id, v]) =>
+        ({ id, name: v.name, tags: (gathered[id] || []).map(card), items: ofTag[id] || [] }));
+    const catalog = Object.keys(tgs).filter(id => !tgs[id].trip)
+        .map((id, i) => ({ id, pos: order.get('t:' + id) ?? i }))
         .sort((a, b) => a.pos - b.pos)
-        .map(x => section(x.id));
-    const orphans = Object.entries(its).filter(([id]) => !placed[id])
+        .map(x => card(x.id));
+    const untagged = Object.entries(its).filter(([id]) => !carried[id])
         .map(([id, v]) => ({ id, label: v.label, done: !!chk[id] }));
-    return { outingList, catalog, orphans };
+    return { trips, catalog, untagged };
 }
 function foldText(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 
@@ -595,12 +565,12 @@ function filterBar(){
       </div>`;
 }
 
-function addSectionActuator(){
+function addTagActuator(){
     return html`
       <div class="add-section">
-        <button class="add-section-btn" aria-label="Nouvelle section"
-                onclick=${() => openAdd(':section')}>+ Section</button>
-        ${adding === ':section' ? addField(':section', 'Nouvelle section', 'Créer la section') : ''}
+        <button class="add-section-btn" aria-label="Nouvelle étiquette"
+                onclick=${() => openAdd(':tag')}>+ Étiquette</button>
+        ${adding === ':tag' ? addField(':tag', 'Nouvelle étiquette', "Créer l'étiquette") : ''}
       </div>`;
 }
 function toggleSelect(k){ selected.has(k) ? selected.delete(k) : selected.add(k); paint(); }
@@ -618,26 +588,35 @@ function renameField(rename, id){
                      : e.key === 'Escape' ? cancelEdit() : null}
       onblur=${() => commitEdit(rename, id)}>`;
 }
-
-function itemRows(list, srcSection, srcOuting){
-    const skOf = it => it.id + '|' + (srcSection || '') + '|' + (srcOuting || '');
-    const activeHere = !!srcSection && list.some(it => skOf(it) === activeItem);
-    const reorderable = (editMode || (activeHere && !hideChecked)) && !!srcSection;
+function tagChips(itemId){
+    const carried = new Set(Object.keys(tagged.toJSON()).filter(k => before(k) === itemId).map(after));
+    return html`<div class="row-tags">${Object.entries(tags.toJSON())
+      .filter(([, v]) => !v.trip)
+      .map(([id, v]) => html`
+        <button class="tagchip" aria-pressed=${carried.has(id) ? 'true' : 'false'}
+                onclick=${() => toggleTag(itemId, id)}>${v.name}</button>`)}</div>`;
+}
+function rowsOnScreen(list, reorderable){
     const kept = (!editMode && hideChecked) ? list.filter(it => !it.done) : list;
-    const shown = (floatSet && !reorderable)   // arrival left a floatSet: lift its stragglers up, but never mid-drag
+    return (floatSet && !reorderable)   // arrival left a floatSet: lift its stragglers up, but never mid-drag
         ? [...kept].sort((a, b) => floatSet.has(b.id) - floatSet.has(a.id)) : kept;
+}
+function itemRows(list, srcTag){
+    const skOf = it => it.id + '|' + (srcTag || '');
+    const activeHere = !!srcTag && list.some(it => skOf(it) === activeItem);
+    const reorderable = (editMode || (activeHere && !hideChecked)) && !!srcTag;
     return html`<ul class=${'items' + (reorderable ? ' reorder-list' : '') + (activeHere ? ' solo' : '')}
-                     data-reorder=${reorderable ? 'section:' + srcSection : null}>${shown.map((it, i) => {
-      const ek = 'item:' + it.id;                                   // rename key — the thing itself
-      const sk = skOf(it);                                          // select key — this placement
-      const controls = editMode || sk === activeItem || selected.has(sk);
-      const grip = reorderable && (editMode || sk === activeItem);
-      return html`
+                     data-reorder=${reorderable ? 'tag:' + srcTag : null}>${
+      rowsOnScreen(list, reorderable).map((it, i) => {
+        const ek = 'item:' + it.id, sk = skOf(it);
+        const controls = editMode || sk === activeItem || selected.has(sk);
+        const grip = reorderable && (editMode || sk === activeItem);
+        return html`
       <li class=${(it.done ? 'done' : '') + (selected.has(sk) ? ' selected' : '') + (reorderable ? ' reorder-item' : '') + (sk === activeItem ? ' active' : '')}
           data-idx=${reorderable ? i : null} data-item=${it.id}>
         ${editing === ek ? renameField(renameItem, it.id) : html`
           ${grip ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}
-          ${controls && editing !== ek ? html`
+          ${controls ? html`
             <input type="checkbox" class="select" aria-label="Sélectionner"
                 .checked=${selected.has(sk)} onchange=${() => toggleSelect(sk)}>` : ''}
           <span class="check" role="checkbox" aria-checked=${it.done ? 'true' : 'false'} aria-label=${it.label}
@@ -650,7 +629,8 @@ function itemRows(list, srcSection, srcOuting){
                 onpointerup=${editMode ? null : longPressCancel}
                 onpointercancel=${editMode ? null : longPressCancel}>${it.label}</span>
           ${controls ? editButtons(() => startEdit(ek, it.label),
-                                   () => removeItemHere(it.id, it.label, srcSection, srcOuting)) : ''}`}
+                                   () => removeItemHere(it.id, it.label, srcTag)) : ''}`}
+        ${sk === activeItem ? tagChips(it.id) : ''}
       </li>`; })}</ul>`;
 }
 function activate(sk){ activeItem = sk; paint(); }
@@ -662,26 +642,27 @@ function toggleFold(k){ folded.has(k) ? folded.delete(k) : folded.add(k); paint(
 
 function foldAll(){
     if(folded.size) folded.clear();
-    else Object.keys(sections.toJSON()).forEach(id => folded.add('section:' + id));
+    else Object.keys(tags.toJSON()).forEach(id => folded.add('tag:' + id));
     paint();
 }
 
-function sectionComplete(s){ return s.items.length > 0 && s.items.every(it => it.done); }
+function cardComplete(s){ return s.items.length > 0 && s.items.every(it => it.done); }
 
 function pageRemaining(m){
-    // the still-unticked things on the page arrived at — the outing's, or the whole catalog's
-    const o = focusId && m.outingList.find(x => x.id === focusId);
-    const its = o ? [...o.sections.flatMap(s => s.items), ...o.items] : [...m.catalog.flatMap(s => s.items), ...m.orphans];
+    // the still-unticked things on the page arrived at — the trip's, or the whole catalog's
+    const o = focusId && m.trips.find(x => x.id === focusId);
+    const its = o ? [...o.tags.flatMap(s => s.items), ...o.items] : [...m.catalog.flatMap(s => s.items), ...m.untagged];
     return new Set(its.filter(it => !it.done).map(it => it.id));
 }
 
 function onArrival(m){
+    const FINAL_STRETCH = 15;
     if(focusId === pageShown) return;   // still on the same page — nothing arrived at
     pageShown = focusId;
     if(editMode){ floatSet = null; return; }   // curating, not packing — leave the view as it is
-    for(const s of m.catalog) if(sectionComplete(s)) folded.add('section:' + s.id);   // done sections fold away
+    for(const s of m.catalog) if(cardComplete(s)) folded.add('tag:' + s.id);   // done cards fold away
     const remaining = pageRemaining(m);
-    floatSet = remaining.size < FLOAT_MAX ? remaining : null;   // few left: float them up; otherwise leave the order alone
+    floatSet = remaining.size < FINAL_STRETCH ? remaining : null;
 }
 
 function foldTitle(k, name, trailing, onLong){
@@ -705,181 +686,157 @@ function uncheckButton(label, list, msg){
     return html`<button class="row-btn reset" aria-label=${label}
       onclick=${() => { uncheck(list.map(it => it.id), msg); notify(msg); }}>↺</button>`;
 }
-function sectionCard(s, srcOuting, idx){
-    const k = 'section:' + s.id;
-    const reorderable = editMode && !srcOuting;   // catalog sections drag; outing-gathered ones do not
-    const complete = !editMode && sectionComplete(s);
+function tagCard(s, srcTrip, idx){
+    const k = 'tag:' + s.id;
+    const reorderable = editMode && !srcTrip;   // catalog cards drag; trip-gathered ones do not
+    const complete = !editMode && cardComplete(s);
     return html`
       <section class=${(reorderable ? 'reorder-item' : '') + (complete ? ' complete' : '')} data-idx=${reorderable ? idx : null}>
-        <h3>${reorderable ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}${editing === k ? renameField(renameSection, s.id)
+        <h3>${reorderable ? html`<span class="reorder-grip" aria-label="Réordonner">⠿</span>` : ''}${editing === k ? renameField(renameTag, s.id)
             : html`${foldTitle(k, s.name, countBadge(s.items), () => openAdd(s.id))}${editMode ? html`${editButtons(() => startEdit(k, s.name),
-                                                     () => removeSectionHere(s.id, s.name, srcOuting))}
+                                                     () => removeTagHere(s.id, s.name, srcTrip))}
                      <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(s.id)}>+</button>
-                     ${s.items.length > 1 ? html`<button class="row-btn" aria-label="Trier de A à Z" onclick=${() => sortSectionAlpha(s.id)}>A↓</button>` : ''}` : ''}`}${uncheckButton('Décocher la section', s.items, 'Section décochée')}</h3>
+                     ${s.items.length > 1 ? html`<button class="row-btn" aria-label="Trier de A à Z" onclick=${() => sortTagAlpha(s.id)}>A↓</button>` : ''}` : ''}`}${uncheckButton("Décocher l'étiquette", s.items, 'Étiquette décochée')}</h3>
         ${folded.has(k) ? '' : html`
           ${adding === s.id ? addField(s.id, 'Nouvelle chose', 'Créer la chose') : ''}
           ${itemRows(s.items, s.id)}`}</section>`;
 }
 
-function outingCard(o){
-    const k = 'outing:' + o.id;
-    const its = [...o.sections.flatMap(x => x.items), ...o.items];
+function tripCard(o){
+    const k = 'tag:' + o.id;
+    const its = [...o.tags.flatMap(x => x.items), ...o.items];
     const complete = !editMode && its.length > 0 && its.every(it => it.done);
     return html`
-      <article class=${'outing' + (complete ? ' complete' : '')}>
-        <h2>${editing === k ? renameField(renameOuting, o.id)
+      <article class=${'trip' + (complete ? ' complete' : '')}>
+        <h2>${editing === k ? renameField(renameTag, o.id)
             : html`<span class="grow">${o.name}${countBadge(its)}</span>${editMode ? editButtons(() => startEdit(k, o.name),
-                                                    () => removeOutingHere(o.id, o.name)) : ''}`}${uncheckButton('Décocher la sortie', its, 'Sortie décochée')}</h2>
-        ${o.sections.map(s => sectionCard(s, o.id))}
-        ${o.items.length ? html`<h3>Sans section</h3>${itemRows(o.items, '', o.id)}` : ''}</article>`;
+                                                    () => removeTagHere(o.id, o.name)) : ''}`}${uncheckButton('Décocher la sortie', its, 'Sortie décochée')}</h2>
+        ${o.tags.map(s => tagCard(s, o.id))}
+        ${o.items.length ? html`<h3>Ses propres choses</h3>${itemRows(o.items, o.id)}` : ''}</article>`;
 }
 
-function orphanCard(orphans){
-    if(!orphans.length && !editMode) return '';   // nothing loose, nothing to add — hide it
+function untaggedCard(untagged){
+    if(!untagged.length && !editMode) return '';   // nothing loose, nothing to add — hide it
     return html`
       <section>
-        <h3><span class="grow">Sans section${countBadge(orphans)}</span>${editMode ? html`
-          <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(':orphan')}>+</button>` : ''}${uncheckButton('Décocher', orphans, 'Décoché')}</h3>
-        ${editMode && adding === ':orphan' ? addField(':orphan', 'Nouvelle chose', 'Créer la chose') : ''}
-        ${itemRows(orphans, '')}</section>`;
+        <h3><span class="grow">Sans étiquette${countBadge(untagged)}</span>${editMode ? html`
+          <button class="row-btn" aria-label="Nouvelle chose" onclick=${() => openAdd(':untagged')}>+</button>` : ''}${uncheckButton('Décocher', untagged, 'Décoché')}</h3>
+        ${editMode && adding === ':untagged' ? addField(':untagged', 'Nouvelle chose', 'Créer la chose') : ''}
+        ${itemRows(untagged, '')}</section>`;
 }
-function openWizard(){
-    wiz = { step: 1, kind: 'new', name: '', existing: '', picks: new Set(), itemPicks: new Set(), itemFilter: '', fromFocus: false };
-    openScreen(() => { wiz = null; paint(); });
+function openPlanner(tripId){
+    plan = { id: tripId || '', name: tripId ? (tags.get(tripId)?.name || '') : '',
+             filter: '', fromFocus: !!tripId };
+    openScreen(() => {
+        const { id, fromFocus } = plan;
+        plan = null;
+        if(id && !fromFocus){                                  // planning is the prelude to packing
+            focusId = id;
+            openScreen(() => { focusId = null; paint(); });    // so the trip gets the entry the planner had
+        }
+        paint();
+    });
     paint();
 }
 
-function sectionsOf(outingId){
-    return Object.keys(outingSections.toJSON()).filter(k => before(k) === outingId).map(after);
+function modifyTrip(id){ openPlanner(id); }
+function planTrip(){
+    if(plan.id) return plan.id;
+    const name = (plan.name || '').trim();
+    if(!name){ document.querySelector('.plan-name')?.focus(); return ''; }
+    const taken = tags.get(slug(name));
+    if(taken && !taken.trip){ notify('« ' + taken.name + ' » est déjà une étiquette'); return ''; }
+    plan.id = taken ? slug(name) : addTag(name, true);
+    return plan.id;
 }
-
-function itemsOf(outingId){
-    return Object.keys(outingItems.toJSON()).filter(k => after(k) === outingId).map(before);
-}
-
-function modifyOuting(id){
-    wiz = { step: 2, kind: 'existing', existing: id,
-            picks: new Set(sectionsOf(id)), itemPicks: new Set(itemsOf(id)), itemFilter: '', fromFocus: true };
-    openScreen(() => { wiz = null; paint(); });
+function togglePlanTag(tagId){
+    const id = planTrip(); if(!id) return;
+    const k = id + ':' + tagId;
+    if(gathers.get(k)) gathers.delete(k); else gathers.set(k, 1);
+    commit('sortie « ' + tags.get(id).name + ' » composée');
     paint();
 }
-function composeOuting(id, picks, itemPicks){
-    for(const k of Object.keys(outingSections.toJSON()))
-        if(before(k) === id && !picks.has(after(k))) outingSections.delete(k);
-    picks.forEach(sid => outingSections.set(id + ':' + sid, 1));
-    for(const k of Object.keys(outingItems.toJSON()))
-        if(after(k) === id && !itemPicks.has(before(k))) outingItems.delete(k);
-    itemPicks.forEach(iid => outingItems.set(iid + ':' + id, 1));
-    commit('sortie « ' + (outings.get(id)?.name || id) + ' » composée');
-}
 
-function wizardNext(){
-    if(wiz.kind === 'existing'){
-        wiz.existing = wiz.existing || Object.keys(outings.toJSON())[0] || '';
-        wiz.picks = new Set(sectionsOf(wiz.existing));
-        wiz.itemPicks = new Set(itemsOf(wiz.existing));
-    }
-    wiz.step = 2; paint();
-}
-
-function wizardSubmit(){
-    let id = wiz.existing;
-    if(wiz.kind === 'new'){ id = slug(wiz.name || 'sortie'); outings.set(id, { name: (wiz.name || 'Sortie').trim() }); }
-    const { picks, itemPicks, fromFocus } = wiz;
-    composeOuting(id, picks, itemPicks);
-    wiz = null;
-    focusId = id;
-    paint();
-    if(fromFocus) goBack();
-    else backStack[backStack.length - 1] = () => { focusId = null; paint(); };
-}
-
-function wizAddItem(){
-    const input = document.querySelector('.wiz-add-input');
-    const sel = document.querySelector('.wiz-add-select');
-    const label = (input.value || '').trim();
-    if(!label) return;
-    addItem(label, sel.value);
-    wiz.itemPicks.add(slug(label));
-    input.value = ''; input.focus();
+function togglePlanItem(itemId){
+    const id = planTrip(); if(!id) return;
+    toggleTag(itemId, id);
     paint();
 }
-function wizItemGroups(){
-    const secOf = {};
-    for(const k of Object.keys(itemSections.toJSON())) (secOf[before(k)] ||= []).push(after(k));
-    const q = wiz.itemFilter.trim();
-    const rows = Object.entries(items.toJSON()).filter(([id, v]) => matchesFilter(v.label, q));
-    return {
-        orphans: rows.filter(([id]) => !(secOf[id] || []).length),
-        otherSec: rows.filter(([id]) => (secOf[id] || []).length && !secOf[id].some(s => wiz.picks.has(s))),
-    };
+
+function planAddItem(){
+    const id = planTrip(); if(!id) return;
+    const box = document.querySelector('.plan-add-input');
+    const val = box.value;
+    box.value = '';
+    addItem(val, id);
+    box.focus();
 }
-function wizPick([id, v]){
-    return html`<label class="pick"><input type="checkbox" aria-label=${v.label} .checked=${wiz.itemPicks.has(id)}
-      onchange=${() => { wiz.itemPicks.has(id) ? wiz.itemPicks.delete(id) : wiz.itemPicks.add(id); paint(); }}>${v.label}</label>`;
+function planTrips(){
+    const q = slug(plan.name);
+    if(!q || plan.id) return [];
+    return Object.entries(tags.toJSON()).filter(([, v]) => v.trip && slug(v.name).includes(q));
 }
-function wizardPanel(){
-    const outs = Object.entries(outings.toJSON());
-    const groups = wizItemGroups();
-    return html`<div class="sheet-back" onclick=${backdropClose(goBack)}><div class="sheet wizard" role="dialog" aria-label="Planifier une sortie">
-      ${wiz.step === 1 ? html`
-        <h2 class="wiz-title">Planifier une sortie</h2>
-        <div class="wizrow">
-          <button class=${wiz.kind === 'new' ? 'wiz-on' : 'wiz-off'} onclick=${() => { wiz.kind = 'new'; paint(); }}>Nouvelle</button>
-          <button class=${wiz.kind === 'existing' ? 'wiz-on' : 'wiz-off'} onclick=${() => { wiz.kind = 'existing'; paint(); }}>Existante</button>
-        </div>
-        ${wiz.kind === 'new'
-          ? html`<input class="wiz-name" placeholder="Nom de la sortie" oninput=${e => wiz.name = e.target.value}>`
-          : html`<select class="wiz-name" aria-label="Sortie existante" onchange=${e => wiz.existing = e.target.value}>
-              ${outs.map(([id, v]) => html`<option value=${id}>${v.name}</option>`)}</select>`}
-        <div class="wizrow end">
-          <button class="wiz-off" onclick=${() => goBack()}>Annuler</button>
-          <button class="wiz-on" onclick=${wizardNext}>Suivant</button>
-        </div>` : html`
-        <h2 class="wiz-title">Quelles sections ?</h2>
-        ${Object.entries(sections.toJSON()).map(([id, v]) => html`
-          <label class="pick"><input type="checkbox" aria-label=${v.name} .checked=${wiz.picks.has(id)}
-            onchange=${() => { wiz.picks.has(id) ? wiz.picks.delete(id) : wiz.picks.add(id); paint(); }}>${v.name}</label>`)}
-        <h2 class="wiz-title">Quelles choses ?</h2>
-        <input type="search" class="wiz-filter" placeholder="Filtrer" aria-label="Filtrer les choses"
-               oninput=${e => { wiz.itemFilter = e.target.value; paint(); }}>
-        ${groups.orphans.length ? html`<h3 class="wiz-group">Sans section</h3>${groups.orphans.map(wizPick)}` : ''}
-        ${groups.otherSec.length ? html`<h3 class="wiz-group">Dans d'autres sections</h3>${groups.otherSec.map(wizPick)}` : ''}
-        <div class="add wiz-add">
-          <input class="wiz-add-input" placeholder="Nouvelle chose"
-                 onkeydown=${e => { if(e.key === 'Enter') wizAddItem(); }}>
-          <select class="wiz-add-select" aria-label="Section">
-            <option value="">Sans section</option>
-            ${Object.entries(sections.toJSON()).map(([id, v]) => html`<option value=${id}>${v.name}</option>`)}
-          </select>
-          <button aria-label="Ajouter la chose" onclick=${wizAddItem}>+</button>
-        </div>
-        <div class="wizrow end">
-          <button class="wiz-off" onclick=${() => { wiz.step = 1; paint(); }}>Retour</button>
-          <button class="wiz-on" onclick=${wizardSubmit}>Valider</button>
-        </div>`}
+
+function planCovered(){
+    const mine = new Set(Object.keys(gathers.toJSON()).filter(k => before(k) === plan.id).map(after));
+    const covered = new Set();
+    for(const k of Object.keys(tagged.toJSON())) if(mine.has(after(k))) covered.add(before(k));
+    return covered;
+}
+function pickTrip(id, name){
+    const box = document.querySelector('.plan-name');
+    if(box) box.value = name;
+    plan.id = id; plan.name = name; paint();
+}
+
+function plannerPanel(){
+    const trip = plan.id, hits = planTrips(), covered = trip ? planCovered() : new Set();
+    const q = plan.filter.trim();
+    return html`<div class="sheet-back" onclick=${backdropClose(goBack)}><div class="sheet planner" role="dialog" aria-label="Planifier une sortie">
+      <h2 class="sheet-title">Planifier une sortie</h2>
+      <input class="sheet-name plan-name" placeholder="Nom de la sortie" aria-label="Nom de la sortie"
+             oninput=${e => { plan.name = e.target.value; paint(); }}>
+      ${hits.length ? html`<div class="planner-trips">${hits.map(([id, v]) => html`
+        <button class="pick-target" onclick=${() => pickTrip(id, v.name)}>${v.name}</button>`)}</div>` : ''}
+      <h3 class="sheet-group">Quelles étiquettes ?</h3>
+      <div class="planner-tags">${Object.entries(tags.toJSON()).filter(([, v]) => !v.trip).map(([id, v]) => html`
+        <button class="tagchip" aria-pressed=${trip && gathers.get(trip + ':' + id) ? 'true' : 'false'}
+                onclick=${() => togglePlanTag(id)}>${v.name}</button>`)}</div>
+      <h3 class="sheet-group">Quelles choses en plus ?</h3>
+      <input type="search" class="sheet-filter" placeholder="Filtrer" aria-label="Filtrer les choses"
+             oninput=${e => { plan.filter = e.target.value; paint(); }}>
+      <div class="planner-things">${Object.entries(items.toJSON())
+        .filter(([id, v]) => !covered.has(id) && matchesFilter(v.label, q))
+        .map(([id, v]) => html`
+          <button class="tagchip" aria-pressed=${trip && tagged.get(id + ':' + trip) ? 'true' : 'false'}
+                  onclick=${() => togglePlanItem(id)}>${v.label}</button>`)}</div>
+      <div class="add">
+        <input class="plan-add-input" placeholder="Ajouter une chose" aria-label="Ajouter une chose"
+               onkeydown=${e => { if(e.key === 'Enter') planAddItem(); }}>
+        <button aria-label="Ajouter la chose" onclick=${planAddItem}>+</button>
+      </div>
     </div></div>`;
 }
 function doUndo(){ if(undo.canUndo()) undo.undo(); }
 function doRedo(){ if(undo.canRedo()) undo.redo(); }
 
-function outingChip(o){
-    const its = o.sections.flatMap(x => x.items), done = its.filter(it => it.done).length;
+function tripChip(o){
+    const its = [...o.tags.flatMap(x => x.items), ...o.items], done = its.filter(it => it.done).length;
     return html`<button class="chip" onclick=${() => { focusId = o.id; openScreen(() => { focusId = null; paint(); }); paint(); }}>
       ${o.name} <small>${done}/${its.length}</small></button>`;
 }
 
 function focusView(m){
-    const o = m.outingList.find(x => x.id === focusId);
+    const o = m.trips.find(x => x.id === focusId);
     const q = filter.trim();
     const match = it => matchesFilter(it.label, q);
-    const fo = q ? { ...o, sections: o.sections.map(s => ({ ...s, items: s.items.filter(match) })).filter(s => s.items.length),
+    const fo = q ? { ...o, tags: o.tags.map(s => ({ ...s, items: s.items.filter(match) })).filter(s => s.items.length),
                      items: o.items.filter(match) } : o;
     return html`
       <div class="toolbar">
         <button class="edit-toggle" aria-label="Retour" onclick=${() => goBack()}>← Retour</button>
         <span class="toolbar-actions">
-          <button class="row-btn" aria-label="Modifier la sortie" onclick=${() => modifyOuting(focusId)}>✎</button>
+          <button class="row-btn" aria-label="Modifier la sortie" onclick=${() => modifyTrip(focusId)}>✎</button>
           <button class="row-btn" aria-label=${folded.size ? 'Tout déplier' : 'Tout plier'}
                   onclick=${foldAll}>${folded.size ? '⊞' : '⊟'}</button>
           <button class="row-btn" aria-label=${hideChecked ? 'Afficher les choses cochées' : 'Masquer les choses cochées'}
@@ -890,9 +847,10 @@ function focusView(m){
         </span>
       </div>
       ${selected.size ? selectionBar() : ''}
+      ${mainAddField()}
       ${filterBar()}
-      ${outingCard(fo)}
-      ${wiz ? wizardPanel() : ''}
+      ${tripCard(fo)}
+      ${plan ? plannerPanel() : ''}
       ${picker ? pickerPanel() : ''}
       ${toast ? toastView() : ''}`;
 }
@@ -917,14 +875,14 @@ function leaveEdit(){ editMode = false; editing = null; selected.clear(); adding
 function toggleEdit(){ if(editMode) leaveEdit(); else { editMode = true; activeItem = null; paint(); } }
 
 function view(m){
-    onArrival(m);   // on arriving at a page, settle it: fold the done sections, float up the last stragglers
-    if(focusId && m.outingList.some(o => o.id === focusId)) return focusView(m);
-    focusId = null;   // no outing focused, or the focused one is gone — show the catalog
-    const empty = !m.outingList.length && !m.catalog.length && !m.orphans.length;
+    onArrival(m);   // on arriving at a page, settle it: fold the done cards, float up the last stragglers
+    if(focusId && m.trips.some(o => o.id === focusId)) return focusView(m);
+    focusId = null;   // no trip focused, or the focused one is gone — show the catalog
+    const empty = !m.trips.length && !m.catalog.length && !m.untagged.length;
     const q = filter.trim();
     const match = it => matchesFilter(it.label, q);
     const catalog = q ? m.catalog.map(s => ({ ...s, items: s.items.filter(match) })).filter(s => s.items.length) : m.catalog;
-    const orphans = q ? m.orphans.filter(match) : m.orphans;
+    const untagged = q ? m.untagged.filter(match) : m.untagged;
     const syncLabel = { off: 'Local', connecting: 'Connexion…', online: 'Synchronisé',
                         offline: 'Hors ligne' + (syncCode ? ' ' + syncCode : '') }[syncState];
     return html`
@@ -941,46 +899,41 @@ function view(m){
           <button class="row-btn" aria-label="Refaire" ?disabled=${!undo.canRedo()}
                   onclick=${doRedo}>↷</button>
           <button class="row-btn" aria-label="Historique" onclick=${openHistory}>🕘</button>
-          <button class="row-btn" aria-label="Planifier une sortie" onclick=${openWizard}>🧳</button>
+          <button class="row-btn" aria-label="Planifier une sortie" onclick=${() => openPlanner()}>🧳</button>
           <button class="edit-toggle" onclick=${toggleEdit}>${editMode ? 'Terminé' : 'Modifier'}</button>
           <button class="row-btn" aria-label="Tout décocher" onclick=${uncheckAll}>↺</button>
         </span>
       </div>
       ${syncUrlShown ? html`<div class="sync-url">${syncUrl || 'Local — pas de synchronisation'}</div>` : ''}
       ${selected.size ? selectionBar() : ''}
-      ${m.outingList.length ? html`<div class="outings">${m.outingList.map(outingChip)}</div>` : ''}
+      ${m.trips.length ? html`<div class="trips">${m.trips.map(tripChip)}</div>` : ''}
+      ${mainAddField()}
       ${empty && !editMode ? html`<p class="empty">Rien à prendre pour l'instant.</p>` : html`
         ${empty ? '' : filterBar()}
-        <div class=${editMode ? 'reorder-list' : ''} data-reorder=${editMode ? 'sections' : null}>${catalog.map((s, i) => sectionCard(s, '', i))}</div>
-        ${orphanCard(orphans)}
-        ${editMode ? addSectionActuator() : ''}`}
-      ${wiz ? wizardPanel() : ''}
+        <div class=${editMode ? 'reorder-list' : ''} data-reorder=${editMode ? 'tags' : null}>${catalog.map((s, i) => tagCard(s, '', i))}</div>
+        ${untaggedCard(untagged)}
+        ${editMode ? addTagActuator() : ''}`}
+      ${plan ? plannerPanel() : ''}
       ${picker ? pickerPanel() : ''}
       ${viewingFrontier ? viewingBar() : ''}
       ${historyOpen ? historyView() : ''}
       ${toast ? toastView() : ''}`;
 }
-function applyPlacement(key, dstSection, mode){
-    const [itemId, srcSection, srcOuting] = key.split('|');
-    if(srcSection === dstSection) return;
-    itemSections.set(itemId + ':' + dstSection, 1);
-    if(mode === 'move'){
-        if(srcSection) itemSections.delete(itemId + ':' + srcSection);
-        else if(srcOuting) outingItems.delete(itemId + ':' + srcOuting);
-    }
-}
-
-function moveOrCopySelected(dstSection, mode){
-    [...selected].forEach(k => applyPlacement(k, dstSection, mode));
+function tagSelected(tagId, mode){
+    [...selected].forEach(k => {
+        const itemId = k.split('|')[0];
+        if(mode === 'untag') tagged.delete(itemId + ':' + tagId);
+        else tagged.set(itemId + ':' + tagId, 1);
+    });
     selected.clear();
-    commit((mode === 'move' ? 'déplacé vers « ' : 'copié vers « ') + (sections.get(dstSection)?.name || dstSection) + ' »');
+    commit((mode === 'untag' ? 'détaché de « ' : 'étiqueté « ') + (tags.get(tagId)?.name || tagId) + ' »');
     paint();
 }
 function openPicker(mode){ picker = mode; openScreen(() => { picker = null; paint(); }); paint(); }
-function applyPick(dstSection){
-    const mode = picker, name = sections.get(dstSection).name;
-    moveOrCopySelected(dstSection, mode);
-    notify((mode === 'move' ? 'Déplacé vers « ' : 'Copié vers « ') + name + ' »');
+function applyPick(tagId){
+    const mode = picker, name = tags.get(tagId).name;
+    tagSelected(tagId, mode);
+    notify((mode === 'untag' ? 'Détaché de « ' : 'Étiqueté « ') + name + ' »');
     goBack();
 }
 
@@ -988,19 +941,19 @@ function selectionBar(){
     const n = selected.size;
     return html`<div class="selbar">
       <span class="selcount">${n} sélectionné${n > 1 ? 's' : ''}</span>
-      <button onclick=${() => openPicker('copy')}>Copier</button>
-      <button onclick=${() => openPicker('move')}>Déplacer</button>
+      <button onclick=${() => openPicker('tag')}>Étiqueter</button>
+      <button onclick=${() => openPicker('untag')}>Détacher</button>
       <button class="selclear" aria-label="Tout désélectionner" onclick=${() => { selected.clear(); paint(); }}>✕</button>
     </div>`;
 }
 
 function pickerPanel(){
-    const verb = picker === 'move' ? 'Déplacer' : 'Copier';
+    const verb = picker === 'untag' ? 'Détacher' : 'Étiqueter';
     return html`<div class="sheet-back" onclick=${backdropClose(goBack)}><div class="sheet picker" role="dialog" aria-label=${verb}>
-      <p class="sheet-msg">${verb} vers…</p>
-      ${Object.entries(sections.toJSON()).map(([id, v]) => html`
+      <p class="sheet-msg">${verb}…</p>
+      ${Object.entries(tags.toJSON()).filter(([, v]) => !v.trip).map(([id, v]) => html`
         <button class="pick-target" onclick=${() => applyPick(id)}>${v.name}</button>`)}
-      <button class="wiz-off" onclick=${() => goBack()}>Annuler</button>
+      <button class="sheet-quiet" onclick=${() => goBack()}>Annuler</button>
     </div></div>`;
 }
 function setSync(state, code = ''){ syncState = state; syncCode = code; paint(); }
@@ -1167,7 +1120,7 @@ function historyView(){
         </div>
       </div>
       ${more > 0 ? html`<p class="hist-more">+ ${more} plus anciennes</p>` : ''}
-      <button class="wiz-off" onclick=${() => goBack()}>Fermer</button>
+      <button class="sheet-quiet" onclick=${() => goBack()}>Fermer</button>
     </div></div>`;
 }
 

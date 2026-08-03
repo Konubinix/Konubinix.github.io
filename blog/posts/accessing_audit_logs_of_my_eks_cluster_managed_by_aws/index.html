@@ -61,6 +61,7 @@ only on those.</p>
 <p>Also, the data are json encoded, but because Amazons prefixes the line with
 something of its own, we have to pre process it. We still want to conserve the
 date for future analysis though.</p>
+<div class="konix-block-name-marker" data-name="process"></div>
 <p><a id="code-snippet--process"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#0550ae">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">time</span> cat <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">out</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">\
@@ -188,6 +189,69 @@ data and process it with jq. Doing so would be harder than using <code>aws logs 
 @timestamp anyway. I may investigate this path another time, but for now, it
 seems to me as unnecessarily complicated for the needs I have.</p>
 <h2 id="permalink"><a class="internal-link" href="/blog/0f71eb60-1da7-4fe7-9c34-55d1f15df1f7?title=accessing_audit_logs_of_my_eks_cluster_managed_by_aws">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
 <div class="footnotes" role="doc-endnotes">
 <hr>
 <ol>

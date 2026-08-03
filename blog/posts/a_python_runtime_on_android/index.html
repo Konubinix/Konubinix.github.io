@@ -396,6 +396,35 @@ implement.</p>
 </span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&lt;category</span> <span style="color:#1f2328">android:name=</span><span style="color:#0a3069">&#34;android.intent.category.DEFAULT&#34;</span> <span style="color:#0550ae">/&gt;</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&lt;data</span> <span style="color:#1f2328">android:mimeType=</span><span style="color:#0a3069">&#34;text/plain&#34;</span> <span style="color:#0550ae">/&gt;</span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">&lt;/intent-filter&gt;</span>
+</span></span></code></pre></div><p>Opening the camera takes more than being granted it. A service that uses one has
+to declare itself a <code>camera</code> foreground service, or Android 12 lends it the camera
+only while the app is on screen and takes it back the moment it is not — which is
+no use at all to a device whose job is to run backgrounded. The same goes for the
+microphone, for the same reason. p4a renders that service element itself and offers
+no option to add the attribute, so I patch its template on the way past.</p>
+<p>Where and when are both p4a&rsquo;s doing: it renders from the distribution it is about
+to build, and calls <code>before_apk_build</code> from that distribution&rsquo;s directory just
+before rendering. A distribution survives between builds, so a template that
+already carries the attribute is left alone; and one whose service element has
+stopped looking the way I expect means p4a has changed the shape of what it
+renders — which has to stop the build, rather than quietly yield a service that
+cannot open a camera.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">before_apk_build</span><span style="color:#1f2328">(</span>toolchain<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    path <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;templates/AndroidManifest.tmpl.xml&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        manifest <span style="color:#0550ae">=</span> f<span style="color:#0550ae">.</span>read<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;foregroundServiceType&#34;</span> <span style="color:#0550ae">in</span> manifest<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>    anchor <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;android:process=&#34;:service_{{ name }}&#34; /&gt;&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> anchor <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> manifest<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;p4a&#39;s service element no longer matches </span><span style="color:#0a3069">%r</span><span style="color:#0a3069">, so the foreground &#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;service type would be dropped in silence&#34;</span> <span style="color:#0550ae">%</span> anchor<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    typed <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;android:process=&#34;:service_{{ name }}&#34;</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#39;</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#0a3069">&#39;                 &#39;</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#0a3069">&#39;android:foregroundServiceType=&#34;camera|microphone&#34; /&gt;&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;w&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        f<span style="color:#0550ae">.</span>write<span style="color:#1f2328">(</span>manifest<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>anchor<span style="color:#1f2328">,</span> typed<span style="color:#1f2328">))</span>
 </span></span></code></pre></div><p>Now, let&rsquo;s create an application, adding a bunch of dependencies that I deem useful.</p>
 <pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">VERSION 0.8
 
@@ -424,12 +453,13 @@ generate:
         -e &#34;s/^(requirements = .+)$/\1,android,plumbum,rpyc,plyer,pyjnius,oscpy,requests${extra}/&#34; \
         -e &#34;s/# android.accept_sdk_license = False/android.accept_sdk_license = True/&#34; \
         -e &#34;s/^#android.manifest.intent_filters =.*$/android.manifest.intent_filters = intent-filter.xml/&#34; \
-        -e &#39;s/^(#android.permissions = .+)$/android.permissions = SET_TIME,SET_TIME_ZONE,WRITE_CALL_LOG,READ_CALL_LOG,WRITE_CONTACTS,READ_CONTACTS,INTERACT_ACROSS_USERS_FULL,SEND_SMS,READ_SMS,RECEIVE_SMS,WRITE_SMS,READ_PHONE_STATE,RECORD_AUDIO,CAMERA,WRITE_SETTINGS,VIBRATE,MANAGE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_LOCATION_EXTRA_COMMANDS,ACCESS_NETWORK_STATE,ACCESS_NOTIFICATION_POLICY,ACCESS_WIFI_STATE,BLUETOOTH,BLUETOOTH_ADMIN,BROADCAST_STICKY,CHANGE_NETWORK_STATE,CHANGE_WIFI_MULTICAST_STATE,CHANGE_WIFI_STATE,DISABLE_KEYGUARD,EXPAND_STATUS_BAR,FOREGROUND_SERVICE,GET_PACKAGE_SIZE,INSTALL_SHORTCUT,INTERNET,KILL_BACKGROUND_PROCESSES,MANAGE_OWN_CALLS,MODIFY_AUDIO_SETTINGS,NFC,READ_SYNC_SETTINGS,READ_SYNC_STATS,RECEIVE_BOOT_COMPLETED,REORDER_TASKS,REQUEST_COMPANION_RUN_IN_BACKGROUND,REQUEST_COMPANION_USE_DATA_IN_BACKGROUND,REQUEST_DELETE_PACKAGES,REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,SET_ALARM,SET_WALLPAPER,SET_WALLPAPER_HINTS,TRANSMIT_IR,USE_FINGERPRINT,VIBRATE,WAKE_LOCK,WRITE_SYNC_SETTINGS,BLUETOOTH, BLUETOOTH_ADMIN, BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, ACCESS_FINE_LOCATION/&#39; \
+        -e &#39;s/^(#android.permissions = .+)$/android.permissions = SET_TIME,SET_TIME_ZONE,WRITE_CALL_LOG,READ_CALL_LOG,WRITE_CONTACTS,READ_CONTACTS,INTERACT_ACROSS_USERS_FULL,SEND_SMS,READ_SMS,RECEIVE_SMS,WRITE_SMS,READ_PHONE_STATE,RECORD_AUDIO,CAMERA,WRITE_SETTINGS,VIBRATE,MANAGE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_LOCATION_EXTRA_COMMANDS,ACCESS_NETWORK_STATE,ACCESS_NOTIFICATION_POLICY,ACCESS_WIFI_STATE,BLUETOOTH,BLUETOOTH_ADMIN,BROADCAST_STICKY,CHANGE_NETWORK_STATE,CHANGE_WIFI_MULTICAST_STATE,CHANGE_WIFI_STATE,DISABLE_KEYGUARD,EXPAND_STATUS_BAR,FOREGROUND_SERVICE,FOREGROUND_SERVICE_CAMERA,FOREGROUND_SERVICE_MICROPHONE,GET_PACKAGE_SIZE,INSTALL_SHORTCUT,INTERNET,KILL_BACKGROUND_PROCESSES,MANAGE_OWN_CALLS,MODIFY_AUDIO_SETTINGS,NFC,READ_SYNC_SETTINGS,READ_SYNC_STATS,RECEIVE_BOOT_COMPLETED,REORDER_TASKS,REQUEST_COMPANION_RUN_IN_BACKGROUND,REQUEST_COMPANION_USE_DATA_IN_BACKGROUND,REQUEST_DELETE_PACKAGES,REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,SET_ALARM,SET_WALLPAPER,SET_WALLPAPER_HINTS,TRANSMIT_IR,USE_FINGERPRINT,VIBRATE,WAKE_LOCK,WRITE_SYNC_SETTINGS,BLUETOOTH, BLUETOOTH_ADMIN, BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, ACCESS_FINE_LOCATION/&#39; \
         -e &#34;s/#android.api =.+/android.api = 33/&#34; \
         -e &#34;s|^(#services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY)$|services = ${name}:./service.py:foreground:sticky|&#34; \
         -e &#39;s|#android.add_src =.*|android.add_src = java_src|&#39; \
         -e &#34;/^\[app\]/a p4a.branch = v2024.01.21&#34; \
         -e &#34;/^\[app\]/a p4a.local_recipes = ./p4a_recipes&#34; \
+        -e &#34;/^\[app\]/a p4a.hook = ./p4a_hook.py&#34; \
         buildozer.spec
 
      # -e &#34;s/#android.gradle_dependencies =.*/android.gradle_dependencies = androidx.core:core:1.12.0, androidx.work:work-runtime:2.9.0, androidx.lifecycle:lifecycle-runtime:2.6.2, androidx.security:security-crypto:1.1.0-alpha06, androidx.camera:camera-core:1.3.0, androidx.camera:camera-camera2:1.3.0, androidx.camera:camera-lifecycle:1.3.0, androidx.camera:camera-view:1.3.0, androidx.camera:camera-extensions:1.3.0/&#34; \
@@ -474,7 +504,7 @@ apk:
     ELSE
         COPY --dir ./buildozer.spec /app/
     END
-    COPY --dir java_src service.py main.py intent-filter.xml p4a_recipes /app
+    COPY --dir java_src service.py main.py intent-filter.xml p4a_hook.py p4a_recipes /app
     RUN mkdir -p /extrajars
     RUN wget http://home/ipfs/bafkreihkwiy2gr4s62laco6ewtsvakoepnybl2kt3iguyqeowvbm62ur7y --output-document /extrajars/d2xx.jar
     # give some memory to java to avoid OOM
@@ -721,7 +751,7 @@ on my phone.</p>
 </span></span><span style="display:flex;"><span>serial_port<span style="color:#0550ae">.</span>close<span style="color:#1f2328">()</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>{&#39;/dev/bus/usb/001/002&#39;: [9025, &#39;Arduino (www.arduino.cc)&#39;, 67, None]}
 </span></span><span style="display:flex;"><span>[&#39;Received: H&#39;, &#39;Received: e&#39;, &#39;Received: l&#39;, &#39;Received: l&#39;, &#39;Received: o&#39;, &#39;Received:&#39;, &#39;Received: w&#39;, &#39;Received: o&#39;, &#39;Received: r&#39;, &#39;Received: l&#39;, &#39;Received: d&#39;, &#39;Received: !&#39;]
-</span></span></code></pre></div><p>That rocks !</p>
+</span></span></code></pre></div><p>That rocks !</p>
 <h2 id="c43ce607-aae5-4f08-bfb5-dfbf38fc9eb9">note about building on old phones</h2>
 <p>To build for android 4, <a target="_blank" href="/braindump/posts/openai/?title=chatgpt#chatgpt">chatgpt</a> tells me that I need to target the API 19 (from 14 to 19) and ndk 19, the <a target="_blank" href="/braindump/posts/android/?title=sdkmanager#sdkmanager">sdkmanager</a> teels me that</p>
 <blockquote>
@@ -995,6 +1025,8 @@ less troubles. Thus, I don&rsquo;t think this use case is worth it.</p>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a target="_blank" href="/braindump/posts/android/?title=4#4">4</a> (braindump)</li>
+<li><a target="_blank" href="/braindump/posts/interval_timer/?title=a_clone_of_moodbrush_with_my_python2_kivy_runtime_on_the_wiko_cink_peax#a-clone-of-moodbrush-with-my-python2-kivy-runtime-on-the-wiko-cink-peax">a clone of moodbrush, with my python2 kivy runtime, on the wiko cink peax</a> (braindump)</li>
+<li><a target="_blank" href="/braindump/posts/an_app_to_measure_the_volume_of_ambiant_sound/?title=an_app_to_measure_the_volume_of_ambiant_sound#">an app to measure the volume of ambiant sound</a> (braindump)</li>
 <li><a target="_blank" href="/braindump/posts/android_kivy_application_to_multiple_downloads_using_the_storage_access_framework/?title=android_kivy_application_to_multiple_downloads_using_the_storage_access_framework#">android kivy application to multiple downloads using the storage access framework</a> (braindump)</li>
 <li><a target="_blank" href="/braindump/posts/buildozer/?title=buildozer#">buildozer</a> (braindump)</li>
 <li><a target="_blank" href="/braindump/posts/android/?title=change_the_orientation#change-the-orientation">change the orientation</a> (braindump)</li>

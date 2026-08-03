@@ -101,6 +101,7 @@ no sense to have one and not the other.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>npm i ts-node @playwright/test
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>added 21 packages in 3s
 </span></span></code></pre></div><p>Imagine you run the following typescript code.</p>
+<div class="konix-block-name-marker" data-name="code"></div>
 <p><a id="code-snippet--code"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-typescript" data-lang="typescript"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">expect</span> <span style="color:#1f2328">}</span> <span style="color:#cf222e">from</span> <span style="color:#0a3069">&#34;@playwright/test&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">let</span> <span style="color:#1f2328">b</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">expect</span> <span style="color:#57606a">// to avoid tree shaking
@@ -153,6 +154,7 @@ overwrite it.</p>
 playwright and then loads ts-node/register. Fortunately, the compilationCache
 module that installs the source map support is exported, so the code of the shim
 then is simply:</p>
+<div class="konix-block-name-marker" data-name="shim-tsnode"></div>
 <p><a id="code-snippet--shim-tsnode"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#1f2328">require</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;@playwright/test/lib/transform/compilationCache&#34;</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">require</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;ts-node&#34;</span><span style="color:#1f2328">).</span><span style="color:#1f2328">register</span><span style="color:#1f2328">();</span>
@@ -177,6 +179,7 @@ then is simply:</p>
 we need to setup its transpilation hooks.</p>
 <p>We know that this is done using <code>installTransform</code>. It would be nice to
 simply load transform and load this code. Like this.</p>
+<div class="konix-block-name-marker" data-name="shim-playwright"></div>
 <p><a id="code-snippet--shim-playwright"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#1f2328">require</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;@playwright/test/lib/transform/transform&#34;</span><span style="color:#1f2328">).</span><span style="color:#1f2328">installTransform</span><span style="color:#1f2328">();</span>
 </span></span></code></pre></div><p>Unfortunately, this code is not exported, so we cannot actually use it.</p>
@@ -298,6 +301,69 @@ are uninstalled, but that does not seem like an easy task.</p>
 <li><a target="_blank" href="/braindump/posts/to_transpile_data_in_nodejs/?title=to_transpile_data_in_nodejs#">to transpile data in nodejs</a> (braindump)</li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/blog/c47e70d1-a159-416b-8319-0a2fa00d28f9?title=playwright_test_ts_node_wrong_stack_traces">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
   </article>
   <aside class="date"><time>Last updated: 14 Nov 2023</time></aside>
   <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 10 Aug 2023</time></aside>
