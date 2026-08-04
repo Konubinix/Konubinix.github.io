@@ -26,39 +26,52 @@ const nameFor = (address, type) =>
     hash(address) + (EXT[type] || '.' + ((type || '').split('/')[1] || 'bin'));
 const HOST = 'https://konubinix.eu/';
 const ROUTE = { webCid: HOST + 'shareddoc/web', cid: HOST + 'shareddoc/original' };
-const media = (which, doc) => `${ROUTE[which]}?${hash(doc[which] || doc.cid)}`;
+const OPENED = String(Date.now());
+const media = (which, doc) => `${ROUTE[which]}?${doc ? hash(doc[which] || doc.cid) : OPENED}`;
 const bytes = (which, doc) => fetch(media(which, doc), { credentials: 'include' });
 const said = document.getElementById('said');
 const say = text => { said.textContent = text; };
 const stage = document.getElementById('stage');
-function draw(doc){
-    const video = String(doc.mimetype || '').startsWith('video/');
-    const el = document.createElement(video ? 'video' : 'img');
+function paint(kind, doc){
+    const el = document.createElement(kind);
     el.src = media('webCid', doc);
-    if(video) el.controls = true; else el.alt = 'the photo the frame is showing';
+    if(kind === 'video') el.controls = true; else el.alt = 'the photo the frame is showing';
     stage.replaceChildren(el);
 }
+const kindOf = doc => String(doc.mimetype || '').startsWith('video/') ? 'video' : 'img';
+async function draw(doc){
+    if(doc) return paint(kindOf(doc), doc);
+    let kind = 'img';
+    try {
+        const head = await fetch(media('webCid', null), { method: 'HEAD', credentials: 'include' });
+        if(String(head.headers.get('content-type') || '').startsWith('video/')) kind = 'video';
+    } catch(err){}
+    if(!showing) paint(kind, null);
+}
 async function send(which){
-    const doc = showing; if(!doc) return;
     if(movedOn) return say(MOVED_ON);
+    const doc = showing;
     say('');
     try {
-        const blob = await (await bytes(which, doc)).blob();
-        const name = nameFor(doc[which] || doc.cid, blob.type);
-        await navigator.share({ files: [new File([blob], name, { type: blob.type })] });
+        const answer = await bytes(which, doc);
+        const blob = await answer.blob();
+        const named = doc ? (doc[which] || doc.cid) : (answer.headers.get('x-ipfs-path') || 'photo');
+        await navigator.share({ files: [new File([blob], nameFor(named, blob.type), { type: blob.type })] });
     } catch(err){ say(String(err && err.message || err)); }
 }
 document.getElementById('send-web').onclick = () => send('webCid');
 document.getElementById('send-original').onclick = () => send('cid');
 const MOVED_ON = 'the frame has moved on — one moment';
-let showing = null, movedOn = false;
+const NO_LINK = 'open this from the access link once, so it learns the server';
+const NO_FRAME = 'no frame has said what it is showing';
+let showing = null, movedOn = false, asked = false;
 function look(){
-    if(!SYNC_URL) return say('open this from the access link once, so it learns the server');
-    const doc = room.get('doc');
-    if(!doc) return say('no frame has said what it is showing');
-    movedOn = pointed.get('cid') !== doc.cid;
-    if(!movedOn && (!showing || doc.cid !== showing.cid)){ showing = doc; draw(doc); }
-    say(movedOn ? MOVED_ON : '');
+    const doc = room.get('doc'), receipt = pointed.get('cid');
+    const vouched = doc && receipt === doc.cid ? doc : null;
+    movedOn = !!(doc && receipt !== undefined && receipt !== doc.cid);
+    if(vouched && (!showing || vouched.cid !== showing.cid)){ showing = vouched; draw(vouched); }
+    else if(!vouched && !asked){ asked = true; draw(null); }
+    say(movedOn ? MOVED_ON : !SYNC_URL ? NO_LINK : !doc ? NO_FRAME : '');
 }
 room.observe(look);
 pointed.observe(look);
