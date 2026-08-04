@@ -1,5 +1,5 @@
-const SHELL = 'frameshare-032c921';
-const KEEP = ['', 'index.html', 'app.js?032c921', 'style.css?032c921',
+const SHELL = 'frameshare-53284d3';
+const KEEP = ['', 'index.html', 'app.js?53284d3', 'style.css?53284d3',
               'manifest.json', 'icon.svg'];
 self.addEventListener('install', e => e.waitUntil(
     caches.open(SHELL).then(c => c.addAll(KEEP)).then(() => self.skipWaiting())));

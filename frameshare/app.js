@@ -14,6 +14,7 @@ const SYNC_URL = localStorage.getItem('frameshare.sync_url');
 const shared = new Y.Doc();
 const provider = SYNC_URL ? new WebsocketProvider(SYNC_URL, SYNC_ROOM, shared) : null;
 const room = shared.getMap('showing');
+const pointed = shared.getMap('pointed');
 const linkState = document.getElementById('link');
 const showLink = word => { linkState.textContent = word; linkState.dataset.state = word; };
 showLink(provider ? 'connecting' : 'offline');
@@ -39,6 +40,7 @@ function draw(doc){
 }
 async function send(which){
     const doc = showing; if(!doc) return;
+    if(movedOn) return say(MOVED_ON);
     say('');
     try {
         const blob = await (await bytes(which, doc)).blob();
@@ -48,15 +50,18 @@ async function send(which){
 }
 document.getElementById('send-web').onclick = () => send('webCid');
 document.getElementById('send-original').onclick = () => send('cid');
-let showing = null;
+const MOVED_ON = 'the frame has moved on — one moment';
+let showing = null, movedOn = false;
 function look(){
     if(!SYNC_URL) return say('open this from the access link once, so it learns the server');
     const doc = room.get('doc');
     if(!doc) return say('no frame has said what it is showing');
-    if(showing && doc.cid === showing.cid) return;
-    showing = doc; say(''); draw(doc);
+    movedOn = pointed.get('cid') !== doc.cid;
+    if(!movedOn && (!showing || doc.cid !== showing.cid)){ showing = doc; draw(doc); }
+    say(movedOn ? MOVED_ON : '');
 }
 room.observe(look);
+pointed.observe(look);
 look();
 if('serviceWorker' in navigator){
     const wasControlled = !!navigator.serviceWorker.controller;
