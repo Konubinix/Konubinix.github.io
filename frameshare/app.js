@@ -24,7 +24,7 @@ const hash = address => String(address).split('/').filter(Boolean).pop();
 const nameFor = (address, type) =>
     hash(address) + (EXT[type] || '.' + ((type || '').split('/')[1] || 'bin'));
 const HOST = 'https://konubinix.eu/';
-const ROUTE = { webCid: HOST + 'shareddoc', cid: HOST + 'shareddocoriginal' };
+const ROUTE = { webCid: HOST + 'shareddoc/web', cid: HOST + 'shareddoc/original' };
 const media = (which, doc) => `${ROUTE[which]}?${hash(doc[which] || doc.cid)}`;
 const bytes = (which, doc) => fetch(media(which, doc), { credentials: 'include' });
 const said = document.getElementById('said');
