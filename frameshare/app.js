@@ -21,11 +21,16 @@ showLink(provider ? 'connecting' : 'offline');
 if(provider) provider.on('status', e => showLink(e.status === 'connected' ? 'live' : 'offline'));
 const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/heic': '.heic',
               'video/mp4': '.mp4', 'video/quicktime': '.mov', 'video/webm': '.webm' };
-const hash = address => String(address).split('/').filter(Boolean).pop();
-const nameFor = (address, type) =>
-    hash(address) + (EXT[type] || '.' + ((type || '').split('/')[1] || 'bin'));
+const two = n => String(n).padStart(2, '0');
+const taken = when => {
+    const d = new Date(when);
+    return isNaN(d) ? null : `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`
+        + `_${two(d.getHours())}-${two(d.getMinutes())}-${two(d.getSeconds())}`;
+};
+const nameFor = (stem, type) => stem + (EXT[type] || '.' + ((type || '').split('/')[1] || 'bin'));
 const HOST = 'https://konubinix.eu/';
 const ROUTE = { webCid: HOST + 'shareddoc/web', cid: HOST + 'shareddoc/original' };
+const hash = address => String(address).split('/').filter(Boolean).pop();
 const OPENED = String(Date.now());
 const media = (which, doc) => `${ROUTE[which]}?${doc ? hash(doc[which] || doc.cid) : OPENED}`;
 const bytes = (which, doc) => fetch(media(which, doc), { credentials: 'include' });
@@ -55,8 +60,8 @@ async function send(which){
     try {
         const answer = await bytes(which, doc);
         const blob = await answer.blob();
-        const named = doc ? (doc[which] || doc.cid) : (answer.headers.get('x-ipfs-path') || 'photo');
-        await navigator.share({ files: [new File([blob], nameFor(named, blob.type), { type: blob.type })] });
+        const stem = (doc && taken(doc.date)) || 'photo';
+        await navigator.share({ files: [new File([blob], nameFor(stem, blob.type), { type: blob.type })] });
     } catch(err){ say(String(err && err.message || err)); }
 }
 document.getElementById('send-web').onclick = () => send('webCid');
