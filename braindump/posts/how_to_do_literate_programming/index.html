@@ -233,6 +233,22 @@ barely surfaces in the reading; the reader meets a promised behavior and,
 right under it, the code that pins it down. Test-specific machinery — a
 tricky fixture, an unusual harness step — earns a sentence only when it is
 genuinely hard to follow, which is rare.</p>
+<p>Somebody uses this program, and that use comes in whole sessions —
+triaging a morning&rsquo;s photos, running the cabinet frame, picking a few
+shots to send. Those sessions are the <a class="internal-link" href="/braindump/posts/verified_proved_promised_contracts_based_programming/">propositions</a> the program makes;
+everything else a test could check is a measure of one. A test written
+per feature asserts a proposition nobody holds — nobody opens a program
+in order to exercise one button — so the runtime unit is the use case,
+never the feature.</p>
+<p>Choosing the set is a design act. Every session must be one somebody
+really lives, and between them they must reach every promise the
+program makes, or a promise goes unmeasured. They will overlap a
+little whatever you do — each one opens the program and loads the same
+first screen, and that much is irreducible — but past that shared
+opening, ground walked twice is time spent measuring a promise already
+measured, so a stretch another session covers is cut from this one. A
+<strong>what</strong> that fits no session is a signal — either a story is missing
+from the set, or nobody does that thing.</p>
 <p>Three rules govern test-and-prose weaving:</p>
 <ol>
 <li>
@@ -243,37 +259,60 @@ the prose flow — the reader cannot trace which sentence promised what
 the test is checking.</p>
 </li>
 <li>
-<p><strong>Always fuse the runtime when possible.</strong> A single function runs all
-the <strong>whats</strong> together, sharing fixture and state across steps, saving
-setup time.</p>
+<p><strong>Always fuse the runtime into the use case.</strong> One function per
+session runs its <strong>whats</strong> in the order the person performs them,
+carrying state from step to step, because a chain of gestures on one
+open program is what using it looks like — an isolated one-gesture
+run is a path no human takes.</p>
 </li>
 <li>
-<p><strong>&ldquo;Possible&rdquo; means you can prove the chaining doesn&rsquo;t dilute any test&rsquo;s
-check.</strong> Each prose paragraph has promised a behaviour; the test below
-it must still fail observably when that behaviour breaks, even after
-being chained behind earlier steps. When an earlier step happens to
-mask the failure mode a downstream test should catch, the test no
-longer checks what the prose promised — the runtime splits too.</p>
+<p><strong>A block joins the session where it still bites.</strong> The session is
+the proposition, the blocks are its measures, and the document owes
+the reader the entailment between them. Each block must still fail
+observably once the earlier steps have run before it; when an
+earlier step masks the failure a block was there to catch, that
+block belongs to another session.</p>
+<p>The same entailment fails the other way round, and more quietly. A
+block that cannot fail without an earlier block failing with it is a
+<strong>step</strong>, not a measure. It may well stay — the session may need the
+state it leaves behind — but the promise it appears to pin is pinned
+upstream, and the prose must not offer it as the place that promise
+is kept. No verdict will tell you which you have: a session reports
+one outcome for all its blocks, so pure setup and pure measurement
+are the same colour from outside. A block that never turns out to be
+the one that failed is the signature to look for, and it is worth
+instrumenting — but it hands you a candidate, not an answer. Which
+blocks earn their slot as steps is read off the text, by asking of
+each what would die if only this one were wrong.</p>
 </li>
 </ol>
-<p>The two layers compose via noweb: each <strong>what</strong> lives in its own visible
-block (with prose), all sharing <code>:noweb-ref test-X-body</code>. A hidden
-wrapper (<code>:exports none</code>) does <code>&lt;&lt;test-X-body&gt;&gt;</code> to recompose the body
-into a runtime function.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;row removal splices both arrays in lockstep&#34;
+<p>The two layers compose via noweb: each <strong>what</strong> stays a visible block in
+the feature chapter that motivated it, tagged with the session it
+serves (<code>:noweb-ref triage-body</code>). The sessions come first, in a
+chapter of their own — the reader meets what the program is <strong>for</strong>
+before meeting its parts, and a block that is only a limb of a session
+cannot be read until the session binding it has been.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>── chapter &#34;Use cases&#34;, first in the note ────────────────────────
+</span></span><span style="display:flex;"><span>Prose: &#34;the triager starts from the unsorted pile, narrows to what
+</span></span><span style="display:flex;"><span>        per is sorting, then works photo by photo — retagging,
+</span></span><span style="display:flex;"><span>        redating, filing&#34;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  [block — :noweb-ref row-removal-body
-</span></span><span style="display:flex;"><span>     setup + modal-side assertions]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Prose: &#34;the post-splice state propagates through the doc to the ballot&#34;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  [block — :noweb-ref row-removal-body
-</span></span><span style="display:flex;"><span>     click &#34;Créer&#34;, advance, bulletin-side assertions]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  [hidden wrapper — :noweb-ref tests :exports none
+</span></span><span style="display:flex;"><span>  [wrapper — :noweb-ref tests
 </span></span><span style="display:flex;"><span>     @testcase
-</span></span><span style="display:flex;"><span>     def test_row_removal(page):
-</span></span><span style="display:flex;"><span>         &lt;&lt;row-removal-body&gt;&gt;]
+</span></span><span style="display:flex;"><span>     def test_triage_a_morning(page):
+</span></span><span style="display:flex;"><span>         &lt;&lt;triage-body&gt;&gt;]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>── feature chapter &#34;Searching and filtering&#34; ─────────────────────
+</span></span><span style="display:flex;"><span>Prose: &#34;a label narrows the grid to the photos carrying it&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  [block — :noweb-ref triage-body
+</span></span><span style="display:flex;"><span>     type the label, commit, assert only those photos remain]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>── feature chapter &#34;The lightbox&#34; ────────────────────────────────
+</span></span><span style="display:flex;"><span>Prose: &#34;a wrong date is fixed on the photo itself&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  [block — :noweb-ref triage-body
+</span></span><span style="display:flex;"><span>     open the photo, edit its date, assert the grid re-orders]
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;a duplicate in the list would make the tally incoherent,
 </span></span><span style="display:flex;"><span>        so we block creation and display an error message&#34;
 </span></span><span style="display:flex;"><span>

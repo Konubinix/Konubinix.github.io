@@ -2754,7 +2754,184 @@ message bus.</p>
 server in <a class="internal-link" href="/braindump/posts/scrutin_de_condorcet_randomise_entre_amis/">Condorcet</a>. The <code>server.mjs</code> and <code>package.json</code> sit
 in <code>nomad/docker/tinybasesync/</code>, and <code>clk nd build tinybasesync</code> builds and pushes the image. The Playwright
 test fixture and the nomad job both pull from the registry.</p>
-<h3 id="7c2a5e10-2b02-4a91-9002-000000000011">Provisioning a device</h3>
+<h3 id="7c2a5e10-2b02-4a91-9002-000000000012">The job that runs it</h3>
+<p>The rooms are files, so the one thing this job cannot do is
+forget its disk between restarts: a sticky ephemeral disk that
+migrates with the allocation is what makes the server a backup
+rather than a relay that happens to remember. It is declared
+rather than left to the default because <a class="internal-link" href="/braindump/posts/placement_failure_due_to_resource_dimension_disk_exhausted_hashicorp_help_center/">Nomad otherwise reserves
+300MB for every placement</a>, and a node out of disk places
+nothing. Fifty is enough because that disk holds three things
+and all are small: the rooms, the migration that carries them to
+the next allocation, and the logs — capped at two files of ten
+megabytes each, so that a server talking all day cannot crowd
+out the rooms it exists to keep.</p>
+<p>The deployment deadlines sit well past Nomad&rsquo;s defaults because
+a first pull of this image can take minutes — the pull timeout
+in the next block allows twenty — and a deployment that gave up
+before the image landed would report a failure that was only
+slowness.</p>
+<div class="konix-block-name-marker" data-name="tinybasesync-shell"></div>
+<p><a id="code-snippet--tinybasesync-shell"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">locals</span> {
+</span></span><span style="display:flex;"><span>  root <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span>
+</span></span><span style="display:flex;"><span>  job-name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span>
+</span></span><span style="display:flex;"><span>  repo <span style="color:#0550ae">=</span> <span style="color:#cf222e">file</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;jobs/conf/repo&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  memory <span style="color:#0550ae">=</span> <span style="color:#0550ae">200</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">job</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span> {
+</span></span><span style="display:flex;"><span>  datacenters <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;dc1&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">group</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">network</span> {
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">port</span> <span style="color:#0a3069">&#34;http&#34;</span> {}
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">update</span> {
+</span></span><span style="display:flex;"><span>      healthy_deadline  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;15m&#34;</span>
+</span></span><span style="display:flex;"><span>      progress_deadline <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;25m&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">ephemeral_disk</span> {
+</span></span><span style="display:flex;"><span>      migrate <span style="color:#0550ae">=</span> <span style="color:#cf222e">true</span>
+</span></span><span style="display:flex;"><span>      sticky  <span style="color:#0550ae">=</span> <span style="color:#cf222e">true</span>
+</span></span><span style="display:flex;"><span>      size    <span style="color:#0550ae">=</span> <span style="color:#0550ae">50</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">task</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span> {
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">logs</span> {
+</span></span><span style="display:flex;"><span>        max_files     <span style="color:#0550ae">=</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>        max_file_size <span style="color:#0550ae">=</span> <span style="color:#0550ae">10</span>
+</span></span><span style="display:flex;"><span>        disabled      <span style="color:#0550ae">=</span> <span style="color:#cf222e">false</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      driver <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;docker&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">config</span> {
+</span></span><span style="display:flex;"><span>        image_pull_timeout <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;20m&#34;</span>
+</span></span><span style="display:flex;"><span>        image <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;${local.repo}/tinybasesync:0.1.1&#34;</span>
+</span></span><span style="display:flex;"><span>        ports <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;http&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">env</span> {
+</span></span><span style="display:flex;"><span>        PORT<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;${NOMAD_PORT_http}&#34;</span>
+</span></span><span style="display:flex;"><span>        DATA_DIR<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;${NOMAD_ALLOC_DIR}/data/tinybasesync&#34;</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">resources</span> {
+</span></span><span style="display:flex;"><span>        cpu <span style="color:#0550ae">=</span> <span style="color:#0550ae">200</span>
+</span></span><span style="display:flex;"><span>        memory <span style="color:#0550ae">=</span> <span style="color:#cf222e">local</span><span style="color:#1f2328">.</span><span style="color:#cf222e">memory</span>
+</span></span><span style="display:flex;"><span>        memory_max <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">.</span><span style="color:#0550ae">5</span> <span style="color:#f6f8fa;background-color:#82071e">*</span> <span style="color:#cf222e">local</span><span style="color:#1f2328">.</span><span style="color:#cf222e">memory</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">service</span>  {
+</span></span><span style="display:flex;"><span>        name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span>
+</span></span><span style="display:flex;"><span>        tags <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">http_stack_index</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">Host</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span> <span style="color:#f6f8fa;background-color:#82071e">&amp;&amp;</span> <span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.tls<span style="color:#0550ae">=</span><span style="color:#cf222e">true</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.tls.certresolver<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.tls.domains[0].main<span style="color:#0550ae">=</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">check</span> {
+</span></span><span style="display:flex;"><span>          port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>          name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tinybasesync-${node.unique.name}&#34;</span>
+</span></span><span style="display:flex;"><span>          type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tcp&#34;</span>
+</span></span><span style="display:flex;"><span>          interval <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
+</span></span><span style="display:flex;"><span>          timeout  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Those rooms have to land on that disk rather than inside the
+container, so the data directory points into the allocation —
+otherwise the persistence just argued for would be writing
+somewhere a restart discards. The memory ceiling sits half again
+above the reservation, so loading or saving a large room has
+headroom without the task reserving that headroom the rest of
+the time.</p>
+<div class="konix-block-name-marker" data-name="tinybasesync-task"></div>
+<p><a id="code-snippet--tinybasesync-task"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">task</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span> {
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">logs</span> {
+</span></span><span style="display:flex;"><span>    max_files     <span style="color:#0550ae">=</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>    max_file_size <span style="color:#0550ae">=</span> <span style="color:#0550ae">10</span>
+</span></span><span style="display:flex;"><span>    disabled      <span style="color:#0550ae">=</span> <span style="color:#cf222e">false</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  driver <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;docker&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">config</span> {
+</span></span><span style="display:flex;"><span>    image_pull_timeout <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;20m&#34;</span>
+</span></span><span style="display:flex;"><span>    image <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;${local.repo}/tinybasesync:0.1.1&#34;</span>
+</span></span><span style="display:flex;"><span>    ports <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;http&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">env</span> {
+</span></span><span style="display:flex;"><span>    PORT<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;${NOMAD_PORT_http}&#34;</span>
+</span></span><span style="display:flex;"><span>    DATA_DIR<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;${NOMAD_ALLOC_DIR}/data/tinybasesync&#34;</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">resources</span> {
+</span></span><span style="display:flex;"><span>    cpu <span style="color:#0550ae">=</span> <span style="color:#0550ae">200</span>
+</span></span><span style="display:flex;"><span>    memory <span style="color:#0550ae">=</span> <span style="color:#cf222e">local</span><span style="color:#1f2328">.</span><span style="color:#cf222e">memory</span>
+</span></span><span style="display:flex;"><span>    memory_max <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">.</span><span style="color:#0550ae">5</span> <span style="color:#f6f8fa;background-color:#82071e">*</span> <span style="color:#cf222e">local</span><span style="color:#1f2328">.</span><span style="color:#cf222e">memory</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">service</span>  {
+</span></span><span style="display:flex;"><span>    name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span>
+</span></span><span style="display:flex;"><span>    tags <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">http_stack_index</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">Host</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span> <span style="color:#f6f8fa;background-color:#82071e">&amp;&amp;</span> <span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.tls<span style="color:#0550ae">=</span><span style="color:#cf222e">true</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.tls.certresolver<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.tls.domains[0].main<span style="color:#0550ae">=</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">check</span> {
+</span></span><span style="display:flex;"><span>      port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>      name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tinybasesync-${node.unique.name}&#34;</span>
+</span></span><span style="display:flex;"><span>      type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tcp&#34;</span>
+</span></span><span style="display:flex;"><span>      interval <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
+</span></span><span style="display:flex;"><span>      timeout  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Two routers reach it, plain and https, and both go through the
+house&rsquo;s authorization gate: a room anyone on the network can
+join is a room in which anyone can read the inventory, so a
+caller has to present the grant a magic link left behind. One
+router serves every room, and the gate works out which one is
+being asked for from the address itself — which is what makes a
+room a boundary rather than a naming convention.</p>
+<p>Nomad&rsquo;s own probe is TCP rather than HTTP, because the process
+answers websocket upgrades and nothing else — a GET would have
+nothing to reply with.</p>
+<div class="konix-block-name-marker" data-name="tinybasesync-service"></div>
+<p><a id="code-snippet--tinybasesync-service"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">service</span>  {
+</span></span><span style="display:flex;"><span>  name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tinybasesync&#34;</span>
+</span></span><span style="display:flex;"><span>  tags <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">http_stack_index</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">Host</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span> <span style="color:#f6f8fa;background-color:#82071e">&amp;&amp;</span> <span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.tls<span style="color:#0550ae">=</span><span style="color:#cf222e">true</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.tls.certresolver<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.tls.domains[0].main<span style="color:#0550ae">=</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>  port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">check</span> {
+</span></span><span style="display:flex;"><span>    port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>    name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tinybasesync-${node.unique.name}&#34;</span>
+</span></span><span style="display:flex;"><span>    type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tcp&#34;</span>
+</span></span><span style="display:flex;"><span>    interval <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
+</span></span><span style="display:flex;"><span>    timeout  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="7c2a5e10-2b02-4a91-9002-000000000011">Provisioning a device</h3>
 <p>Once the server is up, joining a new device to it is a matter
 of getting the sync URL onto it. The <code>?sync_url</code> query
 parameter pre-populates it, so the first time I open the app on
@@ -3157,7 +3334,7 @@ second engine.</p>
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 18 Jul 2026</time></aside>
+	  <aside class="date"><time>Last updated: 05 Aug 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 May 2026</time></aside>
     </div>
   </div>

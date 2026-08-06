@@ -105,6 +105,7 @@
 <li><a class="internal-link" href="#c0d07c0c-0040-4000-8000-000000000000">Service worker et préchargement WASM</a></li>
 <li><a class="internal-link" href="#automergesync-server">Serveur de sync automergesync</a>
 <ul>
+<li><a class="internal-link" href="#automergesync-job">Le job qui le fait tourner</a></li>
 <li><a class="internal-link" href="#sync-indicator">Indicateur de connexion</a></li>
 <li><a class="internal-link" href="#fixture-docker-sync">Fixture Docker pour tests de sync</a></li>
 </ul>
@@ -4204,6 +4205,196 @@ visit suffit pour que les visites suivantes synchent automatiquement.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#0a3069">&#34;Alice&#34;</span> <span style="color:#0550ae">in</span> identity_text <span style="color:#0550ae">and</span> <span style="color:#0a3069">&#34;a voté&#34;</span> <span style="color:#0550ae">in</span> identity_text<span style="color:#1f2328">,</span> \
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;B sans sync_url n&#39;a pas reçu le bulletin : </span><span style="color:#0a3069">{</span>identity_text<span style="color:#0a3069">!r}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: sync_url memorized&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h4 id="automergesync-job">Le job qui le fait tourner</h4>
+<p>Les documents sont des fichiers, donc ce job ne peut pas oublier son
+disque entre deux redémarrages : un disque éphémère collant, qui migre
+avec l&rsquo;allocation, est ce qui fait du serveur une sauvegarde et pas
+seulement le tuyau décrit plus haut. Il est déclaré plutôt que laissé
+par défaut parce que <a class="internal-link" href="/braindump/posts/placement_failure_due_to_resource_dimension_disk_exhausted_hashicorp_help_center/">Nomad réserve sinon 300MB par placement</a>, et un
+nœud à court de disque ne place plus rien.</p>
+<p>Cinquante va contre la recommandation de cette même note, qui
+déconseille de descendre sous 300 puisque la migration et les logs
+partagent ce disque. Le pari est qu&rsquo;ici ni l&rsquo;une ni les autres n&rsquo;en
+approchent — les logs sont pour cela plafonnés à deux fichiers de dix
+mégaoctets, pour qu&rsquo;un serveur qui parle toute la journée ne prenne pas
+la place de ce qu&rsquo;il garde. À relever au premier signe du contraire :
+un déploiement qui n&rsquo;arrive plus à migrer, ou des logs tronqués.</p>
+<p>Un premier pull de cette image prend des minutes. Nomad accorde donc
+quinze minutes à une allocation pour se déclarer saine, et vingt-cinq
+au déploiement pour progresser — le second dépasse le premier parce
+qu&rsquo;il l&rsquo;englobe. Sans cela, un déploiement abandonnerait avant
+l&rsquo;arrivée de l&rsquo;image et signalerait un échec qui n&rsquo;est que de la
+lenteur.</p>
+<div class="konix-block-name-marker" data-name="automergesync-shell"></div>
+<p><a id="code-snippet--automergesync-shell"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">locals</span> {
+</span></span><span style="display:flex;"><span>  root <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automergesync&#34;</span>
+</span></span><span style="display:flex;"><span>  job-name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automergesync&#34;</span>
+</span></span><span style="display:flex;"><span>  repo <span style="color:#0550ae">=</span> <span style="color:#cf222e">file</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;jobs/conf/repo&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  memory <span style="color:#0550ae">=</span> <span style="color:#0550ae">200</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">job</span> <span style="color:#0a3069">&#34;automergesync&#34;</span> {
+</span></span><span style="display:flex;"><span>  datacenters <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;dc1&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">group</span> <span style="color:#0a3069">&#34;automergesync&#34;</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">network</span> {
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">port</span> <span style="color:#0a3069">&#34;http&#34;</span> {}
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">update</span> {
+</span></span><span style="display:flex;"><span>      healthy_deadline  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;15m&#34;</span>
+</span></span><span style="display:flex;"><span>      progress_deadline <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;25m&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">ephemeral_disk</span> {
+</span></span><span style="display:flex;"><span>      migrate <span style="color:#0550ae">=</span> <span style="color:#cf222e">true</span>
+</span></span><span style="display:flex;"><span>      sticky  <span style="color:#0550ae">=</span> <span style="color:#cf222e">true</span>
+</span></span><span style="display:flex;"><span>      size    <span style="color:#0550ae">=</span> <span style="color:#0550ae">50</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">task</span> <span style="color:#0a3069">&#34;automergesync&#34;</span> {
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">logs</span> {
+</span></span><span style="display:flex;"><span>        max_files     <span style="color:#0550ae">=</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>        max_file_size <span style="color:#0550ae">=</span> <span style="color:#0550ae">10</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      driver <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;docker&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">config</span> {
+</span></span><span style="display:flex;"><span>        image_pull_timeout <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;20m&#34;</span>
+</span></span><span style="display:flex;"><span>        image <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;${local.repo}/automergesync:0.1.0&#34;</span>
+</span></span><span style="display:flex;"><span>        command<span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automerge-repo-sync-server&#34;</span>
+</span></span><span style="display:flex;"><span>        ports <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;http&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">env</span> {
+</span></span><span style="display:flex;"><span>        PORT<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;${NOMAD_PORT_http}&#34;</span>
+</span></span><span style="display:flex;"><span>        DATA_DIR<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;${NOMAD_ALLOC_DIR}/data/automergesync&#34;</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">resources</span> {
+</span></span><span style="display:flex;"><span>        cpu <span style="color:#0550ae">=</span> <span style="color:#0550ae">200</span>
+</span></span><span style="display:flex;"><span>        memory <span style="color:#0550ae">=</span> <span style="color:#cf222e">local</span><span style="color:#1f2328">.</span><span style="color:#cf222e">memory</span>
+</span></span><span style="display:flex;"><span>        memory_max <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">.</span><span style="color:#0550ae">5</span> <span style="color:#f6f8fa;background-color:#82071e">*</span> <span style="color:#cf222e">local</span><span style="color:#1f2328">.</span><span style="color:#cf222e">memory</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">service</span>  {
+</span></span><span style="display:flex;"><span>        name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automergesync&#34;</span>
+</span></span><span style="display:flex;"><span>        tags <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">http_stack_index</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">Host</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span> <span style="color:#f6f8fa;background-color:#82071e">&amp;&amp;</span> <span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.tls<span style="color:#0550ae">=</span><span style="color:#cf222e">true</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.tls.certresolver<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.tls.domains[0].main<span style="color:#0550ae">=</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">check</span> {
+</span></span><span style="display:flex;"><span>          port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>          name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automergesync-${node.unique.name}&#34;</span>
+</span></span><span style="display:flex;"><span>          type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>          path <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;/&#34;</span>
+</span></span><span style="display:flex;"><span>          interval <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
+</span></span><span style="display:flex;"><span>          timeout  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>L&rsquo;image ne contient que le package npm, donc la commande est le binaire
+qu&rsquo;il installe. Les documents doivent atterrir sur le disque qu&rsquo;on
+vient de réclamer plutôt que dans le conteneur : le répertoire de
+données pointe donc dans l&rsquo;allocation. Le plafond mémoire est une fois
+et demie la réservation, de quoi charger ou écrire un gros document
+sans réserver cette marge le reste du temps.</p>
+<div class="konix-block-name-marker" data-name="automergesync-task"></div>
+<p><a id="code-snippet--automergesync-task"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">task</span> <span style="color:#0a3069">&#34;automergesync&#34;</span> {
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">logs</span> {
+</span></span><span style="display:flex;"><span>    max_files     <span style="color:#0550ae">=</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>    max_file_size <span style="color:#0550ae">=</span> <span style="color:#0550ae">10</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  driver <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;docker&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">config</span> {
+</span></span><span style="display:flex;"><span>    image_pull_timeout <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;20m&#34;</span>
+</span></span><span style="display:flex;"><span>    image <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;${local.repo}/automergesync:0.1.0&#34;</span>
+</span></span><span style="display:flex;"><span>    command<span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automerge-repo-sync-server&#34;</span>
+</span></span><span style="display:flex;"><span>    ports <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;http&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">env</span> {
+</span></span><span style="display:flex;"><span>    PORT<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;${NOMAD_PORT_http}&#34;</span>
+</span></span><span style="display:flex;"><span>    DATA_DIR<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;${NOMAD_ALLOC_DIR}/data/automergesync&#34;</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">resources</span> {
+</span></span><span style="display:flex;"><span>    cpu <span style="color:#0550ae">=</span> <span style="color:#0550ae">200</span>
+</span></span><span style="display:flex;"><span>    memory <span style="color:#0550ae">=</span> <span style="color:#cf222e">local</span><span style="color:#1f2328">.</span><span style="color:#cf222e">memory</span>
+</span></span><span style="display:flex;"><span>    memory_max <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">.</span><span style="color:#0550ae">5</span> <span style="color:#f6f8fa;background-color:#82071e">*</span> <span style="color:#cf222e">local</span><span style="color:#1f2328">.</span><span style="color:#cf222e">memory</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">service</span>  {
+</span></span><span style="display:flex;"><span>    name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automergesync&#34;</span>
+</span></span><span style="display:flex;"><span>    tags <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">http_stack_index</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">Host</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span> <span style="color:#f6f8fa;background-color:#82071e">&amp;&amp;</span> <span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.tls<span style="color:#0550ae">=</span><span style="color:#cf222e">true</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.tls.certresolver<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.tls.domains[0].main<span style="color:#0550ae">=</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>      &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">check</span> {
+</span></span><span style="display:flex;"><span>      port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>      name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automergesync-${node.unique.name}&#34;</span>
+</span></span><span style="display:flex;"><span>      type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>      path <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;/&#34;</span>
+</span></span><span style="display:flex;"><span>      interval <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
+</span></span><span style="display:flex;"><span>      timeout  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Deux routeurs y mènent, en clair et en https, et tous deux passent par
+le gate de la maison : sans lui, n&rsquo;importe qui sur le réseau
+rejoindrait ce serveur et lirait les bulletins qui y passent.
+L&rsquo;appelant doit donc présenter l&rsquo;autorisation qu&rsquo;un lien lui a laissée
+dans un cookie, et ce lien est le magic link de l&rsquo;invitation : celui
+qui mémorise <code>sync_url</code> porte aussi l&rsquo;autorisation, si bien qu&rsquo;un seul
+clic arme les deux et que rien n&rsquo;est à retaper ensuite.</p>
+<p>Un seul routeur sert tout, et le gate tire de l&rsquo;adresse elle-même
+l&rsquo;autorisation qu&rsquo;il exige. Ce qu&rsquo;elle nomme est l&rsquo;espace de sync
+confié à cette app, et non un scrutin : Automerge n&rsquo;a pas de
+dossiers, un scrutin s&rsquo;identifie côté client par son
+<code>?doc=automerge:…</code>, et l&rsquo;autorisation ouvre donc toute la base. Elle
+décide qui entre dans le cercle, pas ce qu&rsquo;on y voit : <a class="internal-link" href="#c0d07c0c-0000-4000-8000-000000000002">le secret du
+bulletin</a> y est déjà un pari de confiance, et le gate est ce qui garde
+ce pari entre amis au lieu de l&rsquo;ouvrir à tout le réseau.</p>
+<p>La sonde de Nomad est une requête HTTP et non un simple port ouvert :
+un port qui accepte ne prouve pas que le relais répond, et celui-ci
+sait le prouver puisqu&rsquo;il rend 200 sur <code>/</code>.</p>
+<div class="konix-block-name-marker" data-name="automergesync-service"></div>
+<p><a id="code-snippet--automergesync-service"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">service</span>  {
+</span></span><span style="display:flex;"><span>  name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automergesync&#34;</span>
+</span></span><span style="display:flex;"><span>  tags <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">http_stack_index</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.rule<span style="color:#0550ae">=</span><span style="color:#cf222e">Host</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span> <span style="color:#f6f8fa;background-color:#82071e">&amp;&amp;</span> <span style="color:#cf222e">PathPrefix</span><span style="color:#1f2328">(</span><span style="color:#f6f8fa;background-color:#82071e">`/</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">root</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">`</span><span style="color:#1f2328">)</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.tls<span style="color:#0550ae">=</span><span style="color:#cf222e">true</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.tls.certresolver<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.tls.domains[0].main<span style="color:#0550ae">=</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>  port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">check</span> {
+</span></span><span style="display:flex;"><span>    port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>    name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;automergesync-${node.unique.name}&#34;</span>
+</span></span><span style="display:flex;"><span>    type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>    path <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;/&#34;</span>
+</span></span><span style="display:flex;"><span>    interval <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
+</span></span><span style="display:flex;"><span>    timeout  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><h4 id="sync-indicator">Indicateur de connexion</h4>
 <p>Une fois la sync armée, l&rsquo;utilisateur doit pouvoir <strong>voir</strong> en un coup
 d&rsquo;œil si son téléphone est en lien avec le serveur. Sans ça, un
@@ -4896,7 +5087,7 @@ DOM après chaque drag.</p>
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 18 Jul 2026</time></aside>
+	  <aside class="date"><time>Last updated: 05 Aug 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 18 Apr 2026</time></aside>
     </div>
   </div>

@@ -299,8 +299,7 @@ to a loop that died on its first line.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>OPENING <span style="color:#0550ae">=</span> <span style="color:#0550ae">2.0</span>                           <span style="color:#57606a"># seconds to wait for the microphone</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;sound:start&#34;</span><span style="color:#1f2328">,</span> answer<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">start</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> listening<span style="color:#0550ae">.</span>is_set<span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>        thread <span style="color:#0550ae">=</span> threading<span style="color:#0550ae">.</span>Thread<span style="color:#1f2328">(</span>target<span style="color:#0550ae">=</span>_listen<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        thread<span style="color:#0550ae">.</span>daemon <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
@@ -309,8 +308,7 @@ to a loop that died on its first line.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> listening<span style="color:#0550ae">.</span>is_set<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;sound:stop&#34;</span><span style="color:#1f2328">,</span> answer<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">stop</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    listening<span style="color:#0550ae">.</span>clear<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> listening<span style="color:#0550ae">.</span>is_set<span style="color:#1f2328">()</span>
 </span></span></code></pre></div><p>On the app&rsquo;s side there is one screen, and it does both jobs. The word is
@@ -371,9 +369,11 @@ since should not be yanked back for good news.</p>
 </span></span><span style="display:flex;"><span>    populate<span style="color:#1f2328">(</span>App<span style="color:#0550ae">.</span>get_running_app<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>sm<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>word<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;&#34;</span>
 </span></span></code></pre></div><h2 id="6c3f8a05-7b19-4e2d-91a4-58e0b2d6f713">Landing it on the phone</h2>
 <p>The listener and the screen go onto the sdcard as <code>soundmeter.py</code> and
-<code>soundmeterscreen.py</code>, tangled straight over adb. The service imports the
-listener at boot the way it imports its other features, and the app&rsquo;s front
-screen grows one more button, which opens the screen above.</p>
+<code>soundmeterscreen.py</code>, tangled straight over adb. The two messages are answered
+by the service, which reaches for the listener only when one of them arrives —
+so a device given no microphone module still boots, and only refuses when asked
+to listen. The app&rsquo;s front screen grows one more button, which opens the screen
+above.</p>
 <p>What is left is to sit at the table with it and find the two lines. Speak
 normally and nothing should happen; talk over each other and the table should
 buzz, once, a second and a half in.</p>
