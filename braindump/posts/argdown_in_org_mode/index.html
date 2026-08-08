@@ -58,7 +58,8 @@ org-babel layer <code>KONIX_argdown.el</code> (this note is its literate source)
 from our own renderer (built on Argdown&rsquo;s model, with real inline source links),
 or a static <code>:file</code> image for editing — a <strong>collector</strong> that aggregates argdown
 fragments scattered across many notes into a synthesis map, and the polish around
-it (<code>:argdown-include</code> composition, Hugo-export coloring, M-q wrapping).</p>
+it (<code>:argdown-include</code> composition, Hugo-export coloring and layout, M-q
+wrapping).</p>
 <h2 id="1f7c3a2b-0002-0000-0000-000000000001">Choice of direction</h2>
 <p>Two decisions, really: whose argument <strong>model</strong>, and whose <strong>map</strong>. For the model —
 the notation and its parser — the ways are: lean on Argdown; reach for a
@@ -355,12 +356,33 @@ cryptic message.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">set-buffer-multibyte</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">insert-file-contents-literally</span> <span style="color:#953800">file</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#1f2328">(</span><span style="color:#953800">konix/ipfa-buffer</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)</span> <span style="color:#953800">suffix</span><span style="color:#1f2328">)))</span>
+</span></span></code></pre></div><p>A note carries an argument, not the plumbing that draws it, and the map is what
+the block is for in almost every case. So a bare <code>#+begin_src argdown</code> gives the
+interactive map, and the modes below are for the rarer times you want something
+else.</p>
+<div class="konix-block-name-marker" data-name="bare-block-test"></div>
+<p><a id="code-snippet--bare-block-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">executable-find</span> <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  SKIP: argdown not on PATH&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-buffer</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#0a3069">&#34;#+begin_src argdown\n[A]: une prémisse.\n#+end_src\n&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">delay-mode-hooks</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-mode</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">goto-char</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">point-min</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">org-confirm-babel-evaluate</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">out</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-execute-src-block</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;argdown-map&#34;</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#0a3069">&#34;a bare block did not render the map: %S&#34;</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;  PASS: a bare block renders the map, no headers&#34;</span><span style="color:#1f2328">)))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: a bare block renders the map, no headers&#34;
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="argdown-default-headers"></div>
+<p><a id="code-snippet--argdown-default-headers"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defvar</span> <span style="color:#953800">org-babel-default-header-args:argdown</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">((</span><span style="color:#6639ba">:cache</span> <span style="color:#0550ae">.</span> <span style="color:#0a3069">&#34;yes&#34;</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">:results</span> <span style="color:#0550ae">.</span> <span style="color:#0a3069">&#34;output html&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Default header args for argdown src blocks — the interactive map, cached.&#34;</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><p>The dispatcher, plus a preview command. <code>:file</code> wins (render a static image
 there — Argdown&rsquo;s own Graphviz layout — and return nil so Org inserts the link);
 otherwise <code>:results output html</code> inlines our own map fragment (the renderer of
 its own section below), the shared engine injected once per page, and
-<code>:results … pdf|png</code> render and
-upload to IPFS — exactly the modes the existing notes already use.
+<code>:results … pdf|png</code> render and upload to IPFS.
 <code>argdown--compose</code> prepends the <code>:argdown-include</code> / <code>:argdown-collect</code> fragments
 first (see the <a class="internal-link" href="#1f7c3a2b-0006-0000-0000-000000000001">collector</a>). <code>konix/argdown-preview</code> reuses that same compose to
 open the block at point in a browser as the very fragment the page will embed —
@@ -490,9 +512,6 @@ open the block at point in a browser as the very fragment the page will embed �
 </span></span><span style="display:flex;"><span>                                   <span style="color:#953800">body</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>                   <span style="color:#0a3069">&#34;\n\n&#34;</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defvar</span> <span style="color:#953800">org-babel-default-header-args:argdown</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">((</span><span style="color:#6639ba">:cache</span> <span style="color:#0550ae">.</span> <span style="color:#0a3069">&#34;yes&#34;</span><span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Default header args for argdown src blocks — caching on by default.&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">org-babel-execute:argdown</span> <span style="color:#1f2328">(</span><span style="color:#953800">body</span> <span style="color:#953800">params</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;Render an Argdown BODY.  Dispatch on headers:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    - :file F                -&gt; write a static map image to F (svg/dot/pdf/png/jpg/webp),
@@ -572,7 +591,7 @@ from it; the strength propagation walks it. (<code>require</code> pulls in <code
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">json-parse-string</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">argdown--run</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown json --stdout --silent %s&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#6639ba">:object-type</span> <span style="color:#032f62">&#39;alist</span> <span style="color:#6639ba">:array-type</span> <span style="color:#032f62">&#39;list</span> <span style="color:#6639ba">:null-object</span> <span style="color:#0550ae">nil</span> <span style="color:#6639ba">:false-object</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">))</span>
-</span></span></code></pre></div><h2 id="1f7c3a2b-0008-0000-0000-000000000001">Color in the Hugo export</h2>
+</span></span></code></pre></div><h2 id="1f7c3a2b-0008-0000-0000-000000000001">The block in the Hugo export</h2>
 <p>In Emacs the <code>argdown-highlights</code> font-lock above paints <code>[statements]</code>,
 <code>&lt;arguments&gt;</code> and the <code>+=/</code>-= relations. None of that survives <code>ox-hugo</code>:
 a <code>#+begin_src argdown</code> block is emitted as a plain fenced code block, and
@@ -588,23 +607,170 @@ inline <code>color:</code> styles, theme-independent and needing no extra CSS. O
 <code>argdown</code> language; every other language still flows through Chroma
 untouched. The editing colors and the published colors now share a single
 source: the faces.</p>
-<p>Two caveats. <code>org-html-fontify-code</code> strips the enclosing <code>&lt;pre&gt;</code>, so I
-re-wrap it — and since argdown statements carry long sentences, a default
-<code>&lt;pre&gt;</code> would run them off the right edge into a horizontal scroll, so the
-re-wrapped <code>&lt;pre&gt;</code> sets <code>white-space: pre-wrap</code> (the <code>+=/</code>-= indentation is
-kept, only the overflow folds). And Goldmark must run with <code>unsafe = true</code>
-so the raw <code>&lt;pre&gt;</code> reaches the page — the same setting the TODO/tag
-recoloring in <code>KONIX_AL-ox-hugo.el</code> already relies on.</p>
-<div class="konix-block-name-marker" data-name="argdown-hugo-color"></div>
+<div class="konix-block-name-marker" data-name="hugo-color-test"></div>
+<p><a id="code-snippet--hugo-color-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">require</span> <span style="color:#032f62">&#39;ox-hugo</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">html</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-export-string-as</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;#+begin_src argdown\n[Keep Argdown]: build on it.\n  + &lt;Layout&gt;: the hard part.\n#+end_src\n&#34;</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#032f62">&#39;hugo</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;src-argdown&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;no argdown wrapper: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;color:&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;no inline color span: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;^```&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;leaked a chroma fence: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: hugo export colorizes argdown via Emacs font-lock (inline css)&#34;</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: hugo export colorizes argdown via Emacs font-lock (inline css)&#34;
+</span></span></code></pre></div><p>Goldmark must run with <code>unsafe = true</code> for the fontified HTML to reach the
+page at all — the same setting the TODO/tag recoloring in
+<code>KONIX_AL-ox-hugo.el</code> already relies on.</p>
+<p>A long statement does not fit one source line, so the note&rsquo;s source breaks it
+across several — the continuation lines belong to the same statement, and the
+map draws the whole thing as one text. Where that break falls is a fact about
+the note&rsquo;s column, not about the argument, so the page has no business showing
+it: a statement publishes as one block, its continuations merged back in.</p>
+<div class="konix-block-name-marker" data-name="hugo-statement-flows-test"></div>
+<p><a id="code-snippet--hugo-statement-flows-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">require</span> <span style="color:#032f62">&#39;ox-hugo</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">html</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-export-string-as</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;#+begin_src argdown\n[Keep Argdown]: build on it, because the parser\n    and the model are already there.\n#+end_src\n&#34;</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#032f62">&#39;hugo</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;because the parser and the model are already there&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;the statement&#39;s continuation did not merge back in: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: a statement&#39;s continuations merge back into one published block&#34;</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: a statement&#39;s continuations merge back into one published block&#34;
+</span></span></code></pre></div><p>Telling one apart from the other is the source&rsquo;s own job: a line that opens with
+a statement, an argument, a premise number or a relation marker starts a new
+block; any other line continues the one above. In practice the coloured HTML
+cannot answer that question — its spans sit exactly where the marker would be —
+but it carries one line per source line, so the two are read in step: the source
+decides, the coloured line supplies the text.</p>
+<div class="konix-block-name-marker" data-name="argdown-hugo-merge"></div>
+<p><a id="code-snippet--argdown-hugo-merge"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">konix/argdown--marker-re</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;[ \t]*\\(\\[[^]]*\\]\\|&lt;[^&gt;]*&gt;\\|([0-9]+)\\|[-+]\\|&gt;&lt;\\|=+\\|----\\|#\\)&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Regexp matching the start of an argdown structural line (statement,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">argument, premise number, relation, inference…).&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/ox-hugo--argdown-statements</span> <span style="color:#1f2328">(</span><span style="color:#953800">src</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Group HTML into (INDENT . TEXT) statements, SRC deciding where each opens.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">chop</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">s</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;\n\\&#39;&#34;</span> <span style="color:#0a3069">&#34;&#34;</span> <span style="color:#953800">s</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">srcs</span> <span style="color:#1f2328">(</span><span style="color:#953800">split-string</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">chop</span> <span style="color:#953800">src</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;\n&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">htmls</span> <span style="color:#1f2328">(</span><span style="color:#953800">split-string</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">chop</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;\n&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">col</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">s</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">-</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">length</span> <span style="color:#953800">s</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">length</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-trim-left</span> <span style="color:#953800">s</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>         <span style="color:#1f2328">(</span><span style="color:#953800">out</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">col</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">car</span> <span style="color:#953800">srcs</span><span style="color:#1f2328">))</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">car</span> <span style="color:#953800">htmls</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">srcs</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#953800">srcs</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">dolist</span> <span style="color:#1f2328">(</span><span style="color:#953800">h</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#953800">htmls</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">s</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">pop</span> <span style="color:#953800">srcs</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">or</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-empty-p</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-trim</span> <span style="color:#953800">s</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;\\`&#34;</span> <span style="color:#953800">konix/argdown--marker-re</span><span style="color:#1f2328">)</span> <span style="color:#953800">s</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">funcall</span> <span style="color:#953800">col</span> <span style="color:#953800">s</span><span style="color:#1f2328">)</span> <span style="color:#953800">h</span><span style="color:#1f2328">)</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">setcdr</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">car</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#1f2328">(</span><span style="color:#953800">cdar</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34; &#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-trim</span> <span style="color:#953800">h</span><span style="color:#1f2328">))))))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">nreverse</span> <span style="color:#953800">out</span><span style="color:#1f2328">)))</span>
+</span></span></code></pre></div><p>Wrapping is now the reader&rsquo;s business, not the note&rsquo;s, and where a fold lands is
+what makes the block readable or not. A fold at the container&rsquo;s left edge throws
+the text back under a marker it does not belong to, and the shape of the argument
+is lost at exactly the moment the eye needs it. So each statement keeps its own
+column: its marker hangs out to the left, and every line the browser folds comes
+back to where the statement&rsquo;s text began. Two columns of hang, because =+ = and
+=- = — an argdown relation marker — are exactly two characters wide, so a folded
+line lands under the statement&rsquo;s own bracket.</p>
+<p>In practice, a range over the statement&rsquo;s text reports a rectangle per drawn
+fragment rather than per line, so a line is a distinct rectangle top and its
+column is the leftmost rectangle sitting on it.</p>
+<div class="konix-block-name-marker" data-name="test-hugo-wrap-column"></div>
+<p><a id="code-snippet--test-hugo-wrap-column"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_hugo_wrap_column</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A folded line lands on its statement&#39;s own column, the marker hanging out.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>set_viewport_size<span style="color:#1f2328">({</span><span style="color:#0a3069">&#34;width&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">420</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;height&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">900</span><span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        open_page<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;hugowrap&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        g <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;writing a layered graph layout&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;&#34;&#34;e =&gt; {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          const r = document.createRange(); r.selectNodeContents(e);
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          const lines = new Map();
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          for (const b of r.getClientRects()) {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            const y = Math.round(b.y);
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            lines.set(y, Math.min(lines.get(y) ?? Infinity, Math.round(b.x)));
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          const c = document.createRange();
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          const t = document.createTreeWalker(e, NodeFilter.SHOW_TEXT).nextNode();
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          c.setStart(t, 0); c.setEnd(t, 1);
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          return {xs: [...lines.entries()].sort((a, b) =&gt; a[0] - b[0]).map(p =&gt; p[1]),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                  left: Math.round(e.closest(&#39;.src-argdown&#39;).getBoundingClientRect().x),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                  ch: c.getBoundingClientRect().width};
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        }&#34;&#34;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;xs&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the statement did not fold, nothing to measure: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;xs&#34;</span><span style="color:#1f2328">][</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;ch&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the marker did not hang out of the statement&#39;s column: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span><span style="color:#6639ba">set</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;xs&#34;</span><span style="color:#1f2328">][</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]))</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;folded lines landed on different columns: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;xs&#34;</span><span style="color:#1f2328">][</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">4</span> <span style="color:#0550ae">*</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;ch&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;a folded line missed its statement&#39;s column: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: a folded line lands on its statement&#39;s own column&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">finally</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        page<span style="color:#0550ae">.</span>set_viewport_size<span style="color:#1f2328">(</span>PHONE_VIEWPORT<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>An argument sets its title apart from its premises with a blank line, and that
+gap is the reader&rsquo;s cue that a reconstruction is starting. It is part of the
+argument, not of the note&rsquo;s layout, so it survives into the page.</p>
+<div class="konix-block-name-marker" data-name="test-hugo-blank-line"></div>
+<p><a id="code-snippet--test-hugo-blank-line"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_hugo_blank_line</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;The gap before a reconstruction survives: its premise sits two lines down.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    open_page<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;hugogap&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    box <span style="color:#0550ae">=</span> <span style="color:#cf222e">lambda</span> text<span style="color:#1f2328">:</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span>text<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;e =&gt; {const b = e.getBoundingClientRect(); return {top: b.y, h: b.height};}&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    title <span style="color:#0550ae">=</span> box<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;what follows is its skeleton&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    premise <span style="color:#0550ae">=</span> box<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;something established&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> title<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;h&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> premise<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;h&#34;</span><span style="color:#1f2328">],</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;a line folded, so line heights cannot be compared: </span><span style="color:#0a3069">{</span>title<span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">{</span>premise<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">((</span>premise<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;top&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> title<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;top&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> premise<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;h&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the blank line did not survive into the page: </span><span style="color:#0a3069">{</span>title<span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">{</span>premise<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: a blank source line stays a blank line&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>A block ends with its last statement. The newline closing the source&rsquo;s final line
+terminates that line rather than opening another, so nothing follows it on the
+page — a gap hanging off the foot of the block would read as a statement the
+author began and left empty.</p>
+<div class="konix-block-name-marker" data-name="test-hugo-block-end"></div>
+<p><a id="code-snippet--test-hugo-block-end"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_hugo_block_ends_with_source</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A block ends with its last statement, nothing hanging below it.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    open_page<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;hugogap&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    g <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;therefore something follows&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;e =&gt; ({last: e.getBoundingClientRect().bottom,&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34; block: e.closest(&#39;.src-argdown&#39;).getBoundingClientRect().bottom,&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34; h: e.getBoundingClientRect().height})&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;block&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;last&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the block outlives its last statement: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: a block ends where its source ends&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>Counting in columns only works if a column has a fixed width, so the block keeps
+the fixed-width font its source is written in — every character is then exactly
+one column, and the indentation the reader sees is the one the note wrote.</p>
+<p>In practice an empty element draws nothing at all, so the blank line carries a
+line break to claim the one line of height it is there to occupy.</p>
+<div class="konix-block-name-marker" data-name="argdown-hugo-block"></div>
+<p><a id="code-snippet--argdown-hugo-block"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">konix/argdown--hang</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Columns a statement&#39;s marker hangs out of its text column.&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/ox-hugo--argdown-block</span> <span style="color:#1f2328">(</span><span style="color:#953800">statements</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Render STATEMENTS, each (INDENT . TEXT), as one block keeping its columns.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;&lt;div class=\&#34;src src-argdown\&#34; style=\&#34;font-family:monospace;\&#34;&gt;\n&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">mapconcat</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">s</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">text</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-trim-left</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#953800">s</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;&lt;div style=\&#34;padding-left:%dch;text-indent:-%dch;\&#34;&gt;%s&lt;/div&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>                       <span style="color:#1f2328">(</span><span style="color:#6639ba">+</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">car</span> <span style="color:#953800">s</span><span style="color:#1f2328">)</span> <span style="color:#953800">konix/argdown--hang</span><span style="color:#1f2328">)</span> <span style="color:#953800">konix/argdown--hang</span>
+</span></span><span style="display:flex;"><span>                       <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-empty-p</span> <span style="color:#953800">text</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;&lt;br&gt;&#34;</span> <span style="color:#953800">text</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#953800">statements</span> <span style="color:#0a3069">&#34;\n&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0a3069">&#34;\n&lt;/div&gt;\n&#34;</span><span style="color:#1f2328">))</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="argdown-hugo-color"></div>
 <p><a id="code-snippet--argdown-hugo-color"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/ox-hugo--argdown-html</span> <span style="color:#1f2328">(</span><span style="color:#953800">src-block</span> <span style="color:#953800">info</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return SRC-BLOCK fontified as inline-styled argdown HTML.
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Chroma has no argdown lexer, so colorize with </span><span style="color:#032f62">`argdown-mode&#39;</span><span style="color:#0a3069"> + htmlize.
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`org-html-fontify-code&#39;</span><span style="color:#0a3069"> strips the enclosing &lt;pre&gt;, so re-wrap it.&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;&lt;pre class=\&#34;src src-argdown\&#34; style=\&#34;white-space:pre-wrap;\&#34;&gt;\n%s&lt;/pre&gt;\n&#34;</span>
-</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#953800">org-html-fontify-code</span>
-</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">org-export-format-code-default</span> <span style="color:#953800">src-block</span> <span style="color:#953800">info</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>           <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return SRC-BLOCK fontified as inline-styled argdown HTML.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">src</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-export-format-code-default</span> <span style="color:#953800">src-block</span> <span style="color:#953800">info</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">konix/ox-hugo--argdown-block</span>
+</span></span><span style="display:flex;"><span>     <span style="color:#1f2328">(</span><span style="color:#953800">konix/ox-hugo--argdown-statements</span> <span style="color:#953800">src</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-html-fontify-code</span> <span style="color:#953800">src</span> <span style="color:#0a3069">&#34;argdown&#34;</span><span style="color:#1f2328">)))))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/ox-hugo-src-block--argdown</span> <span style="color:#1f2328">(</span><span style="color:#953800">orig</span> <span style="color:#953800">src-block</span> <span style="color:#953800">contents</span> <span style="color:#953800">info</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Fontify argdown src blocks with Emacs; defer everything else to ORIG.&#34;</span>
@@ -621,8 +787,8 @@ disinterested witness; a witness is not a documented record; none of them is a
 reproducible study. I want that nuance <strong>visible on the map</strong>, not buried in
 prose. So this is a small controlled vocabulary of <code>#(tags)</code> — a GENERIC ladder
 of proof, ranked by the TYPE of warrant backing a claim, weakest → strongest. It
-is grounded in the zététique « échelle de la preuve » (Thomas Durand) and the
-AFIS « niveaux de preuve » (Denis Caroti), which rest in turn on Hume/Laplace and
+is grounded in the zététique « échelle de la preuve » (Thomas Durand) and the
+AFIS « niveaux de preuve » (Denis Caroti), which rest in turn on Hume/Laplace and
 the GRADE evidence hierarchy — not invented for this note:</p>
 <table>
   <thead>
@@ -1049,12 +1215,6 @@ dispatcher, so its <code>[thèse]</code> sits with the gathered fragments.</p>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#57606a">;;; Editing comfort — wrap long statement lines, on M-q</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defconst</span> <span style="color:#953800">konix/argdown--marker-re</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;[ \t]*\\(\\[[^]]*\\]\\|&lt;[^&gt;]*&gt;\\|([0-9]+)\\|[-+]\\|&gt;&lt;\\|=+\\|----\\|#\\)&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Regexp matching the start of an argdown structural line (statement,
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">argument, premise number, relation, inference…), anchored at point via
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"></span><span style="color:#032f62">`looking-at&#39;</span><span style="color:#0a3069">.  Lines that don&#39;t match are description continuations.&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">konix/argdown--stmt-bounds</span> <span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Return (BEG . END) of the argdown statement paragraph at point, or nil.
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">BEG is the bol of its structural start line, END the eol of its last
@@ -1238,10 +1398,10 @@ leak in.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">member</span> <span style="color:#0a3069">&#34;CCC&#34;</span> <span style="color:#953800">sub</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;subtree leaked sibling: %S&#34;</span> <span style="color:#953800">sub</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: subtree scope keeps the section&#39;s links, drops the sibling&#39;s&#34;</span><span style="color:#1f2328">))</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: subtree scope keeps the section&#39;s links, drops the sibling&#39;s&#34;
-</span></span></code></pre></div><p>The fourth test pins <code>:argdown-include</code> (« notre mode ») — composition by
+</span></span></code></pre></div><p>The fourth test pins <code>:argdown-include</code> (« notre mode ») — composition by
 <strong>named block</strong>, recursive and cross-file, without the <code>name-ex()</code> wrapper
 boilerplate. A premise <code>prem-a</code> and an argument <code>arg-b</code> that declares
-<code>:argdown-include prem-a</code> ; pulling <code>arg-b</code> must transitively bring <code>prem-a</code>,
+<code>:argdown-include prem-a</code> ; pulling <code>arg-b</code> must transitively bring <code>prem-a</code>,
 and the rendered map must link <code>[A]</code> to <code>&lt;B&gt;</code>.</p>
 <div class="konix-block-name-marker" data-name="include-test"></div>
 <p><a id="code-snippet--include-test"></a></p>
@@ -1265,25 +1425,7 @@ and the rendered map must link <code>[A]</code> to <code>&lt;B&gt;</code>.</p>
 </span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;  PASS: :argdown-include tire arg-b et, récursivement, sa prémisse prem-a (cross-fichier)&#34;</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">delete-directory</span> <span style="color:#953800">dir</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: :argdown-include tire arg-b et, récursivement, sa prémisse prem-a (cross-fichier)&#34;
-</span></span></code></pre></div><p>The fifth test pins the <a class="internal-link" href="#1f7c3a2b-0008-0000-0000-000000000001">Hugo color</a> path: exporting an argdown block
-through the <code>hugo</code> backend must yield <strong>Emacs-fontified</strong> HTML — our
-<code>src-argdown</code> wrapper carrying inline <code>color:</code> spans — and not a bare
-Chroma fence. It drives the <code>:around</code> advice end to end, so green there
-means the published map&rsquo;s source listing is colored the way it is while
-editing.</p>
-<div class="konix-block-name-marker" data-name="hugo-color-test"></div>
-<p><a id="code-snippet--hugo-color-test"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">require</span> <span style="color:#032f62">&#39;ox-hugo</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">((</span><span style="color:#953800">html</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-export-string-as</span>
-</span></span><span style="display:flex;"><span>               <span style="color:#0a3069">&#34;#+begin_src argdown\n[Keep Argdown]: build on it.\n  + &lt;Layout&gt;: the hard part.\n#+end_src\n&#34;</span>
-</span></span><span style="display:flex;"><span>               <span style="color:#032f62">&#39;hugo</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">)))</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;src-argdown&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;no argdown wrapper: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;color:&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;no inline color span: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#1f2328">(</span><span style="color:#953800">string-match-p</span> <span style="color:#0a3069">&#34;^```&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">nil</span> <span style="color:#0a3069">&#34;leaked a chroma fence: %S&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;  PASS: hugo export colorizes argdown via Emacs font-lock (inline css)&#34;</span><span style="color:#1f2328">))</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: hugo export colorizes argdown via Emacs font-lock (inline css)&#34;
-</span></span></code></pre></div><p>The sixth test pins <code>:argdown-mode strict</code>. By default <code>+</code> between two
+</span></span></code></pre></div><p>The fifth test pins <code>:argdown-mode strict</code>. By default <code>+</code> between two
 statements reads as <strong>support</strong> (dialectical); in strict mode it becomes
 <strong>entailment</strong> (logical) — and an argument&rsquo;s <code>+=/</code>-= stay support/attack. The
 test composes the same <code>[B] + [A]</code> both ways through <code>argdown--compose</code> and
@@ -1311,7 +1453,7 @@ control is what makes the test discriminate — a no-op would fail it.</p>
 </span></span><span style="display:flex;"><span>                 <span style="color:#0a3069">&#34;loose: + between statements should support, got %S&#34;</span> <span style="color:#953800">loose</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;  PASS: :argdown-mode strict makes + between statements entail (loose: support)&#34;</span><span style="color:#1f2328">)))</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: :argdown-mode strict makes + between statements entail (loose: support)&#34;
-</span></span></code></pre></div><p>The seventh test pins the <a class="internal-link" href="#1f7c3a2b-0011-0000-0000-000000000001">epistemic nuance scale</a>: the house tag colours are
+</span></span></code></pre></div><p>The sixth test pins the <a class="internal-link" href="#1f7c3a2b-0011-0000-0000-000000000001">epistemic nuance scale</a>: the house tag colours are
 a cross-note convention, so <code>argdown--compose</code> must inject them — as Argdown
 <code>color.tagColors</code>, in a frontmatter at the <strong>very top</strong> — into every map without
 the note declaring anything. It checks the composed input leads with the
@@ -1345,7 +1487,7 @@ into that <strong>same single</strong> block (not a second <code>===</code>, whi
 </span></span><span style="display:flex;"><span>                 <span style="color:#0a3069">&#34;tagged node did not take the scale colour: %S&#34;</span> <span style="color:#953800">svg</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;  PASS: epistemic colours injected at top, strict folds in, tagged node coloured&#34;</span><span style="color:#1f2328">)))</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: epistemic colours injected at top, strict folds in, tagged node coloured&#34;
-</span></span></code></pre></div><p>The eighth test pins the <a class="internal-link" href="#1f7c3a2b-0011-0000-0000-000000000003">strength propagation</a>: a conclusion must inherit
+</span></span></code></pre></div><p>The seventh test pins the <a class="internal-link" href="#1f7c3a2b-0011-0000-0000-000000000003">strength propagation</a>: a conclusion must inherit
 the colour of its best supporting argument&rsquo;s <strong>weakest</strong> premise, recursively
 through chains, while an <strong>asserted</strong> tag on a conclusion is left untouched.
 <code>arg1</code> concludes <code>[C1]</code> from a <code>constat</code> and an <code>affirmation péremptoire</code> (so
@@ -1390,7 +1532,7 @@ really renders the propagated colour.</p>
 </span></span><span style="display:flex;"><span>                 <span style="color:#0a3069">&#34;propagated colour not rendered on a node: %S&#34;</span> <span style="color:#953800">svg</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#0a3069">&#34;  PASS: weakest-link propagation to conclusions, recursive through chains, tagged conclusions kept&#34;</span><span style="color:#1f2328">)))</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: weakest-link propagation to conclusions, recursive through chains, tagged conclusions kept&#34;
-</span></span></code></pre></div><p>The ninth test pins the <a class="internal-link" href="#1f7c3a2b-0011-0000-0000-000000000003">inference-force axis</a>: `&ndash; {force: &ldquo;&lt;level&gt;&rdquo;} &ndash;&rsquo; must
+</span></span></code></pre></div><p>The eighth test pins the <a class="internal-link" href="#1f7c3a2b-0011-0000-0000-000000000003">inference-force axis</a>: `&ndash; {force: &ldquo;&lt;level&gt;&rdquo;} &ndash;&rsquo; must
 enter the weakest-link <code>min</code>, so a gold premise (<code>acte authentique</code>) behind a
 <code>non sequitur</code> still yields a <strong>weak</strong> (<code>#a50026</code>) conclusion; an argument with no
 inference marker keeps its premise strength (backwards-compatible); and each
@@ -1465,7 +1607,7 @@ transitive and Argdown merges <code>[statements]</code> / <code>&lt;arguments&gt
 pulling the same block in via two paths is deduped (harmless). The flip
 side: a mistyped title in a relation mints a <strong>new empty node</strong> instead of
 erroring — so check references explicitly (<code>note_grep</code>) when renaming or
-deleting a node. Titles tolerate <code>:</code> and <code>« »</code>, but keep them short; the
+deleting a node. Titles tolerate <code>:</code> and <code>« »</code>, but keep them short; the
 body carries the verbatim.</p>
 </li>
 <li>
@@ -1509,7 +1651,7 @@ shared engine riding along once per page.</li>
 <li><strong>Strength</strong> — <a class="internal-link" href="#1f7c3a2b-0011-0000-0000-000000000003"><code>argdown--strength</code></a>&rsquo;s weakest-link grade (over premises
 AND inference force, best over arguments, asserted tag wins) drives the
 colours directly, in one pass; and the grade shows as a <strong>badge</strong>, not only a
-tint — « dire la force de l&rsquo;argument ».</li>
+tint — « dire la force de l&rsquo;argument ».</li>
 <li><strong>Fold</strong> — collapse / expand subtrees, relayout on fold.</li>
 </ol>
 <p>Navigation it does <strong>not</strong> own. The map is a full-size, page-scrolled <code>&lt;svg&gt;</code>, so
@@ -2473,7 +2615,7 @@ around it works, just as on any page.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> box<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;width&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">20</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;link label too small to tap: </span><span style="color:#0a3069">{</span>box<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: link is a visible, tappable label&#34;</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><p>An argument is only as strong as its evidence, and the map should <strong>say</strong> so, not
-merely tint it — « dire la force de l&rsquo;argument ». A node wears a small badge
+merely tint it — « dire la force de l&rsquo;argument ». A node wears a small badge
 naming its grade, coloured on the house scale. (The badge names either the tag
 a node carries <strong>directly</strong> or the weakest link a conclusion or argument
 <strong>inherits</strong> — the premise or inference that caps its strength; a matching tint
@@ -2841,6 +2983,9 @@ their own. It is a <strong>run-once</strong> step — run it when the renderer o
 tangling the note doesn&rsquo;t touch the fixtures, so a tangle stays fast. Rendering
 exactly what the publish path emits is what makes a green here mean the shipped
 map holds.</p>
+<p>The wrapping a reader meets is the <a class="internal-link" href="#1f7c3a2b-0008-0000-0000-000000000001">export</a>&rsquo;s, not the map&rsquo;s, so one page carries
+no map at all: its block goes through the <code>hugo</code> backend itself, frontmatter
+dropped the way Hugo drops it, into the same skeleton.</p>
 <div class="konix-block-name-marker" data-name="render-argdown-fixtures"></div>
 <p><a id="code-snippet--render-argdown-fixtures"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">dir</span> <span style="color:#0a3069">&#34;/var/run/user/1000/argdown/fixtures&#34;</span><span style="color:#1f2328">)</span>
@@ -2868,6 +3013,18 @@ map holds.</p>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#953800">f</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#0a3069">&#34;twomap.html&#34;</span> <span style="color:#953800">dir</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-file</span> <span style="color:#953800">f</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#953800">html</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#953800">f</span> <span style="color:#953800">made</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">dolist</span> <span style="color:#1f2328">(</span><span style="color:#953800">n</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;hugowrap&#34;</span> <span style="color:#0a3069">&#34;hugogap&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">body</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">nth</span> <span style="color:#0550ae">1</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">save-excursion</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#6639ba">goto-char</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-find-named-block</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;body-&#34;</span> <span style="color:#953800">n</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#953800">org-babel-get-src-block-info</span> <span style="color:#032f62">&#39;no-eval</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">html</span> <span style="color:#1f2328">(</span><span style="color:#953800">org-export-string-as</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#0a3069">&#34;#+begin_src argdown\n&#34;</span> <span style="color:#953800">body</span> <span style="color:#0a3069">&#34;\n#+end_src\n&#34;</span><span style="color:#1f2328">)</span> <span style="color:#032f62">&#39;hugo</span> <span style="color:#0550ae">t</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#1f2328">(</span><span style="color:#953800">f</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">expand-file-name</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">concat</span> <span style="color:#953800">n</span> <span style="color:#0a3069">&#34;.html&#34;</span><span style="color:#1f2328">)</span> <span style="color:#953800">dir</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">with-temp-file</span> <span style="color:#953800">f</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">insert</span> <span style="color:#0a3069">&#34;&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset=\&#34;utf-8\&#34;&gt;&lt;/head&gt;&lt;body&gt;\n&#34;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;\\`\\+\\+\\+\n\\(?:.*\n\\)*?\\+\\+\\+\n&#34;</span> <span style="color:#0a3069">&#34;&#34;</span> <span style="color:#953800">html</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;\n&lt;/body&gt;&lt;/html&gt;&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#953800">f</span> <span style="color:#953800">made</span><span style="color:#1f2328">)))</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">mapconcat</span> <span style="color:#6639ba">#&#39;identity</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">nreverse</span> <span style="color:#953800">made</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;\n&#34;</span><span style="color:#1f2328">))</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;/var/run/user/1000/argdown/fixtures/sample.html
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/untitled.html
@@ -2880,7 +3037,9 @@ map holds.</p>
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/dupe.html
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/strict.html
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/fanout.html
-</span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/twomap.html&#34;
+</span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/twomap.html
+</span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/hugowrap.html
+</span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/hugogap.html&#34;
 </span></span></code></pre></div><p>The sample pro/con map — read by the self-containment, edges and layout tests.</p>
 <div class="konix-block-name-marker" data-name="body-sample"></div>
 <p><a id="code-snippet--body-sample"></a></p>
@@ -2998,6 +3157,22 @@ the clicked node far. Read by the fold-keeps-in-view test.</p>
         + [leaf ten]: sub-support ten.
     + &lt;Small branch&gt;: a narrow branch off to one side.
         + [only leaf]: its single sub-support.
+</code></pre><p>A reconstruction, its title set apart from its premises — read by the
+blank-line check.</p>
+<div class="konix-block-name-marker" data-name="body-hugogap"></div>
+<p><a id="code-snippet--body-hugogap"></a></p>
+<pre tabindex="0"><code class="language-argdown" data-lang="argdown">&lt;The reconstruction&gt;: what follows is its skeleton.
+
+(1) [Premise one]: something established.
+----
+(2) [Conclusion]: therefore something follows.
+</code></pre><p>A claim and a nested relation whose text outruns any sensible column — read by
+the wrapping check.</p>
+<div class="konix-block-name-marker" data-name="body-hugowrap"></div>
+<p><a id="code-snippet--body-hugowrap"></a></p>
+<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Keep Argdown]: build on Argdown rather than reinventing the notation.
+  + &lt;Layout is the hard part&gt;: writing a layered graph layout that folds and
+      reflows is years of work, and the map is where that work shows.
 </code></pre><p>The suite&rsquo;s own preamble: its imports, the shared browser-path shim that points
 Playwright at the nix chromium, and where the fixtures live.</p>
 <div class="konix-block-name-marker" data-name="argdown-test-imports"></div>
@@ -3009,15 +3184,20 @@ Playwright at the nix chromium, and where the fixtures live.</p>
 </span></span><span style="display:flex;"><span>APP <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;argdown-map&#34;</span>
 </span></span><span style="display:flex;"><span>PHONE_VIEWPORT <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;width&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">1200</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;height&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">900</span><span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>FIXTURES <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;/var/run/user/1000/argdown/fixtures&#34;</span>
-</span></span></code></pre></div><p>The helpers: the shared <code>@testcase</code> registry and failure dump, plus <code>open_map</code>,
-which loads a rendered fixture and waits for its SVG.</p>
+</span></span></code></pre></div><p>The helpers: the shared <code>@testcase</code> registry and failure dump, plus the
+loaders. An export page carries no map, so waiting for one cannot live in the
+loader every check shares — <code>open_page</code> opens the fixture, and <code>open_map</code> waits
+on top of it for the map to arrive.</p>
 <div class="konix-block-name-marker" data-name="argdown-test-helpers"></div>
 <p><a id="code-snippet--argdown-test-helpers"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>nil
 </span></span><span style="display:flex;"><span>nil
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_map</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_page</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;file://&#34;</span> <span style="color:#0550ae">+</span> os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>FIXTURES<span style="color:#1f2328">,</span> name <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;.html&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_map</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    open_page<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_selector<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.argdown-map svg&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">node</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> title<span style="color:#1f2328">):</span>
@@ -3070,8 +3250,8 @@ test reads off the nodes&rsquo; distinct vertical bands.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: wide fan wraps across rows&#34;</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><p>A large map is unreadable all at once, so it folds: clicking a claim collapses
 the argument beneath it — its supporting subtree — and clicking again brings it
-back, the map reflowing each time. In the sample, folding « Bus factor » hides
-its lone support « Fork is cheap ».</p>
+back, the map reflowing each time. In the sample, folding « Bus factor » hides
+its lone support « Fork is cheap ».</p>
 <div class="konix-block-name-marker" data-name="test-fold"></div>
 <p><a id="code-snippet--test-fold"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
@@ -3201,7 +3381,7 @@ it is the argument <strong>supporting</strong> it — so tapping the band near �
 </span></span></code></pre></div><p>Because the engine is shared, several maps can sit on one page — and each must
 lay out in its own box, not merge into one graph. The <code>twomap</code> fixture puts the
 sample map beside the pcs map under a single runtime; each keeps its own nodes
-and gets its own sized <code>&lt;svg&gt;</code>, and « Bus factor » (the sample&rsquo;s) never leaks
+and gets its own sized <code>&lt;svg&gt;</code>, and « Bus factor » (the sample&rsquo;s) never leaks
 into the other.</p>
 <div class="konix-block-name-marker" data-name="test-multiple-maps"></div>
 <p><a id="code-snippet--test-multiple-maps"></a></p>
@@ -3251,8 +3431,11 @@ write this script, then run it.</p>
 </span></span><span style="display:flex;"><span>nil
 </span></span><span style="display:flex;"><span>nil
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_map</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_page</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>goto<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;file://&#34;</span> <span style="color:#0550ae">+</span> os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>FIXTURES<span style="color:#1f2328">,</span> name <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;.html&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_map</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    open_page<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> name<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>wait_for_selector<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.argdown-map svg&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">node</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> title<span style="color:#1f2328">):</span>
@@ -3262,6 +3445,59 @@ write this script, then run it.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> page<span style="color:#0550ae">.</span>locator<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.argdown-node&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>filter<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        has<span style="color:#0550ae">=</span>page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span>title<span style="color:#1f2328">,</span> exact<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_hugo_wrap_column</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A folded line lands on its statement&#39;s own column, the marker hanging out.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>set_viewport_size<span style="color:#1f2328">({</span><span style="color:#0a3069">&#34;width&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">420</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;height&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0550ae">900</span><span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        open_page<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;hugowrap&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        g <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;writing a layered graph layout&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;&#34;&#34;e =&gt; {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          const r = document.createRange(); r.selectNodeContents(e);
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          const lines = new Map();
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          for (const b of r.getClientRects()) {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            const y = Math.round(b.y);
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            lines.set(y, Math.min(lines.get(y) ?? Infinity, Math.round(b.x)));
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          const c = document.createRange();
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          const t = document.createTreeWalker(e, NodeFilter.SHOW_TEXT).nextNode();
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          c.setStart(t, 0); c.setEnd(t, 1);
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">          return {xs: [...lines.entries()].sort((a, b) =&gt; a[0] - b[0]).map(p =&gt; p[1]),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                  left: Math.round(e.closest(&#39;.src-argdown&#39;).getBoundingClientRect().x),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                  ch: c.getBoundingClientRect().width};
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        }&#34;&#34;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;xs&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&gt;</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the statement did not fold, nothing to measure: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;xs&#34;</span><span style="color:#1f2328">][</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;ch&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the marker did not hang out of the statement&#39;s column: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span><span style="color:#6639ba">set</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;xs&#34;</span><span style="color:#1f2328">][</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]))</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;folded lines landed on different columns: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">assert</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;xs&#34;</span><span style="color:#1f2328">][</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">4</span> <span style="color:#0550ae">*</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;ch&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;a folded line missed its statement&#39;s column: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: a folded line lands on its statement&#39;s own column&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">finally</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        page<span style="color:#0550ae">.</span>set_viewport_size<span style="color:#1f2328">(</span>PHONE_VIEWPORT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_hugo_blank_line</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;The gap before a reconstruction survives: its premise sits two lines down.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    open_page<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;hugogap&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    box <span style="color:#0550ae">=</span> <span style="color:#cf222e">lambda</span> text<span style="color:#1f2328">:</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span>text<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;e =&gt; {const b = e.getBoundingClientRect(); return {top: b.y, h: b.height};}&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    title <span style="color:#0550ae">=</span> box<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;what follows is its skeleton&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    premise <span style="color:#0550ae">=</span> box<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;something established&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> title<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;h&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> premise<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;h&#34;</span><span style="color:#1f2328">],</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;a line folded, so line heights cannot be compared: </span><span style="color:#0a3069">{</span>title<span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">{</span>premise<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">((</span>premise<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;top&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> title<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;top&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">-</span> <span style="color:#0550ae">2</span> <span style="color:#0550ae">*</span> premise<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;h&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the blank line did not survive into the page: </span><span style="color:#0a3069">{</span>title<span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">{</span>premise<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: a blank source line stays a blank line&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_hugo_block_ends_with_source</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A block ends with its last statement, nothing hanging below it.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    open_page<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;hugogap&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    g <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;therefore something follows&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>evaluate<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;e =&gt; ({last: e.getBoundingClientRect().bottom,&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34; block: e.closest(&#39;.src-argdown&#39;).getBoundingClientRect().bottom,&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34; h: e.getBoundingClientRect().height})&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">(</span>g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;block&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">-</span> g<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;last&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> \
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the block outlives its last statement: </span><span style="color:#0a3069">{</span>g<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: a block ends where its source ends&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_self_contained</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;The map renders offline: its node titles show, it embeds no iframe, and
@@ -3702,7 +3938,7 @@ write this script, then run it.</p>
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 19 Jul 2026</time></aside>
+	  <aside class="date"><time>Last updated: 08 Aug 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 May 2026</time></aside>
     </div>
   </div>
