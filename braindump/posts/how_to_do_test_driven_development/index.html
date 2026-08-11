@@ -42,171 +42,350 @@
 		<p class="lead">
         <h1>How to Do Test-Driven Development</h1>
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/braindump/">Braindump</a></span></p>
-        <h2 id="4c4bbc32-7ef5-4bdf-9e74-9343426e0a82">The cycle is the unit of change</h2>
-<p>Each change moves through a fixed sequence: whole-suite baseline run,
-failing test written, minimum code to green, whole-suite verify,
-refactor code, refactor tests, whole-suite verify again. The rhythm
-is not decoration: each step exists because the previous one is
-provably insufficient. Skipping any of them leaves a gap the next
-regression will fall into.</p>
-<p>The baseline is the truth-anchor, and only the <strong>whole</strong> suite anchors it. A
-subset baseline — only the tests &ldquo;near&rdquo; the change — proves only that subset
-was green; it says nothing about pre-existing reds elsewhere. When the
-post-change run lights one of those up, you cannot tell whether your change
-broke it or whether it was already broken before you started, and the cycle&rsquo;s
-interpretability is gone. Worse, a subset baseline gives the false comfort of
-green when the codebase is in fact already red — the kind of comfort that
-makes later regressions hard to date. The whole-suite baseline rules out both:
-every red observed after this point was caused by the change in flight. Also,
-don&rsquo;t add on a code base that is not green and not flaky, unless explicitly
-asked to. By default, prefer shifting the subject into fixing the tests before
-going back to the task at hand.</p>
-<p>Among the suite, a subset encodes product-level invariants —
-properties that, if violated, invalidate the product itself,
-regardless of where the current change is. They run on every cycle.
-Identifying them is a per-project decision; the obligation to
-re-assert them is not.</p>
+        <h2 id="ca8ca8de-a1f8-4b08-800b-03666fbbf351">The runtime unit is the use case</h2>
+<dl>
+<dt>rule</dt>
+<dd>the runtime unit is the use case, never the feature.
+<ul>
+<li><strong>why:</strong> a use comes in whole sessions — triaging a morning&rsquo;s photos, running the
+cabinet frame, picking a few shots to send — and those sessions are the
+<a class="internal-link" href="/braindump/posts/verified_proved_promised_contracts_based_programming/">propositions</a> the program makes.</li>
+<li><strong>why:</strong> a test written per feature asserts a proposition nobody holds, since
+nobody opens a program in order to exercise one button.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>one function per session runs its <strong>whats</strong> in the order the person performs
+them, carrying state from step to step.
+<ul>
+<li><strong>why:</strong> a chain of gestures on one open program is what using it looks like, and
+an isolated one-gesture run is a path no human takes.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>every session is one somebody really lives.
+<ul>
+<li><strong>how:</strong> the user tells the stories and the agent never invents one.</li>
+<li><strong>how:</strong> the agent writes the <strong>what</strong>, the <strong>how</strong> and the tests, and assembles them
+into the stories it was told.</li>
+<li><strong>why:</strong> there are very few of them, because a session is a whole real use rather
+than a feature.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>a test names the promise it verifies.
+<ul>
+<li><strong>why:</strong> everything else a test could check is a measure of a proposition the
+program makes.</li>
+<li><strong>rule:</strong> a test with no promise to name is deleted rather than filed.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>between them the stories reach every promise the program makes.
+<ul>
+<li><strong>why:</strong> a promise no story reaches goes unmeasured.</li>
+<li><strong>how:</strong> the agent finds the gap and must propose it; the user decides.</li>
+<li><strong>how:</strong> a <strong>what</strong> that fits no session is that signal — either a story is missing
+from the set, or nobody does that thing, and which it is is the user&rsquo;s call.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>ground walked twice is cut.
+<ul>
+<li><strong>why:</strong> it is time spent measuring a promise already measured.</li>
+<li><strong>how:</strong> the agent suggests the stretch to cut and the user cuts it.</li>
+<li><strong>scope:</strong> stories overlap a little whatever happens, each one opening the program
+and loading the same first screen, and that much is irreducible.</li>
+<li><strong>scope:</strong> the user may bend a story so that it stops short of showing the whole
+thing, when per is confident the trimmed part is measured elsewhere.
+<ul>
+<li><strong>why:</strong> what is protected is semantic coverage, not the walking of every path.</li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>a block joins the session where it still bites.
+<ul>
+<li><strong>why:</strong> the session is the proposition, the blocks are its measures, and the
+document owes the reader the entailment between them.</li>
+<li><strong>how:</strong> each block must still fail observably once the earlier steps have run
+before it.</li>
+<li><strong>how:</strong> a block whose failure an earlier step masks belongs to another session.</li>
+</ul>
+</dd>
+</dl>
+<!--listend-->
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Step, not measure</span>]: a block that cannot fail without an earlier block failing with it is a step, not a measure.</div>
+<div style="padding-left:4ch;text-indent:-2ch;">+&gt; [<span style="color: #93E0E3;">Pinned upstream</span>]: the promise such a block appears to pin is pinned upstream.</div>
+<div style="padding-left:6ch;text-indent:-2ch;">+&gt; [<span style="color: #93E0E3;">Prose attributes it upstream</span>]: the prose names the block that actually pins the promise, not the step.</div>
+<div style="padding-left:4ch;text-indent:-2ch;">+&gt; &lt;<span style="color: #93E0E3;">Drop the step</span>&gt;: a step measures nothing, so it comes out of the session. &lt;- [<span style="color: #93E0E3;">State it leaves behind</span>]: the session may need the state it leaves behind.</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">No verdict distinguishes them</span>]: no verdict tells you whether a block is a step or a measure.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">One outcome for all</span>]: a session reports one outcome for all its blocks, so pure setup and pure measurement are the same colour from outside.</div>
+<div style="padding-left:4ch;text-indent:-2ch;">+&gt; &lt;<span style="color: #93E0E3;">Undecidable</span>&gt;: no verdict distinguishes them, so which is which cannot be known. &lt;- [<span style="color: #93E0E3;">Read it off the text</span>]: which blocks earn their slot as steps is read off the text, by asking of each what would die if only this one were wrong.</div>
+<div style="padding-left:6ch;text-indent:-2ch;">&lt;- &lt;Instrument the silent block&gt;: a block that never turns out to be the one that failed is the signature to look for, and it is worth instrumenting.</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">&lt;<span style="color: #93E0E3;">Instrument the silent block</span>&gt; &lt;- [<span style="color: #93E0E3;">A candidate, not an answer</span>]: the signature hands you a candidate, not an answer.</div>
+</div>
+<h2 id="4c4bbc32-7ef5-4bdf-9e74-9343426e0a82">The cycle is the unit of change</h2>
+<dl>
+<dt>rule</dt>
+<dd>the cycle is the unit of change.
+<ul>
+<li><strong>why:</strong> each step exists because the previous one is provably insufficient.</li>
+<li><strong>why:</strong> skipping a step leaves a gap the next regression will fall into.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>the baseline run covers the whole suite.
+<ul>
+<li><strong>why:</strong> a subset baseline proves only that subset was green, and says nothing
+about pre-existing reds elsewhere.</li>
+<li><strong>why:</strong> a red lit by the post-change run then cannot be dated — your change, or
+already broken before you started.</li>
+<li><strong>why:</strong> a subset baseline reads green while the codebase is red, and that comfort
+is what makes later regressions hard to date.</li>
+<li><strong>why:</strong> after a whole-suite baseline, every red observed was caused by the change
+in flight.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>a codebase that is red and not flaky has its tests fixed before the task at
+hand resumes, unless the user explicitly asks otherwise.</dd>
+<dt>rule</dt>
+<dd>the subset whose violation would invalidate the product runs on every cycle.
+<ul>
+<li><strong>scope:</strong> which properties those are is a per-project decision; re-asserting them
+is not.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="4a5fa7b0-ea63-4709-91fa-b37d78c185e2">Red proves the test</h2>
-<p>A test that has never been observed failing has not been observed.
-Writing the test first — and watching it fail before any production
-code changes — is what establishes that the test exercises the new
-behaviour. Without that step, a passing test proves only that the
-assertion compiles: it may pass because the path it claims to cover
-was already wired, or because the assertion is silently vacuous.</p>
-<p>The failure mode and message are part of the test&rsquo;s value. A red
-observed once is a fixed point: revert the change and the test must
-fail again, confirming it really rides on the new code. A test that
-cannot be made to fail by reverting the change is testing nothing in
-particular.</p>
+<dl>
+<dt>rule</dt>
+<dd>a test that has never been observed failing has not been observed.</dd>
+<dt>rule</dt>
+<dd>the test is written first and watched failing before any production code
+changes.
+<ul>
+<li><strong>why:</strong> that failure is what establishes that the test exercises the new behaviour.</li>
+<li><strong>why:</strong> without it, a passing test proves only that the assertion compiles — the
+path it claims to cover may already be wired, or the assertion silently vacuous.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>the failure mode and message are part of the test&rsquo;s value.</dd>
+<dt>rule</dt>
+<dd>reverting the change makes the test fail again.
+<ul>
+<li><strong>why:</strong> a red observed once is a fixed point, and failing again confirms the test
+rides on the new code.</li>
+<li><strong>why:</strong> a test that cannot be made to fail by reverting the change is testing
+nothing in particular.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>a test that was <strong>restructured</strong> rather than written earns its red again, by
+breaking the behaviour it names and watching it fail.
+<ul>
+<li><strong>why:</strong> a restructuring starts and ends green, so the moment that would have shown
+the test still bites never arrives.</li>
+<li><strong>why:</strong> a check that quietly stopped checking anything is indistinguishable, in a
+green suite, from one that works — the count of passing tests reads the same.</li>
+<li><strong>why:</strong> the failure names which check catches the break, so a check that has drifted
+to where an earlier one already covers it is visible as well.</li>
+<li><strong>how:</strong> break one behaviour at a time, in the production code, and require the
+<strong>named</strong> check to be the one that fails; a break nothing catches is a check that
+promises what it does not read, and a break something else catches first is a
+check whose promise is kept elsewhere.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>a promise that cannot be broken from where the suite stands is recorded as
+such, in the prose, with the reason.
+<ul>
+<li><strong>why:</strong> otherwise it is indistinguishable from one nobody has got round to
+breaking, and the next reader spends the effort again.</li>
+<li><strong>why:</strong> the reason is itself a finding — it usually names a boundary the suite
+cannot reach past, which is worth knowing before trusting what lies beyond it.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="0b016c71-7523-43b9-9f84-c232f48823e7">Minimum to green, then earn the next line</h2>
-<p>Code beyond what the failing test demands is, by definition, untested.
-The next test earns the next line. This tight coupling of spec to
-code is what keeps the suite a faithful description of the system:
-every branch in the implementation traces back to a test that was
-once red.</p>
-<p>This is not a literal line-count rule — refactor passes add structure
-no single test motivates. It is a rule about <strong>new behaviour</strong>:
-behaviour appears under a failing test, not ahead of one. Anticipated
-edge cases are written as the next failing test, not as preemptive
-guards in the current change.</p>
+<dl>
+<dt>rule</dt>
+<dd>new behaviour appears under a failing test, and the next test earns the
+next line.
+<ul>
+<li><strong>why:</strong> code beyond what the failing test demands is untested by definition.</li>
+<li><strong>why:</strong> the coupling keeps the suite a faithful description of the system, every
+branch tracing back to a test that was once red.</li>
+<li><strong>scope:</strong> a refactor pass adds structure no single test motivates.</li>
+<li><strong>rule:</strong> an anticipated edge case is written as the next failing test, not as a
+preemptive guard in the current change.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="83d8e51e-231e-474f-94be-956516d45490">The whole suite is the contract</h2>
-<p>A change is verified only when the <strong>whole</strong> suite is green. The new
-test going green proves the new behaviour exists; it says nothing
-about what the change broke elsewhere. A subset run — even a
-carefully-chosen one — is not a verification: implicit dependencies
-between modules (shared state, cached values, ordering assumptions)
-only surface when every test runs, and the test you didn&rsquo;t include
-is exactly the one most likely to catch the regression you didn&rsquo;t
-predict. Confidence scoped to a subset is, by construction, scoped
-to the regressions you already imagined; the value of the suite is
-the ones you didn&rsquo;t.</p>
-<p>This is why the cycle has three whole-suite runs, not two and never
-one. The baseline pins the truth-anchor. The post-change verify catches behaviour breakage
-from the new code. The post-refactor verify catches breakage
-introduced by structural change (of either code or tests), which is
-a distinct risk: a green-to-green refactor can still flip a subtle
-ordering, a fixture, or a shared helper. None of the three is
-substitutable by a faster subset, because the regressions each
-guards against are unknown ahead of time — that is what makes them
-regressions and not anticipated cases.</p>
+<dl>
+<dt>rule</dt>
+<dd>a change is verified only when the <strong>whole</strong> suite is green.
+<ul>
+<li><strong>why:</strong> the new test going green proves the new behaviour exists, and says nothing
+about what the change broke elsewhere.</li>
+<li><strong>why:</strong> implicit dependencies between modules — shared state, cached values,
+ordering assumptions — surface only when every test runs.</li>
+<li><strong>why:</strong> the test you left out is the one most likely to catch the regression you
+did not predict.</li>
+<li><strong>why:</strong> confidence scoped to a subset is scoped to the regressions you already
+imagined, and the value of the suite is the ones you did not.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>no whole-suite run is substituted by a faster subset.
+<ul>
+<li><strong>why:</strong> a green-to-green refactor can still flip a subtle ordering, a fixture, or
+a shared helper.</li>
+<li><strong>why:</strong> what each run guards against is unknown ahead of time, which is what makes
+it a regression rather than an anticipated case.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="dfaf96a8-c545-458f-9302-019001f96735">Refactor lives under green</h2>
-<p>Structural change runs under a green suite. Behaviour is held fixed
-by the tests; structure is what is allowed to move. Mixing behaviour
-change with structure change loses the bisect signal: when a test
-goes red mid-refactor, you no longer know whether it caught a real
-regression or reacted to an in-progress edit.</p>
-<p>Refactor the tests with the same discipline. Tests are code: they
-duplicate, drift, slow down. The refactor-tests step is the only
-place in the cycle where test debt can be paid without losing
-signal, because the suite is green on both sides of the edit. A
-suite that takes too long stops being run; a suite full of
-duplicated assertions gives false confidence that coverage is
-broader than it is.</p>
+<dl>
+<dt>rule</dt>
+<dd>structural change runs under a green suite.</dd>
+<dt>rule</dt>
+<dd>behaviour is held fixed by the tests, and structure is the only thing
+allowed to move.
+<ul>
+<li><strong>why:</strong> mixing behaviour change with structure change loses the bisect signal — a
+test going red mid-refactor no longer tells you whether it caught a regression or
+reacted to an in-progress edit.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>the tests are refactored with the same discipline.
+<ul>
+<li><strong>why:</strong> tests are code, and they duplicate, drift and slow down.</li>
+<li><strong>why:</strong> the refactor-tests step is the only place in the cycle where test debt can
+be paid without losing signal, the suite being green on both sides of the edit.</li>
+<li><strong>why:</strong> a suite that takes too long stops being run.</li>
+<li><strong>why:</strong> a suite full of duplicated assertions gives false confidence that coverage
+is broader than it is.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="31aa6ccc-e65b-4325-b5dc-39db5af69258">Tests live at the seam the user touches</h2>
-<p>Assertions probe the observable surface — visible text, public API,
-exported artifact, ARIA role — not internals like private stores,
-test-only hooks, or implementation-selector classes. A test coupled
-to internals breaks on every refactor and stops being a contract:
-it becomes a tax that punishes structural improvement.</p>
-<p>The discipline shows up in the helpers a suite reaches for first:
-<code>get_by_role</code>, <code>get_by_label</code>, <code>get_by_placeholder</code> rather than CSS
-selectors that encode the current DOM. The cost of writing
-user-level helpers is paid back the first time a refactor changes
-the markup without changing the behaviour.</p>
+<dl>
+<dt>rule</dt>
+<dd>assertions probe the observable surface — visible text, public API,
+exported artifact, ARIA role — not internals like private stores, test-only hooks
+or implementation-selector classes.
+<ul>
+<li><strong>why:</strong> a test coupled to internals breaks on every refactor and stops being a
+contract, becoming a tax that punishes structural improvement.</li>
+<li><strong>how:</strong> the suite reaches for <code>get_by_role</code>, <code>get_by_label</code> and
+<code>get_by_placeholder</code> rather than CSS selectors that encode the current DOM.
+<ul>
+<li><strong>why:</strong> writing user-level helpers is paid back the first time a refactor
+changes the markup without changing the behaviour.</li>
+</ul>
+</li>
+</ul>
+</dd>
+</dl>
 <h2 id="b3e9c1a7-2f48-4d6a-9c05-7e1a8d4f2b60">A test seeds the world it reads</h2>
-<p>A test asserts on data; the question that decides whether it is reproducible
-is who put that data there. When the answer is &ldquo;whatever the environment
-happened to hold&rdquo; — a live row, a value carried in from a shared dump, a label
-that was there last month — the test rides on state no one pinned. A change
-made somewhere else entirely, a renamed label or a pruned row, then turns it
-red with no edit to the code it guards, and the red points at the wrong place.
-A failure that moves on its own is worse than no test.</p>
-<p>So a test creates the rows it depends on and removes them again, asserting
-only on what it created. A shared fixture may stand the environment up — a
-database, a server, a seeded dump — but the test never trusts that environment
-to hold a particular value: it adds the value, exercises it, and tears it
-down. The green then rides on the code under test and nothing else.</p>
-<p>This is the input twin of the seam the user touches: that principle pins
-what a test reads <strong>out</strong> — the user&rsquo;s surface, never internals — and this one
-pins what it reads <strong>in</strong> — its own fixtures, never the ambient world. A test
-loose at either end has stopped being a contract.</p>
+<dl>
+<dt>rule</dt>
+<dd>a test creates the rows it depends on, asserts only on what it created,
+and removes them again.
+<ul>
+<li><strong>why:</strong> what decides whether a test is reproducible is who put its data there.</li>
+<li><strong>why:</strong> data the environment happened to hold — a live row, a value from a shared
+dump, a label that was there last month — is state no one pinned.</li>
+<li><strong>why:</strong> a change made elsewhere, a renamed label or a pruned row, then turns the
+test red with no edit to the code it guards, and the red points at the wrong
+place.</li>
+<li><strong>why:</strong> a failure that moves on its own is worse than no test.</li>
+<li><strong>scope:</strong> a shared fixture may stand the environment up — a database, a server, a
+seeded dump — and the test still adds the value it needs, exercises it, and tears
+it down.
+<ul>
+<li><strong>why:</strong> the green then rides on the code under test and nothing else.</li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>a test loose at either end has stopped being a contract.
+<ul>
+<li><strong>scope:</strong> the <strong>in</strong> end is its own fixtures, never the ambient world; the <strong>out</strong> end
+is <a class="internal-link" href="#31aa6ccc-e65b-4325-b5dc-39db5af69258">the user&rsquo;s surface, never internals</a>.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="e23de065-d567-4d0d-b1f8-99bf5eef9e7b">Test, don&rsquo;t patch</h2>
-<p>When a bug surfaces, the temptation is to drop a guard, tweak a
-branch, or add a defensive check in the offending file. Without a
-test that captures the bug, the fix is invisible to the suite: no
-proof the bug existed, no proof it is gone, no defense against its
-return. Every fix earns a test — written first, observed red, then
-made green by the smallest change that satisfies it.</p>
-<p>This is the same shape as the rest of the cycle, applied to
-regression rather than feature work. The bug report is a <strong>what</strong> in
-natural language; the failing test is its translation; the fix is
-the minimum code that turns it green. A bug fix landed without a
-test will recur, and there will be no record of why the line was
-added.</p>
+<dl>
+<dt>rule</dt>
+<dd>every fix earns a test — written first, observed red, then made green by
+the smallest change that satisfies it.
+<ul>
+<li><strong>why:</strong> without a test that captures the bug, the fix is invisible to the suite —
+no proof the bug existed, no proof it is gone, no defense against its return.</li>
+<li><strong>why:</strong> a bug fix landed without a test recurs, and leaves no record of why the
+line was added.</li>
+<li><strong>scope:</strong> this is the cycle applied to regression rather than feature work — the
+bug report is the <strong>what</strong>, the failing test its translation, the fix the minimum
+code that turns it green.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="c7d9e1f3-5a2b-4c86-9d40-1e6f8b3a2c50">A flake is a diagnosis, not a knob</h2>
-<p>When a test fails intermittently, the reflex is to widen a timeout until it
-goes quiet — but that only raises the threshold at which the cause shows,
-trading a signal for a longer wait. Read the red as a question and measure
-before touching any limit: usually the expected time sits far under the
-ceiling, so the failure is a transient (a CDN stall, a resource race) to
-remove or isolate, not to wait longer for. Raise a timeout only when the
-measurement shows the <strong>expected</strong> time nearing it, and justify the new number
-in a comment.</p>
-<p>When flakiness is not obvious to fix, improve the tooling by providing
-meaningful logging. It will be generally better and will help investigate the
-next time the flakiness occurs. In any case, moving on a flaky test is the
-choice of the user, never yours.</p>
+<dl>
+<dt>rule</dt>
+<dd>an intermittent red is measured before any limit is touched.
+<ul>
+<li><strong>why:</strong> widening a timeout until it goes quiet raises the threshold at which the
+cause shows, trading a signal for a longer wait.</li>
+<li><strong>why:</strong> the expected time usually sits far under the ceiling, so the failure is a
+transient — a CDN stall, a resource race — to remove or isolate.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>a timeout is raised only when the measurement shows the <strong>expected</strong> time
+nearing it.
+<ul>
+<li><strong>rule:</strong> the new number is justified in a comment.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>flakiness that is not obvious to fix earns meaningful logging.
+<ul>
+<li><strong>why:</strong> it helps investigate the next time the flakiness occurs.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>moving on a flaky test is the choice of the user, never yours.</dd>
+</dl>
 <h2 id="7a3f2c4b-9d51-4e68-b2a1-0c5e9d7f3a82">Cycle prompt</h2>
-<p>Mandatory TDD cycle for ANY edit:</p>
-<ol>
-<li>
-<p>PLAN-GATE — spawn the auditor and get GO on your opening action.
-Every action is gated, the baseline run included.</p>
-</li>
-<li>
-<p>WHOLE SUITE GREEN — run the suite.
-Not green? No edits. Fix the red, or explicitly mark it
-pre-existing and out of scope.</p>
-</li>
-<li>
-<p>NEW TEST RED — write ONE test. Run. Watch it fail.
-Green on first run = you&rsquo;re not testing what you think.</p>
-</li>
-<li>
-<p>MINIMUM CODE TO GREEN — the next line waits for the next
-failing test.</p>
-</li>
-<li>
-<p>REFACTOR UNDER GREEN — run again. Still green.</p>
-</li>
-</ol>
-<p>You must be able to cite the result of each run in the current
-cycle. Can&rsquo;t cite = cycle broken: revert, restart.</p>
+<dl>
+<dt>rule</dt>
+<dd>any edit runs through the cycle below.</dd>
+</dl>
 <h2 id="ef37fcd6-9843-48e2-8b87-807b027eb420">Audit prompt</h2>
-<p>In code, the audit is a table: every observation cited by file and
-line, classified under the principle it tests; the conclusion follows
-from the table, not alongside it. (Cite, don&rsquo;t assert — the general
-rule is in <a class="internal-link" href="/braindump/posts/how_to_write_and_audit_a_note/">how to write and audit a note</a>.)</p>
+<dl>
+<dt>rule</dt>
+<dd>in code, the audit is a table — every observation cited by file and line,
+classified under the principle it tests.</dd>
+<dt>rule</dt>
+<dd>the conclusion follows from the table, not alongside it.</dd>
+<dt>authority</dt>
+<dd>the general rule that an observation is cited rather than asserted
+lives in <a class="internal-link" href="/braindump/posts/how_to_write_and_audit_a_note/">how to write and audit a note</a>.</dd>
+</dl>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/argdown_in_org_mode/#1f7c3a2b-0005-0000-0000-000000000001">A worked example</a></li>

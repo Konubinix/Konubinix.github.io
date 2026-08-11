@@ -588,9 +588,75 @@ from it; the strength propagation walks it. (<code>require</code> pulls in <code
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--json</span> <span style="color:#1f2328">(</span><span style="color:#953800">in</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Parse the `argdown json&#39; model of INPUT file into an alist tree.&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">json-parse-string</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">argdown--run</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown json --stdout --silent %s&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">)))</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#6639ba">:object-type</span> <span style="color:#032f62">&#39;alist</span> <span style="color:#6639ba">:array-type</span> <span style="color:#032f62">&#39;list</span> <span style="color:#6639ba">:null-object</span> <span style="color:#0550ae">nil</span> <span style="color:#6639ba">:false-object</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#953800">argdown--split-steps</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">json-parse-string</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#953800">argdown--run</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;argdown json --stdout --silent %s&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">shell-quote-argument</span> <span style="color:#953800">in</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">:object-type</span> <span style="color:#032f62">&#39;alist</span> <span style="color:#6639ba">:array-type</span> <span style="color:#032f62">&#39;list</span> <span style="color:#6639ba">:null-object</span> <span style="color:#0550ae">nil</span> <span style="color:#6639ba">:false-object</span> <span style="color:#0550ae">nil</span><span style="color:#1f2328">)))</span>
+</span></span></code></pre></div><p>A reconstruction can run in several steps: each <code>----</code> closes one, and what it
+establishes is a premise of the next. Written as separate arguments chained
+together, the model already gives one argument per step with an ordinary
+statement between them; written as a single argument, the middle conclusions
+belong to nothing and the chain cannot be read. It is the same reasoning either
+way, and « on doit pouvoir comprendre le raisonnement avec le diagramme » — so
+the two writings have to reach the map in the same shape rather than by two
+paths that happen to agree. An argument of n steps therefore leaves the parser
+as n arguments, <code>A (1/n)</code> through <code>A (n/n)</code>, each concluding what the next one
+uses. The ordinal is read off the source — two <code>----</code>, two steps — and nothing
+downstream ever learns that a step exists.</p>
+<div class="konix-block-name-marker" data-name="test-steps-are-boxes"></div>
+<p><a id="code-snippet--test-steps-are-boxes"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_multistep_argument_is_one_box_per_step</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A reconstruction that runs in steps shows one box per step, named for it.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    open_map<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;multistep&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    m <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>locator<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.argdown-map&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> step <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;The reduction (1/2)&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;The reduction (2/2)&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        box <span style="color:#0550ae">=</span> m<span style="color:#0550ae">.</span>locator<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.argdown-node&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>filter<span style="color:#1f2328">(</span>has<span style="color:#0550ae">=</span>page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span>step<span style="color:#1f2328">,</span> exact<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        expect<span style="color:#1f2328">(</span>box<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>to_have_count<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        expect<span style="color:#1f2328">(</span>box<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;the neighbour&#39;s fence would be shared too&#34;</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>to_be_visible<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: each step of a reconstruction is its own box, body and all&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="argdown-steps"></div>
+<p><a id="code-snippet--argdown-steps"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--with-role</span> <span style="color:#1f2328">(</span><span style="color:#953800">m</span> <span style="color:#953800">role</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;Member M with its </span><span style="color:#032f62">`role&#39;</span><span style="color:#0a3069"> set to ROLE.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#032f62">&#39;role</span> <span style="color:#953800">role</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#953800">assq-delete-all</span> <span style="color:#032f62">&#39;role</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">copy-alist</span> <span style="color:#953800">m</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--argument-steps</span> <span style="color:#1f2328">(</span><span style="color:#953800">arg</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;ARG&#39;s pcs cut into one member list per inference step: a step holds the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">premises it consumes — the previous step&#39;s conclusion among them — and ends on
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">the conclusion it establishes.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">(</span><span style="color:#953800">steps</span> <span style="color:#953800">pending</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">dolist</span> <span style="color:#1f2328">(</span><span style="color:#953800">m</span> <span style="color:#1f2328">(</span><span style="color:#953800">alist-get</span> <span style="color:#032f62">&#39;pcs</span> <span style="color:#953800">arg</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">member</span> <span style="color:#1f2328">(</span><span style="color:#953800">alist-get</span> <span style="color:#032f62">&#39;role</span> <span style="color:#953800">m</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;intermediary-conclusion&#34;</span> <span style="color:#0a3069">&#34;main-conclusion&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">progn</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">append</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">nreverse</span> <span style="color:#953800">pending</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--with-role</span> <span style="color:#953800">m</span> <span style="color:#0a3069">&#34;main-conclusion&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#953800">steps</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">pending</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--with-role</span> <span style="color:#953800">m</span> <span style="color:#0a3069">&#34;premise&#34;</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#953800">m</span> <span style="color:#953800">pending</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">nreverse</span> <span style="color:#953800">steps</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--split-steps</span> <span style="color:#1f2328">(</span><span style="color:#953800">model</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;MODEL with every argument of several steps replaced by one argument per step,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">titled after it.  A step keeps the whole argument&#39;s members, so its box reads the
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">same description.&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span><span style="color:#6639ba">let</span> <span style="color:#1f2328">(</span><span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">dolist</span> <span style="color:#1f2328">(</span><span style="color:#953800">a</span> <span style="color:#1f2328">(</span><span style="color:#953800">alist-get</span> <span style="color:#032f62">&#39;arguments</span> <span style="color:#953800">model</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">arg</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cdr</span> <span style="color:#953800">a</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#953800">steps</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--argument-steps</span> <span style="color:#953800">arg</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#953800">n</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">length</span> <span style="color:#953800">steps</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#953800">k</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span><span style="color:#6639ba">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">&lt;=</span> <span style="color:#953800">n</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#953800">a</span> <span style="color:#953800">out</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">(</span><span style="color:#6639ba">dolist</span> <span style="color:#1f2328">(</span><span style="color:#953800">s</span> <span style="color:#953800">steps</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">setq</span> <span style="color:#953800">k</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">1+</span> <span style="color:#953800">k</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">title</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">format</span> <span style="color:#0a3069">&#34;%s (%d/%d)&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">alist-get</span> <span style="color:#032f62">&#39;title</span> <span style="color:#953800">arg</span><span style="color:#1f2328">)</span> <span style="color:#953800">k</span> <span style="color:#953800">n</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                   <span style="color:#1f2328">(</span><span style="color:#953800">rest</span> <span style="color:#1f2328">(</span><span style="color:#953800">assq-delete-all</span> <span style="color:#032f62">&#39;title</span> <span style="color:#1f2328">(</span><span style="color:#953800">assq-delete-all</span> <span style="color:#032f62">&#39;pcs</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">copy-alist</span> <span style="color:#953800">arg</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#1f2328">(</span><span style="color:#6639ba">push</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">intern</span> <span style="color:#953800">title</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                          <span style="color:#1f2328">(</span><span style="color:#6639ba">append</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#032f62">&#39;title</span> <span style="color:#953800">title</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#032f62">&#39;pcs</span> <span style="color:#953800">s</span><span style="color:#1f2328">))</span> <span style="color:#953800">rest</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#953800">out</span><span style="color:#1f2328">))))))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#6639ba">append</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">list</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">cons</span> <span style="color:#032f62">&#39;arguments</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">nreverse</span> <span style="color:#953800">out</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#953800">assq-delete-all</span> <span style="color:#032f62">&#39;arguments</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">copy-alist</span> <span style="color:#953800">model</span><span style="color:#1f2328">)))))</span>
 </span></span></code></pre></div><h2 id="1f7c3a2b-0008-0000-0000-000000000001">The block in the Hugo export</h2>
 <p>In Emacs the <code>argdown-highlights</code> font-lock above paints <code>[statements]</code>,
 <code>&lt;arguments&gt;</code> and the <code>+=/</code>-= relations. None of that survives <code>ox-hugo</code>:
@@ -1328,14 +1394,14 @@ map. Here&rsquo;s a small one — should I keep relying on Argdown, given the
 single-maintainer risk? — that doubles as the fixture for the smoke
 test.</p>
 <div class="konix-block-name-marker" data-name="sample-argdown"></div>
-<p><a id="code-snippet--sample-argdown"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Keep Argdown]: I should build on Argdown rather than roll my own.
-  + &lt;Layout is the hard part&gt;: Argument layout (premise/conclusion
-    layering, pro/con grouping) is years of work I&#39;d otherwise redo.
-  + &lt;Actively maintained&gt;: v2.0.0 shipped in 2026 after a long pause.
-  - &lt;Bus factor&gt;: It is essentially a single-maintainer project.
-    + &lt;Fork is cheap&gt;: MIT-licensed, and my Nix flake pins a known version.
-</code></pre><p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample to a
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Keep Argdown</span>]: I should build on Argdown rather than roll my own.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Layout is the hard part</span>&gt;: Argument layout (premise/conclusion layering, pro/con grouping) is years of work I'd otherwise redo.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Actively maintained</span>&gt;: v2.0.0 shipped in 2026 after a long pause.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #ff0000;">-</span> &lt;<span style="color: #93E0E3;">Bus factor</span>&gt;: It is essentially a single-maintainer project.</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Fork is cheap</span>&gt;: MIT-licensed, and my Nix flake pins a known version.</div>
+</div>
+<p>The first pinned test, in the spirit of <a class="internal-link" href="/braindump/posts/how_to_do_test_driven_development/">TDD</a>: render the sample to a
 static <code>:file</code> SVG (<code>argdown--stdout</code>) and assert a non-empty, well-formed SVG.
 Green means the chain holds — Argdown parses, lays out, and renders the SVG with
 its <strong>bundled</strong> Graphviz (no system <code>dot</code>).</p>
@@ -2932,6 +2998,23 @@ that filter can&rsquo;t see — a page a reader loads may be stitched from sever
 exported pieces (a Hugo list page, a partial, a transclusion), each carrying
 its own copy. The engine then installs from the first, and every later copy is
 a no-op.</p>
+<p>A published page is Markdown, and a Markdown pass ends a raw-HTML block at the
+first line carrying <code>&lt;/style&gt;</code>, <code>&lt;/pre&gt;</code>, <code>&lt;/script&gt;</code> or <code>&lt;/textarea&gt;</code>. Anything
+the runtime embeds that carries one of those cuts the script in two, and the
+tail is read as prose. So the runtime has to reach the reader whole: nothing it
+carries may close its own block.</p>
+<div class="konix-block-name-marker" data-name="runtime-survives-markdown-test"></div>
+<p><a id="code-snippet--runtime-survives-markdown-test"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">rt</span> <span style="color:#1f2328">(</span><span style="color:#953800">argdown--runtime-html</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">body</span> <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;\n?&lt;/script&gt;\\&#39;&#34;</span> <span style="color:#0a3069">&#34;&#34;</span> <span style="color:#953800">rt</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">bad</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">string-match</span> <span style="color:#0a3069">&#34;&lt;/style&gt;\\|&lt;/pre&gt;\\|&lt;/script&gt;\\|&lt;/textarea&gt;&#34;</span> <span style="color:#953800">body</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">(</span>cl-assert <span style="color:#1f2328">(</span><span style="color:#953800">not</span> <span style="color:#953800">bad</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">nil</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#0a3069">&#34;the runtime closes its own HTML block early: %S&#34;</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#1f2328">(</span><span style="color:#6639ba">and</span> <span style="color:#953800">bad</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">substring</span> <span style="color:#953800">body</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">max</span> <span style="color:#0550ae">0</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">-</span> <span style="color:#953800">bad</span> <span style="color:#0550ae">60</span><span style="color:#1f2328">))</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">min</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">length</span> <span style="color:#953800">body</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">+</span> <span style="color:#953800">bad</span> <span style="color:#0550ae">20</span><span style="color:#1f2328">)))))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">&#34;  PASS: the runtime carries no tag that would end its own HTML block&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#34;  PASS: the runtime carries no tag that would end its own HTML block&#34;
+</span></span></code></pre></div><p>Under the hood, the escaped slash is inert inside a JS string and no longer
+matches the terminator.</p>
 <div class="konix-block-name-marker" data-name="argdown-runtime-html"></div>
 <p><a id="code-snippet--argdown-runtime-html"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">defun</span> <span style="color:#953800">argdown--runtime-html</span> <span style="color:#1f2328">()</span>
@@ -2944,7 +3027,7 @@ a no-op.</p>
 </span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;if(!window.argdownInitAll){\n&#34;</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">argdown--dagre-js</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;\n&#34;</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;document.head.insertAdjacentHTML(&#39;beforeend&#39;, &#34;</span>
-</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">json-encode</span> <span style="color:#953800">argdown--map-css</span><span style="color:#1f2328">)</span> <span style="color:#0a3069">&#34;);\n&#34;</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#1f2328">(</span><span style="color:#953800">replace-regexp-in-string</span> <span style="color:#0a3069">&#34;&lt;/&#34;</span> <span style="color:#0a3069">&#34;&lt;\\\\/&#34;</span> <span style="color:#1f2328">(</span><span style="color:#953800">json-encode</span> <span style="color:#953800">argdown--map-css</span><span style="color:#1f2328">))</span> <span style="color:#0a3069">&#34;);\n&#34;</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#953800">argdown--layout-js</span>
 </span></span><span style="display:flex;"><span>   <span style="color:#0a3069">&#34;}\n&lt;/script&gt;&#34;</span><span style="color:#1f2328">))</span>
 </span></span></code></pre></div><p>On a published page the map fragments arrive already rendered, so the runtime
@@ -2972,7 +3055,7 @@ written, so each exported page — one map or forty — carries it exactly once.
 folds relayout there. So its tests drive a real one, the house way — Python
 Playwright <code>@testcase</code> functions (<a class="internal-link" href="/braindump/posts/score_counter_tally/">score counter</a>, <a class="internal-link" href="/braindump/posts/a_photos_videos_organiser_with_solid/">photos organiser</a>), woven
 into one nix-shell script and run by executing it, reusing the shared harness
-(<a class="internal-link" href="/braindump/new-posts/shared_blocks/#pw-harness"><code>pw-testcase</code> / <code>pw-run-simple</code> / <code>pw-dump-failure</code></a>).</p>
+(<a class="internal-link" href="/braindump/posts/shared_blocks/#pw-harness"><code>pw-testcase</code> / <code>pw-run-simple</code> / <code>pw-dump-failure</code></a>).</p>
 <p>What they load is the <strong>real</strong> production output. The fixture bodies live once,
 as named <code>argdown</code> blocks; <code>render-argdown-fixtures</code> renders each through
 <code>argdown--map-html</code> and assembles a page the way the publish path does — the
@@ -2989,7 +3072,7 @@ dropped the way Hugo drops it, into the same skeleton.</p>
 <div class="konix-block-name-marker" data-name="render-argdown-fixtures"></div>
 <p><a id="code-snippet--render-argdown-fixtures"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-emacs-lisp" data-lang="emacs-lisp"><span style="display:flex;"><span><span style="color:#1f2328">(</span><span style="color:#6639ba">let*</span> <span style="color:#1f2328">((</span><span style="color:#953800">dir</span> <span style="color:#0a3069">&#34;/var/run/user/1000/argdown/fixtures&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">names</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;sample&#34;</span> <span style="color:#0a3069">&#34;untitled&#34;</span> <span style="color:#0a3069">&#34;widefan&#34;</span> <span style="color:#0a3069">&#34;links&#34;</span> <span style="color:#0a3069">&#34;strength&#34;</span> <span style="color:#0a3069">&#34;propagation&#34;</span> <span style="color:#0a3069">&#34;pcs&#34;</span> <span style="color:#0a3069">&#34;inference&#34;</span> <span style="color:#0a3069">&#34;dupe&#34;</span> <span style="color:#0a3069">&#34;strict&#34;</span> <span style="color:#0a3069">&#34;fanout&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">names</span> <span style="color:#0550ae">&#39;</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;sample&#34;</span> <span style="color:#0a3069">&#34;untitled&#34;</span> <span style="color:#0a3069">&#34;widefan&#34;</span> <span style="color:#0a3069">&#34;links&#34;</span> <span style="color:#0a3069">&#34;strength&#34;</span> <span style="color:#0a3069">&#34;propagation&#34;</span> <span style="color:#0a3069">&#34;pcs&#34;</span> <span style="color:#0a3069">&#34;inference&#34;</span> <span style="color:#0a3069">&#34;dupe&#34;</span> <span style="color:#0a3069">&#34;strict&#34;</span> <span style="color:#0a3069">&#34;fanout&#34;</span> <span style="color:#0a3069">&#34;multistep&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>       <span style="color:#1f2328">(</span><span style="color:#953800">frag</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">lambda</span> <span style="color:#1f2328">(</span><span style="color:#953800">n</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>               <span style="color:#1f2328">(</span><span style="color:#953800">argdown--with-input</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#1f2328">(</span><span style="color:#6639ba">nth</span> <span style="color:#0550ae">1</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">save-excursion</span>
@@ -3037,143 +3120,168 @@ dropped the way Hugo drops it, into the same skeleton.</p>
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/dupe.html
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/strict.html
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/fanout.html
+</span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/multistep.html
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/twomap.html
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/hugowrap.html
 </span></span><span style="display:flex;"><span>/var/run/user/1000/argdown/fixtures/hugogap.html&#34;
 </span></span></code></pre></div><p>The sample pro/con map — read by the self-containment, edges and layout tests.</p>
 <div class="konix-block-name-marker" data-name="body-sample"></div>
-<p><a id="code-snippet--body-sample"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Keep Argdown]: build on Argdown.
-  + &lt;Layout is the hard part&gt;: layout is years of work.
-  - &lt;Bus factor&gt;: single-maintainer project.
-    + &lt;Fork is cheap&gt;: MIT-licensed.
-</code></pre><p>A titled claim with two inline, unnamed statements under it — read by the
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Keep Argdown</span>]: build on Argdown.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Layout is the hard part</span>&gt;: layout is years of work.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #ff0000;">-</span> &lt;<span style="color: #93E0E3;">Bus factor</span>&gt;: single-maintainer project.</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Fork is cheap</span>&gt;: MIT-licensed.</div>
+</div>
+<p>A titled claim with two inline, unnamed statements under it — read by the
 untitled-node test (Argdown auto-names those <code>Untitled 1=/=Untitled 2</code>).</p>
 <div class="konix-block-name-marker" data-name="body-untitled"></div>
-<p><a id="code-snippet--body-untitled"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Titled claim]: a claim with a real name.
-  + a bare premise with no name
-  - a plain objection standing alone
-</code></pre><p>A claim with a dozen bare supporters — one over-wide rank unless staggered.
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Titled claim</span>]: a claim with a real name.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> a bare premise with no name</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #ff0000;">-</span> a plain objection standing alone</div>
+</div>
+<p>A claim with a dozen bare supporters — one over-wide rank unless staggered.
 Read by the wide-fan test.</p>
 <div class="konix-block-name-marker" data-name="body-widefan"></div>
-<p><a id="code-snippet--body-widefan"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Popular claim]: a claim with many backers.
-  + first reason
-  + second reason
-  + third reason
-  + fourth reason
-  + fifth reason
-  + sixth reason
-  + seventh reason
-  + eighth reason
-  + ninth reason
-  + tenth reason
-  + eleventh reason
-  + twelfth reason
-</code></pre><p>A claim citing a source — read by the source-link test.</p>
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Popular claim</span>]: a claim with many backers.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> first reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> second reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> third reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> fourth reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> fifth reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> sixth reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> seventh reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> eighth reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> ninth reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> tenth reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> eleventh reason</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> twelfth reason</div>
+</div>
+<p>A claim citing a source — read by the source-link test.</p>
 <div class="konix-block-name-marker" data-name="body-links"></div>
-<p><a id="code-snippet--body-links"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Sourced claim]: a claim backed by a source [Légifrance](https://www.legifrance.gouv.fr/x).
-  + &lt;Support&gt;: it holds.
-</code></pre><p>A tagged claim — read by the strength-badge test.</p>
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Sourced claim</span>]: a claim backed by a source [<span style="color: #93E0E3;">L&#233;gifrance</span>](https://www.legifrance.gouv.fr/x).</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Support</span>&gt;: it holds.</div>
+</div>
+<p>A tagged claim — read by the strength-badge test.</p>
 <div class="konix-block-name-marker" data-name="body-strength"></div>
-<p><a id="code-snippet--body-strength"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Claim]: a claim. #(constat)
-  + &lt;Support&gt;: it holds.
-</code></pre><p>A reconstructed argument whose premise is graded but whose conclusion is not —
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Claim</span>]: a claim. #(constat)</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Support</span>&gt;: it holds.</div>
+</div>
+<p>A reconstructed argument whose premise is graded but whose conclusion is not —
 read by the strength-propagation test.</p>
 <div class="konix-block-name-marker" data-name="body-propagation"></div>
-<p><a id="code-snippet--body-propagation"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">&lt;Arg&gt;
-
-(1) [P]: a premise. #(constat)
-----
-(2) [C]: the conclusion.
-</code></pre><p>A full reconstruction (distinct argument title) — read by the PCS test.</p>
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">&lt;<span style="color: #93E0E3;">Arg</span>&gt;</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">(1) [<span style="color: #93E0E3;">P</span>]: a premise. #(constat)</div>
+<div style="padding-left:2ch;text-indent:-2ch;">----</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(2) [<span style="color: #93E0E3;">C</span>]: the conclusion.</div>
+</div>
+<p>A full reconstruction (distinct argument title) — read by the PCS test.</p>
 <div class="konix-block-name-marker" data-name="body-pcs"></div>
-<p><a id="code-snippet--body-pcs"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">&lt;Mortality&gt;
-
-(1) [All men mortal]: every human dies.
-(2) [Socrates a man]: Socrates is human.
-----
-(3) [Socrates mortal]: Socrates dies.
-</code></pre><p>A strong premise under a weak inference — read by the strength-label test.</p>
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">&lt;<span style="color: #93E0E3;">Mortality</span>&gt;</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">(1) [<span style="color: #93E0E3;">All men mortal</span>]: every human dies.</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(2) [<span style="color: #93E0E3;">Socrates a man</span>]: Socrates is human.</div>
+<div style="padding-left:2ch;text-indent:-2ch;">----</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(3) [<span style="color: #93E0E3;">Socrates mortal</span>]: Socrates dies.</div>
+</div>
+<p>A strong premise under a weak inference — read by the strength-label test.</p>
 <div class="konix-block-name-marker" data-name="body-inference"></div>
-<p><a id="code-snippet--body-inference"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">&lt;A&gt;
-
-(1) [Strong claim]: solid grounds. #(established consensus)
--- {force: &#34;ténue&#34;} --
-(2) [Weak conclusion]: it barely follows.
-</code></pre><p>A <code>[statement]</code> and an <code>&lt;argument&gt;</code> that share a title — which Argdown keeps as
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">&lt;<span style="color: #93E0E3;">A</span>&gt;</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">(1) [<span style="color: #93E0E3;">Strong claim</span>]: solid grounds. #(established consensus)</div>
+<div style="padding-left:2ch;text-indent:-2ch;">-- {force: "t&#233;nue"} --</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(2) [<span style="color: #93E0E3;">Weak conclusion</span>]: it barely follows.</div>
+</div>
+<p>A <code>[statement]</code> and an <code>&lt;argument&gt;</code> that share a title — which Argdown keeps as
 two distinct nodes (it merges only within a kind) — read by the identity test.</p>
 <div class="konix-block-name-marker" data-name="body-dupe"></div>
-<p><a id="code-snippet--body-dupe"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">&lt;Crux&gt;: the crux, taken as an argument.
-    + [Ground]: common ground.
-    - &lt;Rebuttal&gt;: the rebuttal.
-
-[Crux]: the crux, taken as a statement.
-    + [Ground]
-</code></pre><p>A <code>strict</code> body, whose <code>+</code> / <code>-</code> / <code>&gt;&lt;</code> parse as the <strong>logical</strong> relations
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">&lt;<span style="color: #93E0E3;">Crux</span>&gt;: the crux, taken as an argument.</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">Ground</span>]: common ground.</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #ff0000;">-</span> &lt;<span style="color: #93E0E3;">Rebuttal</span>&gt;: the rebuttal.</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Crux</span>]: the crux, taken as a statement.</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">Ground</span>]</div>
+</div>
+<p>A <code>strict</code> body, whose <code>+</code> / <code>-</code> / <code>&gt;&lt;</code> parse as the <strong>logical</strong> relations
 entails / contrary / contradictory — read by the edge-style test.</p>
 <div class="konix-block-name-marker" data-name="body-strict"></div>
-<p><a id="code-snippet--body-strict"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">===
-model:
-    mode: strict
-===
-
-[P]: a premise.
-
-[Q]: a claim it entails.
-
-[R]: a rival claim.
-
-[Q]
-    + [P]
-    &gt;&lt; [R]
-
-[R]
-    - [P]
-</code></pre><p>A wide fan-out — a root over two branches, one with a wide subtree (ten leaves)
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">=== model: mode: strict</div>
+<div style="padding-left:2ch;text-indent:-2ch;">===</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">P</span>]: a premise.</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Q</span>]: a claim it entails.</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">R</span>]: a rival claim.</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Q</span>]</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">P</span>]</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #ff0000;">&gt;&lt;</span> [<span style="color: #93E0E3;">R</span>]</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">R</span>]</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #ff0000;">-</span> [<span style="color: #93E0E3;">P</span>]</div>
+</div>
+<p>A wide fan-out — a root over two branches, one with a wide subtree (ten leaves)
 and one narrow — so folding the wide branch re-packs the whole width and moves
 the clicked node far. Read by the fold-keeps-in-view test.</p>
 <div class="konix-block-name-marker" data-name="body-fanout"></div>
-<p><a id="code-snippet--body-fanout"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Root]: the root claim of the fan-out.
-    + &lt;Wide branch&gt;: a branch whose wide subtree makes the whole map broad.
-        + [leaf one]: sub-support one.
-        + [leaf two]: sub-support two.
-        + [leaf three]: sub-support three.
-        + [leaf four]: sub-support four.
-        + [leaf five]: sub-support five.
-        + [leaf six]: sub-support six.
-        + [leaf seven]: sub-support seven.
-        + [leaf eight]: sub-support eight.
-        + [leaf nine]: sub-support nine.
-        + [leaf ten]: sub-support ten.
-    + &lt;Small branch&gt;: a narrow branch off to one side.
-        + [only leaf]: its single sub-support.
-</code></pre><p>A reconstruction, its title set apart from its premises — read by the
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Root</span>]: the root claim of the fan-out.</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Wide branch</span>&gt;: a branch whose wide subtree makes the whole map broad.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf one</span>]: sub-support one.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf two</span>]: sub-support two.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf three</span>]: sub-support three.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf four</span>]: sub-support four.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf five</span>]: sub-support five.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf six</span>]: sub-support six.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf seven</span>]: sub-support seven.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf eight</span>]: sub-support eight.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf nine</span>]: sub-support nine.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">leaf ten</span>]: sub-support ten.</div>
+<div style="padding-left:6ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Small branch</span>&gt;: a narrow branch off to one side.</div>
+<div style="padding-left:10ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> [<span style="color: #93E0E3;">only leaf</span>]: its single sub-support.</div>
+</div>
+<p>A reconstruction running in two steps, the first establishing what the second
+uses — read by the step-boxes check.</p>
+<div class="konix-block-name-marker" data-name="body-multistep"></div>
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">&lt;<span style="color: #93E0E3;">The reduction</span>&gt;: it cannot be, or the neighbour's fence would be shared too.</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">(1) [<span style="color: #93E0E3;">Borrowed rule</span>]: any separation would make the work shared.</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(2) [<span style="color: #93E0E3;">Neighbour fence</span>]: the neighbour's fence separates the plots too.</div>
+<div style="padding-left:2ch;text-indent:-2ch;">----</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(3) [<span style="color: #93E0E3;">Fence is shared</span>]: that fence would then be shared.</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(4) [<span style="color: #93E0E3;">Absurd</span>]: holding that fence to be shared is absurd.</div>
+<div style="padding-left:2ch;text-indent:-2ch;">----</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(5) [<span style="color: #93E0E3;">Separation is not sharing</span>]: separating does not make a work shared.</div>
+</div>
+<p>A reconstruction, its title set apart from its premises — read by the
 blank-line check.</p>
 <div class="konix-block-name-marker" data-name="body-hugogap"></div>
-<p><a id="code-snippet--body-hugogap"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">&lt;The reconstruction&gt;: what follows is its skeleton.
-
-(1) [Premise one]: something established.
-----
-(2) [Conclusion]: therefore something follows.
-</code></pre><p>A claim and a nested relation whose text outruns any sensible column — read by
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">&lt;<span style="color: #93E0E3;">The reconstruction</span>&gt;: what follows is its skeleton.</div>
+<div style="padding-left:2ch;text-indent:-2ch;"><br></div>
+<div style="padding-left:2ch;text-indent:-2ch;">(1) [<span style="color: #93E0E3;">Premise one</span>]: something established.</div>
+<div style="padding-left:2ch;text-indent:-2ch;">----</div>
+<div style="padding-left:2ch;text-indent:-2ch;">(2) [<span style="color: #93E0E3;">Conclusion</span>]: therefore something follows.</div>
+</div>
+<p>A claim and a nested relation whose text outruns any sensible column — read by
 the wrapping check.</p>
 <div class="konix-block-name-marker" data-name="body-hugowrap"></div>
-<p><a id="code-snippet--body-hugowrap"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Keep Argdown]: build on Argdown rather than reinventing the notation.
-  + &lt;Layout is the hard part&gt;: writing a layered graph layout that folds and
-      reflows is years of work, and the map is where that work shows.
-</code></pre><p>The suite&rsquo;s own preamble: its imports, the shared browser-path shim that points
+<div class="src src-argdown" style="font-family:monospace;">
+<div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">Keep Argdown</span>]: build on Argdown rather than reinventing the notation.</div>
+<div style="padding-left:4ch;text-indent:-2ch;"><span style="color: #00ff00;">+</span> &lt;<span style="color: #93E0E3;">Layout is the hard part</span>&gt;: writing a layered graph layout that folds and reflows is years of work, and the map is where that work shows.</div>
+</div>
+<p>The suite&rsquo;s own preamble: its imports, the shared browser-path shim that points
 Playwright at the nix chromium, and where the fixtures live.</p>
 <div class="konix-block-name-marker" data-name="argdown-test-imports"></div>
 <p><a id="code-snippet--argdown-test-imports"></a></p>
@@ -3445,6 +3553,16 @@ write this script, then run it.</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> page<span style="color:#0550ae">.</span>locator<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.argdown-node&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>filter<span style="color:#1f2328">(</span>
 </span></span><span style="display:flex;"><span>        has<span style="color:#0550ae">=</span>page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span>title<span style="color:#1f2328">,</span> exact<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_multistep_argument_is_one_box_per_step</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A reconstruction that runs in steps shows one box per step, named for it.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    open_map<span style="color:#1f2328">(</span>page<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;multistep&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    m <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>locator<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.argdown-map&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> step <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;The reduction (1/2)&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;The reduction (2/2)&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        box <span style="color:#0550ae">=</span> m<span style="color:#0550ae">.</span>locator<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.argdown-node&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>filter<span style="color:#1f2328">(</span>has<span style="color:#0550ae">=</span>page<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span>step<span style="color:#1f2328">,</span> exact<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        expect<span style="color:#1f2328">(</span>box<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>to_have_count<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        expect<span style="color:#1f2328">(</span>box<span style="color:#0550ae">.</span>get_by_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;the neighbour&#39;s fence would be shared too&#34;</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>to_be_visible<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: each step of a reconstruction is its own box, body and all&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@testcase</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">test_hugo_wrap_column</span><span style="color:#1f2328">(</span>page<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A folded line lands on its statement&#39;s own column, the marker hanging out.&#34;&#34;&#34;</span>
@@ -3938,7 +4056,7 @@ write this script, then run it.</p>
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 08 Aug 2026</time></aside>
+	  <aside class="date"><time>Last updated: 09 Aug 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 May 2026</time></aside>
     </div>
   </div>
