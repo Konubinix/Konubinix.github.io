@@ -57,124 +57,124 @@
 <p>For example, using &ldquo;le petit cochon pendu au plafond&rdquo;.</p>
 <p><a target="_blank" href="https://ipfs.konubinix.eu/p/bafkreiaduaxqdu3j5epxpxjrs5nothlvagb7lretzczloifcexzsn6k4ta?filename=cochon.mid">cochon.mid</a></p>
 <p>Using <a class="internal-link" href="/braindump/posts/lilypond/#midi2ly">midi2ly</a>.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>midi2ly cochon.mid
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>midi2ly cochon.mid
 </span></span></code></pre></div><p>Then, using the <a target="_blank" href="http://lilypond.org/doc/v2.12/input/lsr/lilypond-snippets/Pitches#Coloring-notes-depending-on-their-pitch">snippet to color notes</a>, changing the staff to make it more
 piano like and removing the silences.</p>
 <p>I get this source code.</p>
-<pre tabindex="0"><code class="language-lilypond" data-lang="lilypond">% Lily was here -- automatically converted by /usr/bin/midi2ly from b.mid
-\version &#34;2.14.0&#34;
-
-%LSR Thanks a LOT to Damian leGassick, Steven Weber and Jay Anderson for this snippet
-
-%Association list of pitches to colors.
-#(define color-mapping
-   (list
-    (cons (ly:make-pitch 0 0 NATURAL) (x11-color &#39;red))
-    (cons (ly:make-pitch 0 0 SHARP) (x11-color &#39;green))
-    (cons (ly:make-pitch 0 1 FLAT) (x11-color &#39;yellow))
-    (cons (ly:make-pitch 0 1 NATURAL) (x11-color &#39;blue))
-    (cons (ly:make-pitch 0 2 NATURAL) (x11-color &#39;red))
-    (cons (ly:make-pitch 0 2 SHARP) (x11-color &#39;green))
-    (cons (ly:make-pitch 0 3 FLAT) (x11-color &#39;red))
-    (cons (ly:make-pitch 0 3 NATURAL) (x11-color &#39;yellow))
-    (cons (ly:make-pitch 0 3 SHARP) (x11-color &#39;blue))
-    (cons (ly:make-pitch 0 4 FLAT) (x11-color &#39;blue))
-    (cons (ly:make-pitch 0 4 SHARP) (x11-color &#39;red))
-    (cons (ly:make-pitch 0 4 NATURAL) (x11-color &#39;red))
-    (cons (ly:make-pitch 0 5 FLAT) (x11-color &#39;red))
-    (cons (ly:make-pitch 0 5 NATURAL) (x11-color &#39;yellow))
-    (cons (ly:make-pitch 0 5 SHARP) (x11-color &#39;blue))
-    (cons (ly:make-pitch 0 6 FLAT) (x11-color &#39;blue))
-    (cons (ly:make-pitch 0 6 SHARP) (x11-color &#39;red))
-    (cons (ly:make-pitch 0 6 NATURAL) (x11-color &#39;red))
-    ))
-
-%Compare pitch and alteration (not octave).
-#(define (pitch-equals? p1 p2)
-   (and
-    (= (ly:pitch-alteration p1) (ly:pitch-alteration p2))
-    (= (ly:pitch-notename p1) (ly:pitch-notename p2))))
-
-#(define (pitch-to-color pitch)
-   (let ((color (assoc pitch color-mapping pitch-equals?)))
-     (if color
-         (cdr color))))
-
-#(define (color-notehead grob)
-   (pitch-to-color
-    (ly:event-property (event-cause grob) &#39;pitch)))
-
-
-\layout {
-  \context {
-    \Voice
-    \remove &#34;Note_heads_engraver&#34;
-    \consists &#34;Completion_heads_engraver&#34;
-    \remove &#34;Rest_engraver&#34;
-    \consists &#34;Completion_rest_engraver&#34;
-  }
-}
-
-trackAchannelA = {
-
-  \time 2/4
-
-  \tempo 4 = 100
-
-}
-
-trackA = &lt;&lt;
-  \context Voice = voiceA \trackAchannelA
-&gt;&gt;
-
-
-trackBchannelA = {
-  \skip 4*6432/240
-}
-
-trackBchannelB = \relative c {
-    \override NoteHead.color = #color-notehead
-
-g&#39;&#39;4*96/240 g4*96/240 a4*96/240 a4*96/240
-
-  g4*192/240
-
-  g4*96/240 g4*96/240 a4*96/240 a4*96/240
-
-  g4*192/240
-  g4*96/240 g4*96/240 a4*96/240 a4*96/240
-
-  g4*192/240
-  g4*96/240 g4*96/240 a4*96/240 a4*96/240
-
-  g4*192/240
-  g4*96/240 g4*96/240 a4*96/240 a4*96/240
-
-  a4*192/240
-  g4*96/240 g4*96/240 a4*96/240 d4*96/240
-
-  g,4*192/240 g4*96/240
-  a4*96/240 g4*96/240 a4*96/240 d4*96/240
-
-  g,4*192/240
-}
-
-trackB = &lt;&lt;
-  \context Voice = voiceA \trackBchannelA
-  \context Voice = voiceB \trackBchannelB
-&gt;&gt;
-
-
-\score {
-  &lt;&lt;
-    \context Staff=trackB \trackA
-    \context Staff=trackB \trackB
-  &gt;&gt;
-  \layout {}
-  \midi {}
-}
-</code></pre><p>And it generates the following image.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>lilypond -o cochon --png cochon-midi.ly
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-lilypond" data-lang="lilypond"><span style="display:flex;"><span><span style="color:#57606a">% Lily was here -- automatically converted by /usr/bin/midi2ly from b.mid</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#cf222e">\version</span><span style="color:#fff"> </span><span style="color:#0a3069">&#34;2.14.0&#34;</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">%LSR Thanks a LOT to Damian leGassick, Steven Weber and Jay Anderson for this snippet</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">%Association list of pitches to colors.</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">#(</span><span style="color:#953800">define</span><span style="color:#fff"> </span><span style="color:#953800">color-mapping</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">   </span><span style="color:#1f2328">(</span><span style="color:#953800">list</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#953800">NATURAL</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">red</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#953800">SHARP</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">green</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">1</span><span style="color:#fff"> </span><span style="color:#953800">FLAT</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">yellow</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">1</span><span style="color:#fff"> </span><span style="color:#953800">NATURAL</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">blue</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">2</span><span style="color:#fff"> </span><span style="color:#953800">NATURAL</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">red</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">2</span><span style="color:#fff"> </span><span style="color:#953800">SHARP</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">green</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">3</span><span style="color:#fff"> </span><span style="color:#953800">FLAT</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">red</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">3</span><span style="color:#fff"> </span><span style="color:#953800">NATURAL</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">yellow</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">3</span><span style="color:#fff"> </span><span style="color:#953800">SHARP</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">blue</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">4</span><span style="color:#fff"> </span><span style="color:#953800">FLAT</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">blue</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">4</span><span style="color:#fff"> </span><span style="color:#953800">SHARP</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">red</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">4</span><span style="color:#fff"> </span><span style="color:#953800">NATURAL</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">red</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">5</span><span style="color:#fff"> </span><span style="color:#953800">FLAT</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">red</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">5</span><span style="color:#fff"> </span><span style="color:#953800">NATURAL</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">yellow</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">5</span><span style="color:#fff"> </span><span style="color:#953800">SHARP</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">blue</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">6</span><span style="color:#fff"> </span><span style="color:#953800">FLAT</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">blue</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">6</span><span style="color:#fff"> </span><span style="color:#953800">SHARP</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">red</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">cons</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">make-pitch</span><span style="color:#fff"> </span><span style="color:#0550ae">0</span><span style="color:#fff"> </span><span style="color:#0550ae">6</span><span style="color:#fff"> </span><span style="color:#953800">NATURAL</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">x11-color</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">red</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>%<span style="color:#953800">Compare</span><span style="color:#fff"> </span><span style="color:#953800">pitch</span><span style="color:#fff"> </span><span style="color:#953800">and</span><span style="color:#fff"> </span><span style="color:#953800">alteration</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">not</span><span style="color:#fff"> </span><span style="color:#953800">octave</span><span style="color:#1f2328">)</span>.<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">#(</span><span style="color:#953800">define</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">pitch-equals?</span><span style="color:#fff"> </span><span style="color:#953800">p1</span><span style="color:#fff"> </span><span style="color:#953800">p2</span><span style="color:#1f2328">)</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">   </span><span style="color:#1f2328">(</span><span style="color:#953800">and</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span>=<span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">pitch-alteration</span><span style="color:#fff"> </span><span style="color:#953800">p1</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">pitch-alteration</span><span style="color:#fff"> </span><span style="color:#953800">p2</span><span style="color:#1f2328">))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span>=<span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">pitch-notename</span><span style="color:#fff"> </span><span style="color:#953800">p1</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">pitch-notename</span><span style="color:#fff"> </span><span style="color:#953800">p2</span><span style="color:#1f2328">))))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">#(</span><span style="color:#953800">define</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">pitch-to-color</span><span style="color:#fff"> </span><span style="color:#953800">pitch</span><span style="color:#1f2328">)</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">   </span><span style="color:#1f2328">(</span><span style="color:#953800">let</span><span style="color:#fff"> </span><span style="color:#1f2328">((</span><span style="color:#953800">color</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">assoc</span><span style="color:#fff"> </span><span style="color:#953800">pitch</span><span style="color:#fff"> </span><span style="color:#953800">color-mapping</span><span style="color:#fff"> </span><span style="color:#953800">pitch-equals?</span><span style="color:#1f2328">)))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">     </span><span style="color:#1f2328">(</span><span style="color:#953800">if</span><span style="color:#fff"> </span><span style="color:#953800">color</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">         </span><span style="color:#1f2328">(</span><span style="color:#953800">cdr</span><span style="color:#fff"> </span><span style="color:#953800">color</span><span style="color:#1f2328">))))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">#(</span><span style="color:#953800">define</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">color-notehead</span><span style="color:#fff"> </span><span style="color:#953800">grob</span><span style="color:#1f2328">)</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">   </span><span style="color:#1f2328">(</span><span style="color:#953800">pitch-to-color</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span><span style="color:#1f2328">(</span><span style="color:#953800">ly</span>:<span style="color:#953800">event-property</span><span style="color:#fff"> </span><span style="color:#1f2328">(</span><span style="color:#953800">event-cause</span><span style="color:#fff"> </span><span style="color:#953800">grob</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span>&#39;<span style="color:#953800">pitch</span><span style="color:#1f2328">)))</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>\<span style="color:#953800">layout</span><span style="color:#fff"> </span>{<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">context</span><span style="color:#fff"> </span>{<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>\<span style="color:#953800">Voice</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>\<span style="color:#953800">remove</span><span style="color:#fff"> </span><span style="color:#0a3069">&#34;Note_heads_engraver&#34;</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>\<span style="color:#953800">consists</span><span style="color:#fff"> </span><span style="color:#0a3069">&#34;Completion_heads_engraver&#34;</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>\<span style="color:#953800">remove</span><span style="color:#fff"> </span><span style="color:#0a3069">&#34;Rest_engraver&#34;</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>\<span style="color:#953800">consists</span><span style="color:#fff"> </span><span style="color:#0a3069">&#34;Completion_rest_engraver&#34;</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>}<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>}<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#953800">trackAchannelA</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span>{<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">time</span><span style="color:#fff"> </span><span style="color:#0550ae">2</span>/<span style="color:#0550ae">4</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">tempo</span><span style="color:#fff"> </span><span style="color:#0550ae">4</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span><span style="color:#0550ae">100</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>}<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#953800">trackA</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span>&lt;&lt;<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">context</span><span style="color:#fff"> </span><span style="color:#953800">Voice</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span><span style="color:#953800">voiceA</span><span style="color:#fff"> </span>\<span style="color:#953800">trackAchannelA</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>&gt;&gt;<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#953800">trackBchannelA</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span>{<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">skip</span><span style="color:#fff"> </span><span style="color:#0550ae">4</span>*<span style="color:#0550ae">6432</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>}<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#953800">trackBchannelB</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span>\<span style="color:#953800">relative</span><span style="color:#fff"> </span><span style="color:#953800">c</span><span style="color:#fff"> </span>{<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>\<span style="color:#953800">override</span><span style="color:#fff"> </span><span style="color:#953800">NoteHead</span>.<span style="color:#953800">color</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span><span style="color:#1f2328">#</span><span style="color:#953800">color-notehead</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#953800">g</span>&#39;&#39;<span style="color:#0550ae">4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">192</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">192</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">192</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">192</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">192</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">d4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g</span>,<span style="color:#0550ae">4</span>*<span style="color:#0550ae">192</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">g4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">a4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff"> </span><span style="color:#953800">d4</span>*<span style="color:#0550ae">96</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#953800">g</span>,<span style="color:#0550ae">4</span>*<span style="color:#0550ae">192</span>/<span style="color:#0550ae">240</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>}<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#953800">trackB</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span>&lt;&lt;<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">context</span><span style="color:#fff"> </span><span style="color:#953800">Voice</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span><span style="color:#953800">voiceA</span><span style="color:#fff"> </span>\<span style="color:#953800">trackBchannelA</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">context</span><span style="color:#fff"> </span><span style="color:#953800">Voice</span><span style="color:#fff"> </span>=<span style="color:#fff"> </span><span style="color:#953800">voiceB</span><span style="color:#fff"> </span>\<span style="color:#953800">trackBchannelB</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>&gt;&gt;<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>\<span style="color:#953800">score</span><span style="color:#fff"> </span>{<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>&lt;&lt;<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>\<span style="color:#953800">context</span><span style="color:#fff"> </span><span style="color:#953800">Staff</span>=<span style="color:#953800">trackB</span><span style="color:#fff"> </span>\<span style="color:#953800">trackA</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">    </span>\<span style="color:#953800">context</span><span style="color:#fff"> </span><span style="color:#953800">Staff</span>=<span style="color:#953800">trackB</span><span style="color:#fff"> </span>\<span style="color:#953800">trackB</span><span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>&gt;&gt;<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">layout</span><span style="color:#fff"> </span>{}<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span>\<span style="color:#953800">midi</span><span style="color:#fff"> </span>{}<span style="color:#fff">
+</span></span></span><span style="display:flex;"><span>}<span style="color:#fff">
+</span></span></span></code></pre></div><p>And it generates the following image.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>lilypond -o cochon --png cochon-midi.ly
 </span></span></code></pre></div><figure><img src="https://ipfs.konubinix.eu/p/bafkreihmcfnc4cooixzcdg3244yvarvueplyed24dlebxdmvdtigecisqe?a.png">
 </figure>
 

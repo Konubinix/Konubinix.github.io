@@ -44,34 +44,34 @@
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
         <p><a class="internal-link" href="/braindump/posts/clk_config/">clk config</a> per level and overriding</p>
 <p>Say I want to run</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something somecommand
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something somecommand
 </span></span></code></pre></div><p>I want that in the context of running somecommand, clk parsed the option to have the value something</p>
 <p>Guess I have another command called someothercommand that flow-depends on
 somecommand. Then I would call this.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something someothercommand --flow
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something someothercommand --flow
 </span></span></code></pre></div><p>During the parsing of the someothercommand, clk would remember that someoption
 is something. But when evaluating the flow, it would evaluate the command.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup somecommand
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup somecommand
 </span></span></code></pre></div><p>We would expect that it remembered the someoption setting and run it like</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something somecommand
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something somecommand
 </span></span></code></pre></div><p>In order not to pollute the config, when evaluating somecommand, a temporary
 config is generated, copied from the current config. Then the parsing appends
 the value of the parsed option (thus nothing) to the existing option
 (&ndash;someoption something).</p>
 <p>Because it has saved the command line settings, it can evaluate</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something somecommand
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something somecommand
 </span></span></code></pre></div><p>But doing so, because there may be several calls to ctx.make_context, we can
 append several time the same options and evaluate instead.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something --someoption something --someoption something somecommand
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something --someoption something --someoption something somecommand
 </span></span></code></pre></div><p>While this does not hurt in general, all the side effect (callback etc) that
 come with the option might go wrong at some point.</p>
 <p>Also, since click-completion does not know about the temporary config, it makes
 use of several calls to ctx.make_context and ends generating buggy command line
 options.</p>
 <p>For instance, the following does not work with this algorithm.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something --someotheroption &lt;TAB&gt;
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something --someotheroption &lt;TAB&gt;
 </span></span></code></pre></div><p>It ends up trying to complete against</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something --someotheroption --someoption something --someotheroption &lt;TAB&gt;
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption something --someotheroption --someoption something --someotheroption &lt;TAB&gt;
 </span></span></code></pre></div><p>Messing up with the completion.</p>
 <p>I need a mechanism to append the command line settings so that the flows, alias
 etc can behave appropriately while ensuring it is not appending too many times.</p>
@@ -82,19 +82,19 @@ in the future.</p>
 <p>There are some times though when I explicitly want to have the side
 effects. Like when I parse some alias and want its parsing to impact my current
 settings.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk <span style="color:#6639ba">alias</span> <span style="color:#6639ba">set</span> somegroup.somealias somegroup --someoption somecommand
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk <span style="color:#6639ba">alias</span> <span style="color:#6639ba">set</span> somegroup.somealias somegroup --someoption somecommand
 </span></span></code></pre></div><p>Then I want that getting the alias behave like if I used</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption somecommand
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption somecommand
 </span></span></code></pre></div><p>And then, calling</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someotheroption somealias
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someotheroption somealias
 </span></span></code></pre></div><p>Would first parse</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someotheroption
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someotheroption
 </span></span></code></pre></div><p>As parent of the alias</p>
 <p>And then again</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption
 </span></span></code></pre></div><p>When parsing the alias. Here I want to explicitly say that the second parsing
 appends on top of the first. And the command should behave like.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption --someotheroption
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>clk somegroup --someoption --someotheroption
 </span></span></code></pre></div><p>To do so, I need that each time I want to run a context with side effect, I put
 aside temporarily the level settings, so that the side effect take place.</p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/f6965d2d-5deb-4dd3-89b5-00a29d885fa8?title=clk_config_per_level_and_overriding">Permalink</a></h2>

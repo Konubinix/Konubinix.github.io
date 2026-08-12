@@ -60,25 +60,25 @@ certificat manager, reloader etc.</p>
 <p>When I need to investigate an issue with the cluster run in docker in earthly,
 this is what I do. I hope it will help you.</p>
 <p>First, find the id of the runc container running in earthly.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ docker exec ${earthly_cont_name} buildkit-runc list
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ docker exec ${earthly_cont_name} buildkit-runc list
 </span></span></code></pre></div><p>earthly will run a different runc container per RUN, so wait until you got into
 the WITH DOCKER before doing that.</p>
 <p>In case you have only one earthly job running, you can use the following shortcut</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ runc_cont_id=$(docker exec ${earthly_cont_name} buildkit-runc list -q)
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ runc_cont_id=$(docker exec ${earthly_cont_name} buildkit-runc list -q)
 </span></span></code></pre></div><p>Then, enter that runc container with</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ docker exec -ti ${earthly_cont_name} buildkit-runc exec -t ${runc_cont_id} bash
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ docker exec -ti ${earthly_cont_name} buildkit-runc exec -t ${runc_cont_id} bash
 </span></span></code></pre></div><p>This entered the container that ran k8s in docker, so from here you can run
 kubectl to connect to your cluster.</p>
 <p>Of course, this can be aliased</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ alias runner=&#34;docker exec -ti ${earthly_cont_name} buildkit-runc exec -t ${runc_cont_id}&#34;
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ alias runner=&#34;docker exec -ti ${earthly_cont_name} buildkit-runc exec -t ${runc_cont_id}&#34;
 </span></span></code></pre></div><p>So that you can call</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ runner kubectl get pods
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ runner kubectl get pods
 </span></span></code></pre></div><p>Or even better</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ alias iktl=&#34;docker exec ${earthly_cont_name} buildkit-runc exec ${runc_cont_id} kubectl&#34;
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ alias iktl=&#34;docker exec ${earthly_cont_name} buildkit-runc exec ${runc_cont_id} kubectl&#34;
 </span></span></code></pre></div><p>So that you can call</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ iktl get pods
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ iktl get pods
 </span></span></code></pre></div><p>The good thing with the iktl is that you can use kubectl bash completions with it</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ source &lt;(kubectl completion bash) ; complete -o default -F __start_kubectl iktl
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$ source &lt;(kubectl completion bash) ; complete -o default -F __start_kubectl iktl
 </span></span><span style="display:flex;"><span>$ iktl get pod [TAB]
 </span></span></code></pre></div><p>An you get the completion on pods.</p>
 <h2 id="permalink"><a class="internal-link" href="/braindump/55b499ab-83e5-4a93-9500-72696fda40fc?title=debug_k8s_in_docker_in_earthly">Permalink</a></h2>
