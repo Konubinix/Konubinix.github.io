@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html><title>plant moisture sensor</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Plant Moisture Sensor</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <h2 id="dda825f0-fcbb-468d-9b73-4ba943578aa1">on the server</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># -*- coding:utf-8 -*-</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">logging</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">datetime</span> <span style="color:#cf222e">import</span> datetime<span style="color:#1f2328">,</span> timedelta
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers.otel</span> <span style="color:#cf222e">import</span> metrics
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">quart</span> <span style="color:#cf222e">import</span> Blueprint<span style="color:#1f2328">,</span> request
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>blueprint <span style="color:#0550ae">=</span> Blueprint<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;basilic&#34;</span><span style="color:#1f2328">,</span> <span style="color:#953800">__name__</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>logger <span style="color:#0550ae">=</span> logging<span style="color:#0550ae">.</span>getLogger<span style="color:#1f2328">(</span><span style="color:#953800">__name__</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>meter <span style="color:#0550ae">=</span> metrics<span style="color:#0550ae">.</span>get_meter<span style="color:#1f2328">(</span><span style="color:#953800">__name__</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>basilic_metric <span style="color:#0550ae">=</span> meter<span style="color:#0550ae">.</span>create_gauge<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>    name<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;basilic&#34;</span><span style="color:#1f2328">,</span> description<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;Basilic gauge metric&#34;</span><span style="color:#1f2328">,</span> unit<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;1&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>schedules <span style="color:#0550ae">=</span> <span style="color:#1f2328">[(</span><span style="color:#0550ae">8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">30</span><span style="color:#1f2328">)]</span>  <span style="color:#57606a"># , (12, 0), (18, 0), (22, 0)]</span>
+</span></span><span style="display:flex;"><span>threshold <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;BASILIC_THRESHOLD&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;200&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;BASILIC_DEBUG&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;true&#34;</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    schedules <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">(</span>hour<span style="color:#1f2328">,</span> minute<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> hour <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">23</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> minute <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># 15,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0550ae">30</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># 45,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># 50,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># 55</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@blueprint.route</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/basilic&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">def</span> <span style="color:#6639ba">record</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># called with http://home:9911/basilic?value={value}</span>
+</span></span><span style="display:flex;"><span>    value <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>request<span style="color:#0550ae">.</span>args<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;value&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    basilic_metric<span style="color:#0550ae">.</span>set<span style="color:#1f2328">(</span>value<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    priority <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">if</span> value <span style="color:#0550ae">&gt;</span> threshold <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;high&#34;</span>
+</span></span><span style="display:flex;"><span>    requests<span style="color:#0550ae">.</span>post<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;http://home:9705/basilic&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        headers<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;mp&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#0a3069">&#34;priority&#34;</span><span style="color:#1f2328">:</span> priority<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>        data<span style="color:#0550ae">=</span><span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>value<span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>        timeout<span style="color:#0550ae">=</span><span style="color:#0550ae">30</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    now <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    shifted <span style="color:#0550ae">=</span> now <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>hours<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>  <span style="color:#57606a"># let&#39;s pretend we are actually past that date</span>
+</span></span><span style="display:flex;"><span>    times <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>        now<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>hour<span style="color:#0550ae">=</span>hour<span style="color:#1f2328">,</span> minute<span style="color:#0550ae">=</span>minute<span style="color:#1f2328">,</span> second<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> microsecond<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> hour<span style="color:#1f2328">,</span> minute <span style="color:#0550ae">in</span> schedules
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    found <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> prev<span style="color:#1f2328">,</span> <span style="color:#6639ba">next</span> <span style="color:#0550ae">in</span> <span style="color:#6639ba">zip</span><span style="color:#1f2328">(</span>times<span style="color:#1f2328">,</span> times<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> prev <span style="color:#0550ae">&lt;=</span> shifted <span style="color:#0550ae">&lt;</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            found <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> shifted <span style="color:#0550ae">&lt;=</span> times<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]:</span>
+</span></span><span style="display:flex;"><span>            found <span style="color:#0550ae">=</span> times<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            found <span style="color:#0550ae">=</span> times<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>days<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    wait_seconds <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>found <span style="color:#0550ae">-</span> now<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>total_seconds<span style="color:#1f2328">()</span> <span style="color:#cf222e">if</span> priority <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;low&#34;</span> <span style="color:#cf222e">else</span> <span style="color:#0550ae">600</span>
+</span></span><span style="display:flex;"><span>    logger<span style="color:#0550ae">.</span>info<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Waiting for </span><span style="color:#0a3069">%s</span><span style="color:#0a3069"> (at </span><span style="color:#0a3069">%s</span><span style="color:#0a3069">)&#34;</span><span style="color:#1f2328">,</span> wait_seconds<span style="color:#1f2328">,</span> found<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>wait_seconds<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h2 id="4dfd5cf6-d7b9-438a-aede-a7c130b589e3">on the MCU</h2>
+<div class="konix-block-name-marker" data-name="main"></div>
+<p><a id="code-snippet--main"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> Pin<span style="color:#1f2328">,</span> ADC
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">comm</span> <span style="color:#cf222e">import</span> wifi<span style="color:#1f2328">,</span> ntfy
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers</span> <span style="color:#cf222e">import</span> deep_sleep<span style="color:#1f2328">,</span> dump_exception<span style="color:#1f2328">,</span> lowpower
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>lowpower<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>wifi<span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>debug <span style="color:#0550ae">=</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">4</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>IN<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>pump <span style="color:#0550ae">=</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">5</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>pump<span style="color:#0550ae">.</span>value<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>sensor <span style="color:#0550ae">=</span> ADC<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># latching = LatchingRelay(</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">#     4, # d2</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">#     0, # d3</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># )</span>
+</span></span><span style="display:flex;"><span>switch <span style="color:#0550ae">=</span> Pin<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> Pin<span style="color:#0550ae">.</span>OUT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">wait</span><span style="color:#1f2328">(</span>waiting_seconds<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> debug<span style="color:#0550ae">.</span>value<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>waiting_seconds<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        deep_sleep<span style="color:#1f2328">(</span>waiting_seconds<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">read_stable_value</span><span style="color:#1f2328">(</span>read_fn<span style="color:#1f2328">,</span> window_size<span style="color:#0550ae">=</span><span style="color:#0550ae">5</span><span style="color:#1f2328">,</span> threshold<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> max_iterations<span style="color:#0550ae">=</span><span style="color:#0550ae">50</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    window <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>window_size<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        window<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>read_fn<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    prev_mean <span style="color:#0550ae">=</span> <span style="color:#6639ba">sum</span><span style="color:#1f2328">(</span>window<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>window<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>max_iterations<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        window<span style="color:#0550ae">.</span>pop<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        window<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>read_fn<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        curr_mean <span style="color:#0550ae">=</span> <span style="color:#6639ba">sum</span><span style="color:#1f2328">(</span>window<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>window<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6639ba">abs</span><span style="color:#1f2328">(</span>curr_mean <span style="color:#0550ae">-</span> prev_mean<span style="color:#1f2328">)</span> <span style="color:#0550ae">&lt;=</span> threshold<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>curr_mean<span style="color:#1f2328">),</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        prev_mean <span style="color:#0550ae">=</span> curr_mean
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>prev_mean<span style="color:#1f2328">),</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">trypump</span><span style="color:#1f2328">(</span>t<span style="color:#0550ae">=</span><span style="color:#0550ae">1</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    pump<span style="color:#0550ae">.</span>value<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>t<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    pump<span style="color:#0550ae">.</span>value<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">main</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> debug<span style="color:#0550ae">.</span>value<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            wifi<span style="color:#0550ae">.</span>on<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;try pump&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            trypump<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;tried pump&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            switch<span style="color:#0550ae">.</span>on<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            value<span style="color:#1f2328">,</span> fallback <span style="color:#0550ae">=</span> read_stable_value<span style="color:#1f2328">(</span>sensor<span style="color:#0550ae">.</span>read<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            switch<span style="color:#0550ae">.</span>off<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;Uploading the value </span><span style="color:#0a3069">{</span>value<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">with</span> wifi<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> fallback<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    ntfy<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Used a fallback value since the sensor never converged&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                waiting_seconds <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span><span style="color:#6639ba">float</span><span style="color:#1f2328">(</span>requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;http://home:9911/basilic?value=</span><span style="color:#0a3069">{</span>value<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>text<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;going to sleep for </span><span style="color:#0a3069">{</span>waiting_seconds<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            wait<span style="color:#1f2328">(</span>waiting_seconds<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> Exception <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        dump_exception<span style="color:#1f2328">(</span>e<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;error2.log&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        waiting_seconds <span style="color:#0550ae">=</span> <span style="color:#0550ae">3600</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;dumped this error, waiting for </span><span style="color:#0a3069">{</span>waiting_seconds<span style="color:#0a3069">}</span><span style="color:#0a3069">s before restarting&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        wait<span style="color:#1f2328">(</span>waiting_seconds<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Wed Jul 15 15:19:32 CEST 2026
+</span></span><span style="display:flex;"><span>Checking the current installation
+</span></span><span style="display:flex;"><span>Reading install.json from basilic
+</span></span><span style="display:flex;"><span>Writing into app.py in basilic
+</span></span><span style="display:flex;"><span>Writing into install.json in basilic
+</span></span><span style="display:flex;"><span>Writing into error.log in basilic
+</span></span><span style="display:flex;"><span>Writing into resetdeepsleep in basilic
+</span></span></code></pre></div><h2 id="1147db06-ee07-4f30-8a73-5c289515e0f9">installation</h2>
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreihr2ngemqjj6hrsyrm4xosd3fkuhp6bwgeowxb6pjneuvzqjxpcz4?a.png">
+</figure>
+
+<figure><img src="https://ipfs.konubinix.eu/p/bafkreiaywg5n437gw5g6szaktuc3lxibt5e6ymk5ypgsrfwdqcau4ol7we?a.png">
+</figure>
+
+<h2 id="ba64c82c-fe8b-487e-b146-cbfe239b833b">câblage / wiring</h2>
+<p>Objectif : système autonome, une LiPo rechargée au solaire via le DFRobot.
+Historique des tentatives d&rsquo;alimentation ci-dessous, de la plus simple à celle
+qui devrait marcher. <strong>Fil rouge de tous les échecs</strong> : <em>brownout de l&rsquo;ESP</em> dès
+qu&rsquo;une charge (moteur et/ou bobine) commute sur un rail qu&rsquo;il partage.</p>
+<p>Commun aux deux plans :</p>
+<ul>
+<li>L&rsquo;ESP pilote la <strong>bobine du relais</strong> : VCC=5V, GND, IN=GPIO5
+(cf. <code>pump = Pin(5, Pin.OUT)</code> dans le bloc <code>main</code>).</li>
+<li><strong>Diode de roue libre</strong> en travers de la pompe : bande (cathode) vers le +.</li>
+<li>Pompe PPMB00117 : 2,5–6 V, ~210 mA → direct sur LiPo (pas de boost). Cellule
+0,2C à la limite mais OK pour des pulses de 1 s.</li>
+</ul>
+<p>Points de vigilance :</p>
+<ul>
+<li>Module relais parfois <strong>actif à l&rsquo;état bas</strong> → vérifier la logique, éviter le
+démarrage au boot.</li>
+<li>Ne jamais faire transiter le courant pompe par l&rsquo;ESP ni par la sortie 5V du
+DFRobot (le boost part en oscillation avec un gros condo en sortie).</li>
+<li>Plan A : masse en <strong>étoile</strong> (retours ESP et pompe réunis en UN point sur le −
+batterie). À ~210 mA le partage de masse est négligeable (~20 mV).</li>
+</ul>
+<h3 id="96d9571f-afba-4c35-9c44-f640ad308020">tentative 1 — une seule batterie</h3>
+<p>Le plus simple : une LiPo rechargée au solaire via le DFRobot ; la pompe tape
+sur la <strong>LiPo brute</strong> (jamais via la sortie 5 V du DFRobot), masse en <strong>étoile</strong>
+(retours ESP et pompe réunis en UN point sur le − batterie ; à ~210 mA le
+partage est négligeable, ~20 mV). C&rsquo;est l&rsquo;objectif final.</p>
+<p>Échecs rencontrés :</p>
+<ul>
+<li>Moteur sur le 5 V de l&rsquo;ESP, <strong>sans diode</strong> → moteur en 5 V continu et <strong>ESP qui
+redémarre</strong> (brownout : le courant moteur traverse l&rsquo;ESP).</li>
+<li>Diode de roue libre <strong>dans un sens</strong> → moteur ~1 V et <strong>diode qui chauffe</strong> :
+diode à l&rsquo;envers (passante en direct, court-circuite le moteur).</li>
+<li>Diode <strong>dans l&rsquo;autre sens</strong> → moteur qui <strong>ne s&rsquo;arrête plus</strong> : 2N2222 <strong>grillé</strong>
+(C-E en court-circuit) par les pics des essais sans diode. ⇒ remplacé par un
+<strong>module relais</strong> (driver + diode + LED intégrés) → supprime les pannes de commande.</li>
+<li><strong>Gros condo (1000 µF) sur la sortie 5 V du DFRobot</strong> → boost en oscillation :
+ESP ne répond plus. ⇒ jamais de gros condo sur une sortie boost.</li>
+<li>Moteur sur <strong>LiPo brute (3,7 V)</strong> → tourne bien ; commande OK une fois le relais
+en place (GPIO vérifié).</li>
+</ul>
+<h4 id="circuit-pompe-1bat">schéma — une batterie</h4>
+<div class="konix-block-name-marker" data-name="circuit_pompe_1bat_py"></div>
+<p><a id="code-snippet--circuit-pompe-1bat-py"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">schemdraw</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">schemdraw.elements</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">elm</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>out <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;/var/run/user/1000/basilic/circuit_pompe_1bat.png&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">with</span> schemdraw<span style="color:#0550ae">.</span>Drawing<span style="color:#1f2328">(</span>file<span style="color:#0550ae">=</span>out<span style="color:#1f2328">,</span> show<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> d<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>config<span style="color:#1f2328">(</span>unit<span style="color:#0550ae">=</span><span style="color:#0550ae">2.0</span><span style="color:#1f2328">,</span> fontsize<span style="color:#0550ae">=</span><span style="color:#0550ae">12</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ===== Batterie unique + domaine ESP =====</span>
+</span></span><span style="display:flex;"><span>    b1 <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Battery<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;LiPo 1Ah</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">(unique)&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;bottom&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    pnode <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span>                      <span style="color:#57606a"># noeud + partage (ESP + pompe)</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.4</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    dfr <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.4</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;DFRobot</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">Solar 5V&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.4</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    esp <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.8</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;ESP32</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">(deep sleep)&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># GPIO5 -&gt; bobine relais</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>esp<span style="color:#0550ae">.</span>end<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.7</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">1.0</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;GPIO5&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    coil <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Inductor2<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">2.0</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;bobine</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">relais&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    coil_bot <span style="color:#0550ae">=</span> coil<span style="color:#0550ae">.</span>end
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ===== Branche pompe : tap sur le + de la batterie, MEME masse (etoile) =====</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>pnode<span style="color:#0550ae">.</span>center<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">2.6</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    sw <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Switch<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;relais</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">contact&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">1.2</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    ptop <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span><span style="color:#0550ae">.</span>center
+</span></span><span style="display:flex;"><span>    pump <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">1.8</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.4</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Pompe</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">PPMB00117&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    pbot <span style="color:#0550ae">=</span> pump<span style="color:#0550ae">.</span>end
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># diode roue libre // pompe (cathode vers +)</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>ptop<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">1.3</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Diode<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>toy<span style="color:#1f2328">(</span>pbot<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">])</span><span style="color:#0550ae">.</span>reverse<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;roue</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">libre&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>left<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>tox<span style="color:#1f2328">(</span>pbot<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ===== Masse en etoile : rail bas commun =====</span>
+</span></span><span style="display:flex;"><span>    ygnd <span style="color:#0550ae">=</span> pbot<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>coil_bot<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>toy<span style="color:#1f2328">(</span>ygnd<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>b1<span style="color:#0550ae">.</span>start<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>toy<span style="color:#1f2328">(</span>ygnd<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    star <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>b1<span style="color:#0550ae">.</span>start<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">],</span> ygnd<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>star<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Label<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;masse etoile&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>star<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>star<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>tox<span style="color:#1f2328">(</span>pbot<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>out<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>https://ipfs.konubinix.eu/p/bafkreih7x3fbrq2e5rwqbmeyxf2kqeq7ryfxqvsqnnal7rlpcdiw7mzmfi?circuit_pompe_1bat.png
+</span></span></code></pre></div><h3 id="6bac78ee-040b-4141-9a5e-e3d675c84e0d">tentative 2 — deux batteries (bobine sur le 5 V DFRobot)</h3>
+<p>Repli du plan A : pompe sur sa <strong>propre batterie</strong>, boucle de puissance isolée de
+l&rsquo;ESP par le <strong>contact</strong> du relais. Mais la <strong>bobine</strong> du relais reste alimentée par
+la <strong>sortie 5 V (boost) du DFRobot</strong> — donc sur le rail ESP.</p>
+<p>Échec :</p>
+<ul>
+<li><strong>Relais installé, s&rsquo;arrête par intermittence.</strong> Pas un pb de commande :
+<code>pump.value(0)</code> (<code>trypump</code>, bloc <code>main</code>) est séquentiel, toujours atteint, et
+GPIO5 ne colle pas au boot (vérifié).</li>
+<li><strong>Preuve</strong> : quand ça reste collé, on reçoit <code>try pump</code> mais <strong>jamais</strong> <code>tried pump</code> ⇒ l&rsquo;ESP <strong>reset en plein</strong> <code>trypump</code>, reboote, relance <code>trypump</code> → le
+relais recolle → « pompe qui ne s&rsquo;arrête plus ».</li>
+<li><strong>Cause = brownout au collage de la bobine</strong> : l&rsquo;échelon de courant (~70 mA, pic
+de collage possiblement 300–500 mA) fait plonger le 5 V du boost fragile → le
+rail ESP suit → détecteur de brownout ESP32 → reset. Intermittent selon l&rsquo;état
+de charge et le timing.</li>
+<li><strong>Piège de diagnostic</strong> : <code>switch = Pin(1)</code> = UART0 TX → console série HS → on
+ne voit pas « Brownout detector was triggered ». Bouger <code>switch</code> sur une autre
+broche et logguer <code>machine.reset_cause()</code> au boot.</li>
+</ul>
+<h4 id="circuit-pompe">schéma — deux batteries (bobine sur boost)</h4>
+<div class="konix-block-name-marker" data-name="circuit_pompe_py"></div>
+<p><a id="code-snippet--circuit-pompe-py"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">schemdraw</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">schemdraw.elements</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">elm</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>out <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;/var/run/user/1000/basilic/circuit_pompe.png&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">with</span> schemdraw<span style="color:#0550ae">.</span>Drawing<span style="color:#1f2328">(</span>file<span style="color:#0550ae">=</span>out<span style="color:#1f2328">,</span> show<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> d<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>config<span style="color:#1f2328">(</span>unit<span style="color:#0550ae">=</span><span style="color:#0550ae">2.0</span><span style="color:#1f2328">,</span> fontsize<span style="color:#0550ae">=</span><span style="color:#0550ae">12</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ================= Domaine ESP (alim propre) =================</span>
+</span></span><span style="display:flex;"><span>    b1 <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Battery<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;LiPo 1Ah</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">(ESP)&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;bottom&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.5</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    dfr <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.4</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;DFRobot</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">Solar 5V&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.5</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    esp <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.8</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;ESP32</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">(deep sleep)&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># branche GPIO5 -&gt; bobine relais -&gt; masse</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>esp<span style="color:#0550ae">.</span>end<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.7</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">1.0</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;GPIO5&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    coil <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Inductor2<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">2.0</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;bobine</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">relais&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.4</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Ground<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ================= Domaine moteur (isolé, 2e batterie) =================</span>
+</span></span><span style="display:flex;"><span>    cx<span style="color:#1f2328">,</span> cy <span style="color:#0550ae">=</span> coil<span style="color:#0550ae">.</span>center
+</span></span><span style="display:flex;"><span>    b2 <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Battery<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>up<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">((</span>cx <span style="color:#0550ae">+</span> <span style="color:#0550ae">3.5</span><span style="color:#1f2328">,</span> cy <span style="color:#0550ae">-</span> <span style="color:#0550ae">1.6</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;LiPo 2</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">(pompe)&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>up<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.5</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    sw <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Switch<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;relais</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">contact&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.8</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    node_top <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span><span style="color:#0550ae">.</span>center
+</span></span><span style="display:flex;"><span>    pump <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">1.8</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.4</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Pompe</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">PPMB00117&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    node_bot <span style="color:#0550ae">=</span> pump<span style="color:#0550ae">.</span>end
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>node_bot<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.4</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>left<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>tox<span style="color:#1f2328">(</span>b2<span style="color:#0550ae">.</span>start<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># diode de roue libre en parallele sur la pompe (cathode vers +)</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>node_top<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">1.3</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Diode<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>toy<span style="color:#1f2328">(</span>node_bot<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">])</span><span style="color:#0550ae">.</span>reverse<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;roue</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">libre&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>left<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>tox<span style="color:#1f2328">(</span>node_bot<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># lien mecanique bobine &lt;-&gt; contact (pointille)</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>coil<span style="color:#0550ae">.</span>center<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>to<span style="color:#1f2328">(</span>sw<span style="color:#0550ae">.</span>center<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>linestyle<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;:&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>color<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;gray&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>out<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>https://ipfs.konubinix.eu/p/bafkreiajcm5xp466i6jeuhfxe7v5gsw3u3wyyrl64bivg2r5jc6rsthuzq?circuit_pompe.png
+</span></span></code></pre></div><h3 id="tentative-1bat-esp-sur-boost">tentative 3 — une batterie : charges sur le brut, ESP + capteur sur le boost</h3>
+<p>Tentative d&rsquo;isoler l&rsquo;ESP <em>derrière</em> la régulation : <strong>bobine + moteur sur la LiPo
+brute</strong>, <strong>ESP + capteur d&rsquo;humidité sur la sortie 5 V (boost) du DFRobot</strong> (lui-même
+alimenté par la même LiPo). L&rsquo;idée : le boost tamponne l&rsquo;ESP.</p>
+<p>Échec :</p>
+<ul>
+<li><strong>Même brownout.</strong> L&rsquo;appel de courant des charges écroule la LiPo brute → l&rsquo;entrée
+du boost plonge aussi → sa sortie (ESP) suit → reset. Le boost ne tamponne rien
+(pas de réservoir, réponse lente). Rebond de masse probable en plus, si les
+retours de charge partagent le chemin de masse de l&rsquo;ESP.</li>
+<li><strong>Conclusion clé</strong> : la cause n&rsquo;est pas (que) le boost — c&rsquo;est le <strong>partage du
+rail / de la masse</strong> avec l&rsquo;ESP. <em>Une seule batterie ne tient pas l&rsquo;appel de
+courant</em> sans écrouler l&rsquo;ESP, quelle que soit la façon dont on prend le 5 V.</li>
+</ul>
+<h3 id="tentative-bobine-isolee">tentative 4 — deux batteries, bobine isolée (cible)</h3>
+<p>Ne plus rien faire commuter sur le rail de l&rsquo;ESP. Le DFRobot ne sert plus que de
+<strong>chargeur solaire de la LiPo ESP</strong>.</p>
+<ul>
+<li><strong>Moteur</strong> sur sa propre batterie (LiPo 2), isolé par le <strong>contact</strong> — inchangé.</li>
+<li><strong>Bobine</strong> sortie du boost : soit sur <strong>LiPo ESP brute</strong>, soit (module opto +
+cavalier <strong>JD-VCC</strong>) sur <strong>LiPo 2</strong> → courant bobine 100 % hors rail ESP, masse
+commune conservée pour la référence du GPIO. <strong>2 batteries suffisent</strong> (pas de 3ᵉ).</li>
+<li><strong>Condo de réservoir 470–1000 µF + 100 nF au ras des broches d&rsquo;alim de l&rsquo;ESP</strong> —
+jamais monté jusqu&rsquo;ici, c&rsquo;est LE fix classique du brownout ; seul il peut suffire.</li>
+<li>Vérifier le seuil de collage (~3,75 V pour un relais 5 V) : si trop juste sur
+LiPo, passer à un <strong>relais bobine 3 V</strong>.</li>
+<li>Masse en étoile stricte, fils courts et gros, condo aussi au ras du moteur.</li>
+</ul>
+<h4 id="circuit-pompe-fix">schéma — bobine isolée (brouillon, à générer/ajuster)</h4>
+<div class="konix-block-name-marker" data-name="circuit_pompe_fix_py"></div>
+<p><a id="code-snippet--circuit-pompe-fix-py"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">schemdraw</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">schemdraw.elements</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">elm</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>out <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;/var/run/user/1000/basilic/circuit_pompe_fix.png&#34;</span>
+</span></span><span style="display:flex;"><span>os<span style="color:#0550ae">.</span>makedirs<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>dirname<span style="color:#1f2328">(</span>out<span style="color:#1f2328">),</span> exist_ok<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">with</span> schemdraw<span style="color:#0550ae">.</span>Drawing<span style="color:#1f2328">(</span>file<span style="color:#0550ae">=</span>out<span style="color:#1f2328">,</span> show<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> d<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>config<span style="color:#1f2328">(</span>unit<span style="color:#0550ae">=</span><span style="color:#0550ae">2.0</span><span style="color:#1f2328">,</span> fontsize<span style="color:#0550ae">=</span><span style="color:#0550ae">11</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ===== Domaine ESP : DFRobot = chargeur solaire SEUL + condo reservoir =====</span>
+</span></span><span style="display:flex;"><span>    b1 <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Battery<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;LiPo 1</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">(ESP)&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;bottom&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.5</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    dfr <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.5</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;DFRobot</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">chargeur</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">solaire SEUL&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.4</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    vdd <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Capacitor<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">1.3</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;470µF</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">//100nF&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Ground<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>vdd<span style="color:#0550ae">.</span>center<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.4</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    esp <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">3</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.8</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;ESP32&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ===== GPIO5 -&gt; module relais (opto) ; bobine renvoyee sur LiPo2 =====</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>esp<span style="color:#0550ae">.</span>end<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.7</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">1.0</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;GPIO5&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    coil <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Inductor2<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">2.0</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;bobine</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">(sur LiPo 2)&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    coil_bot <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># ===== Domaine moteur (LiPo2) : alimente bobine ET pompe, hors rail ESP =====</span>
+</span></span><span style="display:flex;"><span>    cx<span style="color:#1f2328">,</span> cy <span style="color:#0550ae">=</span> coil<span style="color:#0550ae">.</span>center
+</span></span><span style="display:flex;"><span>    b2 <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Battery<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>up<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">((</span>cx <span style="color:#0550ae">+</span> <span style="color:#0550ae">3.8</span><span style="color:#1f2328">,</span> cy <span style="color:#0550ae">-</span> <span style="color:#0550ae">1.6</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;LiPo 2</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">(pompe+bobine)&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;left&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># retour bobine sur LiPo2- (PAS la masse ESP)</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>coil_bot<span style="color:#0550ae">.</span>center<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>toy<span style="color:#1f2328">(</span>b2<span style="color:#0550ae">.</span>start<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>tox<span style="color:#1f2328">(</span>b2<span style="color:#0550ae">.</span>start<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># contact : LiPo2+ -&gt; contact -&gt; pompe -&gt; LiPo2-</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>b2<span style="color:#0550ae">.</span>end<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>up<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.5</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    sw <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Switch<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;relais</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">contact&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">0.8</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    node_top <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Dot<span style="color:#1f2328">())</span><span style="color:#0550ae">.</span>center
+</span></span><span style="display:flex;"><span>    pump <span style="color:#0550ae">=</span> d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>RBox<span style="color:#1f2328">(</span>w<span style="color:#0550ae">=</span><span style="color:#0550ae">1.8</span><span style="color:#1f2328">,</span> h<span style="color:#0550ae">=</span><span style="color:#0550ae">1.4</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Pompe</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">PPMB00117&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    node_bot <span style="color:#0550ae">=</span> pump<span style="color:#0550ae">.</span>end
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>node_bot<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>toy<span style="color:#1f2328">(</span>b2<span style="color:#0550ae">.</span>start<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>left<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>tox<span style="color:#1f2328">(</span>b2<span style="color:#0550ae">.</span>start<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># diode roue libre // pompe (cathode vers +)</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>node_top<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>right<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>length<span style="color:#1f2328">(</span><span style="color:#0550ae">1.3</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Diode<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>down<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>toy<span style="color:#1f2328">(</span>node_bot<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">])</span><span style="color:#0550ae">.</span>reverse<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>label<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;roue</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">libre&#34;</span><span style="color:#1f2328">,</span> loc<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;right&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>left<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>tox<span style="color:#1f2328">(</span>node_bot<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># lien mecanique bobine &lt;-&gt; contact</span>
+</span></span><span style="display:flex;"><span>    d<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>elm<span style="color:#0550ae">.</span>Line<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>at<span style="color:#1f2328">(</span>coil<span style="color:#0550ae">.</span>center<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>to<span style="color:#1f2328">(</span>sw<span style="color:#0550ae">.</span>center<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>linestyle<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;:&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>color<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;gray&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>out<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>https://ipfs.konubinix.eu/p/bafkreifv4d2qtdw4xccvssylvf5lk6wzjf7gqg4yxstertskwbqxuwfa6i?circuit_pompe_fix.png
+</span></span></code></pre></div><h3 id="debug-brownout">suggestion de debug</h3>
+<p>Avant de recâbler, <strong>isoler LA charge coupable</strong> (test A/B, ~2 min) :</p>
+<ul>
+<li>Débrancher le <strong>moteur</strong> du contact (le relais commute dans le vide), garder la
+bobine alimentée, lancer <code>trypump</code> :
+<ul>
+<li><strong>plus de reset</strong> → coupable = <strong>inrush moteur</strong> → batterie moteur séparée + condo ;</li>
+<li><strong>reset quand même</strong> → coupable = <strong>bobine</strong> → condo sur son alim / source raide.</li>
+</ul>
+</li>
+<li><strong>Quantifier</strong> : multimètre en MIN/MAX (ou scope) sur le <strong>3,3 V de l&rsquo;ESP</strong> pendant
+un pulse → profondeur du creux. Confirmer <code>machine.reset_cause() =</code> BROWNOUT_RESET=
+au boot.</li>
+<li><strong>Récupérer le log série</strong> : bouger <code>switch</code> hors de <code>Pin(1)</code> (= UART0 TX) pour
+revoir le message « Brownout detector was triggered ».</li>
+<li><strong>Suspecter la cellule</strong> : capacité / âge → résistance interne trop haute pour
+l&rsquo;appel de courant. Vérifier aussi que la <strong>pompe ne cale pas</strong> (bulle d&rsquo;air / à
+sec → courant de blocage en continu, pas juste un pic).</li>
+</ul>
+<p>Sources brownout ESP32 :
+<a target="_blank" href="https://www.oceanremote.net/troubleshooting/esp32-brownout-detector/">OceanRemote</a> ·
+<a target="_blank" href="https://www.universal-solder.ca/troubleshooting-esp32-brownout/">Universal-Solder</a> ·
+<a target="_blank" href="https://www.espboards.dev/troubleshooting/issues/power/esp32-power-drop-under-load/">espboards (power drop under load)</a> ·
+<a target="_blank" href="https://esp32.com/viewtopic.php?t=11450">ESP32 Forum (brownout prevention)</a></p>
+<h2 id="permalink"><a class="internal-link" href="/braindump/b926351e-6e54-4817-bbc7-1fec3ca515f3?title=plant_moisture_sensor">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+      </div>
+	  <aside class="date"><time>Last updated: 15 Jul 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 29 Oct 2025</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
