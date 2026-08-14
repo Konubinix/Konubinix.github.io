@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html><title>calculer les tâches à faire sur une voiture</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Calculer Les Tâches À Faire Sur Une Voiture</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <h2 id="mode-emploi">comment ça marche</h2>
+<p>Cette note est une &ldquo;bibliothèque&rdquo; : elle définit un <em>bloc de calcul</em> python
+réutilisable, plus deux tableaux d&rsquo;exemple (<code>releves</code> et <code>seuils</code>) qui servent
+surtout à documenter le format attendu. Le vrai usage se fait dans les notes
+par-voiture, qui appellent ce bloc avec <em>leurs propres</em> données. Voir
+<a href="/braindump/new-posts/exemple_de_suivi_d_entretien_d_une_voiture/">exemple de suivi d&rsquo;entretien d&rsquo;une voiture</a> pour un cas d&rsquo;usage complet.</p>
+<h3 id="idee">l&rsquo;idée générale</h3>
+<p>Pour entretenir une voiture, il faut suivre tout un tas d&rsquo;actions
+périodiques : pression des pneus, vidange, révision, remplacement de filtres,
+contrôle de liquide de frein, etc. Chacune a sa propre périodicité, exprimée
+soit en kilomètres, soit en durée, soit (le plus souvent) au premier des deux
+atteint.</p>
+<p>Plutôt que de tenir un calendrier manuel par action, je tiens un <em>journal</em> de
+relevés. À chaque relevé, je note la date, le kilométrage, et la liste des
+actions effectuées (ou simplement vérifiées) ce jour-là. À partir de ce
+journal et des seuils, le bloc python recalcule pour chaque action si elle
+est en retard (&ldquo;A FAIRE&rdquo;) ou encore valide (&ldquo;ok&rdquo;).</p>
+<h3 id="entrees">les deux tableaux d&rsquo;entrée</h3>
+<dl>
+<dt><code>releves</code></dt>
+<dd>le journal. Une ligne par observation, du plus récent au plus
+ancien. Les colonnes essentielles sont la date, le kilométrage, et la
+colonne <code>actions</code> qui liste, séparées par des virgules, les actions
+constatées ce jour-là. Les autres colonnes (<code>stamp</code>, <code>Diff Km</code>, <code>Nb jours</code>,
+<code>Km/J</code>) sont calculées automatiquement par les <code>#+TBLFM</code> associées et
+servent à se faire une idée de l&rsquo;usage.</dd>
+<dt><code>seuils</code></dt>
+<dd>la table des règles. Une ligne par action, avec un seuil en
+kilomètres (<code>seuilkm</code>) et/ou un seuil en durée (<code>seuiltmp</code>, exprimé sous la
+forme <code>1y</code>, <code>6m</code>, <code>4m</code>, <code>2y</code>, etc.). L&rsquo;un, l&rsquo;autre ou les deux peuvent être
+vides : si <code>seuilkm</code> est vide, on ne tient compte que du temps ; si
+<code>seuiltmp</code> est vide, on ne tient compte que des kilomètres.</dd>
+</dl>
+<h3 id="bloc-calcul">le bloc <code>calcul</code></h3>
+<p>Le bloc nommé <code>calcul</code> prend ces deux tableaux en paramètre et produit, pour
+chaque action de <code>seuils</code>, une ligne avec :</p>
+<ul>
+<li>le statut (<code>A FAIRE</code> si périmé, <code>ok</code> sinon),</li>
+<li>le nombre de kilomètres restant avant le prochain seuil km (<code>None</code> si pas
+applicable),</li>
+<li>le nombre de jours restant avant le prochain seuil temps (négatif si déjà
+dépassé),</li>
+<li>le commentaire de la dernière colonne de <code>seuils</code>.</li>
+</ul>
+<p>Le résultat est trié par statut, donc les &ldquo;A FAIRE&rdquo; remontent en haut.</p>
+<h3 id="reutilisation">comment réutiliser ça pour une voiture</h3>
+<p>Dans une note dédiée à une voiture, on définit ses <em>propres</em> tableaux nommés
+<code>releves</code> et <code>seuils</code>, puis on appelle le bloc partagé via <code>#+CALL</code> :</p>
+<p><a id="code-snippet--"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-org" data-lang="org"><span style="display:flex;"><span><span style="color:#57606a">#+CALL</span><span style="color:#57606a">: calculer_les_taches_a_faire_sur_une_voiture.org:calcul(seuils=seuils, releves=releves)</span>
+</span></span></code></pre></div><p>Org-babel résout <code>seuils</code> et <code>releves</code> dans le contexte local de la note (les
+tableaux locaux), et exécute le bloc <code>calcul</code> défini ici. Le tableau de
+résultats est inséré sous une ligne <code>#+RESULTS:</code>.</p>
+<p>Concrètement, mettre à jour l&rsquo;état d&rsquo;entretien d&rsquo;une voiture revient à :</p>
+<ol>
+<li>ajouter une ligne en haut du tableau <code>releves</code> avec la date du jour, le
+kilométrage, et les actions faites/vérifiées ;</li>
+<li>recalculer les formules du tableau (<code>C-u C-c C-c</code> sur la ligne <code>#+TBLFM</code>)
+pour mettre à jour <code>stamp</code>, <code>Diff Km</code>, etc. ;</li>
+<li>évaluer le <code>#+CALL</code> pour régénérer le tableau de résultats ;</li>
+<li>lire ce qui est en &ldquo;A FAIRE&rdquo; et planifier les prochaines interventions.</li>
+</ol>
+<h3 id="seuils-par-voiture">le rôle des seuils par voiture</h3>
+<p>Les seuils ne sont pas universels : ils dépendent du modèle, du carnet
+d&rsquo;entretien constructeur, et des choix qu&rsquo;on assume. Par exemple :</p>
+<ul>
+<li>une thermique aura typiquement une longue liste : vidange, filtres à
+huile/air, bougies, courroie d&rsquo;accessoires, etc. ;</li>
+<li>une électrique aura une liste très réduite : pas de vidange ni de bougies,
+et certains contrôles fluides peuvent être espacés (par exemple <code>4y</code> au
+lieu de <code>1y</code> d&rsquo;origine, si on l&rsquo;assume après vérification).</li>
+</ul>
+<p>Autrement dit, le tableau <code>seuils</code> est l&rsquo;endroit où l&rsquo;on encode la <em>politique
+d&rsquo;entretien</em> qu&rsquo;on a décidé de suivre pour cette voiture-ci, en partant du
+carnet constructeur puis en adaptant.</p>
+<h3 id="benefices">ce qu&rsquo;on gagne</h3>
+<ul>
+<li>une <em>seule</em> source pour la logique de calcul : si je change la façon dont
+les seuils sont interprétés, ça profite à toutes les voitures ;</li>
+<li>un journal qui sert aussi d&rsquo;historique d&rsquo;entretien (date, kilométrage,
+consommation par jour, actions effectuées) ;</li>
+<li>une vision rapide de ce qui est en retard, sans rien à mémoriser ni à
+planifier soi-même.</li>
+</ul>
+<h2 id="reference">tableaux de référence</h2>
+<p>Les tableaux ci-dessous servent surtout d&rsquo;exemple et de gabarit pour copier
+dans une nouvelle note de voiture. Le bloc <code>calcul</code> juste après est celui
+qu&rsquo;on appelle depuis les autres notes.</p>
+<p><a id="table--releves"></a></p>
+<table>
+	<thead>
+			<tr>
+					<th></th>
+					<th>Date</th>
+					<th>stamp</th>
+					<th>Km</th>
+					<th>Diff Km</th>
+					<th>Nb jours</th>
+					<th>Km/J</th>
+					<th>Km restant</th>
+					<th>Tps restant</th>
+					<th>Km/J restant</th>
+					<th>actions</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td></td>
+					<td><span class="timestamp-wrapper"><span class="timestamp">[2018-06-12 Tue 20:00]</span></span></td>
+					<td>1528826400.0</td>
+					<td>0</td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td>0/0</td>
+					<td>PressionPneus, UsurePneus, Feux, NiveauBattery, ControlerHuileDA, RevisionUniqueEurope, RemplacementFiltreHabitacle, RemplacementFiltreHuile, VidangeHuile, ControlerLiquideFrein, ControlerLiquideRefroidissement, RemplacementFiltreAir, RemplacementLiquideFrein, RemplacementLiquideRefroidissement, RemplacementCourroieAccessoireEtGalet, CtrlOeilNuPlaquettesFrein, RemplacementLiquideRefroidissement, RemplacementBougiesAllumage, CtrlDepoussierageGarnitureFreinTambour, ControlerHuile, CtrlLigneEchappement, VerifNivHuileBoiteVitesses, VerifOuRemplacementAmortisseurs, VerifAirbag, ChangerEssuieGlaces</td>
+			</tr>
+	</tbody>
+</table>
+<p><a id="table--seuils"></a></p>
+<table>
+	<thead>
+			<tr>
+					<th>action</th>
+					<th>seuilkm</th>
+					<th>seuiltmp</th>
+					<th></th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>PressionPneus</td>
+					<td></td>
+					<td>1m</td>
+					<td>Ou avant tout déplacement important</td>
+			</tr>
+			<tr>
+					<td>UsurePneus</td>
+					<td></td>
+					<td>4m</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>Feux</td>
+					<td></td>
+					<td>6m</td>
+					<td>arrière, position, croisement, route, plaque arrière, clignotants avant, clignotants arrière, clignotants coté, arrière haut</td>
+			</tr>
+			<tr>
+					<td>NiveauBattery</td>
+					<td></td>
+					<td>6m</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>ControlerHuileDA</td>
+					<td>15000</td>
+					<td>1y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RevisionUniqueEurope</td>
+					<td>20000</td>
+					<td>1y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementFiltreHabitacle</td>
+					<td>20000</td>
+					<td>1y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementFiltreHuile</td>
+					<td>20000</td>
+					<td>1y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>VidangeHuile</td>
+					<td>20000</td>
+					<td>1y</td>
+					<td>ou à chaque intervention importante sur le moteur, avec remplacement du filtre à huile</td>
+			</tr>
+			<tr>
+					<td>ControlerLiquideFrein</td>
+					<td>45000</td>
+					<td>1y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>ControlerLiquideRefroidissement</td>
+					<td></td>
+					<td>1y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementFiltreAir</td>
+					<td>60000</td>
+					<td>4y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementLiquideFrein</td>
+					<td>120000</td>
+					<td>4y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementLiquideRefroidissement</td>
+					<td>120000</td>
+					<td>5y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementCourroieAccessoireEtGalet</td>
+					<td>120000</td>
+					<td>6y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>CtrlOeilNuPlaquettesFrein</td>
+					<td>10000</td>
+					<td>1y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementLiquideRefroidissement</td>
+					<td></td>
+					<td>6y</td>
+					<td>préconisé tous les 6 ans (liquide bleu/vert) ou 10 ans (rouge/orange)</td>
+			</tr>
+			<tr>
+					<td>RemplacementBougiesAllumage</td>
+					<td>60000</td>
+					<td></td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>CtrlDepoussierageGarnitureFreinTambour</td>
+					<td>80000</td>
+					<td></td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>ControlerHuile</td>
+					<td>1000</td>
+					<td></td>
+					<td>ou avant chaque parcours important</td>
+			</tr>
+			<tr>
+					<td>CtrlLigneEchappement</td>
+					<td>30000</td>
+					<td>2y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>VerifNivHuileBoiteVitesses</td>
+					<td>30000</td>
+					<td>2y</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>VerifOuRemplacementAmortisseurs</td>
+					<td>100000</td>
+					<td></td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>VerifAirbag</td>
+					<td>100000</td>
+					<td></td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>ChangerEssuieGlaces</td>
+					<td></td>
+					<td>3y</td>
+					<td></td>
+			</tr>
+	</tbody>
+</table>
+<p><a id="code-snippet--calcul"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">pandas</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">pd</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">dateutil.relativedelta</span> <span style="color:#cf222e">import</span> relativedelta
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">re</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">datetime</span> <span style="color:#cf222e">import</span> datetime
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>DURATION_THRESHOLD_REGEX <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>compile<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#39;^((?P&lt;years&gt;\d+)y)?((?P&lt;months&gt;\d+)m)?$&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">parse_duration_threshold</span><span style="color:#1f2328">(</span>duration_threshold_str<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Convert a duration threshold like &#39;1y&#39; or &#39;6m&#39; into a relativedelta.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">match</span> <span style="color:#0550ae">=</span> DURATION_THRESHOLD_REGEX<span style="color:#0550ae">.</span><span style="color:#cf222e">match</span><span style="color:#1f2328">(</span>duration_threshold_str<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">match</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> relativedelta<span style="color:#1f2328">(</span><span style="color:#0550ae">**</span><span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        unit<span style="color:#1f2328">:</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>quantity<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> unit<span style="color:#1f2328">,</span> quantity <span style="color:#0550ae">in</span> <span style="color:#cf222e">match</span><span style="color:#0550ae">.</span>groupdict<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>items<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> quantity
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">sort_key_by_status</span><span style="color:#1f2328">(</span>result_row<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Sort &#39;A FAIRE&#39; before &#39;ok&#39; (alphabetical order on the status column).&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> result_row<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>log_df <span style="color:#0550ae">=</span> pd<span style="color:#0550ae">.</span>DataFrame<span style="color:#1f2328">(</span>releves<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:],</span> columns<span style="color:#0550ae">=</span>releves<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>log_df<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;date&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> pd<span style="color:#0550ae">.</span>to_datetime<span style="color:#1f2328">(</span>log_df<span style="color:#0550ae">.</span>stamp<span style="color:#1f2328">,</span> unit<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;s&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>current_km <span style="color:#0550ae">=</span> log_df<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;Km&#34;</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>iloc<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>occurrences_df <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>    log_df<span style="color:#0550ae">.</span>assign<span style="color:#1f2328">(</span>action<span style="color:#0550ae">=</span>log_df<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;actions&#34;</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>str<span style="color:#0550ae">.</span>split<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;, &#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0550ae">.</span>explode<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;action&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0550ae">.</span>rename<span style="color:#1f2328">(</span>columns<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;Km&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;km&#34;</span><span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#1f2328">[[</span><span style="color:#0a3069">&#34;km&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;date&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;action&#34;</span><span style="color:#1f2328">]]</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>latest_per_action <span style="color:#0550ae">=</span> occurrences_df<span style="color:#0550ae">.</span>drop_duplicates<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;action&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>set_index<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;action&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>now <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>results <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> action<span style="color:#1f2328">,</span> km_threshold<span style="color:#1f2328">,</span> duration_threshold<span style="color:#1f2328">,</span> comment <span style="color:#0550ae">in</span> seuils<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]:</span>
+</span></span><span style="display:flex;"><span>    latest <span style="color:#0550ae">=</span> latest_per_action<span style="color:#0550ae">.</span>loc<span style="color:#1f2328">[</span>action<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    remaining_km <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        km_threshold <span style="color:#0550ae">-</span> <span style="color:#1f2328">(</span>current_km <span style="color:#0550ae">-</span> latest<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;km&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> km_threshold <span style="color:#cf222e">else</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    duration <span style="color:#0550ae">=</span> parse_duration_threshold<span style="color:#1f2328">(</span>duration_threshold<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    next_due_date <span style="color:#0550ae">=</span> latest<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;date&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">+</span> duration <span style="color:#cf222e">if</span> duration <span style="color:#cf222e">else</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    km_overdue <span style="color:#0550ae">=</span> remaining_km <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#0550ae">and</span> remaining_km <span style="color:#0550ae">&lt;</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>    time_overdue <span style="color:#0550ae">=</span> next_due_date <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#0550ae">and</span> next_due_date <span style="color:#0550ae">&lt;</span> now
+</span></span><span style="display:flex;"><span>    status <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;A FAIRE&#34;</span> <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span>km_overdue <span style="color:#0550ae">or</span> time_overdue<span style="color:#1f2328">)</span> <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;ok&#34;</span>
+</span></span><span style="display:flex;"><span>    results<span style="color:#0550ae">.</span>append<span style="color:#1f2328">([</span>
+</span></span><span style="display:flex;"><span>        action<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        status<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>remaining_km<span style="color:#0a3069">}</span><span style="color:#0a3069"> km&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span><span style="color:#1f2328">(</span>next_due_date <span style="color:#0550ae">-</span> now<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>days<span style="color:#0a3069">}</span><span style="color:#0a3069"> days&#34;</span> <span style="color:#cf222e">if</span> next_due_date <span style="color:#cf222e">else</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        comment<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">return</span> <span style="color:#6639ba">sorted</span><span style="color:#1f2328">(</span>results<span style="color:#1f2328">,</span> key<span style="color:#0550ae">=</span>sort_key_by_status<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><table>
+	<thead>
+			<tr>
+					<th>PressionPneus</th>
+					<th>A FAIRE</th>
+					<th>None km</th>
+					<th>-2857 days</th>
+					<th>Ou avant tout déplacement important</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>UsurePneus</td>
+					<td>A FAIRE</td>
+					<td>None km</td>
+					<td>-2765 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>Feux</td>
+					<td>A FAIRE</td>
+					<td>None km</td>
+					<td>-2704 days</td>
+					<td>arrière, position, croisement, route, plaque arrière, clignotants avant, clignotants arrière, clignotants coté, arrière haut</td>
+			</tr>
+			<tr>
+					<td>NiveauBattery</td>
+					<td>A FAIRE</td>
+					<td>None km</td>
+					<td>-2704 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>ControlerHuileDA</td>
+					<td>A FAIRE</td>
+					<td>15000 km</td>
+					<td>-2522 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RevisionUniqueEurope</td>
+					<td>A FAIRE</td>
+					<td>20000 km</td>
+					<td>-2522 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementFiltreHabitacle</td>
+					<td>A FAIRE</td>
+					<td>20000 km</td>
+					<td>-2522 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementFiltreHuile</td>
+					<td>A FAIRE</td>
+					<td>20000 km</td>
+					<td>-2522 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>VidangeHuile</td>
+					<td>A FAIRE</td>
+					<td>20000 km</td>
+					<td>-2522 days</td>
+					<td>ou à chaque intervention importante sur le moteur, avec remplacement du filtre à huile</td>
+			</tr>
+			<tr>
+					<td>ControlerLiquideFrein</td>
+					<td>A FAIRE</td>
+					<td>45000 km</td>
+					<td>-2522 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>ControlerLiquideRefroidissement</td>
+					<td>A FAIRE</td>
+					<td>None km</td>
+					<td>-2522 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementFiltreAir</td>
+					<td>A FAIRE</td>
+					<td>60000 km</td>
+					<td>-1426 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementLiquideFrein</td>
+					<td>A FAIRE</td>
+					<td>120000 km</td>
+					<td>-1426 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementLiquideRefroidissement</td>
+					<td>A FAIRE</td>
+					<td>None km</td>
+					<td>-695 days</td>
+					<td>préconisé tous les 6 ans (liquide bleu/vert) ou 10 ans (rouge/orange)</td>
+			</tr>
+			<tr>
+					<td>RemplacementCourroieAccessoireEtGalet</td>
+					<td>A FAIRE</td>
+					<td>120000 km</td>
+					<td>-695 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>CtrlOeilNuPlaquettesFrein</td>
+					<td>A FAIRE</td>
+					<td>10000 km</td>
+					<td>-2522 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>CtrlLigneEchappement</td>
+					<td>A FAIRE</td>
+					<td>30000 km</td>
+					<td>-2156 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>VerifNivHuileBoiteVitesses</td>
+					<td>A FAIRE</td>
+					<td>30000 km</td>
+					<td>-2156 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>ChangerEssuieGlaces</td>
+					<td>A FAIRE</td>
+					<td>None km</td>
+					<td>-1791 days</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>RemplacementBougiesAllumage</td>
+					<td>ok</td>
+					<td>60000 km</td>
+					<td>None</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>CtrlDepoussierageGarnitureFreinTambour</td>
+					<td>ok</td>
+					<td>80000 km</td>
+					<td>None</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>ControlerHuile</td>
+					<td>ok</td>
+					<td>1000 km</td>
+					<td>None</td>
+					<td>ou avant chaque parcours important</td>
+			</tr>
+			<tr>
+					<td>VerifOuRemplacementAmortisseurs</td>
+					<td>ok</td>
+					<td>100000 km</td>
+					<td>None</td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>VerifAirbag</td>
+					<td>ok</td>
+					<td>100000 km</td>
+					<td>None</td>
+					<td></td>
+			</tr>
+	</tbody>
+</table>
+<!--more-->
+<h2 id="notes-pointant-ici">Notes pointant ici</h2>
+<ul>
+<li><a href="/braindump/new-posts/exemple_de_suivi_d_entretien_d_une_voiture/">exemple de suivi d&rsquo;entretien d&rsquo;une voiture</a></li>
+</ul>
+<h2 id="permalink"><a href="/braindump/82d27272-9ac9-4281-8527-8b2a5b7f1d85?title=calculer_les_taches_a_faire_sur_une_voiture">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 11 May 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 28 Dec 2020</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
