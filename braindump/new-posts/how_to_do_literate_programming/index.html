@@ -139,7 +139,8 @@ each « intention word » in use.</dd>
 <h3 id="how-the-file-is-typeset">How the file is typeset</h3>
 <dl>
 <dt>rule</dt>
-<dd>the user sets <code>#+filetags</code> and <code>#+KONIX_ORG_PUBLISH_KIND</code>.</dd>
+<dd>the user sets <code>#+filetags</code>, <code>#+KONIX_ORG_PUBLISH_KIND</code> and every <code>:CUSTOM_ID:</code>,
+and the writer neither adds nor edits one.</dd>
 <dt>rule</dt>
 <dd>a file is opened with the <code>ensure_file_open</code> MCP tool.
 <ul>
@@ -250,8 +251,7 @@ makes.</li>
 <dd>the promise is written down, and the test only measures it.
 <ul>
 <li><strong>why:</strong> a promise legible only as a test name is unreadable to the one it was made to.</li>
-<li><strong>why:</strong> <a href="/braindump/posts/verified_proved_promised_contracts_based_programming/#docs-and-tests-are-two-sides-of-the-same-coin">docs and tests are two sides of the
-same coin</a> — the writing states the promise, the test holds it to time.</li>
+<li><strong>why:</strong> the writing states the promise, the test holds it to time.</li>
 </ul>
 </dd>
 <dt>rule</dt>
@@ -280,29 +280,29 @@ breaking the promise would redden the test.</li>
 <dd>what links a promise and its stories is a reasoning, written beside the
 promise — these stories passing entails this promise held.
 <ul>
-<li><strong>why:</strong> a red then traces back to the promise that broke.</li>
-<li><strong>why:</strong> unwritten, the next reader guesses the link, and a gap looks like a choice.</li>
+<li><strong>why:</strong> a red test then traces back to the promise that broke.</li>
+<li><strong>why:</strong> if unwritten, the next reader guesses the link, and a gap looks like a choice.</li>
 </ul>
 </dd>
 </dl>
-<h3 id="the-runtime-unit-is-the-story">The runtime unit is the story</h3>
+<h3 id="stories-are-what-matter">Stories are what matter</h3>
 <dl>
 <dt>rule</dt>
-<dd>the runtime unit is the story, never the feature.
+<dd>we tell the stories, never the feature.
 <ul>
 <li><strong>why:</strong> a use comes in whole stories — triaging a morning&rsquo;s photos, running the
 cabinet frame, picking a few shots to send — and those stories are the
 <a href="/braindump/posts/verified_proved_promised_contracts_based_programming/">promises</a> the program makes.</li>
 <li><strong>why:</strong> a test written per feature asserts a promise nobody holds, since
-nobody opens a program in order to exercise one button.</li>
+nobody opens a program in order to exercise one feature.</li>
 </ul>
 </dd>
 <dt>what</dt>
-<dd>the <strong>what</strong> is the desired behaviour.</dd>
+<dd>when described in text, the desired behaviour is a <strong>what</strong></dd>
 <dt>what</dt>
-<dd>the <strong>how</strong> is the chosen technical approach.</dd>
+<dd>when described in text, the chosen technical approach is a <strong>how</strong></dd>
 <dt>rule</dt>
-<dd>one function per story runs its <strong>whats</strong> in the order the person performs
+<dd>stories describe <strong>whats</strong> in the order the person performs
 them, carrying state from step to step.
 <ul>
 <li><strong>why:</strong> a chain of gestures on one open program is what using it looks like, and
@@ -332,7 +332,7 @@ the set, or nobody does that thing, and which it is is the user&rsquo;s call.</l
 <dt>rule</dt>
 <dd>ground walked twice is cut.
 <ul>
-<li><strong>why:</strong> it is time spent measuring a promise already measured.</li>
+<li><strong>why:</strong> overlapping stories cost CPU, RAM, time and money</li>
 <li><strong>how:</strong> the writer suggests the stretch to cut and the user cuts it.</li>
 <li><strong>scope:</strong> stories overlap a little whatever happens, each one opening the program
 and loading the same first screen, and that much is irreducible.</li>
@@ -342,11 +342,103 @@ thing, when the reasoning shows the trimmed part is measured elsewhere.
 <li><strong>why:</strong> what is protected is semantic coverage, not the walking of every path.</li>
 </ul>
 </li>
+<li><strong>rule:</strong> the reasoning linking promises to stories capture the cut and
+indicate how a set of stories is fulfilling a given promise</li>
 </ul>
 </dd>
 </dl>
+<h3 id="the-surface-and-the-data">The surface and the data</h3>
+<h4 id="the-promise-is-made-at-the-seam-the-user-touches">The promise is made at the seam the user touches</h4>
+<dl>
+<dt>rule</dt>
+<dd>whoever uses the work decides where the seam is — the end user of an
+application, the programmer calling a library.
+<ul>
+<li><strong>why:</strong> the promise is made at that interface; below it is the <strong>how</strong>.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>assertions probe the observable surface — visible text, public API,
+exported artifact, ARIA role — not internals like private stores, test-only hooks
+or implementation-selector classes.
+<ul>
+<li><strong>why:</strong> an internal is the <strong>how</strong>, no user should care about the fact that
+<strong>how</strong> works, but people care that the promise is fulfilled.</li>
+<li><strong>example:</strong> in web dev, the suite reaches for <code>get_by_role</code>, <code>get_by_label</code> and
+<code>get_by_placeholder</code> rather than CSS selectors that encode the current DOM.</li>
+</ul>
+</dd>
+</dl>
+<h4 id="a-test-seeds-the-world-it-reads">A test seeds the world it reads</h4>
+<dl>
+<dt>rule</dt>
+<dd>the test world must be as close as possible to the real life
+<ul>
+<li><strong>why:</strong> the product ends being used in real life, promises tested in a
+different env but that don&rsquo;t work in real life are worth nothing.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>when possible, the real world is duplicated for the test purpose
+<ul>
+<li><strong>example:</strong> if possible a pg_dump of the production database gives a good
+sandbox to check the promises.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>but a test creates the fixtures it depends on
+<ul>
+<li><strong>why:</strong> it helps reproducible result by contrast to using the real world.</li>
+<li><strong>why:</strong> tests must assert there promises while not being disturbed by the changes of the real world</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>the user decides the properties of the test world, not the writer
+<ul>
+<li><strong>why:</strong> the writer is tempted to create a dummy world that has nothing to do with real life to make tests pass</li>
+</ul>
+</dd>
+</dl>
+<h3 id="when-it-goes-wrong">When it goes wrong</h3>
+<h4 id="test-don-t-patch">Test, don&rsquo;t patch</h4>
+<dl>
+<dt>what</dt>
+<dd>a bug is a promise found broken.</dd>
+<dt>rule</dt>
+<dd>every fix earns a red, added to an existing story or by writing a
+new story. Observed red, then made green by the smallest change that
+satisfies it.</dd>
+</dl>
+<h4 id="a-flake-is-a-diagnosis-not-a-knob">A flake is a diagnosis, not a knob</h4>
+<dl>
+<dt>rule</dt>
+<dd>an intermittent red is measured before any limit is touched.
+<ul>
+<li><strong>why:</strong> widening a timeout is hiding the symptom, not fixing the problem</li>
+<li><strong>why:</strong> the expected time usually sits far under the ceiling, so the
+failure is a transient — a CDN stall, a resource race — to remove (e.g. by
+a fixture) or isolate.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>a timeout is raised only when the measurement shows the <strong>expected</strong> time
+nearing it.
+<ul>
+<li><strong>rule:</strong> the new number is justified in a comment.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>any limit change must be validated by the user</dd>
+<dt>rule</dt>
+<dd>flakiness that is not obvious to fix earns meaningful logging.
+<ul>
+<li><strong>why:</strong> it helps investigate the next time the flakiness occurs.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>moving on a flaky test is the choice of the user, never the one of the writer.</dd>
+</dl>
 <h3 id="the-cycle">The cycle</h3>
-<h4 id="the-cycle-is-the-unit-of-change">The cycle is the unit of change</h4>
 <dl>
 <dt>rule</dt>
 <dd>the cycle is the unit of change.
@@ -356,12 +448,9 @@ thing, when the reasoning shows the trimmed part is measured elsewhere.
 </ul>
 </dd>
 <dt>rule</dt>
-<dd>the baseline run covers the whole suite.
+<dd>the baseline run covers THE WHOLE SUITE, not a subset.
 <ul>
-<li><strong>why:</strong> a subset baseline proves only that subset was green, and says nothing
-about pre-existing reds elsewhere.</li>
-<li><strong>why:</strong> a red lit by the post-change run then cannot be dated — your change, or
-already broken before you started.</li>
+<li><strong>why:</strong> a subset baseline says nothing about pre-existing reds of the whole baseline.</li>
 </ul>
 </dd>
 <dt>rule</dt>
@@ -375,11 +464,31 @@ hand resumes, unless the user explicitly asks otherwise.</dd>
 <li><strong>why:</strong> a measure taken anywhere else is one no cycle can cite.</li>
 </ul>
 </dd>
+<dt>rule</dt>
+<dd>the cycle is the succession of the following sub headings</dd>
 </dl>
-<h4 id="red-proves-the-test">Red proves the test</h4>
+<h4 id="1-dot-focus-on-one-promise-at-a-time">1. focus on one promise at a time</h4>
 <dl>
 <dt>rule</dt>
-<dd>a test that has never been observed failing has not been observed.</dd>
+<dd>only one promise is fulfilled during a cycle
+<ul>
+<li><strong>why:</strong> focusing on several creates a mess hard to untangle</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>the other known promises are still taken into account when writing one
+<ul>
+<li><strong>why:</strong> sometimes, we know that what we are doing is going to be put into
+question or factorized by a future promise</li>
+<li><strong>why:</strong> there are several minimal ways to fulfil a promise, choosing the
+one of least future friction is preferable</li>
+</ul>
+</dd>
+</dl>
+<h4 id="2-dot-red-proves-the-test">2. Red proves the test</h4>
+<dl>
+<dt>rule</dt>
+<dd>every test must be observed RED for the good reason at least once</dd>
 <dt>rule</dt>
 <dd>a test that passes for the wrong reason is worse than one that fails for
 the wrong reason.
@@ -394,19 +503,14 @@ indistinguishable from outside, so it survives every whole-suite run.</li>
 changes.
 <ul>
 <li><strong>why:</strong> that failure is what establishes that the test measures the promise it names.</li>
-<li><strong>why:</strong> without it, a passing test proves only that the assertion compiles — the
-path it claims to cover may already be wired, or the assertion silently vacuous.</li>
 </ul>
 </dd>
 <dt>rule</dt>
 <dd>the failure mode and message are part of the test&rsquo;s value.</dd>
 <dt>rule</dt>
-<dd>reverting the change makes the test fail again.
+<dd>provided a given code, a test either always fails or always succeeds always for the same reasons
 <ul>
-<li><strong>why:</strong> a red observed once is a fixed point, and failing again confirms the test
-rides on the new code.</li>
-<li><strong>why:</strong> a test that cannot be made to fail by reverting the change measures no
-promise in particular.</li>
+<li><strong>why:</strong> a flaky test cannot be trusted</li>
 </ul>
 </dd>
 <dt>rule</dt>
@@ -425,7 +529,7 @@ promise measured elsewhere.</li>
 </dd>
 <dt>rule</dt>
 <dd>a promise that cannot be broken from where the suite stands is recorded as
-such, in writing, with the reason.
+such, in writing, with the reason NEVER without the user gating the decision.
 <ul>
 <li><strong>why:</strong> otherwise it is indistinguishable from one nobody has got round to
 breaking, and the next reader spends the effort again.</li>
@@ -434,13 +538,13 @@ cannot reach past, which is worth knowing before trusting what lies beyond it.</
 </ul>
 </dd>
 </dl>
-<h4 id="minimum-to-green-then-earn-the-next-line">Minimum to green, then earn the next line</h4>
+<h4 id="3-dot-minimum-to-green-then-earn-the-next-line-of-code">3. Minimum to green, then earn the next line of code</h4>
 <dl>
 <dt>rule</dt>
 <dd>new behaviour appears under a failing test, and the next test earns the
-next line.
+next line of code.
 <ul>
-<li><strong>why:</strong> code beyond what the failing test demands is untested by definition.</li>
+<li><strong>why:</strong> code beyond what the failing test demands is untested by definition and therefore unwanted.</li>
 <li><strong>why:</strong> the coupling keeps the suite a faithful description of the system, every
 branch tracing back to a test that was once red.</li>
 <li><strong>scope:</strong> a refactor pass adds structure no single test motivates.</li>
@@ -449,7 +553,7 @@ preemptive guard in the current change.</li>
 </ul>
 </dd>
 </dl>
-<h4 id="the-whole-suite-measures-the-whole-contract">The whole suite measures the whole contract</h4>
+<h4 id="4-dot-the-whole-suite-measures-the-whole-contract">4. The whole suite measures the whole contract</h4>
 <dl>
 <dt>what</dt>
 <dd>the contract is every promise the program makes to whoever uses it.</dd>
@@ -469,7 +573,7 @@ it a regression rather than an anticipated case.</li>
 </ul>
 </dd>
 </dl>
-<h4 id="refactor-lives-under-green">Refactor lives under green</h4>
+<h4 id="5-dot-refactor-lives-under-green">5. Refactor lives under green</h4>
 <dl>
 <dt>rule</dt>
 <dd>structural change runs under a green suite.</dd>
@@ -494,130 +598,10 @@ coverage is broader than it is.</li>
 </ul>
 </dd>
 </dl>
-<h3 id="the-surface-and-the-data">The surface and the data</h3>
-<h4 id="the-promise-is-made-at-the-seam-the-user-touches">The promise is made at the seam the user touches</h4>
+<h2 id="4f83033c-08a6-47ca-bd6e-26f2d45d7bc6">The export is the primary artifact</h2>
 <dl>
 <dt>rule</dt>
-<dd>whoever uses the work decides where the seam is — the end user of an
-application, the programmer calling a library.
-<ul>
-<li><strong>why:</strong> the promise is made at that interface; below it is the <strong>how</strong>.</li>
-</ul>
-</dd>
-<dt>rule</dt>
-<dd>assertions probe the observable surface — visible text, public API,
-exported artifact, ARIA role — not internals like private stores, test-only hooks
-or implementation-selector classes.
-<ul>
-<li><strong>why:</strong> an internal is the <strong>how</strong>, so such a test measures the how, and every refactor
-reddens it.</li>
-<li><strong>how:</strong> the suite reaches for <code>get_by_role</code>, <code>get_by_label</code> and
-<code>get_by_placeholder</code> rather than CSS selectors that encode the current DOM.
-<ul>
-<li><strong>why:</strong> writing user-level helpers is paid back the first time a refactor
-changes the markup without changing the behaviour.</li>
-</ul>
-</li>
-</ul>
-</dd>
-</dl>
-<h4 id="a-test-seeds-the-world-it-reads">A test seeds the world it reads</h4>
-<dl>
-<dt>rule</dt>
-<dd>a test creates the rows it depends on, asserts only on what it created,
-and removes them again.
-<ul>
-<li><strong>why:</strong> what decides whether a test is reproducible is who put its data there.</li>
-<li><strong>why:</strong> data the environment happened to hold — a live row, a value from a shared
-dump, a label that was there last month — is state no one pinned.</li>
-<li><strong>why:</strong> a change made elsewhere, a renamed label or a pruned row, then turns the
-test red with no edit to the code it guards, and the red points at the wrong
-place.</li>
-<li><strong>why:</strong> a failure that moves on its own is worse than no test.</li>
-<li><strong>scope:</strong> a shared fixture may stand the environment up — a database, a server, a
-seeded dump — and the test still adds the value it needs, exercises it, and tears
-it down.
-<ul>
-<li><strong>why:</strong> the green then rides on the code under test and nothing else.</li>
-</ul>
-</li>
-</ul>
-</dd>
-</dl>
-<h3 id="when-it-goes-wrong">When it goes wrong</h3>
-<h4 id="test-don-t-patch">Test, don&rsquo;t patch</h4>
-<dl>
-<dt>what</dt>
-<dd>a bug is a promise found broken.</dd>
-<dt>rule</dt>
-<dd>every fix earns a test — written first, observed red, then made green by
-the smallest change that satisfies it.
-<ul>
-<li><strong>why:</strong> without a test that captures the bug, the fix is invisible to the suite —
-no proof the bug existed, no proof it is gone, no defense against its return.</li>
-<li><strong>why:</strong> a bug fix landed without a test recurs, and leaves no record of why the
-line was added.</li>
-<li><strong>scope:</strong> this is the cycle applied to regression rather than feature work — the
-bug report is the <strong>what</strong>, the failing test its translation, the fix the minimum
-code that turns it green.</li>
-</ul>
-</dd>
-</dl>
-<h4 id="a-flake-is-a-diagnosis-not-a-knob">A flake is a diagnosis, not a knob</h4>
-<dl>
-<dt>rule</dt>
-<dd>an intermittent red is measured before any limit is touched.
-<ul>
-<li><strong>why:</strong> widening a timeout until it goes quiet raises the threshold at which the
-cause shows, trading a signal for a longer wait.</li>
-<li><strong>why:</strong> the expected time usually sits far under the ceiling, so the failure is a
-transient — a CDN stall, a resource race — to remove or isolate.</li>
-</ul>
-</dd>
-<dt>rule</dt>
-<dd>a timeout is raised only when the measurement shows the <strong>expected</strong> time
-nearing it.
-<ul>
-<li><strong>rule:</strong> the new number is justified in a comment.</li>
-</ul>
-</dd>
-<dt>rule</dt>
-<dd>flakiness that is not obvious to fix earns meaningful logging.
-<ul>
-<li><strong>why:</strong> it helps investigate the next time the flakiness occurs.</li>
-</ul>
-</dd>
-<dt>rule</dt>
-<dd>moving on a flaky test is the choice of the user, never yours.</dd>
-</dl>
-<h3 id="the-prompts">The prompts</h3>
-<h4 id="cycle-prompt">Cycle prompt</h4>
-<dl>
-<dt>rule</dt>
-<dd>any edit runs through the cycle below.</dd>
-<dt>authority</dt>
-<dd>the buddy, the gate and the gating of the baseline run live in
-<a href="/braindump/posts/how_to_write_and_audit_a_note/">how to write and audit a note</a>.</dd>
-</dl>
-<figure><a href="https://ipfs.konubinix.eu/p/bafkreiheysw5vkqsqmnuq6vrq2zrhdcvt7y7u7eexu5ljxczbv34n4xgei?plantuml.png" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreiheysw5vkqsqmnuq6vrq2zrhdcvt7y7u7eexu5ljxczbv34n4xgei?plantuml.png"></a>
-</figure>
-
-<h4 id="audit-prompt">Audit prompt</h4>
-<dl>
-<dt>rule</dt>
-<dd>in code, the audit is a table — every observation cited by file and line,
-classified under the rule it tests.</dd>
-<dt>rule</dt>
-<dd>the conclusion follows from the table, not alongside it.</dd>
-<dt>authority</dt>
-<dd>the rule that an observation is cited rather than asserted
-lives in <a href="/braindump/posts/how_to_write_and_audit_a_note/">how to write and audit a note</a>.</dd>
-</dl>
-<h2 id="4f83033c-08a6-47ca-bd6e-26f2d45d7bc6">Prose is the primary artifact</h2>
-<dl>
-<dt>rule</dt>
-<dd>a literate program is first and foremost a piece of writing, in the <code>::</code> bullet
-form above.
+<dd>a literate program is above all read by humans
 <ul>
 <li><strong>how:</strong> the bullets carry the full reasoning — problem, solution, and motivation.</li>
 <li><strong>how:</strong> a code block is the technical translation of a bullet&rsquo;s claim.</li>
@@ -626,7 +610,7 @@ form above.
 <dt>rule</dt>
 <dd>a code block sits a glance away from the bullet it translates.
 <ul>
-<li><strong>how:</strong> the reader sees the motivating bullet and the whole block without
+<li><strong>how:</strong> the reader reading the motivating bullet wants to see whole block without
 scrolling.</li>
 <li><strong>how:</strong> long code is split with noweb to show only the fragment relevant to the
 bullet at hand.</li>
@@ -636,18 +620,15 @@ bullet at hand.</li>
 <dd>the <strong>why</strong> lives in the bullet that motivates the block, never in a code
 comment.
 <ul>
-<li><strong>why:</strong> the <strong>why</strong> is never translated, so no code block can hold it.</li>
-<li><strong>why:</strong> a comment carrying a why — a system state, a design constraint, a
-justification of structure — is prose stranded in the wrong file, invisible to
-the prose reader and out of context for the code reader.</li>
-<li><strong>scope:</strong> what remains in code is at most a one-liner annotating the line below.</li>
+<li><strong>why:</strong> <strong>why</strong> is important enough not to be hidden in code</li>
+<li><strong>scope:</strong> what remains in code is at most a one-liner annotating the specifics of the line below.</li>
 </ul>
 </dd>
 <dt>check</dt>
 <dd>remove all code blocks mentally, and the remaining text still forms
-coherent and complete prose.
+coherent and complete reasoning.
 <ul>
-<li><strong>why:</strong> this is what makes the note literate — code and prose interleaved, not
+<li><strong>why:</strong> this is what makes the note literate — code and reasoning interleaved, not
 inserted side by side.</li>
 <li><strong>how:</strong> a gap means either a bullet is missing or an existing bullet was
 paraphrasing a block rather than advancing the reasoning, and the heading is
@@ -661,6 +642,18 @@ passing suite cannot.</li>
 </li>
 </ul>
 </dd>
+<dt>rule</dt>
+<dd>code block must have an :export header suitable so that the end document is readable.</dd>
+<dt>rule</dt>
+<dd>use the bullet format described, not free prose
+<ul>
+<li><strong>why:</strong> even though is seems less literate, agents have a tendency to write
+useless shit when writing free prose, so it&rsquo;s better to have a list of
+bullets than useless agent words.</li>
+<li><strong>why:</strong> it also easier to audit and find flaws in the doc when structured
+like that, the cost in readability is worth it</li>
+</ul>
+</dd>
 </dl>
 <h3 id="7d4e9a2b-8c1f-4e63-b5a8-3f9c2d1e4a7b">Code blocks are not repeated in the export</h3>
 <dl>
@@ -669,9 +662,9 @@ passing suite cannot.</li>
 <ul>
 <li><strong>why:</strong> re-showing a block the reader has already seen adds nothing, even when the
 next block depends on it.</li>
-<li><strong>why:</strong> the dependency is resolved at tangle time, invisibly to the reader.</li>
 <li><strong>scope:</strong> repetition is justified when seeing the surrounding code genuinely
 helps the reading.</li>
+<li><strong>how:</strong> :noweb can be &ldquo;t&rdquo; or &ldquo;no-export&rdquo; depending on what makes the code readable</li>
 </ul>
 </dd>
 </dl>
@@ -681,8 +674,8 @@ helps the reading.</li>
 <dd>the reader glances at a code block to see how a bullet is concretely coded.
 <ul>
 <li><strong>how:</strong> what breaks the flow — a technical derivation, a self-contained
-construction whose result the reasoning will consume — moves to its own note,
-linked from the reasoning where its result is used.</li>
+construction whose result the reasoning will consume — moves to its own
+heading or note, linked from the reasoning where its result is used.</li>
 <li><strong>rule:</strong> a block is taken in at a glance — past 30 lines, it splits.
 <ul>
 <li><strong>why:</strong> past that the reader loses the thread between the sentence that
@@ -693,15 +686,6 @@ with a sentence of motivation just before, and noweb reassembles the pieces
 at tangle time.</li>
 <li><strong>how:</strong> a block that resists splitting means the prose has collapsed several
 ideas into one, so the prose is expanded first and the block splits naturally.</li>
-</ul>
-</li>
-<li><strong>rule:</strong> a short conversational line stays when it names something the reader is
-already feeling.
-<ul>
-<li><strong>why:</strong> a line like &ldquo;let&rsquo;s see what this gives&rdquo;, just before a block that produces
-something visible, paces the flow rather than interrupting it.</li>
-<li><strong>how:</strong> a line that introduces new content instead is a bullet in disguise, and is
-expanded or cut.</li>
 </ul>
 </li>
 </ul>
@@ -768,18 +752,14 @@ belongs, or <code>#+OPTIONS: toc:t</code> to let the exporter render one.</li>
 <dl>
 <dt>rule</dt>
 <dd>the <strong>why</strong> is traced back to a constraint, a measurement, or a decision
-someone actually made.
+the user actually made.
 <ul>
 <li><strong>why:</strong> a gap in the why is an honest signal that something still needs
 establishing, and a fabricated why hides that signal and ships a lie in its
 place.</li>
-<li><strong>how:</strong> the ask goes to whoever can settle the reason.</li>
-<li><strong>authority:</strong> <a href="/braindump/posts/values_that_an_ia_agent_must_respect/#fccf3067-48e1-4dd8-94b6-271639f4963a">the <em>why</em> behind a choice is always a real one</a>.</li>
+<li><strong>how:</strong> the ask goes to the user</li>
 </ul>
 </dd>
-<dt>rule</dt>
-<dd>a sentence whose only job is to make a paragraph sound complete is removed,
-not polished.</dd>
 </dl>
 <h3 id="eec0d206-ce75-46cf-8d75-54d26319956d">What earns a block</h3>
 <dl>
@@ -787,11 +767,12 @@ not polished.</dd>
 <dd>a block exists only where the prose has made it necessary.
 <ul>
 <li><strong>why:</strong> a block the prose did not lead to means a piece of reasoning is missing.</li>
-<li><strong>how:</strong> the <strong>why</strong>, the reason for the choice, stays in prose.</li>
+<li><strong>how:</strong> the <strong>why</strong>, the reason for the choice, stays in bullets.</li>
 <li><strong>how:</strong> the <strong>what</strong> is translated into a test.</li>
 <li><strong>how:</strong> the <strong>how</strong> is translated into code.</li>
 <li><strong>rule:</strong> prose states the problem or need, never a readback of the code.
 <ul>
+<li><strong>rule:</strong> why is always checked with the user before being written</li>
 <li><strong>rule:</strong> a <strong>what</strong> is never stated without its <strong>why</strong>.</li>
 <li><strong>why:</strong> prose that paraphrases the block is duplication, not justification, and
 a note listing &ldquo;this does X, that does Y&rdquo; hands over facts no one asked for.</li>
@@ -879,32 +860,10 @@ fails with it — the promise it appears to pin is pinned upstream, so prose
 that named it here has sent the reader to the wrong paragraph.</li>
 </ul>
 </li>
+<li><strong>rule:</strong> each <strong>what</strong> stays a visible block in the feature heading that motivated
+it, tagged with the story it serves via noweb or noweb-ref.</li>
 </ul>
 </dd>
-</dl>
-<div class="konix-block-name-marker" data-name="step-or-measure"></div>
-<p><a id="code-snippet--step-or-measure"></a></p>
-<pre tabindex="0"><code class="language-argdown" data-lang="argdown">[Step, not measure]: a block that cannot fail without an earlier block failing with it is a step, not a measure.
-  +&gt; [Pinned upstream]: the promise such a block appears to pin is pinned upstream.
-    +&gt; [Prose attributes it upstream]: the prose names the block that actually pins the promise, not the step.
-  +&gt; &lt;Drop the step&gt;: a step measures nothing, so it comes out of the story.
-    &lt;- [State it leaves behind]: the story may need the state it leaves behind.
-
-[No verdict distinguishes them]: no verdict tells you whether a block is a step or a measure.
-  + [One outcome for all]: a story reports one outcome for all its blocks, so pure setup and pure measurement are the same colour from outside.
-  +&gt; &lt;Undecidable&gt;: no verdict distinguishes them, so which is which cannot be known.
-    &lt;- [Read it off the text]: which blocks earn their slot as steps is read off the text, by asking of each what would die if only this one were wrong.
-    &lt;- &lt;Instrument the silent block&gt;: a block that never turns out to be the one that failed is the signature to look for.
-
-&lt;Instrument the silent block&gt;
-  &lt;- [A candidate, not an answer]: the signature hands you a candidate, not an answer.
-</code></pre><dl>
-<dt>rule</dt>
-<dd>each <strong>what</strong> stays a visible block in the feature heading that motivated
-it, tagged with the story it serves via noweb (<code>:noweb-ref triage-body</code>).</dd>
-</dl>
-<!--listend-->
-<dl>
 <dt>rule</dt>
 <dd>the stories come first, in a heading of their own.
 <ul>
@@ -914,34 +873,7 @@ binding it has been.</li>
 </ul>
 </dd>
 </dl>
-<!--listend-->
-<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>── chapter &#34;Stories&#34;, first in the note ──────────────────────────
-</span></span><span style="display:flex;"><span>Prose: &#34;the triager starts from the unsorted pile, narrows to the
-</span></span><span style="display:flex;"><span>        batch being sorted, then works photo by photo — retagging,
-</span></span><span style="display:flex;"><span>        redating, filing&#34;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  [wrapper — :noweb-ref tests
-</span></span><span style="display:flex;"><span>     @testcase
-</span></span><span style="display:flex;"><span>     def test_triage_a_morning(page):
-</span></span><span style="display:flex;"><span>         &lt;&lt;triage-body&gt;&gt;]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>── feature chapter &#34;Searching and filtering&#34; ─────────────────────
-</span></span><span style="display:flex;"><span>Prose: &#34;a label narrows the grid to the photos carrying it&#34;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  [block — :noweb-ref triage-body
-</span></span><span style="display:flex;"><span>     type the label, commit, assert only those photos remain]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>── feature chapter &#34;The lightbox&#34; ────────────────────────────────
-</span></span><span style="display:flex;"><span>Prose: &#34;a wrong date is fixed on the photo itself&#34;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  [block — :noweb-ref triage-body
-</span></span><span style="display:flex;"><span>     open the photo, edit its date, assert the grid re-orders]
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Prose: &#34;a duplicate in the list would make the tally incoherent,
-</span></span><span style="display:flex;"><span>        so we block creation and display an error message&#34;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>  [test — translates &#34;we block and display a message&#34;]
-</span></span><span style="display:flex;"><span>  [code — translates &#34;we validate the list and expose a createError getter&#34;]
-</span></span></code></pre></div><h3 id="75d93d22-97e4-4c51-a309-53c6693a4ef8">What a test may reach</h3>
+<h3 id="75d93d22-97e4-4c51-a309-53c6693a4ef8">What a test may reach</h3>
 <dl>
 <dt>rule</dt>
 <dd>the code carries nothing that exists solely for the test.
@@ -1118,7 +1050,7 @@ revision.</li>
 })();
 </script>
       </div>
-	  <aside class="date"><time>Last updated: 14 Aug 2026</time></aside>
+	  <aside class="date"><time>Last updated: 19 Aug 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 22 Apr 2026</time></aside>
     </div>
   </div>
