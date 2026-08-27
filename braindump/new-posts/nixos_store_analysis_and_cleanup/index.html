@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html><title>nixos store analysis and cleanup</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Nixos Store Analysis and Cleanup</h1>
+		<span class="badge badge-pill badge-warning"><a href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a href="#nix-store-size">How big is my store?</a></li>
+<li><a href="#nix-store-analysis">Understanding what takes space</a>
+<ul>
+<li><a href="#nix-gc-roots">List all GC roots</a></li>
+<li><a href="#nix-closure-sizes">Closure sizes per root</a></li>
+<li><a href="#3fca9b7e-a093-49b0-bd3d-60053132a7dd">Zoom in</a>
+<ul>
+<li><a href="#nix-system-largest-paths">Nixos</a>
+<ul>
+<li><a href="#0d2a692a-97f4-4585-a32c-679791112bf5">focusing into ffmpeg</a></li>
+</ul>
+</li>
+<li><a href="#nix-profile-breakdown">user profile</a></li>
+<li><a href="#nix-hm-largest-paths">Home Manager</a></li>
+</ul>
+</li>
+<li><a href="#nix-dangling-results">Find dangling <code>result</code> symlinks</a></li>
+<li><a href="#nix-tmp-roots">Find <code>/tmp</code> GC roots</a></li>
+<li><a href="#nix-gc-dry-run">Check for reclaimable space (dry run)</a></li>
+</ul>
+</li>
+<li><a href="#nix-cleanup">Cleaning up</a>
+<ul>
+<li><a href="#nix-remove-system-generations">Remove old NixOS generations</a></li>
+<li><a href="#nix-remove-hm-generations">Remove old Home Manager generations</a></li>
+<li><a href="#nix-remove-profile-generations">Remove old user profile generations</a></li>
+<li><a href="#nix-garbage-collect">Garbage collect the store</a></li>
+<li><a href="#nix-rebuild-boot">Rebuild boot entries</a>
+<ul>
+<li><a href="#nix-rebuild-boot-grub">GRUB variant</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#nix-verify">Verify</a></li>
+<li><a href="#33fedc46-e380-4ec2-a0ec-453ded61962e">Annex</a>
+<ul>
+<li><a href="#nix-dep-graph-code">Dependency graph code</a></li>
+</ul>
+</li>
+<li><a href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<p>NixOS keeps every store path alive as long as something references it — a
+generation, a GC root, a <code>result</code> symlink, even a running process. Over time the
+<code>/nix/store</code> grows silently. This note walks through understanding what takes
+space, finding what can be freed, and cleaning it up.</p>
+<h2 id="nix-store-size">How big is my store?</h2>
+<p>Start here. This gives the total disk usage of the nix store.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>du -sh /nix/store /nix/var
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>35G	/nix/store
+</span></span><span style="display:flex;"><span>77M	/nix/var
+</span></span></code></pre></div><p>Almost everything lives in <code>/nix/store</code>. The <code>/nix/var</code> overhead is negligible.</p>
+<h2 id="nix-store-analysis">Understanding what takes space</h2>
+<p>The store is shared: many packages depend on the same libraries, so closure
+sizes overlap. A 7GB system closure + a 7GB home-manager closure might only
+use 10GB on disk because glibc, Qt, etc. are counted once.</p>
+<h3 id="nix-gc-roots">List all GC roots</h3>
+<p>Everything alive in the store is reachable from a GC root. This shows what&rsquo;s
+keeping paths alive:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-store --gc --print-roots 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span> <span style="color:#1f2328">|</span> grep -v <span style="color:#0a3069">&#39;/proc/&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/home/sam/.cache/nix/flake-registry.json -&gt; /nix/store/pnaz66ik1q8alabvzm895x2i66kcnvbx-flake-registry.json
+</span></span><span style="display:flex;"><span>/home/sam/.local/state/home-manager/gcroots/current-home -&gt; /nix/store/fl4p4ygwbsfrgd52xp81kynqa1kfha7b-home-manager-generation
+</span></span><span style="display:flex;"><span>/home/sam/.local/state/nix/profiles/home-manager-105-link -&gt; /nix/store/60z853dchkj350s3vlq1d7pqivr8g07v-home-manager-generation
+</span></span><span style="display:flex;"><span>/home/sam/.local/state/nix/profiles/home-manager-106-link -&gt; /nix/store/xq3pkycr0nc1p4gnxdy7042dbw5nfnhz-home-manager-generation
+</span></span><span style="display:flex;"><span>/home/sam/.local/state/nix/profiles/home-manager-107-link -&gt; /nix/store/fl4p4ygwbsfrgd52xp81kynqa1kfha7b-home-manager-generation
+</span></span><span style="display:flex;"><span>/home/sam/.local/state/nix/profiles/profile-434-link -&gt; /nix/store/pxz6z7ngmclnggc8girwyy244pq2d14v-profile
+</span></span><span style="display:flex;"><span>/home/sam/prog/keyban/dap/.devbox/nix/profile/default-5-link -&gt; /nix/store/4aga4hk2cangqgnla1xjrwhm05lm3cqn-profile
+</span></span><span style="display:flex;"><span>/nix/var/nix/profiles/per-user/root/channels-1-link -&gt; /nix/store/3rx5srpc6jlmhaym7qzj80123szcvqnj-nixos-25.11.6820.c581273b8d5b
+</span></span><span style="display:flex;"><span>/nix/var/nix/profiles/system-83-link -&gt; /nix/store/25v0g8cfddwqf6f73acadangijf5jax1-nixos-system-konix-26.05.20260303.8c809a1
+</span></span><span style="display:flex;"><span>/nix/var/nix/profiles/system-84-link -&gt; /nix/store/14x04k80gdygzh03laf7qgi1laqlsgs7-nixos-system-konix-26.05.20260303.8c809a1
+</span></span><span style="display:flex;"><span>/run/booted-system -&gt; /nix/store/14x04k80gdygzh03laf7qgi1laqlsgs7-nixos-system-konix-26.05.20260303.8c809a1
+</span></span><span style="display:flex;"><span>/run/current-system -&gt; /nix/store/14x04k80gdygzh03laf7qgi1laqlsgs7-nixos-system-konix-26.05.20260303.8c809a1
+</span></span></code></pre></div><p>The <code>/proc/</code> entries are from running processes — they go away on reboot or
+when the process exits. The interesting roots are:</p>
+<ul>
+<li><code>~/.local/state/nix/profiles/profile-*-link</code> — user profile generations
+from <code>nix profile install</code>. Often the biggest root because it accumulates
+every package you&rsquo;ve ever installed. This profile is populated on-demand
+by the hardliases system (<code>~/prog/devel/bin/hardliases/</code>): each hardlias
+is a wrapper script that calls <code>nix profile add</code> on first run. So the
+profile grows over time as you use more commands. Cleaning old generations
+with <code>nix profile wipe-history</code> is safe — the hardliases will reinstall
+on next use. Removing a package from the profile entirely is also safe
+for the same reason, but it will trigger a rebuild on next invocation.</li>
+<li><code>/nix/var/nix/profiles/system-*-link</code> — NixOS system generations. Each
+one is a full bootable system closure. Clean with
+<code>sudo nix-collect-garbage --delete-older-than 7d</code>.</li>
+<li><code>result</code> symlinks in project directories — leftover <code>nix build</code> outputs.
+Each one registers a GC root in <code>/nix/var/nix/gcroots/auto/</code> that
+persists even if the symlink is deleted. Can hold large closures alive.</li>
+<li><code>~/.local/state/nix/profiles/home-manager-*-link</code> — Home Manager
+generations. Old ones keep their full closure alive. Clean with
+<code>home-manager expire-generations</code>.</li>
+<li><code>/tmp/</code> symlinks — same as <code>result</code>, but in <code>/tmp</code>. The symlinks
+themselves disappear on reboot, but the GC root entries persist.
+<code>nix-collect-garbage</code> detects and removes these stale roots automatically.</li>
+<li><code>.devbox/nix/profile/</code> — devbox project environments. Each project with
+a <code>devbox.json</code> gets its own nix profile.</li>
+<li><code>/nix/var/nix/profiles/per-user/root/channels-*-link</code> — the root user&rsquo;s
+channel (e.g. the nixpkgs snapshot used by <code>sudo nixos-rebuild</code>). Usually
+a few hundred MB. Cleaned by <code>sudo nix-collect-garbage -d</code>.</li>
+<li><code>~/.local/state/home-manager/gcroots/current-home</code> — symlink to the
+active Home Manager generation. Managed by Home Manager, don&rsquo;t touch it.</li>
+<li><code>/run/current-system</code> — points to the currently active system generation
+(may differ from <code>booted-system</code> after <code>nixos-rebuild switch</code> without
+rebooting). Managed by NixOS, don&rsquo;t touch it.</li>
+<li><code>/run/booted-system</code> — points to the system generation that was booted.
+Set at boot, read-only. Goes away on reboot.</li>
+<li><code>~/.cache/nix/flake-registry.json</code> — cached copy of the global flake
+registry that maps shorthand names (like <code>nixpkgs</code>) to URLs. Tiny, harmless.</li>
+</ul>
+<h3 id="nix-closure-sizes">Closure sizes per root</h3>
+<p>A closure is a package plus everything it depends on. This shows how big each
+major root is (with overlap — they don&rsquo;t sum to the total). In particular,
+the user profile includes <code>home-manager-path</code> as one of its entries, so its
+closure contains the entire Home Manager closure plus all other packages
+installed via <code>nix profile install</code>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;=== NixOS system ===&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> p in /nix/var/nix/profiles/system-*-link<span style="color:#1f2328">;</span> <span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#953800">size</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>nix path-info --closure-size <span style="color:#0a3069">&#34;</span><span style="color:#953800">$p</span><span style="color:#0a3069">&#34;</span> 2&gt;/dev/null <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;{printf &#34;%.1f GB&#34;, $2/1024/1024/1024}&#39;</span><span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;  </span><span style="color:#cf222e">$(</span>basename <span style="color:#953800">$p</span><span style="color:#cf222e">)</span><span style="color:#0a3069"> -&gt; </span><span style="color:#953800">$size</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;=== Home Manager ===&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> p in ~/.local/state/nix/profiles/home-manager-*-link<span style="color:#1f2328">;</span> <span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#953800">size</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>nix path-info --closure-size <span style="color:#0a3069">&#34;</span><span style="color:#953800">$p</span><span style="color:#0a3069">&#34;</span> 2&gt;/dev/null <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;{printf &#34;%.1f GB&#34;, $2/1024/1024/1024}&#39;</span><span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;  </span><span style="color:#cf222e">$(</span>basename <span style="color:#953800">$p</span><span style="color:#cf222e">)</span><span style="color:#0a3069"> -&gt; </span><span style="color:#953800">$size</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;=== User profile ===&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#0550ae">[</span> -e ~/.local/state/nix/profiles/profile <span style="color:#0550ae">]</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#953800">size</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>nix path-info --closure-size ~/.local/state/nix/profiles/profile 2&gt;/dev/null <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;{printf &#34;%.1f GB&#34;, $2/1024/1024/1024}&#39;</span><span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;  profile -&gt; </span><span style="color:#953800">$size</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">fi</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>=== NixOS system ===
+</span></span><span style="display:flex;"><span>  system-83-link -&gt; 6.8 GB
+</span></span><span style="display:flex;"><span>  system-84-link -&gt; 6.8 GB
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>=== Home Manager ===
+</span></span><span style="display:flex;"><span>  home-manager-105-link -&gt; 7.3 GB
+</span></span><span style="display:flex;"><span>  home-manager-106-link -&gt; 7.3 GB
+</span></span><span style="display:flex;"><span>  home-manager-107-link -&gt; 7.3 GB
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>=== User profile ===
+</span></span><span style="display:flex;"><span>  profile -&gt; 29.3 GB
+</span></span></code></pre></div><h3 id="3fca9b7e-a093-49b0-bd3d-60053132a7dd">Zoom in</h3>
+<h4 id="nix-system-largest-paths">Nixos</h4>
+<p>These are the individual store paths (not closures) that take the most space
+inside the NixOS system generation. This helps understand what the system
+itself pulls in — firmware, mesa, kernel modules, docker, etc.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix path-info --size -r /nix/var/nix/profiles/system <span style="color:#1f2328">|</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>  awk <span style="color:#0a3069">&#39;{sz=$2/1024/1024; if (sz&gt;=1024) printf &#34;%.1f GB %s\n&#34;, sz/1024, $1; else printf &#34;%.0f MB %s\n&#34;, sz, $1}&#39;</span> <span style="color:#1f2328">|</span> sort -t<span style="color:#0a3069">&#39; &#39;</span> -k1 -rn <span style="color:#1f2328">|</span> head -100
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>734 MB /nix/store/g8fv0vl1zq3nm823jm93n95y3dafp7b1-linux-firmware-20260221-zstd
+</span></span><span style="display:flex;"><span>645 MB /nix/store/y0n2rsgi3lfdsgvh2rdkglnb2c07a4gs-source
+</span></span><span style="display:flex;"><span>540 MB /nix/store/s6v0k4cvllyp5cy03ngxz0snj7z23ljm-llvm-21.1.8-lib
+</span></span><span style="display:flex;"><span>528 MB /nix/store/nax6synifbl6syx1l2sxjrf1xh1qprqb-llvm-21.1.8-lib
+</span></span><span style="display:flex;"><span>260 MB /nix/store/7bcamlsr1y22gsi3br0dvw0slw5k7qqz-mesa-26.0.1
+</span></span><span style="display:flex;"><span>252 MB /nix/store/6rcij4a3pcjm94r0k0i3vil6qyhaamdy-mesa-26.0.1
+</span></span><span style="display:flex;"><span>222 MB /nix/store/0qlmqvyckf8zyx03n00azgznnkzgi5xw-glibc-locales-2.42-51
+</span></span><span style="display:flex;"><span>187 MB /nix/store/affmc6lhad8f6q3iaa3iydcdjwr8lwgp-source
+</span></span><span style="display:flex;"><span>165 MB /nix/store/4z51xyah9h8h3al1wclvgy6cb04vq0vl-qtdeclarative-6.10.2
+</span></span><span style="display:flex;"><span>133 MB /nix/store/6wm58zyrnz70240xywc0l9ml18rf03qg-linux-6.18.15-modules
+</span></span><span style="display:flex;"><span>107 MB /nix/store/m1fw8l8y9ycxh5dzispbb7cwl6rra14l-python3-3.13.12
+</span></span><span style="display:flex;"><span>99 MB /nix/store/iarcrhvmxrk4hfqqhy9di2kagb2rjwji-moby-29.2.1
+</span></span><span style="display:flex;"><span>98 MB /nix/store/9g44xzv8bxq3n9pg3h7wjjcbqg70gy4l-docker-containerd-29.2.1
+</span></span><span style="display:flex;"><span>86 MB /nix/store/rkh0rc2nhdy7iian5vdhbsb8fmy0x21x-docker-buildx-0.31.1
+</span></span><span style="display:flex;"><span>83 MB /nix/store/w4q31b93w262q2b75ri3jc7m3xd4i31h-qtbase-6.10.2
+</span></span><span style="display:flex;"><span>74 MB /nix/store/z2hrkj6a6vcbyf90924x2chhmlgwqmpq-python3-3.13.12
+</span></span><span style="display:flex;"><span>61 MB /nix/store/crabwpx7qyz7rysfdvsfg4dclk811q9d-xscreensaver-6.13
+</span></span><span style="display:flex;"><span>61 MB /nix/store/1m0z4ixir10fg7ba7g131js04bxgv265-cmake-4.1.2
+</span></span><span style="display:flex;"><span>60 MB /nix/store/73f5hxj105ny4q0phlv616lwic4sv6n4-flite-2.2-lib
+</span></span><span style="display:flex;"><span>59 MB /nix/store/r042cd7600rhl130idnmwxqyjc9126s4-systemd-259
+</span></span><span style="display:flex;"><span>56 MB /nix/store/wxyn8d3m8g4fnn6xazinjwhzhzdg6wib-systemd-259
+</span></span><span style="display:flex;"><span>55 MB /nix/store/4pfrhja4j3j5g4iwssn9w43sgihdf4wl-perl-5.42.0
+</span></span><span style="display:flex;"><span>51 MB /nix/store/swibh67af55w3pxsjlksyxfihamf9i2z-git-minimal-2.53.0
+</span></span><span style="display:flex;"><span>49 MB /nix/store/sp3pq0in1ca25hyr0ffigvx2g2dhqs91-noto-fonts-2026.02.01
+</span></span><span style="display:flex;"><span>49 MB /nix/store/fy54dwdr2wxf1phq3sgvrdyqdimzb48p-ghostscript-with-X-10.06.0
+</span></span><span style="display:flex;"><span>41 MB /nix/store/q43d6pbb9qxyhj6hq4id5mdg6gfrz6gv-gtk+3-3.24.51
+</span></span><span style="display:flex;"><span>38 MB /nix/store/wcmcai1w6ww72hflq95k61fsx7kz0d2q-icu4c-76.1
+</span></span><span style="display:flex;"><span>38 MB /nix/store/3zlq53qsimf0y525qxycjha8px0q7ygj-icu4c-76.1
+</span></span><span style="display:flex;"><span>34 MB /nix/store/9jk9p6679rz3lsc0mdnyf8h8yq4y8cc6-docker-29.2.1
+</span></span><span style="display:flex;"><span>33 MB /nix/store/ip1zll830af00llffx8s711dhvr51vmq-ffmpeg-headless-8.0.1-lib
+</span></span><span style="display:flex;"><span>33 MB /nix/store/8x2msxrm9yb8ycz9pi1pi8wz5zs9gy64-ffmpeg-8.0.1-lib
+</span></span><span style="display:flex;"><span>32 MB /nix/store/wd2988s9rndikj1l849l350zyv7lzz6h-freepats-20060219
+</span></span><span style="display:flex;"><span>29 MB /nix/store/zls8yqy7drgh35gp3nrm27ljw89n6d8p-pipewire-1.4.10-doc
+</span></span><span style="display:flex;"><span>29 MB /nix/store/r5ifa1m0sqa6ny76jgglds7gr540837m-gtk4-4.20.3
+</span></span><span style="display:flex;"><span>29 MB /nix/store/n2115sg4klccw8a2rq50ndffi7sizmrg-speech-dispatcher-0.12.1
+</span></span><span style="display:flex;"><span>29 MB /nix/store/l0l2ll1lmylczj1ihqn351af2kyp5x19-glibc-2.42-51
+</span></span><span style="display:flex;"><span>29 MB /nix/store/alal0jcsb5gyg9k6x979743k2d0lxamh-ffmpeg-headless-8.0.1-lib
+</span></span><span style="display:flex;"><span>28 MB /nix/store/9l26qshd1kimgay1l8mqab8yb50cfdd7-glibc-2.42-51
+</span></span><span style="display:flex;"><span>27 MB /nix/store/q2d8xphgqlvvdzlnb3pciryjxljq6c09-docker-compose-5.0.2
+</span></span><span style="display:flex;"><span>27 MB /nix/store/pik5qhm6hzigjffh1aqarjc9gd351281-nixos-manual-html
+</span></span><span style="display:flex;"><span>25 MB /nix/store/1whg68gwyb9q9jjasqvjigqs3jma9q7y-rootlesskit-2.3.6
+</span></span><span style="display:flex;"><span>24 MB /nix/store/drba08mg0sbqrsi8phkjbywkj3kn0fac-x265-4.1
+</span></span><span style="display:flex;"><span>23 MB /nix/store/7cqhfagsrlp3h6pv273ihfd1k694gsa4-iso-codes-4.20.1
+</span></span><span style="display:flex;"><span>23 MB /nix/store/5x3b9ijj1bb2fh8zqskl91rn41lh5l0x-iso-codes-4.20.1
+</span></span><span style="display:flex;"><span>22 MB /nix/store/8rw5ajghj5pjqjcx0armbbnbq3cdn270-linux-6.18.15
+</span></span><span style="display:flex;"><span>21 MB /nix/store/nj9xirbbrcj2mfvb6brd9l1hrygyrkiw-nix-manual-2.31.3
+</span></span><span style="display:flex;"><span>20 MB /nix/store/3nb4k9pzmwxq4gxqprhnb37np7yqjwqc-networkmanager-1.56.0
+</span></span><span style="display:flex;"><span>19 MB /nix/store/md592gfars4m9madyrpj9yrq5jhckgjf-gettext-0.26
+</span></span><span style="display:flex;"><span>19 MB /nix/store/g5kvz35643fp9yhxnkwcnwkkrhyj6d71-systemd-minimal-259
+</span></span><span style="display:flex;"><span>19 MB /nix/store/cg2s5xhv346wyy9lfxk9m53g9rra9xhm-espeak-ng-1.52.0.1-unstable-2025-09-09
+</span></span><span style="display:flex;"><span>19 MB /nix/store/5q8y4gqcrp6dnwxkkcqsl4xp1nd39q0b-networkmanager-1.56.0
+</span></span><span style="display:flex;"><span>19 MB /nix/store/356k9ng1i14ssg5pizc66lhywr7rdbsv-systemd-minimal-259
+</span></span><span style="display:flex;"><span>19 MB /nix/store/1saivc2rj6rn1ykvm4rdzlddg41a2wqa-steam-unwrapped-1.0.0.85
+</span></span><span style="display:flex;"><span>17 MB /nix/store/vpq2b3g9rydknxbyxwrdz45vz6kk3fqv-unifont-16.0.03
+</span></span><span style="display:flex;"><span>16 MB /nix/store/x6adcywj0fgd4air162d1pphzh8cjvqn-gst-plugins-bad-1.26.5
+</span></span><span style="display:flex;"><span>16 MB /nix/store/fcqhn9m2sih0rmhw1j1ffxrkl8vw7248-pipewire-1.4.10
+</span></span><span style="display:flex;"><span>15 MB /nix/store/rvvxz8y9smssjbh8x9kk0zdy2iv8ywy5-glib-2.86.3
+</span></span><span style="display:flex;"><span>15 MB /nix/store/plsmwx39r785b1dyblqp4lv81gbdpy4c-qttranslations-6.10.2
+</span></span><span style="display:flex;"><span>15 MB /nix/store/6r0krhrml6hz987s40kbqczq5923i7ix-librsvg-2.61.3
+</span></span><span style="display:flex;"><span>15 MB /nix/store/1qm74vf93ik1xjrr9kl6qvjrklljlcqh-glib-2.86.3
+</span></span><span style="display:flex;"><span>15 MB /nix/store/1aqyzz6pgi49sb8lngypa9ddh5gv993q-pipewire-1.4.10
+</span></span><span style="display:flex;"><span>14 MB /nix/store/y6mlyr480fgdd5bgpcfwwraa6vivhmwj-gnupg-2.4.9
+</span></span><span style="display:flex;"><span>14 MB /nix/store/wrwzn9h21jzg24dilb15wsh0010idkk6-boost-1.89.0
+</span></span><span style="display:flex;"><span>14 MB /nix/store/m04yk1kq9qqigl8c260qrp3asdz1wnw1-modemmanager-1.24.2
+</span></span><span style="display:flex;"><span>14 MB /nix/store/6fsxn74jfpd2ffk454qsjyk8jzcqzm4w-texinfo-interactive-7.2
+</span></span><span style="display:flex;"><span>13 MB /nix/store/q3f55hdd85088xx3sx98x9vmac13gdjk-libajantv2-17.5.0
+</span></span><span style="display:flex;"><span>13 MB /nix/store/h7whg7naplaib6ykafbqfybl1w748x64-docker-runc-29.2.1
+</span></span><span style="display:flex;"><span>13 MB /nix/store/db6sbfmg9zb4g1v77kwpd4waq0ij55nd-util-linux-2.41.3-lib
+</span></span><span style="display:flex;"><span>13 MB /nix/store/8aq1xr8m40x2mrlnmm06mzzjmjv9fvx0-hwdb.bin
+</span></span><span style="display:flex;"><span>13 MB /nix/store/7kxx839gkx9vdyk9wfzq14l66bhdmjsd-wireplumber-0.5.13-doc
+</span></span><span style="display:flex;"><span>13 MB /nix/store/2sfycqdy94jdin4qq04yws1wgq10yz6l-mbedtls-3.6.5
+</span></span><span style="display:flex;"><span>13 MB /nix/store/15hqn31hgllprki8p6l67whix262nn3d-modemmanager-1.24.2
+</span></span><span style="display:flex;"><span>12 MB /nix/store/qsh3yma0sycqh4fcbi48yxv5b1ja7sn9-initrd-linux-6.18.15
+</span></span><span style="display:flex;"><span>12 MB /nix/store/m80scad7b9qzkc0cdk2i4d640ypphbmd-coreutils-full-9.10
+</span></span><span style="display:flex;"><span>12 MB /nix/store/a87fr6776d06pa1m2lx393swn0l4sgla-mbedtls-3.6.5
+</span></span><span style="display:flex;"><span>11 MB /nix/store/aji4a8j115inll9j57w91489ycxaq1b7-sof-firmware-2025.05.1-zstd
+</span></span><span style="display:flex;"><span>11 MB /nix/store/a86d34l78hd1cm0dg3fw09c0qqr245dw-xorg-server-21.1.21
+</span></span><span style="display:flex;"><span>10 MB /nix/store/ypxd9dldr1j8lbg7a5ws42gqa2kizgyh-bluez-5.84
+</span></span><span style="display:flex;"><span>10 MB /nix/store/rg4a85a1rnnagbvapkrp3xfdvg7m140w-noto-fonts-color-emoji-2.051
+</span></span><span style="display:flex;"><span>10 MB /nix/store/p8zzznrm6q1mrlwy6i5z3zr4f87cdc8w-hwdata-0.404
+</span></span><span style="display:flex;"><span>10 MB /nix/store/m3b3fnv33pzhhbadwg3qdqpcjvlg83jn-hwdata-0.404
+</span></span><span style="display:flex;"><span>10 MB /nix/store/ihpdbhy4rfxaixiamyb588zfc3vj19al-gcc-15.2.0-lib
+</span></span><span style="display:flex;"><span>10 MB /nix/store/hndbrrk1gggj5lkd8d9x7q0s7gk94z63-steam-1.0.0.85-fhsenv-rootfs
+</span></span><span style="display:flex;"><span>10 MB /nix/store/h5c0q8a7c61zqgnhqq3psk3g76ajpldh-steam-run-1.0.0.85-fhsenv-rootfs
+</span></span><span style="display:flex;"><span>10 MB /nix/store/7l9d49jd3c3a9hyqx70frrn616n3il4i-xkeyboard-config-2.46
+</span></span><span style="display:flex;"><span>10 MB /nix/store/6cms9f4w6pxp7gkxf464zg031w27pnag-freefont-ttf-20120503
+</span></span><span style="display:flex;"><span>10 MB /nix/store/4g07cwy57p5214szx7fmlkijpb6p6r47-bluez-5.84
+</span></span><span style="display:flex;"><span>10 MB /nix/store/2r1nbfavp94gl5q660vg3x0s4a5vyl6s-libjxl-0.11.2
+</span></span><span style="display:flex;"><span>9 MB /nix/store/vlhrk50xg0lmivk049q8yygbsm86l6m0-openssh-10.2p1
+</span></span><span style="display:flex;"><span>9 MB /nix/store/q8zb95f4m2aahbdi6jl7wh3cjwc4p855-cups-2.4.16
+</span></span><span style="display:flex;"><span>9 MB /nix/store/p96a7p297gmia8zcy4i72qd45wzw8lh6-openssl-3.6.1
+</span></span><span style="display:flex;"><span>9 MB /nix/store/kgf6zn39f6mxg0l3hjx29rpg7a0y3viv-gst-plugins-base-1.26.5
+</span></span><span style="display:flex;"><span>9 MB /nix/store/ilk5qzvkadnj7lx58hfinfvl7jmhriq6-util-linux-2.41.3-bin
+</span></span><span style="display:flex;"><span>9 MB /nix/store/dml7jig0fh35chx530ga4icf68j4qayf-dejavu-fonts-2.37
+</span></span><span style="display:flex;"><span>9 MB /nix/store/c1yv698q09l7lay400v0zz9ajicmf65b-libreelec-dvb-firmware-1.5.0-zstd
+</span></span><span style="display:flex;"><span>9 MB /nix/store/abp49ljkaq0hnzfk0f016rzsrx4rhkx3-gst-plugins-base-1.26.5
+</span></span><span style="display:flex;"><span>9 MB /nix/store/7v308am31q0n3zk2361gqi5pv3swzrnw-groff-1.23.0
+</span></span><span style="display:flex;"><span>9 MB /nix/store/7nvb5clr8li75nn09gjqihy5mbx3g86i-libvpx-1.15.2
+</span></span><span style="display:flex;"><span>9 MB /nix/store/2y2faybcp9a3qgnivfmg4iznqvjcq6pa-zenity-4.2.1
+</span></span><span style="display:flex;"><span>8 MB /nix/store/ycv0bdf8bg06p8w6hhsk409c2q91clqb-svt-av1-3.1.2
+</span></span></code></pre></div><p>The path shown is the current system generation. If you have multiple
+generations, replace <code>system</code> with <code>system-NN-link</code> to compare.</p>
+<p>You can also visualize the dependency graph (see <a href="#nix-dep-graph-code">annex</a>):</p>
+<figure><a href="https://ipfs.konubinix.eu/p/bafkreie2rrdzuxcr6f4dncb4bw5mmynrmbglukf7ei5qtrp5yoetkjjqam?nix-dep-graph-system.svg" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreie2rrdzuxcr6f4dncb4bw5mmynrmbglukf7ei5qtrp5yoetkjjqam?nix-dep-graph-system.svg"></a>
+</figure>
+
+<h5 id="0d2a692a-97f4-4585-a32c-679791112bf5">focusing into ffmpeg</h5>
+<p>That&rsquo;s strange, why does ffmpeg take &ldquo;only&rdquo; 28 MB but 247 MB in cumulative size ?</p>
+<p>Let&rsquo;s focus on it, showing even the small nodes in the path.</p>
+<figure><a href="https://ipfs.konubinix.eu/p/bafybeiarqh73egltm2npbj46igckqjl7dd7bnesvkyp2aprk7neimuthru?nix-dep-graph-ffmpeg.svg" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafybeiarqh73egltm2npbj46igckqjl7dd7bnesvkyp2aprk7neimuthru?nix-dep-graph-ffmpeg.svg"></a>
+</figure>
+
+<h4 id="nix-profile-breakdown">user profile</h4>
+<p>The user profile (from <code>nix profile install</code>) is often the biggest root
+because it accumulates packages over time. Most of these packages come from
+the hardliases system (<code>~/prog/devel/bin/hardliases/</code>) which lazily installs
+them on first use. The <code>home-manager-path</code> entry is the closure of the
+entire Home Manager environment (all packages from the HM config), not an
+individual package. This breaks it down:</p>
+<p><a id="code-snippet--nix-profile-sizes"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">subprocess</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>profile_json<span style="color:#1f2328">,</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    data <span style="color:#0550ae">=</span> json<span style="color:#0550ae">.</span>loads<span style="color:#1f2328">(</span>profile_json<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    data <span style="color:#0550ae">=</span> json<span style="color:#0550ae">.</span>loads<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span><span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>x<span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> x <span style="color:#0550ae">in</span> profile_json<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>sizes <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> name<span style="color:#1f2328">,</span> elem <span style="color:#0550ae">in</span> data<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;elements&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{})</span><span style="color:#0550ae">.</span>items<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> elem<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;storePaths&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">[]):</span>
+</span></span><span style="display:flex;"><span>        r <span style="color:#0550ae">=</span> subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;nix&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;path-info&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--closure-size&#34;</span><span style="color:#1f2328">,</span> p<span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>            capture_output<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> text<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> r<span style="color:#0550ae">.</span>returncode <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            parts <span style="color:#0550ae">=</span> r<span style="color:#0550ae">.</span>stdout<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>split<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>parts<span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                sizes<span style="color:#0550ae">.</span>append<span style="color:#1f2328">((</span>name<span style="color:#1f2328">,</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>parts<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">])))</span>
+</span></span><span style="display:flex;"><span>sizes<span style="color:#0550ae">.</span>sort<span style="color:#1f2328">(</span>key<span style="color:#0550ae">=</span><span style="color:#cf222e">lambda</span> x<span style="color:#1f2328">:</span> <span style="color:#0550ae">-</span>x<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> name<span style="color:#1f2328">,</span> s <span style="color:#0550ae">in</span> sizes<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    gb <span style="color:#0550ae">=</span> s <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> gb <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">0.1</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  </span><span style="color:#0a3069">{</span>name<span style="color:#0a3069">}</span><span style="color:#0a3069"> -&gt; </span><span style="color:#0a3069">{</span>gb<span style="color:#0a3069">:</span><span style="color:#0a3069">.1f</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> GB&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  </span><span style="color:#0a3069">{</span>name<span style="color:#0a3069">}</span><span style="color:#0a3069"> -&gt; </span><span style="color:#0a3069">{</span>s <span style="color:#0550ae">//</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">//</span> <span style="color:#0550ae">1024</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> MB&#34;</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>flakes/android -&gt; 8.3 GB
+</span></span><span style="display:flex;"><span>home-manager-path -&gt; 7.3 GB
+</span></span><span style="display:flex;"><span>whisper-ctranslate2 -&gt; 2.8 GB
+</span></span><span style="display:flex;"><span>blender -&gt; 2.5 GB
+</span></span><span style="display:flex;"><span>mermaid-cli -&gt; 2.0 GB
+</span></span><span style="display:flex;"><span>openboard -&gt; 1.8 GB
+</span></span><span style="display:flex;"><span>cargo -&gt; 1.6 GB
+</span></span><span style="display:flex;"><span>firefox -&gt; 1.5 GB
+</span></span><span style="display:flex;"><span>handbrake -&gt; 1.4 GB
+</span></span><span style="display:flex;"><span>vlc -&gt; 1.3 GB
+</span></span><span style="display:flex;"><span>flakes/scrcpy -&gt; 1.1 GB
+</span></span><span style="display:flex;"><span>openjdk -&gt; 0.8 GB
+</span></span><span style="display:flex;"><span>libextractor -&gt; 0.8 GB
+</span></span><span style="display:flex;"><span>bitwarden-cli -&gt; 0.7 GB
+</span></span><span style="display:flex;"><span>deskflow -&gt; 0.7 GB
+</span></span><span style="display:flex;"><span>apksigner -&gt; 0.6 GB
+</span></span><span style="display:flex;"><span>apktool -&gt; 0.6 GB
+</span></span><span style="display:flex;"><span>pdfarranger -&gt; 0.6 GB
+</span></span><span style="display:flex;"><span>zbar -&gt; 0.6 GB
+</span></span><span style="display:flex;"><span>zathura -&gt; 0.5 GB
+</span></span><span style="display:flex;"><span>keepassxc -&gt; 0.5 GB
+</span></span><span style="display:flex;"><span>fstl -&gt; 0.4 GB
+</span></span><span style="display:flex;"><span>seahorse -&gt; 0.4 GB
+</span></span><span style="display:flex;"><span>vault -&gt; 0.4 GB
+</span></span><span style="display:flex;"><span>awscli2 -&gt; 0.3 GB
+</span></span><span style="display:flex;"><span>feh -&gt; 0.3 GB
+</span></span><span style="display:flex;"><span>pre-commit -&gt; 0.3 GB
+</span></span><span style="display:flex;"><span>loudgain -&gt; 0.3 GB
+</span></span><span style="display:flex;"><span>chromaprint -&gt; 0.3 GB
+</span></span><span style="display:flex;"><span>argocd -&gt; 0.3 GB
+</span></span><span style="display:flex;"><span>pdftotext -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>typescript-language-server -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>typescript -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>flakes/colout -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>pgcli -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>pnpm -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>eslint -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>borgbackup -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>msmtp -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>flakes/renault-api -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>httpie -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>imagemagick -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>consul -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>flakes/rotate-backups -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>deno -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>mpremote -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>w3m -&gt; 0.2 GB
+</span></span><span style="display:flex;"><span>xvfb-run -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>postgresql_16 -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>graphviz -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>poppler-utils -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>kubo -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>hugo -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>ntfy-sh -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>cups -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>sox -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>exiftool -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>ledger -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>sshfs -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>uv -&gt; 0.1 GB
+</span></span><span style="display:flex;"><span>nssTools -&gt; 100 MB
+</span></span><span style="display:flex;"><span>util-linux -&gt; 90 MB
+</span></span><span style="display:flex;"><span>gh -&gt; 86 MB
+</span></span><span style="display:flex;"><span>ruff -&gt; 84 MB
+</span></span><span style="display:flex;"><span>x11vnc -&gt; 68 MB
+</span></span><span style="display:flex;"><span>nixfmt -&gt; 68 MB
+</span></span><span style="display:flex;"><span>websocat -&gt; 67 MB
+</span></span><span style="display:flex;"><span>dig -&gt; 64 MB
+</span></span><span style="display:flex;"><span>ty -&gt; 63 MB
+</span></span><span style="display:flex;"><span>devbox -&gt; 62 MB
+</span></span><span style="display:flex;"><span>dagger -&gt; 60 MB
+</span></span><span style="display:flex;"><span>kubectl -&gt; 60 MB
+</span></span><span style="display:flex;"><span>libsecret -&gt; 54 MB
+</span></span><span style="display:flex;"><span>terraform-ls -&gt; 50 MB
+</span></span><span style="display:flex;"><span>fd -&gt; 50 MB
+</span></span><span style="display:flex;"><span>stylua -&gt; 50 MB
+</span></span><span style="display:flex;"><span>wget -&gt; 47 MB
+</span></span><span style="display:flex;"><span>socat -&gt; 46 MB
+</span></span><span style="display:flex;"><span>ncdu -&gt; 46 MB
+</span></span><span style="display:flex;"><span>jless -&gt; 46 MB
+</span></span><span style="display:flex;"><span>libfaketime -&gt; 45 MB
+</span></span><span style="display:flex;"><span>flakes/oama -&gt; 45 MB
+</span></span><span style="display:flex;"><span>crane -&gt; 45 MB
+</span></span><span style="display:flex;"><span>lighttpd -&gt; 43 MB
+</span></span><span style="display:flex;"><span>flakes/hld -&gt; 42 MB
+</span></span><span style="display:flex;"><span>bkt -&gt; 42 MB
+</span></span><span style="display:flex;"><span>openssl -&gt; 41 MB
+</span></span><span style="display:flex;"><span>inotify-tools -&gt; 41 MB
+</span></span><span style="display:flex;"><span>xclip -&gt; 39 MB
+</span></span><span style="display:flex;"><span>flakes/phasher -&gt; 39 MB
+</span></span><span style="display:flex;"><span>earthly -&gt; 35 MB
+</span></span><span style="display:flex;"><span>xsel -&gt; 35 MB
+</span></span><span style="display:flex;"><span>mpc -&gt; 33 MB
+</span></span><span style="display:flex;"><span>sqlite -&gt; 33 MB
+</span></span><span style="display:flex;"><span>dos2unix -&gt; 33 MB
+</span></span><span style="display:flex;"><span>keyutils -&gt; 33 MB
+</span></span><span style="display:flex;"><span>qrencode -&gt; 31 MB
+</span></span><span style="display:flex;"><span>tree -&gt; 31 MB
+</span></span><span style="display:flex;"><span>colorized-logs -&gt; 31 MB
+</span></span><span style="display:flex;"><span>pstree -&gt; 31 MB
+</span></span><span style="display:flex;"><span>openssl -&gt; 3 MB
+</span></span><span style="display:flex;"><span>postgresql_16 -&gt; 0 MB
+</span></span><span style="display:flex;"><span>util-linux -&gt; 0 MB
+</span></span><span style="display:flex;"><span>kubectl -&gt; 0 MB
+</span></span><span style="display:flex;"><span>cups -&gt; 0 MB
+</span></span><span style="display:flex;"><span>sox -&gt; 0 MB
+</span></span><span style="display:flex;"><span>keyutils -&gt; 0 MB
+</span></span><span style="display:flex;"><span>borgbackup -&gt; 0 MB
+</span></span><span style="display:flex;"><span>feh -&gt; 0 MB
+</span></span><span style="display:flex;"><span>zbar -&gt; 0 MB
+</span></span><span style="display:flex;"><span>sqlite -&gt; 0 MB
+</span></span><span style="display:flex;"><span>qrencode -&gt; 0 MB
+</span></span></code></pre></div><p>You can also visualize the dependency graph (see <a href="#nix-dep-graph-code">annex</a>):</p>
+<figure><a href="https://ipfs.konubinix.eu/p/bafybeihrzpd7m7sbsrj6i5irkmm245s6ryopzm7az6qmj64ybvfordzka4?nix-dep-graph-profile.svg" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafybeihrzpd7m7sbsrj6i5irkmm245s6ryopzm7az6qmj64ybvfordzka4?nix-dep-graph-profile.svg"></a>
+</figure>
+
+<h4 id="nix-hm-largest-paths">Home Manager</h4>
+<p>Same idea for Home Manager. This closure often includes heavy packages like
+chromium, emacs, qtwebengine, gcc (for native-comp), etc. The <code>all</code> entry
+at the top is the aggregated derivation for the entire Home Manager profile,
+not an individual package. Note: <code>--size</code> reports each path&rsquo;s own size
+(just the symlink farm), while the per-package breakdown above uses
+<code>--closure-size</code> which includes all transitive dependencies — hence
+<code>home-manager-path</code> appears much larger there.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix path-info --size -r ~/.local/state/nix/profiles/home-manager <span style="color:#1f2328">|</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>  awk <span style="color:#0a3069">&#39;{sz=$2/1024/1024; if (sz&gt;=1024) printf &#34;%.1f GB %s\n&#34;, sz/1024, $1; else printf &#34;%.0f MB %s\n&#34;, sz, $1}&#39;</span> <span style="color:#1f2328">|</span> sort -t<span style="color:#0a3069">&#39; &#39;</span> -k1 -rn <span style="color:#1f2328">|</span> head -20
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1015 MB /nix/store/1jncnixlflajcb85daq66kggsy2hb78f-all
+</span></span><span style="display:flex;"><span>649 MB /nix/store/dp52zh2z75dbd4nmy1wxc17msyygy2gm-chromium-unwrapped-145.0.7632.116
+</span></span><span style="display:flex;"><span>434 MB /nix/store/fa965xaq074a2c0v4d2ssrg02y5syl9v-qtwebengine-6.10.2
+</span></span><span style="display:flex;"><span>326 MB /nix/store/nqzrva0994k1xgh86kavhi5qcg54ixiq-emacs-30.2
+</span></span><span style="display:flex;"><span>264 MB /nix/store/sca0pf46jmxva40qahkcwys5c1lvk6n2-gcc-15.2.0
+</span></span><span style="display:flex;"><span>222 MB /nix/store/0qlmqvyckf8zyx03n00azgznnkzgi5xw-glibc-locales-2.42-51
+</span></span><span style="display:flex;"><span>181 MB /nix/store/7hgr71y4mchf0h4w4i36j49lhvzl4nc2-docker-scout-1.20.2
+</span></span><span style="display:flex;"><span>165 MB /nix/store/4z51xyah9h8h3al1wclvgy6cb04vq0vl-qtdeclarative-6.10.2
+</span></span><span style="display:flex;"><span>141 MB /nix/store/qx6qwzhfxqskg87zl9igij2nbk0kclmk-deno-2.6.10
+</span></span><span style="display:flex;"><span>139 MB /nix/store/6n4hzs2swrk7hy8v36hs118n33sw7qz4-libgccjit-15.2.0
+</span></span><span style="display:flex;"><span>107 MB /nix/store/m1fw8l8y9ycxh5dzispbb7cwl6rra14l-python3-3.13.12
+</span></span><span style="display:flex;"><span>99 MB /nix/store/iarcrhvmxrk4hfqqhy9di2kagb2rjwji-moby-29.2.1
+</span></span><span style="display:flex;"><span>98 MB /nix/store/9g44xzv8bxq3n9pg3h7wjjcbqg70gy4l-docker-containerd-29.2.1
+</span></span><span style="display:flex;"><span>86 MB /nix/store/rkh0rc2nhdy7iian5vdhbsb8fmy0x21x-docker-buildx-0.31.1
+</span></span><span style="display:flex;"><span>85 MB /nix/store/q62chy9hy3wfyb63q166dg1xldl506m1-index-x86_64-linux
+</span></span><span style="display:flex;"><span>84 MB /nix/store/yricn9c0wsv39r324dm96bsyfqvsdp3p-samba-4.22.7
+</span></span><span style="display:flex;"><span>83 MB /nix/store/w4q31b93w262q2b75ri3jc7m3xd4i31h-qtbase-6.10.2
+</span></span><span style="display:flex;"><span>80 MB /nix/store/h4apbnz8p5fmjwcmzlaxcjm5vr70d97x-nodejs-slim-24.13.0
+</span></span><span style="display:flex;"><span>76 MB /nix/store/gsykwaghk72cm2wwfcxpznr0i3yp9020-opencv-4.13.0
+</span></span><span style="display:flex;"><span>61 MB /nix/store/crabwpx7qyz7rysfdvsfg4dclk811q9d-xscreensaver-6.13
+</span></span></code></pre></div><p>You can also visualize the dependency graph (see <a href="#nix-dep-graph-code">annex</a>):</p>
+<figure><a href="https://ipfs.konubinix.eu/p/bafkreiakx4boaloqixd3metfw7uvb45mhyqfzhnufi5ie44kozh3zugity?nix-dep-graph-hm.svg" target="_blank"><img src="https://ipfs.konubinix.eu/p/bafkreiakx4boaloqixd3metfw7uvb45mhyqfzhnufi5ie44kozh3zugity?nix-dep-graph-hm.svg"></a>
+</figure>
+
+<h3 id="nix-dangling-results">Find dangling <code>result</code> symlinks</h3>
+<p><code>nix build</code> creates <code>result</code> symlinks that register as GC roots. They
+accumulate in project directories and keep old builds alive. Note: some
+hardliases use custom flakes (e.g. <code>scrcpy</code> builds from
+<code>~/prog/devel/flakes/scrcpy</code>) — if you run <code>nix build</code> manually in those
+flake directories, the <code>result</code> symlink will linger there too.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-store --gc --print-roots 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span> <span style="color:#1f2328">|</span> grep -v <span style="color:#0a3069">&#39;/proc/&#39;</span> <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#39;result&#39;</span>
+</span></span></code></pre></div><p>To remove them (review the list first!):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#953800">roots</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>nix-store --gc --print-roots 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span> <span style="color:#1f2328">|</span> grep -v <span style="color:#0a3069">&#39;/proc/&#39;</span> <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#39;result&#39;</span> <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;{print $1}&#39;</span><span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> r in <span style="color:#953800">$roots</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">if</span> <span style="color:#0550ae">[</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$DRY_RUN</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;yes&#34;</span> <span style="color:#0550ae">]</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;[dry run] would remove: </span><span style="color:#953800">$r</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">else</span>
+</span></span><span style="display:flex;"><span>    rm -v <span style="color:#0a3069">&#34;</span><span style="color:#953800">$r</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span></code></pre></div><p>Set <code>DRY_RUN</code> to <code>&quot;no&quot;</code> in the header to actually delete them.</p>
+<h3 id="nix-tmp-roots">Find <code>/tmp</code> GC roots</h3>
+<p>Same problem as <code>result</code> symlinks, but in <code>/tmp</code>. The symlinks themselves may
+be gone after reboot, but the GC root entries in
+<code>/nix/var/nix/gcroots/auto/</code> persist. <code>nix-collect-garbage</code> cleans stale
+roots automatically, but it helps to know they&rsquo;re there:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-store --gc --print-roots 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span> <span style="color:#1f2328">|</span> grep -v <span style="color:#0a3069">&#39;/proc/&#39;</span> <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#39;/tmp/&#39;</span>
+</span></span></code></pre></div><h3 id="nix-gc-dry-run">Check for reclaimable space (dry run)</h3>
+<p>Before actually collecting, see how much would be freed:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-collect-garbage --dry-run 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span> <span style="color:#1f2328">|</span> tail -3
+</span></span></code></pre></div><p>If this shows nothing, the store is already clean — all paths are live.</p>
+<h2 id="nix-cleanup">Cleaning up</h2>
+<h3 id="nix-remove-system-generations">Remove old NixOS generations</h3>
+<p>List current generations:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-env --list-generations --profile /nix/var/nix/profiles/system
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>83   2026-03-25 11:15:33
+</span></span><span style="display:flex;"><span>84   2026-03-29 11:51:21   (current)
+</span></span></code></pre></div><p>Delete all but the current one:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-collect-garbage -d
+</span></span></code></pre></div><p>Or keep the last 7 days:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-collect-garbage --delete-older-than 7d
+</span></span></code></pre></div><h3 id="nix-remove-hm-generations">Remove old Home Manager generations</h3>
+<p>List current generations:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>home-manager generations
+</span></span></code></pre></div><p>Expire old ones (keep last 7 days):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>home-manager expire-generations <span style="color:#0a3069">&#34;-7 days&#34;</span>
+</span></span></code></pre></div><h3 id="nix-remove-profile-generations">Remove old user profile generations</h3>
+<p>Every time a hardlias triggers <code>nix profile add</code>, a new generation is
+created. Over time this accumulates many generations, each holding a full
+closure. Wiping history is safe — it only removes old generations, not the
+current one. All installed packages remain available.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix profile wipe-history --profile ~/.local/state/nix/profiles/profile
+</span></span></code></pre></div><p>Or keep recent ones:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix profile wipe-history --profile ~/.local/state/nix/profiles/profile --older-than 7d
+</span></span></code></pre></div><p>You can also remove individual packages to save space. The hardlias wrapper
+will reinstall it transparently the next time you run the command (at the
+cost of a one-time rebuild):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix profile remove --profile ~/.local/state/nix/profiles/profile <span style="color:#0a3069">&#34;</span><span style="color:#953800">$PKG</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><h3 id="nix-garbage-collect">Garbage collect the store</h3>
+<p>This removes all store paths not reachable from any GC root (including stale
+roots pointing to deleted symlinks):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-collect-garbage
+</span></span></code></pre></div><p>For a more aggressive clean (also removes old generations from all profiles
+system-wide — use <code>--delete-older-than</code> variant above if you want more
+control):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-collect-garbage -d
+</span></span></code></pre></div><h3 id="nix-rebuild-boot">Rebuild boot entries</h3>
+<p>After removing old system generations, the boot loader (systemd-boot) may
+still have stale entries. The generation files in <code>/nix/var/nix/profiles/</code> are
+gone, but the entries in <code>/boot/loader/entries/</code> are not cleaned automatically
+by garbage collection. Regenerate them:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#953800">boot_entries</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>ls /boot/loader/entries/ <span style="color:#1f2328">|</span> wc -l<span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">generations</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>nix-env --list-generations --profile /nix/var/nix/profiles/system <span style="color:#1f2328">|</span> wc -l<span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;boot entries: </span><span style="color:#953800">$boot_entries</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;system generations: </span><span style="color:#953800">$generations</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#0550ae">[</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$boot_entries</span><span style="color:#0a3069">&#34;</span> -gt <span style="color:#0a3069">&#34;</span><span style="color:#953800">$generations</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">]</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;=&gt; STALE: </span><span style="color:#cf222e">$((</span>boot_entries <span style="color:#0550ae">-</span> generations<span style="color:#cf222e">))</span><span style="color:#0a3069"> extra boot entries to clean&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;=&gt; OK&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">fi</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>boot entries: 2
+</span></span><span style="display:flex;"><span>system generations: 2
+</span></span><span style="display:flex;"><span>=&gt; OK
+</span></span></code></pre></div><p>If stale, rebuild:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/run/current-system/bin/switch-to-configuration boot
+</span></span></code></pre></div><p>This regenerates boot entries to match only the existing generations. Verify:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ls /boot/loader/entries/ <span style="color:#1f2328">|</span> wc -l
+</span></span></code></pre></div><p>The change takes effect on next reboot.</p>
+<p>Which boot loader am I using?</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#0550ae">[</span> -d /boot/loader/entries <span style="color:#0550ae">]</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;systemd-boot&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">elif</span> <span style="color:#0550ae">[</span> -d /boot/grub <span style="color:#0550ae">]</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;GRUB&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;unknown — check /boot/&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">fi</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>systemd-boot
+</span></span></code></pre></div><h4 id="nix-rebuild-boot-grub">GRUB variant</h4>
+<p>If using GRUB instead of systemd-boot, the rebuild command is different:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nixos-rebuild boot
+</span></span></code></pre></div><h2 id="nix-verify">Verify</h2>
+<p>After cleanup, check the final size and confirm nothing is left to collect:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>du -sh /nix
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;---&#34;</span>
+</span></span><span style="display:flex;"><span>nix-collect-garbage --dry-run 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span> <span style="color:#1f2328">|</span> tail -3
+</span></span></code></pre></div><h2 id="33fedc46-e380-4ec2-a0ec-453ded61962e">Annex</h2>
+<h3 id="nix-dep-graph-code">Dependency graph code</h3>
+<p>A visual graph of the dependency tree makes it easy to spot which paths
+pull in the most weight. Each node shows the package name and its own size;
+edges show &ldquo;depends on&rdquo;. Only paths above a configurable threshold are
+included to keep the graph readable.</p>
+<p>Change <code>root</code> to the root you want to explore (a GC root, a profile,
+or any store path). Change <code>minmb</code> to filter out small nodes. Set <code>focus</code>
+to a package name to restrict the graph to that package&rsquo;s closure.</p>
+<p>The <code>minmb</code> threshold applies differently depending on the mode:</p>
+<ul>
+<li><strong>Without focus</strong>: filters by <strong>own size</strong> (<code>narSize</code>). This keeps the
+graph small and readable on large closures like the full system.</li>
+<li><strong>With focus</strong>: filters by <strong>closure size</strong>. When zooming into a single
+package, you want to see the full dependency chain — including small
+intermediary packages that pull in heavy transitive dependencies.</li>
+</ul>
+<p>The graph is color-coded:</p>
+<ul>
+<li><strong>Red</strong>: ≥500 MB</li>
+<li><strong>Orange</strong>: ≥200 MB</li>
+<li><strong>Yellow</strong>: ≥100 MB</li>
+<li><strong>Green</strong>: &lt;100 MB (but above the threshold)</li>
+</ul>
+<p>The main entry point assembles all the pieces:</p>
+<p><a id="code-snippet--nix-dep-graph"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">subprocess</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">re</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>min_bytes <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>minmb<span style="color:#1f2328">)</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span>
+</span></span><span style="display:flex;"><span>store_path <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>expanduser<span style="color:#1f2328">(</span>root<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;nix&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;path-info&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-r&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--json&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--closure-size&#34;</span><span style="color:#1f2328">,</span> store_path<span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>    capture_output<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> text<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> r<span style="color:#0550ae">.</span>returncode <span style="color:#0550ae">!=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;nix path-info failed: </span><span style="color:#0a3069">{</span>r<span style="color:#0550ae">.</span>stderr<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>raw <span style="color:#0550ae">=</span> json<span style="color:#0550ae">.</span>loads<span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>stdout<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># nix path-info --json returns a dict keyed by store path</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>raw<span style="color:#1f2328">,</span> <span style="color:#6639ba">list</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    info <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>p<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;path&#34;</span><span style="color:#1f2328">]:</span> p <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> raw<span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    info <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>path<span style="color:#1f2328">:</span> data <span style="color:#cf222e">for</span> path<span style="color:#1f2328">,</span> data <span style="color:#0550ae">in</span> raw<span style="color:#0550ae">.</span>items<span style="color:#1f2328">()}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">closure_size</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;closureSize&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> focus<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    focus_path <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>p <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> info <span style="color:#cf222e">if</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span>re<span style="color:#0550ae">.</span>escape<span style="color:#1f2328">(</span>focus<span style="color:#1f2328">),</span> p<span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> focus_path<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;no store path matching &#39;</span><span style="color:#0a3069">{</span>focus<span style="color:#0a3069">}</span><span style="color:#0a3069">&#39;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    focus_path <span style="color:#0550ae">=</span> focus_path<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    relevant <span style="color:#0550ae">=</span> <span style="color:#6639ba">set</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    stack <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>focus_path<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> stack<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        p <span style="color:#0550ae">=</span> stack<span style="color:#0550ae">.</span>pop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> p <span style="color:#0550ae">in</span> relevant <span style="color:#0550ae">or</span> p <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> info<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        relevant<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>p<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> ref <span style="color:#0550ae">in</span> info<span style="color:#1f2328">[</span>p<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;references&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">[]):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> ref <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> relevant<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                stack<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>ref<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    info <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>p<span style="color:#1f2328">:</span> info<span style="color:#1f2328">[</span>p<span style="color:#1f2328">]</span> <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> relevant <span style="color:#cf222e">if</span> p <span style="color:#0550ae">in</span> info<span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> focus<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    big <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>path <span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> info <span style="color:#cf222e">if</span> closure_size<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> min_bytes<span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    big <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>path <span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> info <span style="color:#cf222e">if</span> info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;narSize&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> min_bytes<span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">fmt_size</span><span style="color:#1f2328">(</span>size<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> size <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>size <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span><span style="color:#0a3069">:</span><span style="color:#0a3069">.1f</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> GB&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> size <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>size <span style="color:#0550ae">//</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span><span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> MB&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>size <span style="color:#0550ae">//</span> <span style="color:#0550ae">1024</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> KB&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">label</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    hash_prefix <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;^/nix/store/([a-z0-9]</span><span style="color:#0a3069">{8}</span><span style="color:#0a3069">)&#34;</span><span style="color:#1f2328">,</span> path<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>group<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    name <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>sub<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;^/nix/store/[a-z0-9]+-&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">,</span> path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    own <span style="color:#0550ae">=</span> info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;narSize&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    clos <span style="color:#0550ae">=</span> closure_size<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>name<span style="color:#0a3069">}</span><span style="color:#0a3069"> (</span><span style="color:#0a3069">{</span>hash_prefix<span style="color:#0a3069">}</span><span style="color:#0a3069">)</span><span style="color:#0a3069">\\</span><span style="color:#0a3069">n</span><span style="color:#0a3069">{</span>fmt_size<span style="color:#1f2328">(</span>own<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> (closure: </span><span style="color:#0a3069">{</span>fmt_size<span style="color:#1f2328">(</span>clos<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">)&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">color</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    size <span style="color:#0550ae">=</span> info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;narSize&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    mb <span style="color:#0550ae">=</span> size <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> mb <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">500</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;#e74c3c&#34;</span>  <span style="color:#57606a"># red</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> mb <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">200</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;#e67e22&#34;</span>  <span style="color:#57606a"># orange</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> mb <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;#f1c40f&#34;</span>  <span style="color:#57606a"># yellow</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;#2ecc71&#34;</span>  <span style="color:#57606a"># green</span>
+</span></span><span style="display:flex;"><span>lines <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#39;digraph deps {&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#39;  rankdir=LR;&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#39;  node [shape=box, style=&#34;filled,rounded&#34;, fontname=&#34;sans-serif&#34;, fontsize=10];&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#39;  edge [color=&#34;#bbbbbb&#34;];&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> <span style="color:#6639ba">sorted</span><span style="color:#1f2328">(</span>big<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    node_id <span style="color:#0550ae">=</span> path<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;-&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    lines<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;  &#34;</span><span style="color:#0a3069">{</span>node_id<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34; [label=&#34;</span><span style="color:#0a3069">{</span>label<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;, fillcolor=&#34;</span><span style="color:#0a3069">{</span>color<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;];&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> <span style="color:#6639ba">sorted</span><span style="color:#1f2328">(</span>big<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    src <span style="color:#0550ae">=</span> path<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;-&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> ref <span style="color:#0550ae">in</span> <span style="color:#6639ba">sorted</span><span style="color:#1f2328">(</span>info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;references&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">[])):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> ref <span style="color:#0550ae">!=</span> path <span style="color:#0550ae">and</span> ref <span style="color:#0550ae">in</span> big<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            dst <span style="color:#0550ae">=</span> ref<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;-&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            edge_size <span style="color:#0550ae">=</span> fmt_size<span style="color:#1f2328">(</span>closure_size<span style="color:#1f2328">(</span>ref<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            lines<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;  &#34;</span><span style="color:#0a3069">{</span>src<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34; -&gt; &#34;</span><span style="color:#0a3069">{</span>dst<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34; [label=&#34;+</span><span style="color:#0a3069">{</span>edge_size<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;, fontsize=8];&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>lines<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;}&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>dot <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>lines<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;dot&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-Tsvg&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-o&#34;</span><span style="color:#1f2328">,</span> out<span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">input</span><span style="color:#0550ae">=</span>dot<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    text<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> check<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">return</span> out
+</span></span></code></pre></div><p>First we ask nix for the full closure of the root path. The
+<code>--closure-size</code> flag makes nix compute each path&rsquo;s transitive closure
+size natively, which is much faster than recomputing it in Python.</p>
+<p><a id="code-snippet--nix-dep-graph-fetch"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>r <span style="color:#0550ae">=</span> subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;nix&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;path-info&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-r&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--json&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--closure-size&#34;</span><span style="color:#1f2328">,</span> store_path<span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>    capture_output<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> text<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> r<span style="color:#0550ae">.</span>returncode <span style="color:#0550ae">!=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;nix path-info failed: </span><span style="color:#0a3069">{</span>r<span style="color:#0550ae">.</span>stderr<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>raw <span style="color:#0550ae">=</span> json<span style="color:#0550ae">.</span>loads<span style="color:#1f2328">(</span>r<span style="color:#0550ae">.</span>stdout<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># nix path-info --json returns a dict keyed by store path</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#6639ba">isinstance</span><span style="color:#1f2328">(</span>raw<span style="color:#1f2328">,</span> <span style="color:#6639ba">list</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    info <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>p<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;path&#34;</span><span style="color:#1f2328">]:</span> p <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> raw<span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    info <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>path<span style="color:#1f2328">:</span> data <span style="color:#cf222e">for</span> path<span style="color:#1f2328">,</span> data <span style="color:#0550ae">in</span> raw<span style="color:#0550ae">.</span>items<span style="color:#1f2328">()}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">closure_size</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;closureSize&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>When <code>focus</code> is set, we restrict the graph to only the closure of the
+matching package. This lets you zoom into a single package to understand
+why it pulls in so much. We walk the reference graph with BFS to find
+all transitive dependencies of the focused path.</p>
+<p><a id="code-snippet--nix-dep-graph-focus"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">if</span> focus<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    focus_path <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>p <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> info <span style="color:#cf222e">if</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span>re<span style="color:#0550ae">.</span>escape<span style="color:#1f2328">(</span>focus<span style="color:#1f2328">),</span> p<span style="color:#1f2328">)]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> focus_path<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;no store path matching &#39;</span><span style="color:#0a3069">{</span>focus<span style="color:#0a3069">}</span><span style="color:#0a3069">&#39;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    focus_path <span style="color:#0550ae">=</span> focus_path<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    relevant <span style="color:#0550ae">=</span> <span style="color:#6639ba">set</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    stack <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>focus_path<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> stack<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        p <span style="color:#0550ae">=</span> stack<span style="color:#0550ae">.</span>pop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> p <span style="color:#0550ae">in</span> relevant <span style="color:#0550ae">or</span> p <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> info<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        relevant<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>p<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> ref <span style="color:#0550ae">in</span> info<span style="color:#1f2328">[</span>p<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;references&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">[]):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> ref <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> relevant<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                stack<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>ref<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    info <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>p<span style="color:#1f2328">:</span> info<span style="color:#1f2328">[</span>p<span style="color:#1f2328">]</span> <span style="color:#cf222e">for</span> p <span style="color:#0550ae">in</span> relevant <span style="color:#cf222e">if</span> p <span style="color:#0550ae">in</span> info<span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>In focus mode, we filter by closure size so that small intermediary
+packages that pull in heavy dependencies remain visible — this is the
+whole point of zooming in. On the full system graph, we filter by own
+size to keep the graph readable and fast to render.</p>
+<p><a id="code-snippet--nix-dep-graph-filter"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">if</span> focus<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    big <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>path <span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> info <span style="color:#cf222e">if</span> closure_size<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> min_bytes<span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    big <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>path <span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> info <span style="color:#cf222e">if</span> info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;narSize&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> min_bytes<span style="color:#1f2328">}</span>
+</span></span></code></pre></div><p>Formatting helpers to make the graph readable: human-friendly sizes and
+color coding by own size to quickly spot the heaviest individual paths.</p>
+<p><a id="code-snippet--nix-dep-graph-format"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">fmt_size</span><span style="color:#1f2328">(</span>size<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> size <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>size <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span><span style="color:#0a3069">:</span><span style="color:#0a3069">.1f</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> GB&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> size <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>size <span style="color:#0550ae">//</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">1024</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">1024</span><span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> MB&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>size <span style="color:#0550ae">//</span> <span style="color:#0550ae">1024</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> KB&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">label</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    hash_prefix <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;^/nix/store/([a-z0-9]</span><span style="color:#0a3069">{8}</span><span style="color:#0a3069">)&#34;</span><span style="color:#1f2328">,</span> path<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>group<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    name <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>sub<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;^/nix/store/[a-z0-9]+-&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">,</span> path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    own <span style="color:#0550ae">=</span> info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;narSize&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    clos <span style="color:#0550ae">=</span> closure_size<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>name<span style="color:#0a3069">}</span><span style="color:#0a3069"> (</span><span style="color:#0a3069">{</span>hash_prefix<span style="color:#0a3069">}</span><span style="color:#0a3069">)</span><span style="color:#0a3069">\\</span><span style="color:#0a3069">n</span><span style="color:#0a3069">{</span>fmt_size<span style="color:#1f2328">(</span>own<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> (closure: </span><span style="color:#0a3069">{</span>fmt_size<span style="color:#1f2328">(</span>clos<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">)&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">color</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    size <span style="color:#0550ae">=</span> info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;narSize&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    mb <span style="color:#0550ae">=</span> size <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span> <span style="color:#0550ae">/</span> <span style="color:#0550ae">1024</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> mb <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">500</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;#e74c3c&#34;</span>  <span style="color:#57606a"># red</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> mb <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">200</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;#e67e22&#34;</span>  <span style="color:#57606a"># orange</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> mb <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;#f1c40f&#34;</span>  <span style="color:#57606a"># yellow</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;#2ecc71&#34;</span>  <span style="color:#57606a"># green</span>
+</span></span></code></pre></div><p>We emit Graphviz DOT syntax: one node per big path, one edge per direct
+reference between big paths. Edge labels show the closure size of the
+target to help estimate how much removing that dependency would save.</p>
+<p><a id="code-snippet--nix-dep-graph-dot"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>lines <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#39;digraph deps {&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#39;  rankdir=LR;&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#39;  node [shape=box, style=&#34;filled,rounded&#34;, fontname=&#34;sans-serif&#34;, fontsize=10];&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#39;  edge [color=&#34;#bbbbbb&#34;];&#39;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> <span style="color:#6639ba">sorted</span><span style="color:#1f2328">(</span>big<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    node_id <span style="color:#0550ae">=</span> path<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;-&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    lines<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;  &#34;</span><span style="color:#0a3069">{</span>node_id<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34; [label=&#34;</span><span style="color:#0a3069">{</span>label<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;, fillcolor=&#34;</span><span style="color:#0a3069">{</span>color<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;];&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> <span style="color:#6639ba">sorted</span><span style="color:#1f2328">(</span>big<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    src <span style="color:#0550ae">=</span> path<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;-&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> ref <span style="color:#0550ae">in</span> <span style="color:#6639ba">sorted</span><span style="color:#1f2328">(</span>info<span style="color:#1f2328">[</span>path<span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;references&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">[])):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> ref <span style="color:#0550ae">!=</span> path <span style="color:#0550ae">and</span> ref <span style="color:#0550ae">in</span> big<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            dst <span style="color:#0550ae">=</span> ref<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;-&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;_&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            edge_size <span style="color:#0550ae">=</span> fmt_size<span style="color:#1f2328">(</span>closure_size<span style="color:#1f2328">(</span>ref<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            lines<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;  &#34;</span><span style="color:#0a3069">{</span>src<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34; -&gt; &#34;</span><span style="color:#0a3069">{</span>dst<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34; [label=&#34;+</span><span style="color:#0a3069">{</span>edge_size<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;, fontsize=8];&#39;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>lines<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;}&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>dot <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>lines<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><p>Finally, render the DOT graph to SVG using Graphviz.</p>
+<p><a id="code-snippet--nix-dep-graph-render"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;dot&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-Tsvg&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-o&#34;</span><span style="color:#1f2328">,</span> out<span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">input</span><span style="color:#0550ae">=</span>dot<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    text<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> check<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">return</span> out
+</span></span></code></pre></div><h2 id="permalink"><a href="/braindump/a1b2c3d4-nix-store-cleanup-guide?title=nixos_store_analysis_and_cleanup">Permalink</a></h2>
+      </div>
+	  <aside class="date"><time>Last updated: 02 Apr 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 01 Apr 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>
