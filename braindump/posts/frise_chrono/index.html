@@ -129,7 +129,7 @@ they share the single Preact instance HTM uses — we don&rsquo;t want two copie
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#1f2328">&lt;</span><span style="color:#0550ae">div</span> <span style="color:#1f2328">id</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;app&#34;</span><span style="color:#1f2328">&gt;&lt;/</span><span style="color:#0550ae">div</span><span style="color:#1f2328">&gt;</span>
 </span></span></code></pre></div><p>The render and data layers arrive together: Preact&rsquo;s <code>html=/=render</code> and its hooks
 (<code>useState</code>, <code>useRef</code>, <code>useLayoutEffect</code>), urql&rsquo;s <code>Provider</code> and <code>useQuery</code>, and the
-<a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0011-4000-8000-000000000001">shared GraphQL client</a> with its auth-store accessors.</p>
+<a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0011-4000-8000-000000000001">shared GraphQL client</a> with its auth-store accessors.</p>
 <div class="konix-block-name-marker" data-name="app-imports"></div>
 <p><a id="code-snippet--app-imports"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#1f2328">{</span> <span style="color:#1f2328">html</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">render</span> <span style="color:#1f2328">}</span> <span style="color:#1f2328">from</span> <span style="color:#0a3069">&#39;htm/preact&#39;</span><span style="color:#1f2328">;</span>
@@ -409,7 +409,7 @@ the banner:</p>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;authoriz&#34;</span><span style="color:#1f2328">,</span> page<span style="color:#0550ae">.</span>get_by_role<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;alert&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>inner_text<span style="color:#1f2328">(),</span> re<span style="color:#0550ae">.</span>I<span style="color:#1f2328">),</span> \
 </span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;expected an authorization-required message&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: shows auth required when unauthorized&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p>urql doesn&rsquo;t take a raw <code>fetch</code>, so the 401 is caught in the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0011-4000-8000-000000000001">shared client</a>&rsquo;s <code>fetch</code>
+</span></span></code></pre></div><p>urql doesn&rsquo;t take a raw <code>fetch</code>, so the 401 is caught in the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0011-4000-8000-000000000001">shared client</a>&rsquo;s <code>fetch</code>
 wrapper, which flips a tiny framework-agnostic store; the frise&rsquo;s <code>useAuthNeeded</code> makes
 that store Preact-reactive and the App renders the banner from it. It never tries
 to authenticate — the app can&rsquo;t mint a grant — it only says a fresh access link
@@ -444,12 +444,12 @@ the floor the window opens at, so placeholder rows (motivated in <a href="#0b1d2
 dates</a>) never enter. Rows that carry no <code>thumbnailCid</code> are dropped in the component
 rather than in the query: <code>photovideosSearch</code> is a server-side search function, not a
 filterable table connection, so its results are pruned client-side.</p>
-<p>The box itself is the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared query language</a>, the same parser memories uses. Turning that
+<p>The box itself is the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared query language</a>, the same parser memories uses. Turning that
 parse into the query&rsquo;s filter variables is shared too — <code>searchVars</code> is the
-<a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001">data module</a>&rsquo;s <code>photoVars</code>, handed the window as the date range. So the frise gains the
+<a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001">data module</a>&rsquo;s <code>photoVars</code>, handed the window as the date range. So the frise gains the
 boolean label search and the <code>type:=/=owner:=/=onthisday:</code> filters, in step with memories.
-The query&rsquo;s GraphQL <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001">declarations and arguments</a> are shared too, and the fields it reads back are
-the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001"><code>PhotoCore</code></a> set; the frise splices those in, adding only its own — the
+The query&rsquo;s GraphQL <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001">declarations and arguments</a> are shared too, and the fields it reads back are
+the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001"><code>PhotoCore</code></a> set; the frise splices those in, adding only its own — the
 <code>cap=/=dsince=/=duntil</code> window args and <code>size=/=cameraType</code> fields, plus the photo&rsquo;s <code>owner</code>.</p>
 <div class="konix-block-name-marker" data-name="dsl-import"></div>
 <p><a id="code-snippet--dsl-import"></a></p>
@@ -501,7 +501,7 @@ for the true total. <code>searchVars</code> maps a window to query variables onc
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">}</span>
 </span></span></code></pre></div><p>A thumbnail base turns each <code>/ipfs/...</code> path into a loadable URL — a <strong>same-origin</strong>
 relative path, so the frise works wherever it&rsquo;s served, with no host baked in. The auth
-gate is the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0011-4000-8000-000000000001">shared client</a>&rsquo;s; a small Preact hook makes its store reactive for the banner.</p>
+gate is the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0011-4000-8000-000000000001">shared client</a>&rsquo;s; a small Preact hook makes its store reactive for the banner.</p>
 <div class="konix-block-name-marker" data-name="graphql-client"></div>
 <p><a id="code-snippet--graphql-client"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">THUMB_BASE</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;&#39;</span><span style="color:#1f2328">;</span>   <span style="color:#57606a">// https://ipfs.konubinix.eu/p/... is served on the same origin as the app
@@ -653,7 +653,7 @@ strings hundreds — soon thousands — of pins across many lanes, most below th
 or, once you start panning, off the sides. Holding a decoded image for every one of
 them is what eventually grinds the strip to a halt. So each pin carries its <code>/ipfs/</code>
 source <strong>only while near the viewport</strong> and drops back to a 1×1 blank when it leaves,
-the way the <a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/">memories</a> wall does — load <strong>and</strong> unload, not just deferred-load.</p>
+the way the <a href="/braindump/posts/a_photos_videos_organiser_with_solid/">memories</a> wall does — load <strong>and</strong> unload, not just deferred-load.</p>
 <p>The twist here is the <strong>margin</strong>. The frise&rsquo;s gesture is a <strong>lateral</strong> drag, and an
 image that only loaded once its edge crossed the viewport would pop in visibly mid-pan.
 So the observer&rsquo;s margin is <strong>broad horizontally</strong> — a full viewport width on each side —
@@ -748,7 +748,7 @@ than the lightbox can step to. The fix lives in the function: it takes a separat
 <strong>density window</strong> (<code>dsince=/=duntil</code>), and the strip passes the <strong>visible</strong> window there
 while querying the wide one. So the keep-rate is the visible window&rsquo;s, the overscan
 margins ride along at the same rate, and a single fetch covers both — no thinning. (The
-<a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001">shared cap</a> is high enough that any readable window shows every photo it holds; the frise
+<a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001">shared cap</a> is high enough that any readable window shows every photo it holds; the frise
 can afford that because its lazy-loader keeps off-screen pins as DOM, not decoded images.) Mapping stays
 over the visible window, so on-screen photos keep their exact spots (the ruler stays
 aligned). The margin photos are <strong>overscan pins</strong>: placed at <code>frac &lt; 0</code> / <code>&gt;1</code> (or simply
@@ -1628,14 +1628,14 @@ photo and renders this lightbox over everything when one is set. The metadata is
 whatever the row carries that&rsquo;s worth showing — built into labelled rows, empty
 fields dropped. The side panel also names the occasions this photo falls within, read from
 the calendar — the <code>DocEvents</code> built in <a href="#0b1d2e3f-0200-4000-8000-000000000001">Events on the timeline</a>.</p>
-<p>Each change saves straight away, through the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001">shared <code>updatePhotovideo</code></a> — frise
+<p>Each change saves straight away, through the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001">shared <code>updatePhotovideo</code></a> — frise
 hands it a patch of just <code>labels</code>, keyed by <code>cid</code> (the table&rsquo;s primary key in the schema).</p>
 <p>A label typed blind breeds near-duplicates — <code>cosmo</code> one day, <code>Cosmo</code> or <code>cosmos</code>
 the next — and the shared vocabulary frays. So as you type, the input offers the
 words already in use — your fragment matched anywhere in a word, so <code>smo</code> still
 finds <code>cosmo</code> — and you reuse one instead of coining a variant. They come from the vocabulary the
 label edits themselves feed (see <a href="#0b1d2e3f-00a0-4000-8000-000000000001">the schema</a>), read through the shared
-<a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001"><code>LABEL_COMPLETIONS</code></a> query — memories asks it too, and the search box reuses it later for its
+<a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001"><code>LABEL_COMPLETIONS</code></a> query — memories asks it too, and the search box reuses it later for its
 own label tokens.</p>
 <p>Picking a suggestion fills the input and leaves <code>Enter</code> to commit it — a pick never
 saves on its own, so a mistaken click leaves the shared photo untouched. We check
@@ -2059,7 +2059,7 @@ the media <strong>changed</strong> (and came back), not a particular src.</p>
 clear of the centred ‹ › buttons. The media carries <code>touch-action: pan-y</code> so the
 browser yields the horizontal drag to the swipe handler: without it the browser
 claims that drag itself and fires <code>pointercancel</code> instead of <code>pointerup</code>, and the
-swipe silently dies (the same pitfall <a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/">memories</a> hit).</p>
+swipe silently dies (the same pitfall <a href="/braindump/posts/a_photos_videos_organiser_with_solid/">memories</a> hit).</p>
 <p>The swipe is measured against the photo&rsquo;s own box, so the test first waits for that
 box to gain a non-zero width. A freshly opened <code>&lt;img&gt;</code> reports a zero-width rect until
 it has loaded and laid out, and measuring against that would give a zero-distance
@@ -2554,7 +2554,7 @@ the count drops to a smaller, non-zero set.</p>
 </span></span><span style="display:flex;"><span>    after <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;\d+&#34;</span><span style="color:#1f2328">,</span> page<span style="color:#0550ae">.</span>text_content<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.count&#34;</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>group<span style="color:#1f2328">())</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#0550ae">0</span> <span style="color:#0550ae">&lt;</span> after <span style="color:#0550ae">&lt;</span> before<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;search didn&#39;t narrow results: </span><span style="color:#0a3069">{</span>before<span style="color:#0a3069">}</span><span style="color:#0a3069"> -&gt; </span><span style="color:#0a3069">{</span>after<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: search narrows results&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p>That web-search dialect isn&rsquo;t the frise&rsquo;s to explain — it&rsquo;s the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared language</a>&rsquo;s, and
+</span></span></code></pre></div><p>That web-search dialect isn&rsquo;t the frise&rsquo;s to explain — it&rsquo;s the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared language</a>&rsquo;s, and
 it falls out of the free text reaching <code>websearch_to_tsquery</code> untouched. The frise only
 has to prove its box wires it.</p>
 <p>We assert this by typing <code>or</code> and <code>-</code> forms and watching the count swing between a small set
@@ -2625,7 +2625,7 @@ matching half; the completion half is checked against a real accented label in t
 </span></span><span style="display:flex;"><span>    items <span style="color:#0550ae">=</span> page<span style="color:#0550ae">.</span>eval_on_selector_all<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.completion&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;els =&gt; els.map(e =&gt; e.textContent)&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#0a3069">&#34;compétition&#34;</span> <span style="color:#0550ae">in</span> items<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;completion should fold accents and offer &#39;compétition&#39;, got </span><span style="color:#0a3069">{</span>items<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: completion still folds accents&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p>The same box also carries the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared language</a>&rsquo;s typed filters — <code>type:</code> to one medium,
+</span></span></code></pre></div><p>The same box also carries the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared language</a>&rsquo;s typed filters — <code>type:</code> to one medium,
 <code>owner:</code> to one person, <code>onthisday</code> to an anniversary, <code>month:=/=day:</code> to a recurring
 month or day across every year — each compiled by <code>searchVars</code> into the window&rsquo;s query, so
 the count and the strip narrow together. A leading <code>-</code> negates a closed-vocab token the way
@@ -2748,9 +2748,9 @@ neighbours.</p>
 </span></span></code></pre></div><p>The box reports its text up through <code>onChange</code> like the other controls; the app
 root folds it into the window so <code>usePhotos</code> picks it up. Empty is the default —
 the whole window. Completion works on the <code>;</code>-segment at the end of the box: a typed
-token offers the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared language</a>&rsquo;s suggestions (<code>dslSuggestions</code> — keys, a filter&rsquo;s
+token offers the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared language</a>&rsquo;s suggestions (<code>dslSuggestions</code> — keys, a filter&rsquo;s
 values, or a date picker), and otherwise it falls back to the same label vocabulary
-the open view completes — the same <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001"><code>LABEL_COMPLETIONS</code></a> query the <a href="#0b1d2e3f-0014-4000-8000-000000000001">lightbox</a> uses; the query pauses
+the open view completes — the same <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0010-4000-8000-000000000001"><code>LABEL_COMPLETIONS</code></a> query the <a href="#0b1d2e3f-0014-4000-8000-000000000001">lightbox</a> uses; the query pauses
 while the box is empty.</p>
 <p>That dropdown is the same keyboard-reachable <a href="#0b1d2e3f-0014-4000-8000-000000000001"><code>CompletionList</code></a> the label editor uses —
 <code>↓=/=↑</code> stepping through and cycling back out via a &ldquo;no selection&rdquo; slot, so a hand never
@@ -2923,7 +2923,7 @@ rest of the query — operators and earlier terms — intact.</p>
 </span></span><span style="display:flex;"><span>    page<span style="color:#0550ae">.</span>press<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;.search&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;ArrowUp&#34;</span><span style="color:#1f2328">)</span>            <span style="color:#57606a"># ↑ back out to none</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> highlighted<span style="color:#1f2328">()</span> <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;up from the first didn&#39;t return to none: </span><span style="color:#0a3069">{</span>highlighted<span style="color:#1f2328">()</span><span style="color:#0a3069">!r}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;  PASS: search completion keyboard nav&#34;</span><span style="color:#1f2328">)</span>
-</span></span></code></pre></div><p>The same box also completes the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">language</a>&rsquo;s tokens: a key prefix offers the key, and an
+</span></span></code></pre></div><p>The same box also completes the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">language</a>&rsquo;s tokens: a key prefix offers the key, and an
 open filter offers its values — <code>typ</code> suggests <code>type:</code>, then <code>type:</code> offers <code>type:image</code>
 and <code>type:video</code>.</p>
 <div class="konix-block-name-marker" data-name="test-dsl-completion"></div>
@@ -2980,7 +2980,7 @@ and <code>type:video</code>.</p>
 the date range already lives in the window, so in the box they&rsquo;re <strong>commands</strong>, not standing
 filters. Pressing Enter jumps the window to them and consumes the tokens — the other filters
 stay — so there is one date authority and no stale token to drift when you next pan. Which
-tokens count as window commands, and the bounds they resolve to, are the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared DSL</a>&rsquo;s to say
+tokens count as window commands, and the bounds they resolve to, are the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0008-4000-8000-000000000001">shared DSL</a>&rsquo;s to say
 (<code>dateBounds</code> and <code>stripWindowTokens</code>), so the box here re-learns no date syntax — a new
 window token added there works here untouched.</p>
 <div class="konix-block-name-marker" data-name="test-since-window"></div>
@@ -3097,7 +3097,7 @@ found. If the suggestion never shows, the failure lists the completions that <em
 </span></span></code></pre></div><h2 id="0b1d2e3f-0200-4000-8000-000000000001">Events on the timeline</h2>
 <p>The frise says <strong>when</strong> each photo was taken and stays silent on <strong>what</strong> it was — the
 birthday, the week away, the afternoon at the pool. Those occasions already exist, in
-the shared calendar the other photo apps read. On its grid, <a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/">memories</a> can only stamp an
+the shared calendar the other photo apps read. On its grid, <a href="/braindump/posts/a_photos_videos_organiser_with_solid/">memories</a> can only stamp an
 occasion&rsquo;s name onto each tile, a pill per photo, because a grid has no axis of time to
 pin it to. The frise has exactly that axis: <code>win.from</code> and <code>win.to</code> map every date to an
 x, and the pins already stand on it. An occasion is itself a span of time — so here it
@@ -3138,8 +3138,8 @@ its dates, captioned with its name.</p>
 </span></span></code></pre></div><p>The occasions come from the calendar, not from the photos: a photo cannot carry an
 event it merely happened during, and asking the calendar pin by pin would be hundreds of
 queries a screen. So the band lane reads the shared layer&rsquo;s batched
-<a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0012-4000-8000-000000000001"><code>events_in_window</code></a> — every event overlapping the shown window in one query, the way
-<a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/">memories</a>&rsquo; wall reads it.</p>
+<a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0012-4000-8000-000000000001"><code>events_in_window</code></a> — every event overlapping the shown window in one query, the way
+<a href="/braindump/posts/a_photos_videos_organiser_with_solid/">memories</a>&rsquo; wall reads it.</p>
 <div class="konix-block-name-marker" data-name="events-query"></div>
 <p><a id="code-snippet--events-query"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#cf222e">const</span> <span style="color:#1f2328">EVENTS_IN_WINDOW</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">`query($since:Datetime!,$until:Datetime!){
@@ -3209,8 +3209,8 @@ date bar down.</p>
 </span></span></code></pre></div><p>Rows part the occasions that overlap; two that merely abut — one ending the day the next
 opens — still share a row, edge to edge, and a photo&rsquo;s occasion still has to be told from the
 one stacked above it. Colour draws both lines. Each band takes a hue of its own, from a small
-palette of contrasted pastels — the one <a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/">memories</a> colours its tiles with. The calendar returns its
-events earliest-first (see <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0012-4000-8000-000000000001"><code>events_in_window</code></a>), and the hues follow that order, so consecutive
+palette of contrasted pastels — the one <a href="/braindump/posts/a_photos_videos_organiser_with_solid/">memories</a> colours its tiles with. The calendar returns its
+events earliest-first (see <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0012-4000-8000-000000000001"><code>events_in_window</code></a>), and the hues follow that order, so consecutive
 occasions — abutting along a row or stacked across rows — never share one. A repeat needs
 eight occasions to come between, so it seldom lands beside its twin.</p>
 <div class="konix-block-name-marker" data-name="test-event-band-colour"></div>
@@ -3317,7 +3317,7 @@ wider.</p>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">.</span><span style="color:#1f2328">event-core</span><span style="color:#1f2328">{</span> <span style="color:#cf222e">position</span><span style="color:#1f2328">:</span><span style="color:#cf222e">absolute</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">height</span><span style="color:#1f2328">:</span><span style="color:#0550ae">16</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">border-radius</span><span style="color:#1f2328">:</span><span style="color:#0550ae">8</span><span style="color:#cf222e">px</span><span style="color:#1f2328">;</span> pointer-events<span style="color:#1f2328">:</span><span style="color:#cf222e">none</span><span style="color:#1f2328">;</span> <span style="color:#1f2328">}</span>
 </span></span></code></pre></div><p>A band names an occasion, and clicking it asks the obvious question — <em>show me that one</em>. So a
 band is a button: a click runs its <code>event:</code> search, narrowing the frise to the photos taken during
-the occasion — the same jump the <a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/">memories</a> event pills make. In practice, only the band
+the occasion — the same jump the <a href="/braindump/posts/a_photos_videos_organiser_with_solid/">memories</a> event pills make. In practice, only the band
 catches the click — the lane around it stays click-through, so the strip below still pans.</p>
 <div class="konix-block-name-marker" data-name="test-event-band-search"></div>
 <p><a id="code-snippet--test-event-band-search"></a></p>
@@ -3478,7 +3478,7 @@ pass straight through.</p>
 <p>Metadata is moving off the key-value <code>tag=/=tagmap</code> model onto a free-text
 <code>photovideo.labels</code> field with full-text search and completion. This DDL is
 <strong>additive</strong>: <code>tag</code>, <code>tagmap</code>, <code>ipfsdocs_tag_view</code> and <code>ipfsdocs_photovideo_view</code>
-are untouched, so the <a href="/braindump/new-posts/wip_ipfsdocs_slider_alpinejs/">slider</a> and thumbs keep working. A near-future migration
+are untouched, so the <a href="/braindump/posts/wip_ipfsdocs_slider_alpinejs/">slider</a> and thumbs keep working. A near-future migration
 will retire the key-value side (Stage 2).</p>
 <p>It seeds <code>labels</code> from existing tag values, builds a generated <code>labels_fts</code>
 tsvector (labels only — description is the raw file path, whose folder names would
@@ -3924,13 +3924,13 @@ years and wrap at the boundary (December ↔ January is one step, not eleven).</
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#cf222e">CREATE</span><span style="color:#fff"> </span><span style="color:#cf222e">OR</span><span style="color:#fff"> </span><span style="color:#cf222e">REPLACE</span><span style="color:#fff"> </span><span style="color:#cf222e">FUNCTION</span><span style="color:#fff"> </span>month_dist<span style="color:#1f2328">(</span>m<span style="color:#fff"> </span><span style="color:#6639ba">int</span><span style="color:#1f2328">,</span><span style="color:#fff"> </span>target<span style="color:#fff"> </span><span style="color:#6639ba">int</span><span style="color:#1f2328">)</span><span style="color:#fff"> </span><span style="color:#cf222e">RETURNS</span><span style="color:#fff"> </span><span style="color:#6639ba">int</span><span style="color:#fff"> </span><span style="color:#cf222e">LANGUAGE</span><span style="color:#fff"> </span><span style="color:#cf222e">sql</span><span style="color:#fff"> </span><span style="color:#cf222e">IMMUTABLE</span><span style="color:#fff"> </span><span style="color:#cf222e">AS</span><span style="color:#fff"> </span><span style="color:#f6f8fa;background-color:#82071e">$</span>a$<span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#fff">  </span><span style="color:#cf222e">SELECT</span><span style="color:#fff"> </span>LEAST<span style="color:#1f2328">(</span><span style="color:#cf222e">abs</span><span style="color:#1f2328">(</span>m<span style="color:#fff"> </span><span style="color:#0550ae">-</span><span style="color:#fff"> </span>target<span style="color:#1f2328">),</span><span style="color:#fff"> </span><span style="color:#0550ae">12</span><span style="color:#fff"> </span><span style="color:#0550ae">-</span><span style="color:#fff"> </span><span style="color:#cf222e">abs</span><span style="color:#1f2328">(</span>m<span style="color:#fff"> </span><span style="color:#0550ae">-</span><span style="color:#fff"> </span>target<span style="color:#1f2328">))</span><span style="color:#fff">
 </span></span></span><span style="display:flex;"><span><span style="color:#f6f8fa;background-color:#82071e">$</span>a$<span style="color:#1f2328">;</span><span style="color:#fff">
-</span></span></span></code></pre></div><p>Two filters reach past the row into the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0012-4000-8000-000000000001">calendar</a>, and both turn on one question: <strong>which
+</span></span></span></code></pre></div><p>Two filters reach past the row into the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0012-4000-8000-000000000001">calendar</a>, and both turn on one question: <strong>which
 photos does an occasion of a given name bracket?</strong> Because <code>event:NAME</code> (keep only those photos)
 and <code>-event:NAME</code> (keep everything but those photos) are the same set read in opposite
 directions, that set is a single function, <code>cids_during_event</code>. The include is <code>cid IN</code> it, the
 exclusion <code>cid NOT IN</code> it — so the two can never disagree about what an occasion brackets.</p>
 <p>It answers <strong>event-first</strong>, not photo-first: it works from the few matching occasions and probes
-the photos in each span through the <a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0012-4000-8000-000000000001"><code>(owner, date)</code> index</a>, rather than testing every photo
+the photos in each span through the <a href="/braindump/posts/the_data_layer_behind_my_photo_apps/#5e1a0d00-0012-4000-8000-000000000001"><code>(owner, date)</code> index</a>, rather than testing every photo
 against the calendar. There are far fewer events than photos, so that is the difference between
 sub-second and tens of seconds on a ~75k archive. A cancelled event is skipped — a call
 that didn&rsquo;t happen is no occasion — and when <code>events=/=events_x</code> is null its <code>IS NULL</code> guard
@@ -3951,7 +3951,7 @@ would hash all the bracketed cids and lose the probe.</p>
 <strong>filter</strong> alone — the rows matching the search, date range, states, kinds, owners, and the
 recurring day/month windows — and everything else composes over it rather than re-spelling the
 filter: <code>photovideos_count</code> counts it, <code>photovideos_search</code> samples it, and
-<a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/">memories</a> draws its own spread over it (its note owns that). Defining the filter once is
+<a href="/braindump/posts/a_photos_videos_organiser_with_solid/">memories</a> draws its own spread over it (its note owns that). Defining the filter once is
 what keeps the count, the sample, and the bulk edits agreeing on a single set.</p>
 <p><code>photovideos_search</code> is the frise&rsquo;s <strong>sample</strong>: it keeps the matching rows whose fixed
 cid-hash falls under <code>cap/total</code> — a stable, evenly-spread ~cap. <code>cap</code> (default 300) is
@@ -4409,16 +4409,16 @@ only reads. Run once.</p>
 </table>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
-<li><a href="/braindump/new-posts/a_duplicate_photo_batch_resolver_with_hyperapp/">a duplicate-photo batch resolver with hyperapp</a></li>
-<li><a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0011-4000-8000-000000000001">A grid of thumbnails</a></li>
-<li><a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0004-4000-8000-000000000001">Authorization — the LAN gate</a></li>
-<li><a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0015-4000-8000-000000000001">Completing labels</a></li>
-<li><a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0028-4000-8000-000000000001">Drawing our own spread</a></li>
-<li><a href="/braindump/new-posts/pwa_to_create_printable_thumbnails/">pwa to create printable thumbnails</a></li>
-<li><a href="/braindump/new-posts/slides_in_vue3/">slides in vue3</a></li>
-<li><a href="/braindump/new-posts/testing_render_and_sync_stacks_for_local_first_pwas/">testing render and sync stacks for local-first PWAs</a></li>
-<li><a href="/braindump/new-posts/the_data_layer_behind_my_photo_apps/">the data layer behind my photo apps</a></li>
-<li><a href="/braindump/new-posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0002-4000-8000-000000000001">Why this note</a></li>
+<li><a href="/braindump/posts/a_duplicate_photo_batch_resolver_with_hyperapp/">a duplicate-photo batch resolver with hyperapp</a></li>
+<li><a href="/braindump/posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0011-4000-8000-000000000001">A grid of thumbnails</a></li>
+<li><a href="/braindump/posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0004-4000-8000-000000000001">Authorization — the LAN gate</a></li>
+<li><a href="/braindump/posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0015-4000-8000-000000000001">Completing labels</a></li>
+<li><a href="/braindump/posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0028-4000-8000-000000000001">Drawing our own spread</a></li>
+<li><a href="/braindump/posts/pwa_to_create_printable_thumbnails/">pwa to create printable thumbnails</a></li>
+<li><a href="/braindump/posts/slides_in_vue3/">slides in vue3</a></li>
+<li><a href="/braindump/posts/testing_render_and_sync_stacks_for_local_first_pwas/">testing render and sync stacks for local-first PWAs</a></li>
+<li><a href="/braindump/posts/the_data_layer_behind_my_photo_apps/">the data layer behind my photo apps</a></li>
+<li><a href="/braindump/posts/a_photos_videos_organiser_with_solid/#9a7b1c20-0002-4000-8000-000000000001">Why this note</a></li>
 </ul>
 <h2 id="permalink"><a href="/braindump/f2606223-11a7-47eb-9f7f-1a1684b27c54?title=frise_chrono">Permalink</a></h2>
 <style>

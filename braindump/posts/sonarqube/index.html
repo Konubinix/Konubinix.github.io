@@ -65,7 +65,7 @@
 </ul>
 <p>SonarQube - Wikipedia</p>
 <blockquote>
-<p>SonarQube (formerly Sonar) is an <a href="/braindump/new-posts/open_source/">open-source</a> platform developed by SonarSource
+<p>SonarQube (formerly Sonar) is an <a href="/braindump/posts/open_source/">open-source</a> platform developed by SonarSource
 for continuous inspection of code quality to perform automatic reviews with
 static analysis of code to detect bugs, code smells, and security
 vulnerabilities on 20+ programming languages.</p>
@@ -79,8 +79,8 @@ vulnerabilities on 20+ programming languages.</p>
 <h2 id="6f1fe82b-0d9f-427c-9af6-dbb990992603">sonar client/server architecture</h2>
 <p>This is what I guessed.</p>
 <ol>
-<li>on a <a href="/braindump/new-posts/continuous_integration/">CI</a> or the computer of a developer, <a href="/braindump/posts/sonar_scanner/">sonar-scanner</a> is run. It scans the
-code, gets the <a href="/braindump/new-posts/source_code_manager/">SCM</a> annotations of the code (among other things the date of
+<li>on a <a href="/braindump/posts/continuous_integration/">CI</a> or the computer of a developer, <a href="/braindump/posts/sonar_scanner/">sonar-scanner</a> is run. It scans the
+code, gets the <a href="/braindump/posts/source_code_manager/">SCM</a> annotations of the code (among other things the date of
 the last commit that brought each line) and sends the analyses and annotated
 code to the server<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>, associated with a sonar.<a href="#fb155b35-e1e3-43ca-84c4-bb8a977dbfaa">projectVersion</a> value. Hereafter,
 we call this analysis the <strong>current version</strong>. Its date is either the date of
@@ -88,7 +88,7 @@ scan or whatever you put in the <a href="/braindump/posts/sonar_projectdate/">pr
 <li>the server stores the  in a stack. The order of the sent analyses
 impacts how sonar will behave, so don&rsquo;t send a past analysis (with
 sonar.projectDate) and rather create a new project from scratch.</li>
-<li>the server finds a date after which it considers <a href="/braindump/new-posts/sonar_new_code_definition/">the code as being new</a>,
+<li>the server finds a date after which it considers <a href="/braindump/posts/sonar_new_code_definition/">the code as being new</a>,
 <ul>
 <li>either using a number of days from the date of the current version,</li>
 <li>or using a fixed date</li>
@@ -108,11 +108,11 @@ of the stack the last analysis with that version.</li>
 are in this interval -&gt; those become the new code.</li>
 </ol>
 <h2 id="7cf61ff1-e28c-4251-b411-e2eea11561e0">how to use sonarqube?</h2>
-<p>I feel like <a href="/braindump/posts/sonarqube/">sonarqube</a> is a great tool. But <a href="/braindump/new-posts/don_t_confuse_an_implementation_and_the_method/">simply using it without
+<p>I feel like <a href="/braindump/posts/sonarqube/">sonarqube</a> is a great tool. But <a href="/braindump/posts/don_t_confuse_an_implementation_and_the_method/">simply using it without
 understanding the method</a> would be pointless. So here is what I understood.</p>
 <h3 id="c20539c9-ccc4-4b6a-af6e-540ee4658d90">defining what &ldquo;<a href="#fb155b35-e1e3-43ca-84c4-bb8a977dbfaa">projectVersion</a>&rdquo; means</h3>
-<p>It follows the idea of <a href="/braindump/new-posts/clean_as_you_code/">clean as you code</a>, meaning it strongly emphasizes the
-reporting on <a href="/braindump/new-posts/sonar_new_code_definition/">new code</a>.</p>
+<p>It follows the idea of <a href="/braindump/posts/clean_as_you_code/">clean as you code</a>, meaning it strongly emphasizes the
+reporting on <a href="/braindump/posts/sonar_new_code_definition/">new code</a>.</p>
 <p>Hence you need to make sure you correctly configure the new code definition.</p>
 <p>In maven project, there are some rites, like mvn release:XXX that make the
 pom.xml contain some version number. sonar appears to be automatically
@@ -124,7 +124,7 @@ the code base is. When I have something that has enough features and whose
 quality is good, I simply git tag the code base.</p>
 <p>Then main difference with the maven-ish workflow is that giving a release name
 (concreted by a git tag) is the last thing I do, even after the tests are run. I
-like this workflow, because it is very compatible with <a href="/braindump/new-posts/semantic_versioning_2_0_0/">semver</a> and does not need
+like this workflow, because it is very compatible with <a href="/braindump/posts/semantic_versioning_2_0_0/">semver</a> and does not need
 to plan as will be in the tag beforehand: I name the tag by looking at what as
 landed inside it. If I planned to release a minor version but in the mean time I
 realize I will definitely need an intermediate bugfix version, I don&rsquo;t need to
@@ -139,7 +139,7 @@ change anything in my workflow.</p>
 base, with a main branch (see <a href="/blog/posts/pragmatic_git_workflow/?title=pragmatic_git_workflow#">best practices to use gitflow</a>) but does not fit
 well most of my projects. Only the version based definition remains.</p>
 <p>Because git tag is my source of truth, I don&rsquo;t want to repeat the information in
-a sonar-project.properties file (<a href="/braindump/new-posts/don_t_repeat_yourself/">DRY</a>). I cannot use a file as the source of
+a sonar-project.properties file (<a href="/braindump/posts/don_t_repeat_yourself/">DRY</a>). I cannot use a file as the source of
 truth because of the arguments above.</p>
 <p>Hence, I setup my workflows to provide the version dynamically. It ends up like:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>sonar-scanner -Dsonar.projectVersion<span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>git tag --sort<span style="color:#0550ae">=</span>creatordate --merged<span style="color:#1f2328">|</span>grep <span style="color:#0a3069">&#39;^v&#39;</span><span style="color:#1f2328">|</span>tail -1<span style="color:#cf222e">)</span>
@@ -265,7 +265,7 @@ that &ldquo;sonar report T1 == code in T2&rdquo;.</p>
 <p>If you are using <a href="/braindump/posts/sonarqube/">sonar</a> in an old project with already much technical debt, you
 won&rsquo;t want to face all that debt at once.</p>
 <p>In that case, you can simply setup sonar and let the tool show you technical
-debt piece by piece during the day to day work (see <a href="/braindump/new-posts/clean_as_you_code/">clean as you code</a>).</p>
+debt piece by piece during the day to day work (see <a href="/braindump/posts/clean_as_you_code/">clean as you code</a>).</p>
 <p>In case your project is new, you might want to deal with this technical from the
 beginning.</p>
 <p>The thing is that sonar compares analyses. That means that the first analysis
@@ -277,23 +277,23 @@ initial sonar-scanner in an empty directory, so that sonar will now this is the
 reference.</p>
 <p>Beware that this might not be enough. In case you already have code written in
 the past (meaning git commits with committer date in the past), those won&rsquo;t be
-considered as new code (see <a href="/braindump/new-posts/sonar_new_code_definition/#d4c45a0f-fc0b-413f-b9f2-859423a958b0">ambiguity in computing the new code in sonarqube</a>).</p>
+considered as new code (see <a href="/braindump/posts/sonar_new_code_definition/#d4c45a0f-fc0b-413f-b9f2-859423a958b0">ambiguity in computing the new code in sonarqube</a>).</p>
 <p>In that case, you have to make the first empty analysis be in the past as well,
 using long enough in the past.</p>
 <h2 id="fb155b35-e1e3-43ca-84c4-bb8a977dbfaa">sonar projectVersion</h2>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
-<li><a href="/braindump/new-posts/sonar_new_code_definition/#d4c45a0f-fc0b-413f-b9f2-859423a958b0">ambiguity in computing the new code in sonarqube</a></li>
-<li><a href="/braindump/new-posts/clean_as_you_code/">clean as you code</a></li>
+<li><a href="/braindump/posts/sonar_new_code_definition/#d4c45a0f-fc0b-413f-b9f2-859423a958b0">ambiguity in computing the new code in sonarqube</a></li>
+<li><a href="/braindump/posts/clean_as_you_code/">clean as you code</a></li>
 <li><a href="/braindump/posts/verified_proved_promised_contracts_based_programming/#example-with-clk">example with clk</a></li>
-<li><a href="/braindump/new-posts/is_it_ok_to_let_the_ci_fail_and_not_do_anything_about_it/">is it ok to let the CI fail and not do anything about it?</a></li>
-<li><a href="/braindump/new-posts/is_tdd_possible_in_companies/">is tdd possible in companies?</a></li>
-<li><a href="/braindump/new-posts/sonar_cloud/">sonar cloud</a></li>
-<li><a href="/braindump/new-posts/sonar_new_code_definition/#627bca71-2ebc-4822-944b-99008f011e8e">sonar new code definition is not adapted to the pragmatic git workflow</a></li>
-<li><a href="/braindump/new-posts/sonar_try_to_have_a_nice_activity_line/#d2f4d076-5b40-4309-b4ec-1877e7a20975">sonar play analysis in the past</a></li>
+<li><a href="/braindump/posts/is_it_ok_to_let_the_ci_fail_and_not_do_anything_about_it/">is it ok to let the CI fail and not do anything about it?</a></li>
+<li><a href="/braindump/posts/is_tdd_possible_in_companies/">is tdd possible in companies?</a></li>
+<li><a href="/braindump/posts/sonar_cloud/">sonar cloud</a></li>
+<li><a href="/braindump/posts/sonar_new_code_definition/#627bca71-2ebc-4822-944b-99008f011e8e">sonar new code definition is not adapted to the pragmatic git workflow</a></li>
+<li><a href="/braindump/posts/sonar_try_to_have_a_nice_activity_line/#d2f4d076-5b40-4309-b4ec-1877e7a20975">sonar play analysis in the past</a></li>
 <li><a href="/braindump/posts/sonar_projectdate/">sonar projectDate</a></li>
 <li><a href="/braindump/posts/sonar_scanner/">sonar-scanner</a></li>
-<li><a href="/braindump/new-posts/sonarlint/">sonarlint</a></li>
+<li><a href="/braindump/posts/sonarlint/">sonarlint</a></li>
 <li><a href="/braindump/posts/what_implies_80_of_coverage_in_sonar/">what implies 80% of coverage in sonar?</a></li>
 <li><a href="/braindump/posts/working_code_then_elegant_code/">working code, then elegant code</a></li>
 </ul>
