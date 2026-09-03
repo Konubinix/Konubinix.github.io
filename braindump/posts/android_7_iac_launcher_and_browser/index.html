@@ -62,16 +62,25 @@
 <!--endtoc-->
 <h2 id="1a6ab172-0001-0000-0000-000000000001">objective</h2>
 <dl>
-<dt>motivation</dt>
+<dt>why</dt>
 <dd>I configure my NixOS box from a versioned file; I want
 my phone&rsquo;s home screen the same way — declared once, applied
 reproducibly, with no tapping, dragging or dropping.</dd>
-<dt>question</dt>
+<dt>what</dt>
 <dd>on Android 7+ / LineageOS, can a home screen carrying
 several screens, app widgets, and PWAs — including self-hosted ones
 served from <code>http://localhost</code> — be provisioned declaratively from a
 version-controlled config, and at what privilege cost?</dd>
-<dt>hypothesis</dt>
+<dt>why</dt>
+<dd>my goal is a FOSS, lightweight browser that allows PWA installation.
+<ul>
+<li><strong>what:</strong> lightweight here means running on an old device such as oxenhead.</li>
+<li><strong>what:</strong> oxenhead is a Nexus 5X on Android 8.1.</li>
+</ul>
+</dd>
+<dt>why</dt>
+<dd>all web-related work must go toward that goal.</dd>
+<dt>scope</dt>
 <dd>the target, held fixed for the whole note, is a
 <strong>de-Googled</strong> LineageOS — no Google Play Services (GMS) — running a
 Launcher3-based launcher — on stock LineageOS that is Trebuchet, a
@@ -86,81 +95,81 @@ what the privilege costs, not whether it can be paid.</dd>
 </div>
 <h2 id="1a6ab172-0002-0000-0000-000000000001">can the home screen be described in a file?</h2>
 <dl>
-<dt>claim</dt>
+<dt>what</dt>
 <dd>the workspace is expressible as data.</dd>
-<dt>evidence</dt>
+<dt>how</dt>
 <dd>AOSP Launcher3 ships an XML parser whose vocabulary maps
 one-to-one onto screens, icons, folders, and widgets at chosen grid
 cells.</dd>
 </dl>
 <h2 id="1a6ab172-0003-0000-0000-000000000001">at what privilege does that file apply?</h2>
 <dl>
-<dt>claim</dt>
+<dt>what</dt>
 <dd>expressible is not appliable.</dd>
-<dt>tension</dt>
+<dt>how</dt>
 <dd>the XML&rsquo;s source and read-time decide it: Launcher3 reads
 a resource baked into a system package, only once, not a user file.</dd>
 </dl>
 <h2 id="1a6ab172-0004-0000-0000-000000000001">why « add to home screen » is not enough for a PWA</h2>
 <dl>
-<dt>claim</dt>
+<dt>what</dt>
 <dd>PWAs are the awkward third.</dd>
-<dt>problem</dt>
+<dt>what</dt>
 <dd>the browser&rsquo;s « add to home screen » does not yield an
 installed app on a de-Googled phone.</dd>
-<dt>reason</dt>
+<dt>how</dt>
 <dd>the real install (a <strong>WebAPK</strong>) is minted by a Google server
 the phone cannot reach.</dd>
 </dl>
 <h2 id="1a6ab172-0005-0000-0000-000000000001">how to install a PWA declaratively</h2>
 <dl>
-<dt>premise</dt>
+<dt>what</dt>
 <dd>the browser will not mint the app, so the app is built
 ahead of time, from a file.</dd>
-<dt>mechanism</dt>
+<dt>how</dt>
 <dd>a Trusted Web Activity (TWA) wraps the PWA in a thin
 APK, and Bubblewrap generates that APK from the site&rsquo;s web manifest.</dd>
-<dt>claim</dt>
+<dt>therefore</dt>
 <dd>that is exactly IaC — config in, installable artifact out.</dd>
 </dl>
 <h2 id="1a6ab172-0008-0000-0000-000000000001">and a PWA served from <a href="http://localhost">http://localhost</a>?</h2>
 <dl>
-<dt>anomaly</dt>
+<dt>what</dt>
 <dd>one PWA does not fit the TWA path — the <strong>self-hosted</strong> one,
 served from the phone&rsquo;s own loopback <code>http://localhost</code>, with no
 public domain and no certificate.</dd>
-<dt>context</dt>
+<dt>what</dt>
 <dd>a Secure Context treats it as a securely-delivered,
 trustworthy origin<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> — a verdict about the
 <strong>trust</strong> of the origin, distinct from Android&rsquo;s Network Security
 Config, which still blocks <strong>cleartext</strong> to it by default; proving to a
 <strong>Trusted</strong> Web Activity that app and site share one owner is the
 trouble, since the site is every device&rsquo;s own <code>localhost</code>.</dd>
-<dt>fix</dt>
+<dt>how</dt>
 <dd>stop asking a <strong>Trusted</strong> Web Activity to trust a site it
 structurally cannot verify, and ship an app that never runs the check.</dd>
-<dt>variant</dt>
+<dt>how</dt>
 <dd>the cleanest is our own thin WebView; forking the browser&rsquo;s
 verification or decompiling a prebuilt TWA APK are heavier variants of
 the same bypass.</dd>
 </dl>
 <h2 id="1a6ab172-0006-0000-0000-000000000001">conclusion</h2>
 <dl>
-<dt>answer</dt>
+<dt>therefore</dt>
 <dd>yes — as two mechanisms, not one: the launcher layout is
 expressible as declarative XML (<a href="#1a6ab172-0002-0000-0000-000000000001">a file</a>) yet appliable only as a
 first-boot system artifact — <a href="#1a6ab172-0003-0000-0000-000000000001">root or a ROM build, plus a data wipe</a>.</dd>
-<dt>answer</dt>
+<dt>therefore</dt>
 <dd>PWAs cannot be installed by the browser without GMS
 (<a href="#1a6ab172-0004-0000-0000-000000000001">only a shortcut</a>), so they take the
 <a href="#1a6ab172-0005-0000-0000-000000000001">TWA-from-manifest path</a> — a versioned config compiled to an APK
 and <code>adb install</code>-ed.</dd>
-<dt>answer</dt>
+<dt>therefore</dt>
 <dd>a <code>http://localhost</code> PWA is the exception to even that path —
 a <strong>Trusted</strong> Web Activity cannot verify a loopback origin, so it
 degrades to a URL-bar Custom Tab (<a href="#1a6ab172-0008-0000-0000-000000000001">the localhost case</a>); the
 reproducible answer is our own thin WebView APK, not a TWA.</dd>
-<dt>payoff</dt>
+<dt>therefore</dt>
 <dd>the no-tap/drag goal holds on both halves; the price is
 asymmetric — the PWA half is plain user-space tooling, the launcher
 half costs system privilege, payable on this target since root is at
@@ -172,12 +181,12 @@ hand, though still at the price of a data wipe. See the overview map in
 <div style="padding-left:2ch;text-indent:-2ch;">[<span style="color: #93E0E3;">iac feasible, split path</span>]: home-screen-as-code is feasible on a de-Googled LineageOS, but along two distinct paths &#8212; the launcher layout as a first-boot system XML (root/ROM + data wipe), and PWAs as TWA APKs built from a versioned manifest and adb-installed. The no-tap/drag goal holds; only the launcher half costs system privilege. A =http://localhost= PWA is the one exception to the TWA route &#8212; it cannot pass Digital Asset Links verification, so it ships as our own WebView APK instead.</div>
 </div>
 <dl>
-<dt>deferred</dt>
+<dt>scope</dt>
 <dd>a <strong>user-space</strong> alternative for the launcher half — a
 third-party launcher whose backup/restore file can be generated and
 pushed without root (Nova, Lawnchair, others). With root assumed it
 is an optional simplification, not a necessity.</dd>
-<dt>deferred</dt>
+<dt>scope</dt>
 <dd>which LineageOS Chromium-based browsers implement the
 TWA protocol well enough to render a Bubblewrap APK full-screen.</dd>
 </dl>
@@ -196,10 +205,10 @@ claim defined once, in its chapter.</dd>
 <dd>this chapter turns the conclusion into runnable artifacts —
 the launcher XML plus the TWA and WebView APKs — so the two paths are
 reproducible, not only proven.</dd>
-<dt>step</dt>
+<dt>how</dt>
 <dd>declare the launcher layout as a system customization XML in
 AutoInstallsLayout&rsquo;s vocabulary, then make it the first-boot source.</dd>
-<dt>artifact</dt>
+<dt>what</dt>
 <dd>the workspace below places an icon, a two-app folder and a
 2x1 widget on screens 0–1; its coordinates are the expressible layout
 (<a href="#1a6ab172-0002-0000-0000-000000000001">a file</a>).</dd>
@@ -222,21 +231,21 @@ AutoInstallsLayout&rsquo;s vocabulary, then make it the first-boot source.</dd>
 </span></span><span style="display:flex;"><span>             <span style="color:#1f2328">screen=</span><span style="color:#0a3069">&#34;1&#34;</span> <span style="color:#1f2328">x=</span><span style="color:#0a3069">&#34;0&#34;</span> <span style="color:#1f2328">y=</span><span style="color:#0a3069">&#34;0&#34;</span> <span style="color:#1f2328">spanX=</span><span style="color:#0a3069">&#34;2&#34;</span> <span style="color:#1f2328">spanY=</span><span style="color:#0a3069">&#34;1&#34;</span> <span style="color:#0550ae">/&gt;</span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">&lt;/workspace&gt;</span>
 </span></span></code></pre></div><dl>
-<dt>apply</dt>
+<dt>how</dt>
 <dd>ship that XML as a partner customization APK — a system package
 carrying the <code>android.autoinstalls.config.action.PLAY_AUTO_INSTALL</code>
 intent-filter, with the layout under <code>res/xml/</code> — matching the
 first-boot loader (<a href="#1a6ab172-0003-0000-0000-000000000001">root or a ROM build, plus a data wipe</a>).</dd>
-<dt>command</dt>
+<dt>how</dt>
 <dd>install the overlay, then wipe the launcher so the loader
 re-runs on next boot: <code>adb install custom-launcher-layout.apk</code>,
 <code>adb shell pm clear org.lineageos.trebuchet</code>, <code>adb reboot</code>.</dd>
-<dt>cost</dt>
+<dt>scope</dt>
 <dd>the <code>pm clear</code> drops the launcher&rsquo;s DB, so this is the
 first-boot-only, system-privilege cost the conclusion already named.</dd>
-<dt>step</dt>
+<dt>how</dt>
 <dd>build each PWA as a TWA APK from its web manifest.</dd>
-<dt>artifact</dt>
+<dt>what</dt>
 <dd>Bubblewrap reads the manifest and writes a versioned
 <code>twa-manifest.json</code>; the commands are config-in, artifact-out
 (<a href="#1a6ab172-0005-0000-0000-000000000001">the TWA path</a>).</dd>
@@ -252,7 +261,7 @@ first-boot-only, system-privilege cost the conclusion already named.</dd>
 </span></span><span style="display:flex;"><span><span style="color:#57606a"># install on the device; a TWA-capable browser renders it</span>
 </span></span><span style="display:flex;"><span>adb install app-release-signed.apk
 </span></span></code></pre></div><dl>
-<dt>apply</dt>
+<dt>how</dt>
 <dd>prove app and site share one owner via Digital Asset Links —
 host the file the browser fetches at first launch.</dd>
 </dl>
@@ -269,13 +278,13 @@ host the file the browser fetches at first launch.</dd>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">]</span>
 </span></span></code></pre></div><dl>
-<dt>command</dt>
+<dt>how</dt>
 <dd>publish it at
 <code>https://example.com/.well-known/assetlinks.json</code> so verification
 passes and the URL bar stays hidden.</dd>
-<dt>step</dt>
+<dt>how</dt>
 <dd>for the localhost PWA, skip TWA and ship a minimal WebView APK.</dd>
-<dt>artifact</dt>
+<dt>what</dt>
 <dd>one full-screen Activity loads the loopback origin;
 cleartext to localhost is opted in because it is off by default before
 API 37 (<a href="#1a6ab172-0008-0000-0000-000000000001">the localhost case</a>).</dd>
@@ -292,10 +301,10 @@ API 37 (<a href="#1a6ab172-0008-0000-0000-000000000001">the localhost case</a>).
 </span></span><span style="display:flex;"><span>  <span style="color:#0550ae">&lt;/activity&gt;</span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">&lt;/application&gt;</span>
 </span></span></code></pre></div><dl>
-<dt>apply</dt>
+<dt>how</dt>
 <dd>the Activity loads <code>http://localhost:8080</code> in a full-screen
 <code>WebView</code>; no Digital Asset Links run, so no URL bar appears.</dd>
-<dt>command</dt>
+<dt>how</dt>
 <dd>build and install like any app: <code>./gradlew assembleRelease</code>,
 then <code>adb install app-release.apk</code>.</dd>
 </dl>
@@ -305,14 +314,14 @@ then <code>adb install app-release.apk</code>.</dd>
 <dd>this chapter is the runnable source behind the localhost path
 (<a href="#1a6ab172-0008-0000-0000-000000000001">the localhost case</a>, <a href="#1a6ab172-0009-0000-0000-000000000001">the worked example</a>) — a full-screen WebView on
 <code>http://localhost:9682/memories/</code>, tangled to a buildable tree.</dd>
-<dt>note</dt>
+<dt>what</dt>
 <dd>no TWA, no Digital Asset Links — the app is a plain WebView, so
 the URL bar never appears and no verification runs.</dd>
-<dt>tangle</dt>
+<dt>how</dt>
 <dd>three blocks land under <code>/var/run/user/1000/memories-webview/</code>
 — the manifest, the Activity, and the build script — with package
 <code>com.example.memorieswebview</code>.</dd>
-<dt>command</dt>
+<dt>how</dt>
 <dd>once tangled, run it inside the flake&rsquo;s devShell —
 <code>nix develop /home/sam/prog/devel/flakes/android# --command bash build.sh</code>
 — which compiles, dexes, signs and emits <code>build/memories-webview.apk</code>;
@@ -485,113 +494,307 @@ here — the server is on the device&rsquo;s own loopback per the target&rsquo;s
 </span></span></code></pre></div><h2 id="1a6ab172-0011-0000-0000-000000000001">the declarative webapp install</h2>
 <dl>
 <dt>scope</dt>
-<dd>this chapter replaces the localhost WebView APK (<a href="#1a6ab172-0010-0000-0000-000000000001">the bundle</a>) — the
-target&rsquo;s browser already renders a localhost PWA chrome-less as a
-<em>webapp</em> once &ldquo;install to home screen&rdquo; has run, so IaC means writing
-that install&rsquo;s two files instead of building an APK.</dd>
-<dt>finding</dt>
-<dd>the home-screen icon is two files, both under app-private
-data and both writable with root (<a href="#1a6ab172-0009-0000-0000-000000000001">the worked example</a> confirmed
-root is at hand): a Cromite webapp registration and a Launcher3
-deep-shortcut row.</dd>
-<dt>artifact</dt>
-<dd>Cromite stores each installed webapp as
-<code>shared_prefs/webapp_&lt;uuid&gt;.xml</code> (url, scope, name, display_mode=4 for
-fullscreen, theme/background colours) and lists the uuid in
-<code>shared_prefs/webapp_registry.xml</code>; that is what &ldquo;install to home
-screen&rdquo; actually writes.</dd>
-<dt>artifact</dt>
-<dd>the launcher stores the home-screen entry as a <code>favorites</code>
-row, <code>itemType=6</code> (DEEP_SHORTCUT), with an intent on
-<code>org.cromite.cromite/com.google.android.apps.chrome.Main</code> carrying
-<code>S.shortcut_id=&lt;uuid&gt;</code>; this was read straight from the device&rsquo;s
-<code>launcher.db</code>.</dd>
-<dt>mechanism</dt>
-<dd>the install script writes those two files idempotently —
-skip any step whose target already exists — then restarts Cromite and
-the active home launcher so both re-read their data.</dd>
-<dt>caveat</dt>
-<dd>the launcher caches <code>favorites</code> in memory, so a restart (not
-just a write) is what makes the icon appear; the script kills the
-active launcher, which Android restarts.</dd>
-<dt>caveat</dt>
-<dd>the script targets the <strong>active</strong> home launcher dynamically
-(<code>cmd role get-role-holders android.app.role.HOME</code>), not a hardcoded
-package, so it works under Nexus Launcher, Trebuchet, Lawnchair or any
-Launcher3-derived launcher.</dd>
-<dt>tangle</dt>
-<dd>the script lands at
-<code>/var/run/user/1000/memories-webview/install-webapp.sh</code> and takes the
-url, name and uuid as arguments.</dd>
+<dd>this chapter is the alternative to the WebView APK
+(<a href="#1a6ab172-0010-0000-0000-000000000001">the bundle</a>) — the target&rsquo;s browser installs a PWA chrome-less
+by itself, so IaC means driving that install from a versioned file rather than building an APK.
+<ul>
+<li><strong>scope:</strong> the evidence is oxenhead alone, running Trebuchet and carrying two Chromium forks —
+corroboration for the browser half, none for the launcher half.</li>
+<li><strong>scope:</strong> the PWAs exercised were public https sites, so the <code>http://localhost</code> case
+(<a href="#1a6ab172-0008-0000-0000-000000000001">the localhost case</a>) stays untested here.</li>
+<li><strong>what:</strong> forging the state by hand is the other way — a <code>webapp_&lt;uuid&gt;.xml</code> under the browser plus a
+<code>favorites</code> row in the launcher&rsquo;s <code>launcher.db</code> opens a chrome-less webapp too.
+<ul>
+<li><strong>scope:</strong> it takes root, the <code>sqlite3</code> the device does not carry and the launcher&rsquo;s own schema; its
+row shows a stock icon, and its file-exists check reads an emptied leftover as installed.</li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd><em>webapp</em> is the browser&rsquo;s own word for the chrome-less install of a PWA — the PWA is the site,
+the webapp is what the browser installs from it.</dd>
+<dt>what</dt>
+<dd>« add to home screen » does two things.
+<ul>
+<li><strong>what:</strong> it registers the webapp inside the browser.</li>
+<li><strong>what:</strong> it asks the launcher to pin an icon for it.
+<ul>
+<li><strong>what:</strong> that icon carries the browser&rsquo;s badge, and the webapp belongs to that browser.</li>
+</ul>
+</li>
+<li><strong>what:</strong> both are reachable from <code>adb</code>, so the install asks for no root and no hand on the phone.
+<ul>
+<li><strong>scope:</strong> the sandbox carries no secure lock, so what <code>wm dismiss-keyguard</code> does against a PIN is
+unknown.</li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt>how</dt>
+<dd><code>uiautomator dump</code> writes the current window as XML, every control carrying its resource-id and
+its bounds; the script looks a control up by id and taps the centre of its bounds.
+<ul>
+<li><strong>therefore:</strong> a step that has an id depends neither on the screen size nor on the wording of the button.</li>
+</ul>
+</dd>
+<dt>how</dt>
+<dd>the steps run in this order, the script landing at
+<code>/var/run/user/1000/pwa-install/install-webapp.py</code> and taking the url, the browser and, at need, the
+launcher.
+<ul>
+<li><strong>how:</strong> <code>am start -a android.intent.action.VIEW -d &lt;url&gt; -p &lt;browser&gt;</code> opens the page.</li>
+<li><strong>how:</strong> <code>menu_button</code> opens the app menu, and <code>app_menu_list</code> scrolls when the entry sits below the fold.</li>
+<li><strong>how:</strong> the install entry is <code>universal_install</code> on Brave 1.80.115 and <code>add_to_homescreen_id</code> on
+Bromite 108; which version cuts over between them is unknown.</li>
+<li><strong>how:</strong> <code>button_install</code>, then <code>positive_button</code>, whichever of the two the build puts on screen,
+confirm the install.</li>
+<li><strong>how:</strong> the launcher&rsquo;s pin dialog carries <code>widget_cell</code> and buttons with no id at all, so the script
+takes the rightmost — place-automatically sitting right of cancel.
+<ul>
+<li><strong>scope:</strong> that one step is positional, and one locale exercised it.</li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>five things hold for every run.
+<ul>
+<li><strong>rule:</strong> the browser is named in the file, never guessed — with two browsers installed and no default
+set, <code>resolve-activity</code> answers the chooser, <code>android</code>.</li>
+<li><strong>rule:</strong> the launcher is resolved the same way; the run stops when the answer comes back <code>android</code>, and
+a third argument names it instead.</li>
+<li><strong>rule:</strong> the script clears a fresh browser&rsquo;s onboarding first, <code>terms_accept</code> being the button.</li>
+<li><strong>rule:</strong> it reads <code>dumpsys shortcut</code> and stops when a pinned shortcut&rsquo;s <code>webapp_scope</code> already covers
+the url; without that read a second run pins a second icon under a new uuid.</li>
+<li><strong>rule:</strong> it checks its own work — it taps the icon it pinned and reads <code>dumpsys activity activities</code>,
+which has to name <code>webapps.WebappActivity</code>.</li>
+</ul>
+</dd>
+<dt>rule</dt>
+<dd>the browser is chosen against the goal
+(<a href="#1a6ab172-0001-0000-0000-000000000001">the objective</a>), and the note advises none.
+<ul>
+<li><strong>what:</strong> Cromite asks « Android 10 and above »<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>, and oxenhead runs 8.1.</li>
+<li><strong>what:</strong> Brave 1.80.115 and Bromite 108 both ran on oxenhead.</li>
+<li><strong>scope:</strong> whether either is FOSS was not weighed here.</li>
+</ul>
+</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="install-webapp"></div>
 <p><a id="code-snippet--install-webapp"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
-</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Install a localhost PWA as a chrome-less home-screen webapp, idempotently,</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a"># by writing the two files Cromite&#39;s &#34;add to home screen&#34; would write.</span>
-</span></span><span style="display:flex;"><span><span style="color:#57606a"># Usage: install-webapp.sh &lt;url&gt; &lt;name&gt; &lt;uuid&gt;</span>
-</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -euo pipefail
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#0a3069">&#34;&#34;&#34;Install a PWA as a chrome-less home-screen webapp, by driving the browser.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Usage: install-webapp.py &lt;url&gt; &lt;browser-package&gt; [launcher-package]
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Needs adb alone: no root, no launcher database, no browser preferences.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">re</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">subprocess</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">xml.etree.ElementTree</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">ET</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#953800">URL</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">1</span><span style="color:#1f2328">:?url</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">;</span> <span style="color:#953800">NAME</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">2</span><span style="color:#1f2328">:?name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">;</span> <span style="color:#953800">UUID</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">3</span><span style="color:#1f2328">:?uuid</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#953800">CRONITE_PKG</span><span style="color:#0550ae">=</span>org.cromite.cromite
-</span></span><span style="display:flex;"><span><span style="color:#953800">SP</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;/data/data/</span><span style="color:#953800">$CRONITE_PKG</span><span style="color:#0a3069">/shared_prefs&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#953800">PREFS</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$SP</span><span style="color:#0a3069">/webapp_</span><span style="color:#953800">$UUID</span><span style="color:#0a3069">.xml&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#953800">REGISTRY</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$SP</span><span style="color:#0a3069">/webapp_registry.xml&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># the install entry: universal_install on Brave 1.80.115,</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># add_to_homescreen_id on Bromite 108. Add an id for a fork outside the pair.</span>
+</span></span><span style="display:flex;"><span>INSTALL_ENTRIES <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;universal_install&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;add_to_homescreen_id&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>INSTALL_BUTTONS <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;button_install&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;positive_button&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;checking root&#34;</span>
-</span></span><span style="display:flex;"><span>adb shell su -c <span style="color:#6639ba">true</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> adb shell su -c <span style="color:#0a3069">&#34;[ -f &#39;</span><span style="color:#953800">$PREFS</span><span style="color:#0a3069">&#39; ]&#34;</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;webapp </span><span style="color:#953800">$UUID</span><span style="color:#0a3069"> already registered — skipping Cromite files&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;writing Cromite webapp registration for </span><span style="color:#953800">$NAME</span><span style="color:#0a3069">&#34;</span>
-</span></span><span style="display:flex;"><span>  adb shell su -c <span style="color:#0a3069">&#34;cat &gt; &#39;</span><span style="color:#953800">$PREFS</span><span style="color:#0a3069">&#39; &lt;&lt;XEOF
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&lt;?xml version=&#39;1.0&#39; encoding=&#39;utf-8&#39; standalone=&#39;yes&#39; ?&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&lt;map&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;int name=&#39;orientation&#39; value=&#39;0&#39; /&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;int name=&#39;display_mode&#39; value=&#39;4&#39; /&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;long name=&#39;last_used&#39; value=&#39;0&#39; /&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;int name=&#39;source&#39; value=&#39;7&#39; /&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;int name=&#39;version&#39; value=&#39;3&#39; /&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;string name=&#39;url&#39;&gt;</span><span style="color:#953800">$URL</span><span style="color:#0a3069">&lt;/string&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;string name=&#39;scope&#39;&gt;</span><span style="color:#953800">$URL</span><span style="color:#0a3069">&lt;/string&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;string name=&#39;name&#39;&gt;</span><span style="color:#953800">$NAME</span><span style="color:#0a3069">&lt;/string&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;string name=&#39;short_name&#39;&gt;</span><span style="color:#953800">$NAME</span><span style="color:#0a3069">&lt;/string&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&lt;/map&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">XEOF&#34;</span>
-</span></span><span style="display:flex;"><span>  adb shell su -c <span style="color:#0a3069">&#34;chmod 660 &#39;</span><span style="color:#953800">$PREFS</span><span style="color:#0a3069">&#39;&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#57606a"># add the uuid to the registry set, creating the file if needed</span>
-</span></span><span style="display:flex;"><span>  adb shell su -c <span style="color:#0a3069">&#34;if [ ! -f &#39;</span><span style="color:#953800">$REGISTRY</span><span style="color:#0a3069">&#39; ]; then
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    cat &gt; &#39;</span><span style="color:#953800">$REGISTRY</span><span style="color:#0a3069">&#39; &lt;&lt;&#39;YEOF&#39;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&lt;?xml version=&#39;1.0&#39; encoding=&#39;utf-8&#39; standalone=&#39;yes&#39; ?&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&lt;map&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;set name=&#39;webapp_set&#39;&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        &lt;string&gt;</span><span style="color:#953800">$UUID</span><span style="color:#0a3069">&lt;/string&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;/set&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&lt;/map&gt;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">YEOF
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  else
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    grep -q &#39;</span><span style="color:#953800">$UUID</span><span style="color:#0a3069">&#39; &#39;</span><span style="color:#953800">$REGISTRY</span><span style="color:#0a3069">&#39; || sed -i \&#34;s|&lt;/set&gt;|&lt;string&gt;</span><span style="color:#953800">$UUID</span><span style="color:#0a3069">&lt;/string&gt;&lt;/set&gt;|\&#34; &#39;</span><span style="color:#953800">$REGISTRY</span><span style="color:#0a3069">&#39;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">  fi&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">shell</span><span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>args<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">([</span><span style="color:#0a3069">&#34;adb&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;shell&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>args<span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>                          capture_output<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> text<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>stdout
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#953800">HOME_PKG</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>adb shell cmd role get-role-holders android.app.role.HOME <span style="color:#1f2328">|</span> tr -d <span style="color:#0a3069">&#39;\r&#39;</span> <span style="color:#1f2328">|</span> head -1<span style="color:#cf222e">)</span>
-</span></span><span style="display:flex;"><span><span style="color:#953800">LDB</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;/data/data/</span><span style="color:#953800">$HOME_PKG</span><span style="color:#0a3069">/databases/launcher.db&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;active home launcher: </span><span style="color:#953800">$HOME_PKG</span><span style="color:#0a3069">&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> adb shell su -c <span style="color:#0a3069">&#34;[ -n \&#34;\$(sqlite3 &#39;</span><span style="color:#953800">$LDB</span><span style="color:#0a3069">&#39; \&#34;SELECT 1 FROM favorites WHERE intent LIKE &#39;%</span><span style="color:#953800">$UUID</span><span style="color:#0a3069">%&#39; LIMIT 1\&#34;)\&#34; ]&#34;</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;shortcut </span><span style="color:#953800">$UUID</span><span style="color:#0a3069"> already on home screen — skipping launcher row&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;inserting home-screen deep-shortcut for </span><span style="color:#953800">$NAME</span><span style="color:#0a3069">&#34;</span>
-</span></span><span style="display:flex;"><span>  adb shell su -c <span style="color:#0a3069">&#34;sqlite3 &#39;</span><span style="color:#953800">$LDB</span><span style="color:#0a3069">&#39; \&#34;INSERT INTO favorites
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    (title,itemType,screen,cellX,cellY,spanX,spanY,intent)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    VALUES(&#39;</span><span style="color:#953800">$NAME</span><span style="color:#0a3069">&#39;,6,0,0,0,1,1,
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &#39;#Intent;action=android.intent.action.MAIN;category=com.android.launcher3.DEEP_SHORTCUT;launchFlags=0x10200000;package=</span><span style="color:#953800">$CRONITE_PKG</span><span style="color:#0a3069">;component=</span><span style="color:#953800">$CRONITE_PKG</span><span style="color:#0a3069">/com.google.android.apps.chrome.Main;S.shortcut_id=</span><span style="color:#953800">$UUID</span><span style="color:#0a3069">;end&#39;);\&#34;&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">fi</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;restarting Cromite and the home launcher&#34;</span>
-</span></span><span style="display:flex;"><span>adb shell am force-stop <span style="color:#0a3069">&#34;</span><span style="color:#953800">$CRONITE_PKG</span><span style="color:#0a3069">&#34;</span>
-</span></span><span style="display:flex;"><span>adb shell am force-stop <span style="color:#0a3069">&#34;</span><span style="color:#953800">$HOME_PKG</span><span style="color:#0a3069">&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;done — </span><span style="color:#953800">$NAME</span><span style="color:#0a3069"> webapp installed declaratively&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">screen</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">10</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;dumped&#34;</span> <span style="color:#0550ae">in</span> shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;uiautomator&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;dump&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;/sdcard/ui.xml&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            raw <span style="color:#0550ae">=</span> subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">([</span><span style="color:#0a3069">&#34;adb&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;exec-out&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;cat&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;/sdcard/ui.xml&#34;</span><span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>                                 capture_output<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>stdout
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> raw<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> ET<span style="color:#0550ae">.</span>fromstring<span style="color:#1f2328">(</span>raw<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">raise</span> SystemExit<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;uiautomator dump keeps failing&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">nodes</span><span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> rid<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> <span style="color:#6a737d">cls</span><span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> node <span style="color:#0550ae">in</span> root<span style="color:#0550ae">.</span>iter<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;node&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> rid <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> node<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;resource-id&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>endswith<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;:id/&#34;</span> <span style="color:#0550ae">+</span> rid<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">cls</span> <span style="color:#0550ae">and</span> node<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;class&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">!=</span> <span style="color:#6a737d">cls</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> pkg <span style="color:#0550ae">and</span> node<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;package&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">!=</span> pkg<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">yield</span> node
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">first</span><span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> ids<span style="color:#1f2328">,</span> pkg<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">((</span>n <span style="color:#cf222e">for</span> rid <span style="color:#0550ae">in</span> ids <span style="color:#cf222e">for</span> n <span style="color:#0550ae">in</span> nodes<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> rid<span style="color:#0550ae">=</span>rid<span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span>pkg<span style="color:#1f2328">)),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">box</span><span style="color:#1f2328">(</span>node<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">list</span><span style="color:#1f2328">(</span><span style="color:#6639ba">map</span><span style="color:#1f2328">(</span><span style="color:#6639ba">int</span><span style="color:#1f2328">,</span> re<span style="color:#0550ae">.</span>findall<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;-?\d+&#34;</span><span style="color:#1f2328">,</span> node<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;bounds&#34;</span><span style="color:#1f2328">))))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">tap</span><span style="color:#1f2328">(</span>node<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    x1<span style="color:#1f2328">,</span> y1<span style="color:#1f2328">,</span> x2<span style="color:#1f2328">,</span> y2 <span style="color:#0550ae">=</span> box<span style="color:#1f2328">(</span>node<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;input&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;tap&#34;</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">((</span>x1 <span style="color:#0550ae">+</span> x2<span style="color:#1f2328">)</span> <span style="color:#0550ae">//</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">),</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">((</span>y1 <span style="color:#0550ae">+</span> y2<span style="color:#1f2328">)</span> <span style="color:#0550ae">//</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">home_launcher</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    out <span style="color:#0550ae">=</span> shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;cmd&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;package&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;resolve-activity&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--brief&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;-a&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;android.intent.action.MAIN&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#0a3069">&#34;-c&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;android.intent.category.HOME&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    pkg <span style="color:#0550ae">=</span> out<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>splitlines<span style="color:#1f2328">()[</span><span style="color:#0550ae">-</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>split<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/&#34;</span><span style="color:#1f2328">)[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> pkg <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;android&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> SystemExit<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;no default launcher: name its package as argument 3&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> pkg
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">pinned_webapp</span><span style="color:#1f2328">(</span>browser<span style="color:#1f2328">,</span> url<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;dumpsys prints a pinned shortcut&#39;s extras, its scope included.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> line <span style="color:#0550ae">in</span> shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;dumpsys&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;shortcut&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>splitlines<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;ShortcutInfo {&#34;</span> <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> line<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;packageName=</span><span style="color:#0a3069">%s</span><span style="color:#0a3069">,&#34;</span> <span style="color:#0550ae">%</span> browser <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> line<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        flags <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;flags=0x[0-9a-f]+ \[([^]]*)\]&#34;</span><span style="color:#1f2328">,</span> line<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        scope <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;webapp_scope=([^,}]+)&#34;</span><span style="color:#1f2328">,</span> line<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> flags <span style="color:#0550ae">or</span> <span style="color:#0a3069">&#34;P&#34;</span> <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> flags<span style="color:#0550ae">.</span>group<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">or</span> <span style="color:#0550ae">not</span> scope<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> url<span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span>scope<span style="color:#0550ae">.</span>group<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)):</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#34;id=([^,]+),&#34;</span><span style="color:#1f2328">,</span> line<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>group<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">clear_first_run</span><span style="color:#1f2328">(</span>browser<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;A browser installed a moment ago shows its onboarding first.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">12</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        root <span style="color:#0550ae">=</span> screen<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>nodes<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> rid<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;url_bar&#34;</span><span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span>browser<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        step <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>nodes<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> rid<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;terms_accept&#34;</span><span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span>browser<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> step <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            tap<span style="color:#1f2328">(</span>step<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_menu</span><span style="color:#1f2328">(</span>browser<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">15</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        menu <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>nodes<span style="color:#1f2328">(</span>screen<span style="color:#1f2328">(),</span> rid<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;menu_button&#34;</span><span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span>browser<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> menu <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            tap<span style="color:#1f2328">(</span>menu<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">install_entry</span><span style="color:#1f2328">(</span>browser<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;The entry may sit below the fold, so scroll the menu to reach it.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">6</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        root <span style="color:#0550ae">=</span> screen<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        entry <span style="color:#0550ae">=</span> first<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> INSTALL_ENTRIES<span style="color:#1f2328">,</span> browser<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> entry <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> entry
+</span></span><span style="display:flex;"><span>        menu <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>nodes<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> rid<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;app_menu_list&#34;</span><span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span>browser<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> menu <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        x1<span style="color:#1f2328">,</span> y1<span style="color:#1f2328">,</span> x2<span style="color:#1f2328">,</span> y2 <span style="color:#0550ae">=</span> box<span style="color:#1f2328">(</span>menu<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        mid <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>x1 <span style="color:#0550ae">+</span> x2<span style="color:#1f2328">)</span> <span style="color:#0550ae">//</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>        shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;input&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;swipe&#34;</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>mid<span style="color:#1f2328">),</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>y2 <span style="color:#0550ae">-</span> <span style="color:#0550ae">50</span><span style="color:#1f2328">),</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>mid<span style="color:#1f2328">),</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>y1 <span style="color:#0550ae">+</span> <span style="color:#0550ae">50</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;300&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">confirm_install</span><span style="color:#1f2328">(</span>browser<span style="color:#1f2328">,</span> launcher<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">12</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        root <span style="color:#0550ae">=</span> screen<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>nodes<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> rid<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;widget_cell&#34;</span><span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span>launcher<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>        step <span style="color:#0550ae">=</span> first<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> INSTALL_BUTTONS<span style="color:#1f2328">,</span> browser<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> step <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            tap<span style="color:#1f2328">(</span>step<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">pin_icon</span><span style="color:#1f2328">(</span>launcher<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;The pin dialog&#39;s buttons carry no id; the rightmost one places it.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">15</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        root <span style="color:#0550ae">=</span> screen<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>nodes<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> rid<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;widget_cell&#34;</span><span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span>launcher<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            buttons <span style="color:#0550ae">=</span> <span style="color:#6639ba">list</span><span style="color:#1f2328">(</span>nodes<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> <span style="color:#6a737d">cls</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;android.widget.Button&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                 pkg<span style="color:#0550ae">=</span>launcher<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> buttons<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                label <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">(</span>nodes<span style="color:#1f2328">(</span>root<span style="color:#1f2328">,</span> rid<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;widget_name&#34;</span><span style="color:#1f2328">,</span> pkg<span style="color:#0550ae">=</span>launcher<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                tap<span style="color:#1f2328">(</span><span style="color:#6639ba">max</span><span style="color:#1f2328">(</span>buttons<span style="color:#1f2328">,</span> key<span style="color:#0550ae">=</span><span style="color:#cf222e">lambda</span> n<span style="color:#1f2328">:</span> box<span style="color:#1f2328">(</span>n<span style="color:#1f2328">)[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]))</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> label<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">if</span> label <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">resumed</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    lines <span style="color:#0550ae">=</span> shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;dumpsys&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;activity&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;activities&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>splitlines<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">((</span>l <span style="color:#cf222e">for</span> l <span style="color:#0550ae">in</span> lines <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;mResumedActivity&#34;</span> <span style="color:#0550ae">in</span> l<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">check</span><span style="color:#1f2328">(</span>label<span style="color:#1f2328">,</span> launcher<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Open the icon just pinned; the browser has to run it as a webapp.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;input&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;keyevent&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;KEYCODE_HOME&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">10</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        icon <span style="color:#0550ae">=</span> <span style="color:#6639ba">next</span><span style="color:#1f2328">((</span>n <span style="color:#cf222e">for</span> n <span style="color:#0550ae">in</span> screen<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>iter<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;node&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                     <span style="color:#cf222e">if</span> n<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> label
+</span></span><span style="display:flex;"><span>                     <span style="color:#0550ae">and</span> n<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;package&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> launcher<span style="color:#1f2328">),</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> icon <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            tap<span style="color:#1f2328">(</span>icon<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;no icon named </span><span style="color:#0a3069">%r</span><span style="color:#0a3069"> on the home screen&#34;</span> <span style="color:#0550ae">%</span> label
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">10</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0a3069">&#34;webapps.WebappActivity&#34;</span> <span style="color:#0550ae">in</span> resumed<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0a3069">&#34;the icon opened </span><span style="color:#0a3069">%s</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span>resumed<span style="color:#1f2328">()</span> <span style="color:#0550ae">or</span> <span style="color:#0a3069">&#34;nothing&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">main</span><span style="color:#1f2328">(</span>url<span style="color:#1f2328">,</span> browser<span style="color:#1f2328">,</span> launcher<span style="color:#0550ae">=</span><span style="color:#cf222e">None</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    launcher <span style="color:#0550ae">=</span> launcher <span style="color:#0550ae">or</span> home_launcher<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;browser=</span><span style="color:#0a3069">%s</span><span style="color:#0a3069"> launcher=</span><span style="color:#0a3069">%s</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span>browser<span style="color:#1f2328">,</span> launcher<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    already <span style="color:#0550ae">=</span> pinned_webapp<span style="color:#1f2328">(</span>browser<span style="color:#1f2328">,</span> url<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> already<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;already installed as </span><span style="color:#0a3069">%s</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> already<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># uiautomator sees nothing through a dark screen or a keyguard</span>
+</span></span><span style="display:flex;"><span>    shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;input&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;keyevent&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;KEYCODE_WAKEUP&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;wm&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;dismiss-keyguard&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    shell<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;am&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;start&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-a&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;android.intent.action.VIEW&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0a3069">&#34;-d&#34;</span><span style="color:#1f2328">,</span> url<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-p&#34;</span><span style="color:#1f2328">,</span> browser<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    clear_first_run<span style="color:#1f2328">(</span>browser<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> open_menu<span style="color:#1f2328">(</span>browser<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> SystemExit<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">%s</span><span style="color:#0a3069"> did not come up on </span><span style="color:#0a3069">%s</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span>browser<span style="color:#1f2328">,</span> url<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    entry <span style="color:#0550ae">=</span> install_entry<span style="color:#1f2328">(</span>browser<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> entry <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> SystemExit<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">%s</span><span style="color:#0a3069"> offers no install entry for </span><span style="color:#0a3069">%s</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span>browser<span style="color:#1f2328">,</span> url<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    tap<span style="color:#1f2328">(</span>entry<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    confirm_install<span style="color:#1f2328">(</span>browser<span style="color:#1f2328">,</span> launcher<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    label <span style="color:#0550ae">=</span> pin_icon<span style="color:#1f2328">(</span>launcher<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> label <span style="color:#0550ae">is</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> SystemExit<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">%s</span><span style="color:#0a3069"> never asked to pin the icon&#34;</span> <span style="color:#0550ae">%</span> launcher<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    wrong <span style="color:#0550ae">=</span> check<span style="color:#1f2328">(</span>label<span style="color:#1f2328">,</span> launcher<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> wrong<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> SystemExit<span style="color:#1f2328">(</span>wrong<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;installed and checked: </span><span style="color:#0a3069">%s</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> label<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#953800">__name__</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;__main__&#34;</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> <span style="color:#0550ae">3</span> <span style="color:#0550ae">&lt;=</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>sys<span style="color:#0550ae">.</span>argv<span style="color:#1f2328">)</span> <span style="color:#0550ae">&lt;=</span> <span style="color:#0550ae">4</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> SystemExit<span style="color:#1f2328">(</span><span style="color:#953800">__doc__</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    main<span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>sys<span style="color:#0550ae">.</span>argv<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:])</span>
 </span></span></code></pre></div><p>&mdash; LineageOS Trebuchet&rsquo;s <code>.gitupstream</code>, which records the AOSP repository
 it forks (branch <code>lineage-22.2</code>):</p>
 <p><a href="https://github.com/LineageOS/android_packages_apps_Trebuchet/blob/lineage-22.2/.gitupstream">https://github.com/LineageOS/android_packages_apps_Trebuchet/blob/lineage-22.2/.gitupstream</a></p>
@@ -677,6 +880,13 @@ same device as the browser. They are therefore potentially trustworthy.</p>
 <p>&mdash; <a href="https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts">https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts</a></p>
 </blockquote>
 &#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+<li id="fn:3">
+<blockquote>
+<p>Cromite is available for Android arm64-v8a, arm32-v7a and x86_64, Android 10 and above</p>
+<p>&mdash; Cromite&rsquo;s own README (primary):
+<a href="https://raw.githubusercontent.com/uazo/cromite/master/README.md">https://raw.githubusercontent.com/uazo/cromite/master/README.md</a> (<span class="timestamp-wrapper"><span class="timestamp">[2026-09-02 Wed]</span></span>)</p>
+</blockquote>
+&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
 </ol>
 </div>
       </div>
