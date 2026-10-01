@@ -63,6 +63,7 @@
 <ul>
 <li><a class="internal-link" href="#the-agent-sees-the-page-i-have-open">The agent sees the page I have open</a></li>
 <li><a class="internal-link" href="#the-agent-interacts-with-that-page">The agent interacts with that page</a></li>
+<li><a class="internal-link" href="#i-follow-what-the-agent-does-on-the-page">I follow what the agent does on the page</a></li>
 </ul>
 </li>
 <li><a class="internal-link" href="#the-server">The server</a></li>
@@ -92,8 +93,9 @@ listens on<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnot
 <h4 id="getting-help-on-a-payment-page-then-on-an-aws-page">Getting help on a payment page, then on an AWS page</h4>
 <dl>
 <dt>rule</dt>
-<dd>this story asserts that <a class="internal-link" href="#the-agent-sees-the-page-i-have-open">the agent sees the page</a> and that
-<a class="internal-link" href="#the-agent-interacts-with-that-page">it interacts with it through separate tools</a>.</dd>
+<dd>this story asserts that <a class="internal-link" href="#the-agent-sees-the-page-i-have-open">the agent sees the page</a>, that
+<a class="internal-link" href="#the-agent-interacts-with-that-page">it interacts with it through separate tools</a>, and that
+<a class="internal-link" href="#i-follow-what-the-agent-does-on-the-page">I follow what it does</a>.</dd>
 </dl>
 <h5 id="on-a-payment-page">On a payment page</h5>
 <dl>
@@ -144,12 +146,15 @@ listens on<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnot
 <dd>I land on an AWS page, trying to configure something boring.
 <ul>
 <li><strong>example:</strong> an AgentCore Bedrock MCP.</li>
+<li><strong>how:</strong> on that page, the test keeps the clock the agent&rsquo;s page script goes by, as I could by :jseval, so that
+seconds I would wait out are moved on at once.</li>
 </ul>
 </dd>
 </dl>
 <div class="konix-block-name-marker" data-name="story-open-aws"></div>
 <p><a id="code-snippet--story-open-aws"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>open_page<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;aws.html&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>keep_clock<span style="color:#1f2328">(</span>runtime<span style="color:#1f2328">)</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>I let the agent interact too.</dd>
@@ -192,7 +197,26 @@ draws no outline.</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="story-fill-highlighted"></div>
 <p><a id="code-snippet--story-fill-highlighted"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>FILL_CYAN <span style="color:#0550ae">in</span> shot<span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">()</span> <span style="color:#cf222e">for</span> shot <span style="color:#0550ae">in</span> seen<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;the field did not stand out in the fill&#39;s colour&#34;</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>FILL_CYAN <span style="color:#0550ae">in</span> shot<span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">()</span> <span style="color:#cf222e">for</span> _<span style="color:#1f2328">,</span> shot <span style="color:#0550ae">in</span> seen<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;the field did not stand out in the fill&#39;s colour&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>it stood out at least 1.1 seconds before eu-west-3 showed in it.
+<ul>
+<li><strong>how:</strong> of the two seconds it stands out first, my looks, a screenshot each and at most 0.4 seconds apart, may
+miss two looks&rsquo; worth, so a lead of one second stays below.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-fill-lead"></div>
+<p><a id="code-snippet--story-fill-lead"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> lead<span style="color:#1f2328">(</span>seen<span style="color:#1f2328">,</span> FILL_CYAN<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> STAND_OUT_LEAD<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;the field did not stand out long enough before it was filled&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>once filled, the field still stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-fill-still"></div>
+<p><a id="code-snippet--story-fill-still"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> FILL_CYAN <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;the field no longer stood out once filled&#34;</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>the form wants my logo too, and the agent uploads it from my disk through « Upload », and is told it
@@ -202,11 +226,51 @@ did.</dd>
 <p><a id="code-snippet--story-upload"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>logo <span style="color:#0550ae">=</span> tmp_path <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;logo.png&#34;</span>
 </span></span><span style="display:flex;"><span>logo<span style="color:#0550ae">.</span>write_bytes<span style="color:#1f2328">(</span><span style="color:#0a3069">b</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">\x89</span><span style="color:#0a3069">PNG</span><span style="color:#0a3069">\r\n\x1a\n</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>uploaded <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;upload&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#upload-logo&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;path&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>logo<span style="color:#1f2328">)})</span>
+</span></span><span style="display:flex;"><span>uploaded<span style="color:#1f2328">,</span> seen <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> watch<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;upload&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#upload-logo&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;path&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>logo<span style="color:#1f2328">)})</span>
+</span></span><span style="display:flex;"><span>done <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> uploaded<span style="color:#0550ae">.</span>isError<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent was told the upload failed: </span><span style="color:#0a3069">{</span>uploaded<span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>dom <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
 </span></span><span style="display:flex;"><span>chosen <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#39;&lt;output id=&#34;logo&#34;&gt;([^&lt;]*)&lt;/output&gt;&#39;</span><span style="color:#1f2328">,</span> dom<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> chosen <span style="color:#0550ae">and</span> chosen<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;logo.png&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the AWS page got </span><span style="color:#0a3069">{</span>chosen <span style="color:#0550ae">and</span> chosen<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span><span style="color:#0a3069">!r}</span><span style="color:#0a3069"> as logo, not my logo.png&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>« Upload » stood out at least 1.1 seconds before the logo&rsquo;s name showed.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-upload-lead"></div>
+<p><a id="code-snippet--story-upload-lead"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> lead<span style="color:#1f2328">(</span>seen<span style="color:#1f2328">,</span> UPLOAD_YELLOW<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> STAND_OUT_LEAD<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;« Upload » did not stand out long enough before the upload&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>once uploaded, « Upload » still stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-upload-still"></div>
+<p><a id="code-snippet--story-upload-still"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> UPLOAD_YELLOW <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Upload » no longer stood out once uploaded&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>with this next action, the region field no longer stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-fill-gone"></div>
+<p><a id="code-snippet--story-fill-gone"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> FILL_CYAN <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;the region field still stood out after the upload&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>I look away; 8 seconds after the upload, « Upload » still stands out.
+<ul>
+<li><strong>how:</strong> its frame stays ten seconds, and 8 and 12 sit two seconds either side of them.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-upload-later"></div>
+<p><a id="code-snippet--story-upload-later"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> UPLOAD_YELLOW <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen_at<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> done<span style="color:#1f2328">,</span> STILL_SEEN<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Upload » no longer stood out 8 seconds on&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>12 seconds after, it no longer does.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-upload-expired"></div>
+<p><a id="code-snippet--story-upload-expired"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> UPLOAD_YELLOW <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen_at<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> done<span style="color:#1f2328">,</span> GONE_BY<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Upload » still stood out 12 seconds on&#34;</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>it wants a product logo as well, whose input lies invisible over its « Choose file » button, and the
@@ -230,6 +294,13 @@ agent uploads it there too.</dd>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0a3069">&#39;aria-expanded=&#34;true&#34;&#39;</span> <span style="color:#0550ae">in</span> categories<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the list of categories stayed shut: </span><span style="color:#0a3069">{</span>categories<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
+<dd>with this next action, « Choose file » no longer stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-upload-gone"></div>
+<p><a id="code-snippet--story-upload-gone"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> UPLOAD_YELLOW <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Choose file » still stood out once the categories opened&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
 <dd>it reads me the names of the categories, and only them, however heavy the markup around.</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="story-read-categories"></div>
@@ -246,8 +317,61 @@ agent uploads it there too.</dd>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> headers <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;Region settings&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent read other headers than those I see: </span><span style="color:#0a3069">{</span>headers<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
-<dd>it picks the zone « b » in the page&rsquo;s plain list, and the tier « premium » in a list the page draws
-itself, where each tier&rsquo;s name comes with a description, each by the name I see, whatever its case.
+<dd>it opens the list of tiers through « Choose a tier ».</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-open-tiers"></div>
+<p><a id="code-snippet--story-open-tiers"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;click&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#tier&#34;</span><span style="color:#1f2328">})</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>it picks the zone « b » in the page&rsquo;s plain list.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-select-zone"></div>
+<p><a id="code-snippet--story-select-zone"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>selected<span style="color:#1f2328">,</span> seen <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> watch<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;select&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#zone&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;option&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;b&#34;</span><span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>done <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> selected<span style="color:#0550ae">.</span>isError<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent could not pick b: </span><span style="color:#0a3069">{</span>selected<span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>shown <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#zone-picked&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">}))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> shown <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;b&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the page took </span><span style="color:#0a3069">{</span>shown<span style="color:#0a3069">!r}</span><span style="color:#0a3069">, not b&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>with this next action, « Choose a tier » no longer stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-click-gone"></div>
+<p><a id="code-snippet--story-click-gone"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> HIGHLIGHT_PURPLE <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Choose a tier » still stood out once the zone was picked&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>the zone stood out at least 1.1 seconds before « b » showed as picked.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-select-zone-lead"></div>
+<p><a id="code-snippet--story-select-zone-lead"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> lead<span style="color:#1f2328">(</span>seen<span style="color:#1f2328">,</span> SELECT_GREEN<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> STAND_OUT_LEAD<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;the zone did not stand out long enough before its pick&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>once picked, the zone still stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-select-zone-still"></div>
+<p><a id="code-snippet--story-select-zone-still"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> SELECT_GREEN <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;the zone no longer stood out once picked&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>I look away; 8 seconds after the pick, the zone still stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-select-zone-later"></div>
+<p><a id="code-snippet--story-select-zone-later"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> SELECT_GREEN <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen_at<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> done<span style="color:#1f2328">,</span> STILL_SEEN<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;the zone no longer stood out 8 seconds on&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>12 seconds after, it no longer does.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-select-zone-expired"></div>
+<p><a id="code-snippet--story-select-zone-expired"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> SELECT_GREEN <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen_at<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> done<span style="color:#1f2328">,</span> GONE_BY<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;the zone still stood out 12 seconds on&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>then it picks the tier « premium » in a list the page draws itself, where each tier&rsquo;s name comes with a
+description, by the name I see, whatever its case.
 <ul>
 <li><strong>what:</strong> the list of tiers was left open, and its button, pressed again, would close it.</li>
 <li><strong>what:</strong> it picks « remove a version » in the « Request changes » menu the same way, a menu&rsquo;s items being
@@ -257,16 +381,32 @@ alike to a selector.</li>
 </dl>
 <div class="konix-block-name-marker" data-name="story-select"></div>
 <p><a id="code-snippet--story-select"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;click&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#tier&#34;</span><span style="color:#1f2328">})</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>watched<span style="color:#1f2328">,</span> after <span style="color:#0550ae">=</span> <span style="color:#1f2328">{},</span> <span style="color:#1f2328">{}</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> list_<span style="color:#1f2328">,</span> option<span style="color:#1f2328">,</span> picked<span style="color:#1f2328">,</span> name <span style="color:#0550ae">in</span> <span style="color:#1f2328">[</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;#zone&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;b&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;#zone-picked&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;b&#34;</span><span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;#tier&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;premium&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;#tier-picked&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;Premium&#34;</span><span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;#request-changes&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;remove a version&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;#requested&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;Remove a version&#34;</span><span style="color:#1f2328">),</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">]:</span>
-</span></span><span style="display:flex;"><span>    selected <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;select&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> list_<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;option&#34;</span><span style="color:#1f2328">:</span> option<span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>    selected<span style="color:#1f2328">,</span> watched<span style="color:#1f2328">[</span>list_<span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> watch<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;select&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> list_<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;option&#34;</span><span style="color:#1f2328">:</span> option<span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>    after<span style="color:#1f2328">[</span>list_<span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> selected<span style="color:#0550ae">.</span>isError<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent could not pick </span><span style="color:#0a3069">{</span>option<span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>selected<span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    shown <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> picked<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">}))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> shown <span style="color:#0550ae">==</span> name<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the page took </span><span style="color:#0a3069">{</span>shown<span style="color:#0a3069">!r}</span><span style="color:#0a3069">, not </span><span style="color:#0a3069">{</span>name<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>each list stood out at least 1.1 seconds before its pick showed.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-select-lead"></div>
+<p><a id="code-snippet--story-select-lead"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">for</span> list_<span style="color:#1f2328">,</span> seen <span style="color:#0550ae">in</span> watched<span style="color:#0550ae">.</span>items<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> lead<span style="color:#1f2328">(</span>seen<span style="color:#1f2328">,</span> SELECT_GREEN<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> STAND_OUT_LEAD<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>list_<span style="color:#0a3069">}</span><span style="color:#0a3069"> did not stand out long enough before its pick&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>once picked, each list still stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-select-still"></div>
+<p><a id="code-snippet--story-select-still"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">for</span> list_<span style="color:#1f2328">,</span> look <span style="color:#0550ae">in</span> after<span style="color:#0550ae">.</span>items<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> SELECT_GREEN <span style="color:#0550ae">in</span> look<span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>list_<span style="color:#0a3069">}</span><span style="color:#0a3069"> no longer stood out once picked&#34;</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>it tries to click the logo&rsquo;s hidden input, which no mouse can reach, and is told so.</dd>
@@ -294,6 +434,13 @@ picks IAM.</dd>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> opened<span style="color:#0550ae">.</span>isError<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent could not pick IAM once the section opened: </span><span style="color:#0a3069">{</span>opened<span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
+<dd>with these next actions, « Request changes » no longer stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-select-gone"></div>
+<p><a id="code-snippet--story-select-gone"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> SELECT_GREEN <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Request changes » still stood out once IAM was picked&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
 <dd>it follows the link to my role, naming it by its address, which holds a query, as AWS&rsquo;s do.</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="story-click-link"></div>
@@ -319,6 +466,7 @@ picks IAM.</dd>
 <div class="konix-block-name-marker" data-name="story-save"></div>
 <p><a id="code-snippet--story-save"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_<span style="color:#1f2328">,</span> seen <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> watch<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;click&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;button&#34;</span><span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>done <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>dom <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
 </span></span><span style="display:flex;"><span>saved <span style="color:#0550ae">=</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">r</span><span style="color:#0a3069">&#39;&lt;output id=&#34;saved&#34;&gt;([^&lt;]*)&lt;/output&gt;&#39;</span><span style="color:#1f2328">,</span> dom<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> saved <span style="color:#0550ae">and</span> saved<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;eu-west-3&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the AWS page saved </span><span style="color:#0a3069">{</span>saved <span style="color:#0550ae">and</span> saved<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span><span style="color:#0a3069">!r}</span><span style="color:#0a3069">, not what the agent filled&#34;</span>
@@ -328,7 +476,35 @@ picks IAM.</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="story-save-highlighted"></div>
 <p><a id="code-snippet--story-save-highlighted"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>HIGHLIGHT_PURPLE <span style="color:#0550ae">in</span> shot<span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">()</span> <span style="color:#cf222e">for</span> shot <span style="color:#0550ae">in</span> seen<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;« Save » did not stand out as it was clicked&#34;</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>HIGHLIGHT_PURPLE <span style="color:#0550ae">in</span> shot<span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">()</span> <span style="color:#cf222e">for</span> _<span style="color:#1f2328">,</span> shot <span style="color:#0550ae">in</span> seen<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;« Save » did not stand out as it was clicked&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>« Save » stood out at least 1.1 seconds before eu-west-3 showed as saved.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-save-lead"></div>
+<p><a id="code-snippet--story-save-lead"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> lead<span style="color:#1f2328">(</span>seen<span style="color:#1f2328">,</span> HIGHLIGHT_PURPLE<span style="color:#1f2328">)</span> <span style="color:#0550ae">&gt;=</span> STAND_OUT_LEAD<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;« Save » did not stand out long enough before the click&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>once clicked, « Save » still stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-save-still"></div>
+<p><a id="code-snippet--story-save-still"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> HIGHLIGHT_PURPLE <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Save » no longer stood out once clicked&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>I look away; 8 seconds after the click, « Save » still stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-save-later"></div>
+<p><a id="code-snippet--story-save-later"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> HIGHLIGHT_PURPLE <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen_at<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> done<span style="color:#1f2328">,</span> STILL_SEEN<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Save » no longer stood out 8 seconds on&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>12 seconds after, it no longer does.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-save-expired"></div>
+<p><a id="code-snippet--story-save-expired"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> HIGHLIGHT_PURPLE <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen_at<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> done<span style="color:#1f2328">,</span> GONE_BY<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;« Save » still stood out 12 seconds on&#34;</span>
 </span></span></code></pre></div><h5 id="then-accepting-each-action-myself">Then accepting each action myself</h5>
 <dl>
 <dt>what</dt>
@@ -383,9 +559,24 @@ agent is told.</dd>
 <div class="konix-block-name-marker" data-name="story-accept"></div>
 <p><a id="code-snippet--story-accept"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>accepted <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> asked<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;confirm_fill&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;[name=region]&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;eu-west-1&#34;</span><span style="color:#1f2328">},</span> <span style="color:#0a3069">&#34;yes&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>done <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> accepted<span style="color:#0550ae">.</span>isError<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the fill failed though I accepted: </span><span style="color:#0a3069">{</span>accepted<span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>field <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;[name=region]&#34;</span><span style="color:#1f2328">}))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0a3069">&#39;value=&#34;eu-west-1&#34;&#39;</span> <span style="color:#0550ae">in</span> field<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the field did not take what I accepted: </span><span style="color:#0a3069">{</span>field<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>I look away; 8 seconds after, the field still stands out.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-accept-later"></div>
+<p><a id="code-snippet--story-accept-later"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> FILL_CYAN <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen_at<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> done<span style="color:#1f2328">,</span> STILL_SEEN<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;the field no longer stood out 8 seconds on&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>12 seconds after, it no longer does.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-accept-expired"></div>
+<p><a id="code-snippet--story-accept-expired"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">assert</span> FILL_CYAN <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> screen_at<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> runtime<span style="color:#1f2328">,</span> done<span style="color:#1f2328">,</span> GONE_BY<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;the field still stood out 12 seconds on&#34;</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>the agent shows me the scroll counter, low on the page: the page scrolls to it and I see it framed in
@@ -395,7 +586,7 @@ blue.</dd>
 <p><a id="code-snippet--story-show"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>shown<span style="color:#1f2328">,</span> screens <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> watch<span style="color:#1f2328">(</span>agent<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;readonly_show&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#scrolled&#34;</span><span style="color:#1f2328">})</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> shown<span style="color:#0550ae">.</span>isError<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent could not show me the counter: </span><span style="color:#0a3069">{</span>shown<span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>SHOW_BLUE <span style="color:#0550ae">in</span> screen<span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">()</span> <span style="color:#cf222e">for</span> screen <span style="color:#0550ae">in</span> screens<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;I never saw the counter framed in blue&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>SHOW_BLUE <span style="color:#0550ae">in</span> shot<span style="color:#0550ae">.</span>getdata<span style="color:#1f2328">()</span> <span style="color:#cf222e">for</span> _<span style="color:#1f2328">,</span> shot <span style="color:#0550ae">in</span> screens<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;I never saw the counter framed in blue&#34;</span>
 </span></span><span style="display:flex;"><span>scrolled <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#scrolled&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">}))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> scrolled <span style="color:#0550ae">!=</span> <span style="color:#0a3069">&#34;0&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;the page did not scroll to the counter&#34;</span>
 </span></span></code></pre></div><dl>
@@ -576,7 +767,8 @@ button, across the move.</dd>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>then to the payment page, in a new tab, leaving the documentation in the tab before; I go back to the
-documentation, and the agent still reads its payment tab, whose title starts with « 🤖 ».</dd>
+documentation, and the agent still reads its payment tab, whose title starts with « 🤖 »; working in another
+program meanwhile, I keep its window while the agent reads.</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="story-open-in-new-tab"></div>
 <p><a id="code-snippet--story-open-in-new-tab"></a></p>
@@ -588,6 +780,18 @@ documentation, and the agent still reads its payment tab, whose title starts wit
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> total <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;Total: 42.00 €&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent left its tab for mine: </span><span style="color:#0a3069">{</span>total<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>title <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">}))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> title<span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;🤖&#34;</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent&#39;s tab does not tell me it is the agent&#39;s: </span><span style="color:#0a3069">{</span>title<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>terminal <span style="color:#0550ae">=</span> subprocess<span style="color:#0550ae">.</span>Popen<span style="color:#1f2328">([</span><span style="color:#0a3069">&#34;xterm&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-title&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;my-work&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    mine <span style="color:#0550ae">=</span> subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">([</span><span style="color:#0a3069">&#34;xdotool&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;search&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--sync&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--name&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;^my-work$&#34;</span><span style="color:#1f2328">],</span>
+</span></span><span style="display:flex;"><span>                          capture_output<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> text<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span> check<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>stdout<span style="color:#0550ae">.</span>split<span style="color:#1f2328">()[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">([</span><span style="color:#0a3069">&#34;xdotool&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;mousemove&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--window&#34;</span><span style="color:#1f2328">,</span> mine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;10&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;10&#34;</span><span style="color:#1f2328">],</span> check<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">([</span><span style="color:#0a3069">&#34;xdotool&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;windowactivate&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;--sync&#34;</span><span style="color:#1f2328">,</span> mine<span style="color:#1f2328">],</span> check<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">await</span> anyio<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>ANSWER_POLL<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> focused_window<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> mine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;I could not get into my terminal&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;#total&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">assert</span> focused_window<span style="color:#1f2328">()</span> <span style="color:#0550ae">==</span> mine<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;the agent&#39;s call took me out of the window I was in&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">finally</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    terminal<span style="color:#0550ae">.</span>terminate<span style="color:#1f2328">()</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>on a page the server changes at each visit, the agent reloads, and reads the page anew.</dd>
@@ -600,6 +804,20 @@ documentation, and the agent still reads its payment tab, whose title starts wit
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> reloaded<span style="color:#0550ae">.</span>isError<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the reload failed: </span><span style="color:#0a3069">{</span>reloaded<span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>after <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;h1&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">}))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> after <span style="color:#0550ae">!=</span> before<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the page read after the reload is the one before: </span><span style="color:#0a3069">{</span>after<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>the agent opens the documentation in yet another tab of its own; going back to its former tab, I see it
+no longer bears the « 🤖 », the new one alone bearing it.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-agent-tab-again"></div>
+<p><a id="code-snippet--story-agent-tab-again"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>opened <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;open_url_in_new_tab&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;url&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>site<span style="color:#0a3069">}</span><span style="color:#0a3069">/docs.html&#34;</span><span style="color:#1f2328">})</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> opened<span style="color:#0550ae">.</span>isError<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent could not open the documentation in a new tab: </span><span style="color:#0a3069">{</span>opened<span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>title <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> agent<span style="color:#0550ae">.</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;readonly_read_dom&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;selector&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;text&#34;</span><span style="color:#1f2328">:</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">}))</span><span style="color:#0550ae">.</span>content<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>text
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> title<span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;🤖&#34;</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent&#39;s new tab does not tell me it is the agent&#39;s: </span><span style="color:#0a3069">{</span>title<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>tell_qutebrowser<span style="color:#1f2328">(</span>runtime<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;:tab-prev&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>former <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> shown_title<span style="color:#1f2328">(</span>runtime<span style="color:#1f2328">,</span> tmp_path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">assert</span> <span style="color:#0550ae">not</span> former<span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;🤖&#34;</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the agent&#39;s former tab still tells me it is the agent&#39;s: </span><span style="color:#0a3069">{</span>former<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span></code></pre></div><h3 id="how-the-stories-are-tested">How the stories are tested</h3>
 <dl>
 <dt>rule</dt>
@@ -803,6 +1021,29 @@ only the tools so marked, refuses the click and « Pay » stays unclicked.</dd>
 <dd>it also entails the tools let the agent interact with the page, since through them the test fills
 the region and clicks « Save », and the page shows it saved what was filled.</dd>
 </dl>
+<h4 id="i-follow-what-the-agent-does-on-the-page">I follow what the agent does on the page</h4>
+<dl>
+<dt>what</dt>
+<dd>what the agent acts on stands out two seconds before it acts, then ten seconds after, unless its next
+action comes sooner.
+<ul>
+<li><strong>why:</strong> so I follow it.</li>
+</ul>
+</dd>
+<dt>therefore</dt>
+<dd>the story passing entails each fill, click, select and upload stands out before it lands, since the
+test sees its colour at least 1.1 seconds before the page shows the action done.</dd>
+<dt>therefore</dt>
+<dd>it also entails what was acted on still stands out once done, since the test sees each one&rsquo;s colour
+right after it.</dd>
+<dt>therefore</dt>
+<dd>it also entails the next action takes it away, since the field no longer stands out after the
+upload, nor « Choose file » once the categories open, « Choose a tier » once the zone is picked, or « Request
+changes » once the auth section opens.</dd>
+<dt>therefore</dt>
+<dd>it also entails it goes by itself after ten seconds, since a fill, an upload, a pick and a click
+each still stand out 8 seconds after, and no longer 12 seconds after, nothing acting meanwhile.</dd>
+</dl>
 <h3 id="the-server">The server</h3>
 <dl>
 <dt>what</dt>
@@ -820,7 +1061,15 @@ the region and clicks « Save », and the page shows it saved what was filled.</
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>environ<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;XDG_RUNTIME_DIR&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;/run/user/</span><span style="color:#0a3069">{</span>os<span style="color:#0550ae">.</span>getuid<span style="color:#1f2328">()</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">))</span> <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;qutebrowser&#34;</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>AGENT_TAB <span style="color:#0550ae">=</span> <span style="color:#1f2328">{}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>OPEN_LINGER <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.5</span>  <span style="color:#57606a"># seconds</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">send</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">,</span> linger<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> AGENT_TAB<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        command <span style="color:#0550ae">=</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;:agent-run </span><span style="color:#0a3069">{</span>command<span style="color:#0550ae">.</span>removeprefix<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;:&#39;</span><span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    name <span style="color:#0550ae">=</span> hashlib<span style="color:#0550ae">.</span>md5<span style="color:#1f2328">(</span>getpass<span style="color:#0550ae">.</span>getuser<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>encode<span style="color:#1f2328">())</span><span style="color:#0550ae">.</span>hexdigest<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    path <span style="color:#0550ae">=</span> runtime<span style="color:#1f2328">()</span> <span style="color:#0550ae">/</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;ipc-</span><span style="color:#0a3069">{</span>name<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> socket<span style="color:#0550ae">.</span>socket<span style="color:#1f2328">(</span>socket<span style="color:#0550ae">.</span>AF_UNIX<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> ipc<span style="color:#1f2328">:</span>
@@ -832,15 +1081,100 @@ the region and clicks « Save », and the page shows it saved what was filled.</
 </span></span><span style="display:flex;"><span>        time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>linger<span style="color:#1f2328">)</span>
 </span></span></code></pre></div><dl>
 <dt>how</dt>
-<dd>a command raising a window holds its socket open half a second before closing it.
+<dd>a command opening a tab holds its socket open half a second before closing it.
 <ul>
-<li><strong>why:</strong> raising the window lets Qt handle the socket&rsquo;s close while qutebrowser still reads it, and qutebrowser
-dies of it.</li>
+<li><strong>why:</strong> opening the tab lets Qt handle the socket&rsquo;s close while qutebrowser still reads it, and qutebrowser
+dies of it, as gdb showed with <code>:tab-select</code>.</li>
 </ul>
 </dd>
 <dt>how</dt>
-<dd>to see the page, it has qutebrowser hand the page to a small script, which copies it where the server
-reads it back, looking every tenth of a second and giving up after ten.</dd>
+<dd>once the agent opened a tab of its own, which <code>:agent-claim</code> makes its, every command goes through
+<code>:agent-run</code>, which runs it in that tab, made current in its window, raising no window; both commands come from
+my qutebrowser configuration.
+<ul>
+<li><strong>why:</strong> qutebrowser runs a socket command in the window I last used, and its <code>:tab-select</code> raises the window
+it selects, taking my focus.</li>
+<li><strong>how:</strong> given to another window, the tab is another one to qutebrowser, so the command then looks for the tab
+titled « 🤖 ».</li>
+<li><strong>scope:</strong> it leans on qutebrowser&rsquo;s internals, which may change between its versions.</li>
+<li><strong>how:</strong> sourcing the configuration again replaces both commands, qutebrowser refusing a command twice.</li>
+<li><strong>how:</strong> a tab I closed is let go of before anything touches it, as touching it would crash qutebrowser.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="agent-run"></div>
+<p><a id="code-snippet--agent-run"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">json</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">pathlib</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">qutebrowser.api</span> <span style="color:#cf222e">import</span> cmdutils
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">qutebrowser.commands</span> <span style="color:#cf222e">import</span> runners
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">qutebrowser.completion.models</span> <span style="color:#cf222e">import</span> miscmodels
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">qutebrowser.misc</span> <span style="color:#cf222e">import</span> objects
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">qutebrowser.qt</span> <span style="color:#cf222e">import</span> sip
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">qutebrowser.utils</span> <span style="color:#cf222e">import</span> objreg<span style="color:#1f2328">,</span> usertypes
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> name <span style="color:#0550ae">in</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;agent-claim&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;agent-run&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;agent-eval&#34;</span><span style="color:#1f2328">]:</span>
+</span></span><span style="display:flex;"><span>    objects<span style="color:#0550ae">.</span>commands<span style="color:#0550ae">.</span>pop<span style="color:#1f2328">(</span>name<span style="color:#1f2328">,</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>AGENT_TAB <span style="color:#0550ae">=</span> <span style="color:#1f2328">{}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@cmdutils.register</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@cmdutils.argument</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;win_id&#34;</span><span style="color:#1f2328">,</span> value<span style="color:#0550ae">=</span>cmdutils<span style="color:#0550ae">.</span>Value<span style="color:#0550ae">.</span>win_id<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">agent_claim</span><span style="color:#1f2328">(</span>win_id<span style="color:#1f2328">:</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">-&gt;</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Make the tab this window shows the agent&#39;s.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    tabbed <span style="color:#0550ae">=</span> objreg<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;tabbed-browser&#34;</span><span style="color:#1f2328">,</span> scope<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;window&#34;</span><span style="color:#1f2328">,</span> window<span style="color:#0550ae">=</span>win_id<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    AGENT_TAB<span style="color:#0550ae">.</span>update<span style="color:#1f2328">(</span>win_id<span style="color:#0550ae">=</span>win_id<span style="color:#1f2328">,</span> tab<span style="color:#0550ae">=</span>tabbed<span style="color:#0550ae">.</span>widget<span style="color:#0550ae">.</span>currentWidget<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">agent_tab</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;The window and tab of the agent: the one claimed, else the one titled 🤖, as when given to another window.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> AGENT_TAB <span style="color:#0550ae">and</span> AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;win_id&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">in</span> objreg<span style="color:#0550ae">.</span>window_registry <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> sip<span style="color:#0550ae">.</span>isdeleted<span style="color:#1f2328">(</span>AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;tab&#34;</span><span style="color:#1f2328">]):</span>
+</span></span><span style="display:flex;"><span>        tabbed <span style="color:#0550ae">=</span> objreg<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;tabbed-browser&#34;</span><span style="color:#1f2328">,</span> scope<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;window&#34;</span><span style="color:#1f2328">,</span> window<span style="color:#0550ae">=</span>AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;win_id&#34;</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> tabbed<span style="color:#0550ae">.</span>widget<span style="color:#0550ae">.</span>indexOf<span style="color:#1f2328">(</span>AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;tab&#34;</span><span style="color:#1f2328">])</span> <span style="color:#0550ae">&gt;=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> tabbed<span style="color:#1f2328">,</span> AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;win_id&#34;</span><span style="color:#1f2328">],</span> AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;tab&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    tabs <span style="color:#0550ae">=</span> miscmodels<span style="color:#0550ae">.</span>tabs<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    tabs<span style="color:#0550ae">.</span>set_pattern<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;🤖&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> tabs<span style="color:#0550ae">.</span>count<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> cmdutils<span style="color:#0550ae">.</span>CommandError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;the agent has no tab of its own&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    win_id<span style="color:#1f2328">,</span> index <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>part<span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> part <span style="color:#0550ae">in</span> tabs<span style="color:#0550ae">.</span>data<span style="color:#1f2328">(</span>tabs<span style="color:#0550ae">.</span>first_item<span style="color:#1f2328">())</span><span style="color:#0550ae">.</span>split<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    tabbed <span style="color:#0550ae">=</span> objreg<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;tabbed-browser&#34;</span><span style="color:#1f2328">,</span> scope<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;window&#34;</span><span style="color:#1f2328">,</span> window<span style="color:#0550ae">=</span>win_id<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    AGENT_TAB<span style="color:#0550ae">.</span>update<span style="color:#1f2328">(</span>win_id<span style="color:#0550ae">=</span>win_id<span style="color:#1f2328">,</span> tab<span style="color:#0550ae">=</span>tabbed<span style="color:#0550ae">.</span>widget<span style="color:#0550ae">.</span>widget<span style="color:#1f2328">(</span>index <span style="color:#0550ae">-</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> tabbed<span style="color:#1f2328">,</span> win_id<span style="color:#1f2328">,</span> AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;tab&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@cmdutils.register</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@cmdutils.argument</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;win_id&#34;</span><span style="color:#1f2328">,</span> value<span style="color:#0550ae">=</span>cmdutils<span style="color:#0550ae">.</span>Value<span style="color:#0550ae">.</span>win_id<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">agent_eval</span><span style="color:#1f2328">(</span>script<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">,</span> answer<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">,</span> win_id<span style="color:#1f2328">:</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">-&gt;</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Run the javascript in SCRIPT in the tab this window shows, writing what it gives back to ANSWER, as JSON.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    tab <span style="color:#0550ae">=</span> objreg<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;tabbed-browser&#34;</span><span style="color:#1f2328">,</span> scope<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;window&#34;</span><span style="color:#1f2328">,</span> window<span style="color:#0550ae">=</span>win_id<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>widget<span style="color:#0550ae">.</span>currentWidget<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">answered</span><span style="color:#1f2328">(</span>value<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        part <span style="color:#0550ae">=</span> pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>answer<span style="color:#0a3069">}</span><span style="color:#0a3069">.part&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        part<span style="color:#0550ae">.</span>write_text<span style="color:#1f2328">(</span>json<span style="color:#0550ae">.</span>dumps<span style="color:#1f2328">(</span>value<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        part<span style="color:#0550ae">.</span>rename<span style="color:#1f2328">(</span>answer<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    tab<span style="color:#0550ae">.</span>run_js_async<span style="color:#1f2328">(</span>pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span>script<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>read_text<span style="color:#1f2328">(),</span> answered<span style="color:#1f2328">,</span> world<span style="color:#0550ae">=</span>usertypes<span style="color:#0550ae">.</span>JsWorld<span style="color:#0550ae">.</span>jseval<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">@cmdutils.register</span><span style="color:#1f2328">(</span>maxsplit<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">agent_run</span><span style="color:#1f2328">(</span>command<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">-&gt;</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Run COMMAND in the agent&#39;s tab, made current in its window, raising no window.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    tabbed<span style="color:#1f2328">,</span> win_id<span style="color:#1f2328">,</span> tab <span style="color:#0550ae">=</span> agent_tab<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    tabbed<span style="color:#0550ae">.</span>widget<span style="color:#0550ae">.</span>setCurrentWidget<span style="color:#1f2328">(</span>tab<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    runners<span style="color:#0550ae">.</span>CommandRunner<span style="color:#1f2328">(</span>win_id<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>run_safely<span style="color:#1f2328">(</span>command<span style="color:#1f2328">)</span>
+</span></span></code></pre></div><dl>
+<dt>how</dt>
+<dd>my qutebrowser configuration sources it, and so does the test&rsquo;s.</dd>
+<dt>how</dt>
+<dd>to see the page, it has <code>:agent-eval</code>, from my qutebrowser configuration, ask the page its own HTML and
+write it where the server reads it back, looking every tenth of a second and giving up after ten.
+<ul>
+<li><strong>why:</strong> qutebrowser&rsquo;s own copy of a page, handed to a userscript, comes back empty from a new tab still loading.</li>
+<li><strong>how:</strong> a page not yet ready for scripts answers nothing, so it is asked again till it answers.</li>
+</ul>
+</dd>
 <dt>how</dt>
 <dd>given a CSS selector, it returns only the elements that match, so a big page can be read in parts.
 <ul>
@@ -860,13 +1194,11 @@ field&rsquo;s live value into its HTML, marking itself as an interaction does.
 <dt>how</dt>
 <dd>it marks the tools that see as read-only, so a harness can grant them by that mark alone.</dd>
 <dt>how</dt>
-<dd>once the agent opened a tab of its own, each tool selects that tab, by the « 🤖 » of its title, in
-whatever window it went, and acts there, so I wander in my tabs while it works in its own.
+<dd>once the agent opened a tab of its own, each tool acts on that tab, in whatever window it went, so I
+wander in my tabs while it works in its own.
 <ul>
-<li><strong>why:</strong> qutebrowser runs a page command only on the tab its window shows, and no command names a window.</li>
-<li><strong>scope:</strong> selecting the tab raises its window.</li>
-<li><strong>how:</strong> qutebrowser may drop the command asking the title right after the select, so it is asked again, each
-second, till qutebrowser answers.</li>
+<li><strong>how:</strong> a tool first asks that tab&rsquo;s title, each second, till qutebrowser answers, and says the tab is gone
+when it never does.</li>
 </ul>
 </dd>
 <dt>how</dt>
@@ -874,6 +1206,9 @@ second, till qutebrowser answers.</li>
 tab and window show it, and no other; before it opened one, the tab it acts on shows it while a tool acts.
 <ul>
 <li><strong>how:</strong> the title comes back once the last of the calls running at once ends, not the first.</li>
+<li><strong>how:</strong> opening a tab of its own, the agent first takes the « 🤖 » off its former one, so one tab only bears
+it, even one claimed before the server restarted.</li>
+<li><strong>how:</strong> the new tab bears the « 🤖 » from the first check of its loading, before the agent does anything there.</li>
 </ul>
 </dd>
 </dl>
@@ -892,22 +1227,26 @@ tab and window show it, and no other; before it opened one, the tab it acts on s
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">page_html</span><span style="color:#1f2328">(</span>wait<span style="color:#0550ae">=</span>HAND_OVER_WAIT<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    deadline <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> wait
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> tempfile<span style="color:#0550ae">.</span>TemporaryDirectory<span style="color:#1f2328">()</span> <span style="color:#cf222e">as</span> tmp<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        dom<span style="color:#1f2328">,</span> script <span style="color:#0550ae">=</span> pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span>tmp<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;dom.html&#34;</span><span style="color:#1f2328">,</span> pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span>tmp<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;hand-over&#34;</span>
-</span></span><span style="display:flex;"><span>        script<span style="color:#0550ae">.</span>write_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;#!/bin/sh</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">cp &#34;$QUTE_HTML&#34; &#34;$1.part&#34; &amp;&amp; mv &#34;$1.part&#34; &#34;$1&#34;</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        script<span style="color:#0550ae">.</span>chmod<span style="color:#1f2328">(</span><span style="color:#0550ae">0o755</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        send<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;:spawn --userscript </span><span style="color:#0a3069">{</span>script<span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">{</span>dom<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        wait_for<span style="color:#1f2328">(</span>dom<span style="color:#1f2328">,</span> wait<span style="color:#0550ae">=</span>wait<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> dom<span style="color:#0550ae">.</span>read_text<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        dom<span style="color:#1f2328">,</span> script <span style="color:#0550ae">=</span> pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span>tmp<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;dom.json&#34;</span><span style="color:#1f2328">,</span> pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span>tmp<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;dom.js&#34;</span>
+</span></span><span style="display:flex;"><span>        script<span style="color:#0550ae">.</span>write_text<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;document.documentElement.outerHTML&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            dom<span style="color:#0550ae">.</span>unlink<span style="color:#1f2328">(</span>missing_ok<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            send<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;:agent-eval </span><span style="color:#0a3069">{</span>script<span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">{</span>dom<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            wait_for<span style="color:#1f2328">(</span>dom<span style="color:#1f2328">,</span> wait<span style="color:#0550ae">=</span><span style="color:#6639ba">max</span><span style="color:#1f2328">(</span>deadline <span style="color:#0550ae">-</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">(),</span> HAND_OVER_POLL<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span>page <span style="color:#0550ae">:=</span> json<span style="color:#0550ae">.</span>loads<span style="color:#1f2328">(</span>dom<span style="color:#0550ae">.</span>read_text<span style="color:#1f2328">()))</span> <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">return</span> page
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">&gt;</span> deadline<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">raise</span> TimeoutError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;the page never let a script read it&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            time<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span>HAND_OVER_POLL<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>AGENT_MARK <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;🤖&#34;</span>
-</span></span><span style="display:flex;"><span>RAISE_LINGER <span style="color:#0550ae">=</span> <span style="color:#0550ae">0.5</span>  <span style="color:#57606a"># seconds</span>
-</span></span><span style="display:flex;"><span>AGENT_TAB <span style="color:#0550ae">=</span> <span style="color:#1f2328">{}</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">shown_title</span><span style="color:#1f2328">():</span>
-</span></span><span style="display:flex;"><span>    deadline <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> HAND_OVER_WAIT
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">shown_title</span><span style="color:#1f2328">(</span>wait<span style="color:#0550ae">=</span>HAND_OVER_WAIT<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    deadline <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> wait
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> tempfile<span style="color:#0550ae">.</span>TemporaryDirectory<span style="color:#1f2328">()</span> <span style="color:#cf222e">as</span> tmp<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            shown<span style="color:#1f2328">,</span> script <span style="color:#0550ae">=</span> pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span>tmp<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;title&#34;</span><span style="color:#1f2328">,</span> pathlib<span style="color:#0550ae">.</span>Path<span style="color:#1f2328">(</span>tmp<span style="color:#1f2328">)</span> <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;hand-over&#34;</span>
@@ -958,9 +1297,10 @@ tab and window show it, and no other; before it opened one, the tab it acts on s
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> AGENT_TAB<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> titled<span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> tool<span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>arguments<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>keywords<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    send<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;:tab-select </span><span style="color:#0a3069">{</span>AGENT_MARK<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> linger<span style="color:#0550ae">=</span>RAISE_LINGER<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> shown_title<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span>AGENT_MARK<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;no tab is titled </span><span style="color:#0a3069">{</span>AGENT_MARK<span style="color:#0a3069">}</span><span style="color:#0a3069"> any more: open one again with open_url_in_new_tab&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        shown_title<span style="color:#1f2328">(</span>CHECK_WAIT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> TimeoutError<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;the agent&#39;s tab is gone: open one again with open_url_in_new_tab&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">from</span> <span style="color:#6a737d">None</span>
 </span></span><span style="display:flex;"><span>    result <span style="color:#0550ae">=</span> tool<span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>arguments<span style="color:#1f2328">,</span> <span style="color:#0550ae">**</span>keywords<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    title_acting<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> result
@@ -1018,10 +1358,12 @@ it cannot click.</li>
 </li>
 <li><strong>scope:</strong> the mark stays in the page as an attribute.</li>
 <li><strong>how:</strong> when the script fails, the page marks itself all the same, adding why, and the agent is told that why.</li>
-<li><strong>how:</strong> before a click or a fill, the element is scrolled into view and framed for a second, so I follow.
+<li><strong>how:</strong> before a click, a fill, a select or an upload, the element is scrolled into view, then stands out as
+<a class="internal-link" href="#i-follow-what-the-agent-does-on-the-page">I follow what the agent does</a> asks.
 <ul>
+<li><strong>how:</strong> its frame follows it as the page scrolls.</li>
 <li><strong>how:</strong> the frame is the tool&rsquo;s own, laid above the page over the element&rsquo;s box, so no style of the page hides
-it, and it goes once the action is done.</li>
+it.</li>
 </ul>
 </li>
 <li><strong>how:</strong> a fill sets the value the way a framework expects, then tells the field it heard an input.</li>
@@ -1112,7 +1454,7 @@ so the question holds only what goes in, « « … »? », or « ? » for a clic
 </span></span><span style="display:flex;"><span>    deadline <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> wait
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#0550ae">not</span> <span style="color:#1f2328">(</span>done <span style="color:#0550ae">:=</span> re<span style="color:#0550ae">.</span>search<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#39;data-qutebrowser-mcp=&#34;</span><span style="color:#0a3069">{</span>mark<span style="color:#0a3069">}</span><span style="color:#0a3069">([^&#34;]*)&#34;&#39;</span><span style="color:#1f2328">,</span> page <span style="color:#0550ae">:=</span> page_html<span style="color:#1f2328">(</span><span style="color:#6639ba">max</span><span style="color:#1f2328">(</span>wait<span style="color:#1f2328">,</span> HAND_OVER_WAIT<span style="color:#1f2328">)))):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">&gt;</span> deadline<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span> TimeoutError<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;the page never showed the action done&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span> TimeoutError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;the page never showed the action done, showing </span><span style="color:#0a3069">{</span>page<span style="color:#1f2328">[:</span><span style="color:#0550ae">300</span><span style="color:#1f2328">]</span><span style="color:#0a3069">!r}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> done<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> RuntimeError<span style="color:#1f2328">(</span>html<span style="color:#0550ae">.</span>unescape<span style="color:#1f2328">(</span>done<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> page
@@ -1120,7 +1462,7 @@ so the question holds only what goes in, « « … »? », or « ? » for a clic
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">asking</span><span style="color:#1f2328">(</span>calls<span style="color:#1f2328">,</span> ask<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> ask<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> act<span style="color:#1f2328">(</span>calls<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> act<span style="color:#1f2328">(</span>calls<span style="color:#1f2328">,</span> HAND_OVER_WAIT<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    asker <span style="color:#0550ae">=</span> uuid<span style="color:#0550ae">.</span>uuid4<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>hex
 </span></span><span style="display:flex;"><span>    send<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;:mode-enter insert&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
@@ -1141,7 +1483,7 @@ so the question holds only what goes in, « « … »? », or « ? » for a clic
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@qutebrowserserver.tool</span><span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@acting</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">click</span><span style="color:#1f2328">(</span>selector<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">-&gt;</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Click the element SELECTOR picks, once it stood out for a second.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Click the element SELECTOR picks, once it stood out long enough for me to look at it.&#34;&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> clicking<span style="color:#1f2328">(</span>selector<span style="color:#1f2328">,</span> ask<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
@@ -1160,7 +1502,7 @@ so the question holds only what goes in, « « … »? », or « ? » for a clic
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@qutebrowserserver.tool</span><span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@acting</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">fill</span><span style="color:#1f2328">(</span>selector<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">,</span> text<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">-&gt;</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Put TEXT in the field SELECTOR picks, in place of what it held, once it stood out for a second.&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Put TEXT in the field SELECTOR picks, in place of what it held, once it stood out.&#34;&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> filling<span style="color:#1f2328">(</span>selector<span style="color:#1f2328">,</span> text<span style="color:#1f2328">,</span> ask<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
@@ -1243,7 +1585,7 @@ the focused element, wherever its box.</li>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@qutebrowserserver.tool</span><span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@acting</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">upload</span><span style="color:#1f2328">(</span>selector<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">,</span> path<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">-&gt;</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Choose the file at PATH through the chooser a click on SELECTOR opens, once it stood out for a second.
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Choose the file at PATH through the chooser a click on SELECTOR opens, once it stood out.
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    SELECTOR picks the file input, or the button opening it when the input is hidden.&#34;&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> uploading<span style="color:#1f2328">(</span>selector<span style="color:#1f2328">,</span> path<span style="color:#1f2328">,</span> ask<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
@@ -1257,8 +1599,9 @@ the focused element, wherever its box.</li>
 </span></span></code></pre></div><dl>
 <dt>how</dt>
 <dd>to open a link, it marks the page it leaves, has qutebrowser open the link, in the tab I see or in a new
-one made current, and waits for a page without that mark to have loaded.
+one made current, and waits for a page without that mark to have loaded its document.
 <ul>
+<li><strong>why:</strong> not its every image: the documentation&rsquo;s never comes, as some of AWS&rsquo;s resources never end.</li>
 <li><strong>how:</strong> it checks again and again, each check given a second, since a page moving on drops the check sent to
 it, which then would use up the whole wait.
 <ul>
@@ -1283,14 +1626,17 @@ words to search.</li>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>CHECK_WAIT <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span>  <span style="color:#57606a"># seconds a check may take, a check the page drops as it moves on being tried again</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">opening</span><span style="color:#1f2328">(</span>url<span style="color:#1f2328">,</span> command<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">opening</span><span style="color:#1f2328">(</span>url<span style="color:#1f2328">,</span> command<span style="color:#1f2328">,</span> claiming<span style="color:#0550ae">=</span><span style="color:#cf222e">False</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    left <span style="color:#0550ae">=</span> uuid<span style="color:#0550ae">.</span>uuid4<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>hex
 </span></span><span style="display:flex;"><span>    act<span style="color:#1f2328">(</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;markLeft&#34;</span><span style="color:#1f2328">,</span> left<span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>    send<span style="color:#1f2328">(</span>command<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    send<span style="color:#1f2328">(</span>command<span style="color:#1f2328">,</span> linger<span style="color:#0550ae">=</span>OPEN_LINGER<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> claiming<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        send<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;:agent-claim&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;opened&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
 </span></span><span style="display:flex;"><span>    deadline <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> HAND_OVER_WAIT
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            act<span style="color:#1f2328">(</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;loaded&#34;</span><span style="color:#1f2328">,</span> left<span style="color:#1f2328">),</span> CHECK_WAIT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            act<span style="color:#1f2328">((</span>call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;titleActing&#34;</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">if</span> claiming <span style="color:#cf222e">else</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">+</span> call<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;loaded&#34;</span><span style="color:#1f2328">,</span> left<span style="color:#1f2328">),</span> CHECK_WAIT<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;opened </span><span style="color:#0a3069">{</span>url<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> <span style="color:#1f2328">(</span>RuntimeError<span style="color:#1f2328">,</span> TimeoutError<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> error<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">&gt;</span> deadline<span style="color:#1f2328">:</span>
@@ -1345,14 +1691,10 @@ words to search.</li>
 </span></span><span style="display:flex;"><span><span style="color:#0550ae">@qutebrowserserver.tool</span><span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">open_url_in_new_tab</span><span style="color:#1f2328">(</span>url<span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">-&gt;</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;Open URL in a new tab, made the agent&#39;s, which the other tools then act on, once it loaded.&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> AGENT_TAB<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        send<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;:tab-select </span><span style="color:#0a3069">{</span>AGENT_MARK<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> linger<span style="color:#0550ae">=</span>RAISE_LINGER<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> shown_title<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span>AGENT_MARK<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>            title_acting<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    opened <span style="color:#0550ae">=</span> opening<span style="color:#1f2328">(</span>url<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;:open --tab </span><span style="color:#0a3069">{</span>url<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    AGENT_TAB<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;opened&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
-</span></span><span style="display:flex;"><span>    title_acting<span style="color:#1f2328">(</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> opened
+</span></span><span style="display:flex;"><span>    title_acting<span style="color:#1f2328">(</span><span style="color:#cf222e">False</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    AGENT_TAB<span style="color:#0550ae">.</span>clear<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> opening<span style="color:#1f2328">(</span>url<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;:open --tab </span><span style="color:#0a3069">{</span>url<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> claiming<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
 </span></span></code></pre></div><dl>
 <dt>how</dt>
 <dd>what the page runs lives in one script, loaded with each call, the server only calling into it.</dd>
@@ -1363,7 +1705,8 @@ words to search.</li>
 </span></span><span style="display:flex;"><span><span style="color:#6639ba">window</span><span style="color:#1f2328">.</span><span style="color:#1f2328">qutebrowserMcp</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">state</span><span style="color:#0550ae">:</span> <span style="color:#6639ba">window</span><span style="color:#1f2328">.</span><span style="color:#1f2328">qutebrowserMcpState</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">colours</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">{</span><span style="color:#1f2328">click</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;#ff00ff&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">fill</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;#00c0ff&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">select</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;#00c000&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">upload</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;#ffd000&#39;</span><span style="color:#1f2328">},</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">highlight</span><span style="color:#0550ae">:</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">,</span> <span style="color:#57606a">// milliseconds an element stands out, when nobody is asked
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">highlight</span><span style="color:#0550ae">:</span> <span style="color:#0550ae">2000</span><span style="color:#1f2328">,</span> <span style="color:#57606a">// milliseconds an element stands out before the agent acts, when nobody is asked
+</span></span></span><span style="display:flex;"><span>  <span style="color:#1f2328">left</span><span style="color:#0550ae">:</span> <span style="color:#0550ae">10000</span><span style="color:#1f2328">,</span> <span style="color:#57606a">// milliseconds its frame stays once the agent acted, unless the next action comes first
 </span></span></span><span style="display:flex;"><span>  <span style="color:#1f2328">poll</span><span style="color:#0550ae">:</span> <span style="color:#0550ae">100</span><span style="color:#1f2328">,</span> <span style="color:#57606a">// milliseconds between two looks
 </span></span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">sleep</span><span style="color:#0550ae">:</span> <span style="color:#1f2328">milliseconds</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#cf222e">new</span> <span style="color:#6639ba">Promise</span><span style="color:#1f2328">(</span><span style="color:#1f2328">resolve</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">setTimeout</span><span style="color:#1f2328">(</span><span style="color:#1f2328">resolve</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">milliseconds</span><span style="color:#1f2328">)),</span>
@@ -1632,9 +1975,10 @@ words to search.</li>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  <span style="color:#cf222e">async</span> <span style="color:#1f2328">highlighted</span><span style="color:#1f2328">(</span><span style="color:#1f2328">selector</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">doing</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">value</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">ask</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">leave</span><span style="color:#1f2328">();</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">element</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">element</span><span style="color:#1f2328">(</span><span style="color:#1f2328">selector</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">element</span><span style="color:#1f2328">.</span><span style="color:#1f2328">scrollIntoView</span><span style="color:#1f2328">({</span><span style="color:#1f2328">block</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;center&#39;</span><span style="color:#1f2328">});</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">{</span><span style="color:#1f2328">frame</span><span style="color:#1f2328">}</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">frame</span><span style="color:#1f2328">(</span><span style="color:#1f2328">element</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">`solid </span><span style="color:#0a3069">${</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">colours</span><span style="color:#1f2328">[</span><span style="color:#1f2328">doing</span><span style="color:#1f2328">]</span><span style="color:#0a3069">}</span><span style="color:#0a3069">`</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">2147483647</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">{</span><span style="color:#1f2328">frame</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">place</span><span style="color:#1f2328">}</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">frame</span><span style="color:#1f2328">(</span><span style="color:#1f2328">element</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">`solid </span><span style="color:#0a3069">${</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">colours</span><span style="color:#1f2328">[</span><span style="color:#1f2328">doing</span><span style="color:#1f2328">]</span><span style="color:#0a3069">}</span><span style="color:#0a3069">`</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">2147483647</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#1f2328">ask</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">await</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">sleep</span><span style="color:#1f2328">(</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">highlight</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#cf222e">else</span> <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#1f2328">element</span><span style="color:#1f2328">.</span><span style="color:#1f2328">closest</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;[data-qutebrowser-mcp-trusted]&#39;</span><span style="color:#1f2328">))</span> <span style="color:#1f2328">{</span>
@@ -1642,16 +1986,35 @@ words to search.</li>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">answer</span> <span style="color:#0550ae">===</span> <span style="color:#cf222e">null</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">throw</span> <span style="color:#cf222e">new</span> <span style="color:#6639ba">Error</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;the question was withdrawn, as another took its place&#39;</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">!</span><span style="color:#1f2328">answer</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">throw</span> <span style="color:#cf222e">new</span> <span style="color:#6639ba">Error</span><span style="color:#1f2328">(</span><span style="color:#0a3069">`you refused: </span><span style="color:#0a3069">${</span><span style="color:#1f2328">doing</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">${</span><span style="color:#1f2328">value</span><span style="color:#0a3069">}</span><span style="color:#0a3069">, at </span><span style="color:#0a3069">${</span><span style="color:#1f2328">selector</span><span style="color:#0a3069">}</span><span style="color:#0a3069">`</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">}</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">return</span> <span style="color:#1f2328">element</span><span style="color:#1f2328">;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span> <span style="color:#cf222e">finally</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span> <span style="color:#cf222e">catch</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">error</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>      <span style="color:#1f2328">frame</span><span style="color:#1f2328">.</span><span style="color:#1f2328">remove</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">throw</span> <span style="color:#1f2328">error</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">leaving</span><span style="color:#1f2328">(</span><span style="color:#1f2328">frame</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">place</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">element</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">leaving</span><span style="color:#1f2328">(</span><span style="color:#1f2328">frame</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">place</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">timer</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">setTimeout</span><span style="color:#1f2328">(()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">leave</span><span style="color:#1f2328">(),</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">left</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">window</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;scroll&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">place</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">window</span><span style="color:#1f2328">.</span><span style="color:#1f2328">addEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;resize&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">place</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">.</span><span style="color:#1f2328">leave</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">clearTimeout</span><span style="color:#1f2328">(</span><span style="color:#1f2328">timer</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#6639ba">window</span><span style="color:#1f2328">.</span><span style="color:#1f2328">removeEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;scroll&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">place</span><span style="color:#1f2328">,</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#6639ba">window</span><span style="color:#1f2328">.</span><span style="color:#1f2328">removeEventListener</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;resize&#39;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">place</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#1f2328">frame</span><span style="color:#1f2328">.</span><span style="color:#1f2328">remove</span><span style="color:#1f2328">();</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">delete</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">.</span><span style="color:#1f2328">leave</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">};</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">},</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">leave</span><span style="color:#1f2328">()</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">.</span><span style="color:#1f2328">leave</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">.</span><span style="color:#1f2328">leave</span><span style="color:#1f2328">();</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">titleActing</span><span style="color:#1f2328">(</span><span style="color:#1f2328">acting</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">mark</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;🤖 &#39;</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">mark</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;🤖&#39;</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">keep</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">()</span> <span style="color:#1f2328">=&gt;</span> <span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">.</span><span style="color:#1f2328">acting</span> <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#0550ae">!</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span><span style="color:#1f2328">.</span><span style="color:#1f2328">startsWith</span><span style="color:#1f2328">(</span><span style="color:#1f2328">mark</span><span style="color:#1f2328">))</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">mark</span> <span style="color:#0550ae">+</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">.</span><span style="color:#1f2328">acting</span> <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#0550ae">!</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span><span style="color:#1f2328">.</span><span style="color:#1f2328">startsWith</span><span style="color:#1f2328">(</span><span style="color:#1f2328">mark</span><span style="color:#1f2328">))</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">`</span><span style="color:#0a3069">${</span><span style="color:#1f2328">mark</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#0a3069">${</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span><span style="color:#0a3069">}</span><span style="color:#0a3069">`</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">};</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">.</span><span style="color:#1f2328">acting</span> <span style="color:#0550ae">=</span> <span style="color:#1f2328">acting</span><span style="color:#1f2328">;</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">acting</span> <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#0550ae">!</span><span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">state</span><span style="color:#1f2328">.</span><span style="color:#1f2328">titleWatch</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
@@ -1660,10 +2023,11 @@ words to search.</li>
 </span></span><span style="display:flex;"><span>                                    <span style="color:#1f2328">{</span><span style="color:#1f2328">subtree</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">childList</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">characterData</span><span style="color:#0550ae">:</span> <span style="color:#cf222e">true</span><span style="color:#1f2328">});</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#1f2328">acting</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">keep</span><span style="color:#1f2328">();</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span> <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span><span style="color:#1f2328">.</span><span style="color:#1f2328">startsWith</span><span style="color:#1f2328">(</span><span style="color:#1f2328">mark</span><span style="color:#1f2328">))</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span> <span style="color:#0550ae">=</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span><span style="color:#1f2328">.</span><span style="color:#1f2328">slice</span><span style="color:#1f2328">(</span><span style="color:#1f2328">mark</span><span style="color:#1f2328">.</span><span style="color:#1f2328">length</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span> <span style="color:#cf222e">while</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span><span style="color:#1f2328">.</span><span style="color:#1f2328">startsWith</span><span style="color:#1f2328">(</span><span style="color:#1f2328">mark</span><span style="color:#1f2328">))</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span> <span style="color:#0550ae">=</span> <span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">title</span><span style="color:#1f2328">.</span><span style="color:#1f2328">slice</span><span style="color:#1f2328">(</span><span style="color:#1f2328">mark</span><span style="color:#1f2328">.</span><span style="color:#1f2328">length</span><span style="color:#1f2328">).</span><span style="color:#1f2328">trimStart</span><span style="color:#1f2328">();</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  <span style="color:#cf222e">async</span> <span style="color:#1f2328">show</span><span style="color:#1f2328">(</span><span style="color:#1f2328">selector</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">milliseconds</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">leave</span><span style="color:#1f2328">();</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">element</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">element</span><span style="color:#1f2328">(</span><span style="color:#1f2328">selector</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#1f2328">element</span><span style="color:#1f2328">.</span><span style="color:#1f2328">scrollIntoView</span><span style="color:#1f2328">({</span><span style="color:#1f2328">block</span><span style="color:#0550ae">:</span> <span style="color:#0a3069">&#39;center&#39;</span><span style="color:#1f2328">});</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> <span style="color:#1f2328">{</span><span style="color:#1f2328">frame</span><span style="color:#1f2328">}</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">this</span><span style="color:#1f2328">.</span><span style="color:#1f2328">frame</span><span style="color:#1f2328">(</span><span style="color:#1f2328">element</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#39;solid #0000ff&#39;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">2147483647</span><span style="color:#1f2328">);</span>
@@ -1766,7 +2130,7 @@ words to search.</li>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">loaded</span><span style="color:#1f2328">(</span><span style="color:#1f2328">left</span><span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">documentElement</span><span style="color:#1f2328">.</span><span style="color:#1f2328">dataset</span><span style="color:#1f2328">.</span><span style="color:#1f2328">qutebrowserMcpLeft</span> <span style="color:#0550ae">==</span> <span style="color:#1f2328">left</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">throw</span> <span style="color:#cf222e">new</span> <span style="color:#6639ba">Error</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;the page left is still shown&#39;</span><span style="color:#1f2328">);</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">readyState</span> <span style="color:#0550ae">!=</span> <span style="color:#0a3069">&#39;complete&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">throw</span> <span style="color:#cf222e">new</span> <span style="color:#6639ba">Error</span><span style="color:#1f2328">(</span><span style="color:#0a3069">`the page is still </span><span style="color:#0a3069">${</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">readyState</span><span style="color:#0a3069">}</span><span style="color:#0a3069">`</span><span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">document</span><span style="color:#1f2328">.</span><span style="color:#1f2328">readyState</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#39;loading&#39;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">throw</span> <span style="color:#cf222e">new</span> <span style="color:#6639ba">Error</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#39;the page is still loading&#39;</span><span style="color:#1f2328">);</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">},</span>
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">};</span>
 </span></span></code></pre></div><h2 id="permalink"><a class="internal-link" href="/braindump/cec2365e-3f02-4a7d-ab87-d15819020300?title=remote_control_qutebrowser">Permalink</a></h2>
