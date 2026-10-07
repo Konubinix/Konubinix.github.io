@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html><title>debug health of my ipfs swarm</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Debug Health of My Ipfs Swarm</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <dl>
+<dt>what</dt>
+<dd>the health of my <a class="internal-link" href="/braindump/posts/ipfs/">ipfs</a> swarm, debugged</dd>
+<dt>tl;dr</dt>
+<dd>on Oct 07 morning, gooseberry&rsquo;s ipfs read a stale sda1 mount, its SMART-clean USB disk having
+disconnected at 05:56 and come back as sdb; 95 aborts on roddenberry&rsquo;s USB disk hit a write, and it has
+301 reallocated and 704 pending sectors.</dd>
+</dl>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a class="internal-link" href="#4922b875-ccd9-42b2-90fc-c2bf54731393">symptom</a></li>
+<li><a class="internal-link" href="#68982e43-2d6e-4377-a540-3527dc777306">swarm peers</a></li>
+<li><a class="internal-link" href="#7e2aff84-9898-4f5b-b2ef-584d04b3d3c9">ipfs status</a></li>
+<li><a class="internal-link" href="#d82b7e4c-27f0-45d4-9403-30ad1393b161">the failing block, allocation by allocation</a></li>
+<li><a class="internal-link" href="#6cdaa637-d23a-4e10-bf5e-6d6e805d459f">reading a SMART report</a></li>
+<li><a class="internal-link" href="#a491cdfe-7ae6-410d-bb79-2dfec7bb6ba4">gooseberry</a></li>
+<li><a class="internal-link" href="#9f716059-aa12-455e-8b6c-19aa3562e19f">roddenberry</a></li>
+<li><a class="internal-link" href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<h2 id="4922b875-ccd9-42b2-90fc-c2bf54731393">symptom</h2>
+<div class="konix-block-name-marker" data-name="symptom"></div>
+<p><a id="code-snippet--symptom"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#cf222e">for</span> i in <span style="color:#cf222e">$(</span>seq 10<span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>    curl -s http://home/stack-index/ <span style="color:#1f2328">|</span> head -n <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span><span style="display:flex;"><span>failed to resolve https://ipfs.konubinix.eu/p/bafybeihjerjrbbpsh2dwasvnv2e5i7tf5ojvzry7a3vunxl45dimn2kjf4/: open /data/ipfs/blocks/SL/CIQOSJCTCCC7EPUHMBFK3LUJ2R7GL24TLTDR6BXLI3OXZ2GQY3UUSLY.data: input/output error: retrieval: no providers found for the CID (phase: path resolution)
+</span></span><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span><span style="display:flex;"><span>failed to resolve https://ipfs.konubinix.eu/p/bafybeihjerjrbbpsh2dwasvnv2e5i7tf5ojvzry7a3vunxl45dimn2kjf4/: open /data/ipfs/blocks/SL/CIQOSJCTCCC7EPUHMBFK3LUJ2R7GL24TLTDR6BXLI3OXZ2GQY3UUSLY.data: input/output error: retrieval: no providers found for the CID (phase: path resolution)
+</span></span><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span></code></pre></div><h2 id="68982e43-2d6e-4377-a540-3527dc777306">swarm peers</h2>
+<div class="konix-block-name-marker" data-name="swarm-peers"></div>
+<p><a id="code-snippet--swarm-peers"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ipfs swarm peers
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/ip4/192.168.2.14/tcp/4001/p2p/12D3KooWPus3L2qxYHBHnbjomrbU7VouFZiRCaLjwL86ExNz8yCJ
+</span></span><span style="display:flex;"><span>/ip4/192.168.2.20/tcp/4001/p2p/12D3KooWCRRAVNKmzLNpyXEHcasxT94jyaEjM3Pa4ZRphrbxtbxc
+</span></span><span style="display:flex;"><span>/ip4/192.168.2.21/tcp/4001/p2p/12D3KooWPdDokC7pjrKghj1Bsz3B9dfWbCgzjr4n61SHLW5FPKiP
+</span></span><span style="display:flex;"><span>/ip4/192.168.2.25/tcp/4001/p2p/12D3KooWEMZbfQu8BContbyftXAo5BCF5pJvfb1ASdF74Ns5rvAu
+</span></span></code></pre></div><h2 id="7e2aff84-9898-4f5b-b2ef-584d04b3d3c9">ipfs status</h2>
+<div class="konix-block-name-marker" data-name="ipfs-status"></div>
+<p><a id="code-snippet--ipfs-status"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nd status ipfs <span style="color:#1f2328">|</span> sed -n <span style="color:#0a3069">&#39;/^Allocations/,$p&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Allocations
+</span></span><span style="display:flex;"><span>ID        Node ID   Task Group  Version  Desired  Status   Created    Modified
+</span></span><span style="display:flex;"><span>402b25af  73403049  ipfs        251      run      running  1d19h ago  1d19h ago
+</span></span><span style="display:flex;"><span>8884e15b  601a455f  ipfs        251      run      running  3d18h ago  3d18h ago
+</span></span><span style="display:flex;"><span>a2c73623  b38a4e50  ipfs        251      run      running  3d18h ago  3d18h ago
+</span></span><span style="display:flex;"><span>bc1685a3  49e5a14a  ipfs        251      stop     lost     3d18h ago  1d19h ago
+</span></span><span style="display:flex;"><span>ffe12ed3  d12a8a26  ipfs        251      run      running  3d18h ago  3d18h ago
+</span></span></code></pre></div><h2 id="d82b7e4c-27f0-45d4-9403-30ad1393b161">the failing block, allocation by allocation</h2>
+<div class="konix-block-name-marker" data-name="block-per-alloc"></div>
+<p><a id="code-snippet--block-per-alloc"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#cf222e">for</span> alloc in 402b25af 8884e15b a2c73623 ffe12ed3
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">alloc</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#cf222e">$(</span>timeout <span style="color:#0550ae">30</span> nd alloc <span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">alloc</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>        ipfs block stat --offline bafybeihjerjrbbpsh2dwasvnv2e5i7tf5ojvzry7a3vunxl45dimn2kjf4 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>        <span style="color:#1f2328">|</span> head -n 1<span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>402b25af: Key: bafybeihjerjrbbpsh2dwasvnv2e5i7tf5ojvzry7a3vunxl45dimn2kjf4
+</span></span><span style="display:flex;"><span>8884e15b: Key: bafybeihjerjrbbpsh2dwasvnv2e5i7tf5ojvzry7a3vunxl45dimn2kjf4
+</span></span><span style="display:flex;"><span>a2c73623: Key: bafybeihjerjrbbpsh2dwasvnv2e5i7tf5ojvzry7a3vunxl45dimn2kjf4
+</span></span><span style="display:flex;"><span>ffe12ed3: Error: error loading plugins: open /data/ipfs/config: input/output error
+</span></span></code></pre></div><h2 id="6cdaa637-d23a-4e10-bf5e-6d6e805d459f">reading a SMART report</h2>
+<dl>
+<dt>what</dt>
+<dd>a USB disk, in this note, is a drive inside its USB enclosure, as its host sees it.</dd>
+<dt>what</dt>
+<dd><code>smartctl -H</code> prints the drive&rsquo;s own verdict, failing meaning failed or predicting its own
+failure within 24 hours<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</dd>
+<dt>what</dt>
+<dd>an attribute fails once its normalized VALUE falls to its THRESH, and a failed Pre-fail attribute
+means failure is imminent<sup id="fnref:2"><a class="internal-link" href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</dd>
+<dt>what</dt>
+<dd>attribute 5 counts the bad sectors found and reallocated<sup id="fnref:3"><a class="internal-link" href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>.</dd>
+<dt>what</dt>
+<dd>attribute 197 counts pending sectors, waiting to be reallocated after unrecoverable read
+errors<sup id="fnref:4"><a class="internal-link" href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>.</dd>
+<dt>what</dt>
+<dd>attribute 199 counts errors in data transfer over the interface cable<sup id="fnref:5"><a class="internal-link" href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>.</dd>
+<dt>who</dt>
+<dd>Backblaze recorded each day the SMART stats of the 67,814 drives in its data center, in
+2016<sup id="fnref:6"><a class="internal-link" href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>.
+<ul>
+<li><strong>what:</strong> Backblaze holds as a reason to investigate a raw value above zero in attribute 5, 187, 188, 197 or
+198<sup id="fnref:7"><a class="internal-link" href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>.</li>
+<li><strong>what:</strong> in that fleet, one of those five was above zero on 76.7% of failed drives and 4.2% of working
+ones<sup id="fnref:8"><a class="internal-link" href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup>.</li>
+</ul>
+</dd>
+</dl>
+<h2 id="a491cdfe-7ae6-410d-bb79-2dfec7bb6ba4">gooseberry</h2>
+<h3 id="ad01f028-83ec-4724-8835-1bd7a37966af">the host of the failing allocation</h3>
+<div class="konix-block-name-marker" data-name="failing-alloc"></div>
+<p><a id="code-snippet--failing-alloc"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nd alloc status ffe12ed3 <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;^Node Name|^\*http&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Node Name           = gooseberry
+</span></span><span style="display:flex;"><span>*http  yes      192.168.2.21:27384
+</span></span></code></pre></div><h3 id="6992fb6f-c19e-47d1-a2df-acec0daba38d">the journal</h3>
+<div class="konix-block-name-marker" data-name="gooseberry-kernel-errors"></div>
+<p><a id="code-snippet--gooseberry-kernel-errors"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry journalctl --dmesg --priority<span style="color:#0550ae">=</span>err --no-pager <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Cannot enable|I/O error, dev sda|Remounting filesystem read-only&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> uniq
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 07 05:56:08 gooseberry kernel: usb 4-1-port4: Cannot enable. Maybe the USB cable is bad?
+</span></span><span style="display:flex;"><span>Oct 07 05:56:08 gooseberry kernel: I/O error, dev sda, sector 1182905456 op 0x1:(WRITE) flags 0x800 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>Oct 07 05:56:08 gooseberry kernel: EXT4-fs (sda1): Remounting filesystem read-only
+</span></span></code></pre></div><h3 id="b4e43da9-3649-4a6d-b778-ea555eed8a2b">the USB disk under the ipfs volume</h3>
+<div class="konix-block-name-marker" data-name="gooseberry-ipfs-disk"></div>
+<p><a id="code-snippet--gooseberry-ipfs-disk"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#953800">volume_path</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>nd node status -verbose d12a8a26 <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;$1 == &#34;ipfs&#34; {print $NF}&#39;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>ssh gooseberry df --output<span style="color:#0550ae">=</span>source,target <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">volume_path</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Filesystem     Mounted on
+</span></span><span style="display:flex;"><span>/dev/sdb1      /media/sam/bobux
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="gooseberry-disks-attached"></div>
+<p><a id="code-snippet--gooseberry-disks-attached"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry journalctl --dmesg --no-pager <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Attached SCSI disk&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 03 09:24:20 gooseberry kernel: sd 0:0:0:0: [sda] Attached SCSI disk
+</span></span><span style="display:flex;"><span>Oct 07 05:56:10 gooseberry kernel: sd 1:0:0:0: [sdb] Attached SCSI disk
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="ipfs-alloc-mount"></div>
+<p><a id="code-snippet--ipfs-alloc-mount"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nd alloc <span style="color:#6639ba">exec</span> ffe12ed3 cat /proc/self/mountinfo &lt; /dev/null <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;$5 == &#34;/data/ipfs&#34; {print $3, $5, $(NF-1)}&#39;</span>
+</span></span><span style="display:flex;"><span>ssh gooseberry lsblk --noheadings --output NAME,MAJ:MIN,SERIAL,LABEL &lt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>8:1 /data/ipfs /dev/sda1
+</span></span><span style="display:flex;"><span>sdb           8:16  X4KGT016T
+</span></span><span style="display:flex;"><span>└─sdb1        8:17             bobux
+</span></span><span style="display:flex;"><span>mmcblk0     179:0   0xab2757a1
+</span></span><span style="display:flex;"><span>├─mmcblk0p1 179:1              bootfs
+</span></span><span style="display:flex;"><span>└─mmcblk0p2 179:2              rootfs
+</span></span></code></pre></div><h3 id="904bc761-1b96-4662-952c-014ebd94556c">what happened to its USB disk</h3>
+<div class="konix-block-name-marker" data-name="gooseberry-disk-event"></div>
+<p><a id="code-snippet--gooseberry-disk-event"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry <span style="color:#0a3069">&#34;journalctl --dmesg --no-pager \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    --grep=&#39;hub_ext_port_status|USB disconnect|Direct-Access|EXT4-fs \(sd[ab]1\): (mounted|recovery)&#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    | uniq&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 03 09:24:19 gooseberry kernel: scsi 0:0:0:0: Direct-Access     TOSHIBA  EXTERNAL_USB     0    PQ: 0 ANSI: 6
+</span></span><span style="display:flex;"><span>Oct 03 09:24:23 gooseberry kernel: EXT4-fs (sda1): mounted filesystem d137b942-35c5-491b-a0a5-f830185e937a r/w with ordered data mode. Quota mode: none.
+</span></span><span style="display:flex;"><span>Oct 03 09:24:58 gooseberry kernel: EXT4-fs (sda1): mounted filesystem d137b942-35c5-491b-a0a5-f830185e937a r/w with ordered data mode. Quota mode: none.
+</span></span><span style="display:flex;"><span>Oct 07 05:56:08 gooseberry kernel: hub 4-1:1.0: hub_ext_port_status failed (err = -71)
+</span></span><span style="display:flex;"><span>Oct 07 05:56:08 gooseberry kernel: usb 4-1.4: USB disconnect, device number 3
+</span></span><span style="display:flex;"><span>Oct 07 05:56:10 gooseberry kernel: scsi 1:0:0:0: Direct-Access     TOSHIBA  EXTERNAL_USB     0    PQ: 0 ANSI: 6
+</span></span><span style="display:flex;"><span>Oct 07 05:56:17 gooseberry kernel: EXT4-fs (sdb1): recovery complete
+</span></span><span style="display:flex;"><span>Oct 07 05:56:17 gooseberry kernel: EXT4-fs (sdb1): mounted filesystem d137b942-35c5-491b-a0a5-f830185e937a r/w with ordered data mode. Quota mode: none.
+</span></span></code></pre></div><h3 id="4c773978-603c-4e2a-b09f-834a7aac25c3">the history of USB disk errors</h3>
+<div class="konix-block-name-marker" data-name="gooseberry-disk-error-history"></div>
+<p><a id="code-snippet--gooseberry-disk-error-history"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry <span style="color:#0a3069">&#34;journalctl --list-boots --no-pager \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; journalctl --dmesg --boot=all --no-pager --grep=&#39;I/O error, dev sd|Cannot enable&#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    | uniq --skip-fields=5 --count&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>IDX BOOT ID                          FIRST ENTRY                  LAST ENTRY
+</span></span><span style="display:flex;"><span>  0 05e894ad557a43e9b9d46d830fafc685 Sat 2026-10-03 09:24:19 CEST Wed 2026-10-07 07:31:29 CEST
+</span></span><span style="display:flex;"><span>      4 Oct 07 05:56:08 gooseberry kernel: usb 4-1-port4: Cannot enable. Maybe the USB cable is bad?
+</span></span><span style="display:flex;"><span>      1 Oct 07 05:56:08 gooseberry kernel: I/O error, dev sda, sector 1182905456 op 0x1:(WRITE) flags 0x800 phys_seg 1 prio class 2
+</span></span></code></pre></div><h3 id="35b1377d-8f9f-43dd-8c73-6c648fbaa410">the SMART of its USB disk</h3>
+<div class="konix-block-name-marker" data-name="gooseberry-smart"></div>
+<p><a id="code-snippet--gooseberry-smart"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry sudo -n smartctl -H -A -l error /dev/sdb <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;overall-health|Reallocated|Pending|Uncorrectable|CRC|Errors Logged&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>SMART overall-health self-assessment test result: PASSED
+</span></span><span style="display:flex;"><span>  5 Reallocated_Sector_Ct   0x0033   100   100   050    Pre-fail  Always       -       0
+</span></span><span style="display:flex;"><span>196 Reallocated_Event_Count 0x0032   100   100   000    Old_age   Always       -       0
+</span></span><span style="display:flex;"><span>197 Current_Pending_Sector  0x0032   100   100   000    Old_age   Always       -       0
+</span></span><span style="display:flex;"><span>198 Offline_Uncorrectable   0x0030   100   100   000    Old_age   Offline      -       0
+</span></span><span style="display:flex;"><span>199 UDMA_CRC_Error_Count    0x0032   200   200   000    Old_age   Always       -       0
+</span></span><span style="display:flex;"><span>No Errors Logged
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>gooseberry&rsquo;s drive reports no sector reallocated or pending, and no interface cable transfer error.</dd>
+</dl>
+<h3 id="5701ef53-6825-4ca4-99d3-9db82560d37b">what the USB disconnect points at</h3>
+<div class="konix-block-name-marker" data-name="gooseberry-usb-path"></div>
+<p><a id="code-snippet--gooseberry-usb-path"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry <span style="color:#0a3069">&#34;vcgencmd get_throttled \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; lsusb -t \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; journalctl --dmesg --no-pager \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">       --grep=&#39;usb [34]-1(\.[0-9])?: (USB disconnect|reset|Product|SerialNumber)&#39;&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>throttled=0x0
+</span></span><span style="display:flex;"><span>/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/2p, 480M
+</span></span><span style="display:flex;"><span>/:  Bus 002.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/1p, 5000M
+</span></span><span style="display:flex;"><span>/:  Bus 003.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/2p, 480M
+</span></span><span style="display:flex;"><span>    |__ Port 001: Dev 002, If 0, Class=Hub, Driver=hub/4p, 480M
+</span></span><span style="display:flex;"><span>        |__ Port 002: Dev 003, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+</span></span><span style="display:flex;"><span>/:  Bus 004.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/1p, 5000M
+</span></span><span style="display:flex;"><span>    |__ Port 001: Dev 002, If 0, Class=Hub, Driver=hub/4p, 5000M
+</span></span><span style="display:flex;"><span>        |__ Port 004: Dev 004, If 0, Class=Mass Storage, Driver=usb-storage, 5000M
+</span></span><span style="display:flex;"><span>Oct 03 09:24:19 gooseberry kernel: usb 3-1: Product: USB2.1 Hub
+</span></span><span style="display:flex;"><span>Oct 03 09:24:19 gooseberry kernel: usb 4-1: Product: USB3.1 Hub
+</span></span><span style="display:flex;"><span>Oct 03 09:24:19 gooseberry kernel: usb 4-1.4: Product: EXTERNAL_USB
+</span></span><span style="display:flex;"><span>Oct 03 09:24:19 gooseberry kernel: usb 4-1.4: SerialNumber: 20241020009136F
+</span></span><span style="display:flex;"><span>Oct 03 09:24:19 gooseberry kernel: usb 3-1.2: Product: Eaton 3S
+</span></span><span style="display:flex;"><span>Oct 03 09:24:19 gooseberry kernel: usb 3-1.2: SerialNumber: Blank
+</span></span><span style="display:flex;"><span>Oct 07 05:56:08 gooseberry kernel: usb 4-1.4: USB disconnect, device number 3
+</span></span><span style="display:flex;"><span>Oct 07 05:56:09 gooseberry kernel: usb 4-1: reset SuperSpeed USB device number 2 using xhci-hcd
+</span></span><span style="display:flex;"><span>Oct 07 05:56:09 gooseberry kernel: usb 4-1.4: Product: EXTERNAL_USB
+</span></span><span style="display:flex;"><span>Oct 07 05:56:09 gooseberry kernel: usb 4-1.4: SerialNumber: 20241020009136F
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="gooseberry-old-hubs"></div>
+<p><a id="code-snippet--gooseberry-old-hubs"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry <span style="color:#0a3069">&#34;lsusb -v -s 4:2 2&gt;/dev/null \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    | grep -E &#39;idVendor|idProduct|bmAttributes|Self Powered|Bus Powered|MaxPower|wHubCharacteristic|Power switching&#39; ; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    lsusb -v -s 3:2 2&gt;/dev/null | grep -E &#39;idVendor|idProduct|Self Powered|Bus Powered|MaxPower&#39;; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    lsusb -s 3:3; lsusb -s 4:4&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>  idVendor           0x05e3 Genesys Logic, Inc.
+</span></span><span style="display:flex;"><span>  idProduct          0x0626 Hub
+</span></span><span style="display:flex;"><span>    bmAttributes         0xe0
+</span></span><span style="display:flex;"><span>      Self Powered
+</span></span><span style="display:flex;"><span>    MaxPower                0mA
+</span></span><span style="display:flex;"><span>        bmAttributes           19
+</span></span><span style="display:flex;"><span>  idVendor           0x05e3 Genesys Logic, Inc.
+</span></span><span style="display:flex;"><span>  idProduct          0x0610 Hub
+</span></span><span style="display:flex;"><span>      Self Powered
+</span></span><span style="display:flex;"><span>    MaxPower              100mA
+</span></span><span style="display:flex;"><span>Bus 003 Device 003: ID 0463:ffff MGE UPS Systems UPS
+</span></span><span style="display:flex;"><span>Bus 004 Device 004: ID 0480:0906 Toshiba America Inc EXTERNAL_USB
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>both blocks above ran on Oct 07 before the hub swap that the block below shows, so they no longer
+run.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="gooseberry-new-hub"></div>
+<p><a id="code-snippet--gooseberry-new-hub"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry <span style="color:#0a3069">&#34;uptime --since \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; journalctl --dmesg --no-pager --grep=&#39;usb [34]-1: (Product|Manufacturer)&#39;&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>2026-10-07 08:37:40
+</span></span><span style="display:flex;"><span>Oct 07 08:37:44 gooseberry kernel: usb 3-1: Product: USB3 HUB
+</span></span><span style="display:flex;"><span>Oct 07 08:37:44 gooseberry kernel: usb 3-1: Manufacturer: Raspberry Pi
+</span></span><span style="display:flex;"><span>Oct 07 08:37:44 gooseberry kernel: usb 4-1: Product: USB3 HUB
+</span></span><span style="display:flex;"><span>Oct 07 08:37:44 gooseberry kernel: usb 4-1: Manufacturer: Raspberry Pi
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>in <code>vcgencmd get_throttled</code>, bit 16, 0x10000, set means undervoltage has occurred<sup id="fnref:9"><a class="internal-link" href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup>.
+<ul>
+<li><strong>therefore:</strong> gooseberry reads 0x0: no undervoltage is flagged as having occurred, over a window the
+documentation does not give.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>the hub, one physical box as the user states, showed as two Genesys Logic hubs: its USB3.1 part on
+bus 4 and its USB2.1 part on bus 3, each on port 1.
+<ul>
+<li><strong>what:</strong> the USB disk sat behind the hub&rsquo;s USB3.1 part, the Eaton UPS behind the hub&rsquo;s USB2.1 part.</li>
+<li><strong>therefore:</strong> at 05:56:09 the USB3.1 part was reset, while the UPS behind the USB2.1 part never
+disconnected.</li>
+</ul>
+</dd>
+<dt>therefore</dt>
+<dd>nothing above rules out any of: gooseberry&rsquo;s supply, its USB3 port, driver or controller
+firmware, the hub&rsquo;s USB3.1 part, its cable and power supply, the USB disk cable, the enclosure&rsquo;s USB bridge,
+the drive.</dd>
+<dt>what</dt>
+<dd>the hub ran on its own power supply, and its gooseberry-to-hub cable could not be taken off, as the
+user states.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="gooseberry-ups"></div>
+<p><a id="code-snippet--gooseberry-ups"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-shell -p apcupsd --run <span style="color:#0a3069">&#34;apcaccess -h 192.168.2.21:30745&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;^(MODEL|STARTTIME|STATUS|LOTRANS|HITRANS|NUMXFERS|CUMONBATT)&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>STARTTIME: 2026-10-03 07:28:48 +0000
+</span></span><span style="display:flex;"><span>MODEL    : Eaton 3S
+</span></span><span style="display:flex;"><span>STATUS   : ONLINE
+</span></span><span style="display:flex;"><span>LOTRANS  : 184.0 Volts
+</span></span><span style="display:flex;"><span>HITRANS  : 264.0 Volts
+</span></span><span style="display:flex;"><span>NUMXFERS : 0
+</span></span><span style="display:flex;"><span>CUMONBATT: 0 Seconds
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>NUMXFERS counts transfers to battery since apcupsd started, and the UPS switches to battery below
+LOTRANS or above HITRANS<sup id="fnref:10"><a class="internal-link" href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>.
+<ul>
+<li><strong>therefore:</strong> the Eaton UPS saw no mains event that made it switch to battery since Oct 03, 05:56
+included.</li>
+</ul>
+</dd>
+</dl>
+<h4 id="1a6e6e76-116f-407b-8183-b9c7504458fe">the swap experiments</h4>
+<dl>
+<dt>how</dt>
+<dd>change one part at a time: the hub with its cable first, for an official Raspberry Pi hub, then
+the USB disk cable.
+<ul>
+<li><strong>why:</strong> the user bought the official Raspberry Pi hubs expecting them to be more reliable than this cheap one.</li>
+<li><strong>how:</strong> assuming a single fault, a reset after a change clears the part changed, and a quiet stretch well
+past the first 4 days points at it.</li>
+<li><strong>how:</strong> when the <a class="internal-link" href="#4922b875-ccd9-42b2-90fc-c2bf54731393">symptom</a> shows, run the block below before any
+reboot, to tie it to a hub reset, and fill the row.
+<ul>
+<li><strong>what:</strong> gooseberry&rsquo;s journal is set to Storage=volatile, as the block just below shows, and so is kept
+only in memory<sup id="fnref:11"><a class="internal-link" href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup>; a reboot wipes the reset that would explain the symptom.</li>
+<li><strong>what:</strong> a hub reset always brings the symptom into the user&rsquo;s day, as the user states.
+<ul>
+<li><strong>therefore:</strong> with no symptom, a reboot loses no reset the table needs.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="gooseberry-journal-storage"></div>
+<p><a id="code-snippet--gooseberry-journal-storage"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry <span style="color:#0a3069">&#34;grep -rH &#39;^Storage&#39; /etc/systemd/journald.conf /etc/systemd/journald.conf.d \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    /usr/lib/systemd/journald.conf.d 2&gt;/dev/null; journalctl --header | grep -m1 &#39;File path&#39;&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/usr/lib/systemd/journald.conf.d/40-rpi-volatile-storage.conf:Storage=volatile
+</span></span><span style="display:flex;"><span>File path: /run/log/journal/1d3b95d611bf4cdda79c66034553e85a/system.journal
+</span></span></code></pre></div><table>
+	<thead>
+			<tr>
+					<th>#</th>
+					<th>part changed</th>
+					<th>changed on</th>
+					<th>reset count</th>
+					<th>reset dates</th>
+					<th>read on</th>
+					<th>what it teaches</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>0</td>
+					<td>none, baseline</td>
+					<td><span class="timestamp-wrapper"><span class="timestamp">[2026-10-03 Sat]</span></span></td>
+					<td>1</td>
+					<td><span class="timestamp-wrapper"><span class="timestamp">[2026-10-07 Wed 05:56]</span></span></td>
+					<td><span class="timestamp-wrapper"><span class="timestamp">[2026-10-07 Wed]</span></span></td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>1</td>
+					<td>official Raspberry Pi hub</td>
+					<td><span class="timestamp-wrapper"><span class="timestamp">[2026-10-07 Wed]</span></span></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+			</tr>
+			<tr>
+					<td>2</td>
+					<td>USB disk cable</td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td></td>
+			</tr>
+	</tbody>
+</table>
+<div class="konix-block-name-marker" data-name="gooseberry-hub-resets"></div>
+<p><a id="code-snippet--gooseberry-hub-resets"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry <span style="color:#0a3069">&#34;journalctl --dmesg --boot=all --no-pager --grep=&#39;usb 4-1: reset&#39;&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 07 05:56:09 gooseberry kernel: usb 4-1: reset SuperSpeed USB device number 2 using xhci-hcd
+</span></span></code></pre></div><h2 id="9f716059-aa12-455e-8b6c-19aa3562e19f">roddenberry</h2>
+<div class="konix-block-name-marker" data-name="roddenberry-in-swarm"></div>
+<p><a id="code-snippet--roddenberry-in-swarm"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nd node status <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;^ID|roddenberry&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>ID        Node Pool  DC       Name         Class   Drain  Eligibility  Status
+</span></span><span style="display:flex;"><span>601a455f  default    dc1      roddenberry  &lt;none&gt;  false  eligible     ready
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>roddenberry is nomad node 601a455f, which runs ipfs allocation 8884e15b in the ipfs status above.</dd>
+</dl>
+<h3 id="38dac968-695d-4577-97a1-ed3565ae05f1">the journal</h3>
+<div class="konix-block-name-marker" data-name="roddenberry-journal"></div>
+<p><a id="code-snippet--roddenberry-journal"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh roddenberry <span style="color:#0a3069">&#34;echo uas aborts: \$(journalctl --dmesg --no-pager | grep -c &#39;uas_eh_abort_handler&#39;) \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; echo uas aborts by opcode of the aborted command: \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; journalctl --dmesg --no-pager | grep -A1 &#39;uas_eh_abort_handler&#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    | grep -o &#39;opcode=0x..&#39; | sort | uniq --count \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; echo usb disk resets per hour: \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; journalctl --dmesg --no-pager --output=short-iso --grep=&#39;uas_eh_device_reset_handler start&#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    | cut -c1-13 | uniq --count&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>uas aborts: 99
+</span></span><span style="display:flex;"><span>uas aborts by opcode of the aborted command:
+</span></span><span style="display:flex;"><span>      1 opcode=0x28
+</span></span><span style="display:flex;"><span>     95 opcode=0x2a
+</span></span><span style="display:flex;"><span>      1 opcode=0x35
+</span></span><span style="display:flex;"><span>      2 opcode=0xa1
+</span></span><span style="display:flex;"><span>usb disk resets per hour:
+</span></span><span style="display:flex;"><span>      4 2026-10-04T11
+</span></span><span style="display:flex;"><span>      2 2026-10-04T21
+</span></span><span style="display:flex;"><span>      7 2026-10-06T03
+</span></span><span style="display:flex;"><span>      1 2026-10-06T12
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>opcode 0x2a is WRITE(10)<sup id="fnref:12"><a class="internal-link" href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup>.</dd>
+<dt>therefore</dt>
+<dd>95 of the 99 uas aborts on roddenberry&rsquo;s USB disk hit a write, and the USB disk was reset 14 times
+since Oct 04.</dd>
+</dl>
+<h3 id="50c08a00-61c2-4cb9-8735-402c480d3705">the SMART of its USB disk</h3>
+<div class="konix-block-name-marker" data-name="roddenberry-smart"></div>
+<p><a id="code-snippet--roddenberry-smart"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh roddenberry sudo -n smartctl -i -H -A -l error /dev/sda <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Device Model|overall-health|Reallocated|Pending|Uncorrectable|CRC|Errors Logged&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Device Model:     TOSHIBA MQ04ABD200
+</span></span><span style="display:flex;"><span>SMART overall-health self-assessment test result: PASSED
+</span></span><span style="display:flex;"><span>  5 Reallocated_Sector_Ct   0x0033   100   100   050    Pre-fail  Always       -       301
+</span></span><span style="display:flex;"><span>196 Reallocated_Event_Count 0x0032   100   100   000    Old_age   Always       -       301
+</span></span><span style="display:flex;"><span>197 Current_Pending_Sector  0x0032   100   100   000    Old_age   Always       -       704
+</span></span><span style="display:flex;"><span>198 Offline_Uncorrectable   0x0030   100   100   000    Old_age   Offline      -       0
+</span></span><span style="display:flex;"><span>199 UDMA_CRC_Error_Count    0x0032   200   253   000    Old_age   Always       -       0
+</span></span><span style="display:flex;"><span>No Errors Logged
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>roddenberry&rsquo;s drive has reallocated 301 bad sectors and holds 704 pending ones, while
+its interface cable carried no transfer error.</dd>
+<dt>therefore</dt>
+<dd>neither the drive&rsquo;s verdict, PASSED, nor any attribute shown flags failure: attribute 5
+still reads 100 against a threshold of 50, while its raw count is 301.</dd>
+<dt>therefore</dt>
+<dd>by Backblaze&rsquo;s rule, roddenberry&rsquo;s drive gives a reason to investigate, in the group that held
+76.7% of Backblaze&rsquo;s failed drives.</dd>
+</dl>
+<h3 id="3805b501-5466-4491-8102-e09ff417b6dc">what to do about its drive</h3>
+<dl>
+<dt>what</dt>
+<dd>in Google&rsquo;s fleet, drives were over 14 times likelier to fail within 60 days after their first
+reallocation, a count of the times a sector was reallocated<sup id="fnref:13"><a class="internal-link" href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup>.
+<ul>
+<li><strong>therefore:</strong> attribute 5 reads 301 on roddenberry, so at least one reallocation happened there.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>there, drives were 16 times likelier to fail within 60 days after their first sector put on
+probation<sup id="fnref:14"><a class="internal-link" href="#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>.
+<ul>
+<li><strong>therefore:</strong> probation resembles attribute 197&rsquo;s pending sectors, an analogy the paper does not draw.</li>
+</ul>
+</dd>
+<dt>therefore</dt>
+<dd>roddenberry&rsquo;s drive sits in the reallocation group, and, if the analogy holds, in the probation
+group too.</dd>
+<dt>how</dt>
+<dd>copy what only roddenberry holds off the drive, then replace the drive, as the user settled.</dd>
+</dl>
+<h3 id="e2f4c1dc-257b-4792-b216-3b3bc7ce8771">moving its cids to barbeuc</h3>
+<dl>
+<dt>what</dt>
+<dd>barbeuc is to replace the drive under roddenberry&rsquo;s ipfs node, holding only the cids the docs
+database allocates to roddenberry, the rest staying behind, as the user states.
+<ul>
+<li><strong>what:</strong> no ipfs node runs on barbeuc yet, as the user states.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>barbeuc is a second USB disk on roddenberry, beside bimbap, the one holding the drive above, as the
+roddenberry-disks block below shows.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="roddenberry-cid-counts"></div>
+<p><a id="code-snippet--roddenberry-cid-counts"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql -h 192.168.2.5 -U postgres docs -At -c <span style="color:#0a3069">&#34;select
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    (select count(*) from file where allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    (select count(*) from photovideo where thumbnail_allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    (select count(*) from photovideo where web_allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;);&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>35528|36512|37717
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="roddenberry-repo-size"></div>
+<p><a id="code-snippet--roddenberry-repo-size"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nd alloc <span style="color:#6639ba">exec</span> 8884e15b sh -c <span style="color:#0a3069">&#39;ipfs repo stat --human&#39;</span> &lt; /dev/null
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NumObjects: 2458743
+</span></span><span style="display:flex;"><span>RepoSize:   574 GB
+</span></span><span style="display:flex;"><span>StorageMax: 2.0 TB
+</span></span><span style="display:flex;"><span>RepoPath:   /data/ipfs
+</span></span><span style="display:flex;"><span>Version:    fs-repo@18
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="roddenberry-disks"></div>
+<p><a id="code-snippet--roddenberry-disks"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh roddenberry <span style="color:#0a3069">&#34;lsblk --noheadings --output NAME,TRAN,MODEL,SIZE,LABEL,MOUNTPOINTS&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>sda         usb    TOSHIBA MQ04ABD200    1.8T
+</span></span><span style="display:flex;"><span>└─sda1                                   1.8T bimbap  /media/sam/bimbap
+</span></span><span style="display:flex;"><span>sdb         usb    WDC WD20JDRW-11C7VS1  1.8T
+</span></span><span style="display:flex;"><span>└─sdb1                                   1.8T barbeuc /media/sam/barbeuc
+</span></span><span style="display:flex;"><span>mmcblk0     mmc                         29.8G
+</span></span><span style="display:flex;"><span>├─mmcblk0p1 mmc                          512M bootfs  /boot/firmware
+</span></span><span style="display:flex;"><span>└─mmcblk0p2 mmc                         29.3G rootfs  /
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>the user settled the three steps below.</dd>
+<dt>how</dt>
+<dd>copy each cid into one MFS directory with <code>ipfs files cp</code>, which copies only the root node, not the
+whole DAG<sup id="fnref:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.
+<ul>
+<li><strong>what:</strong> content in MFS is not deleted by garbage collection<sup id="fnref:16"><a class="internal-link" href="#fn:16" class="footnote-ref" role="doc-noteref">16</a></sup>.</li>
+<li><strong>therefore:</strong> the cids stay safe from garbage collection on the old repo without one pin each.</li>
+</ul>
+</dd>
+<dt>how</dt>
+<dd>export that directory&rsquo;s root with <code>ipfs dag export</code>, which streams the DAG below a root as one
+CAR<sup id="fnref:17"><a class="internal-link" href="#fn:17" class="footnote-ref" role="doc-noteref">17</a></sup>.</dd>
+<dt>how</dt>
+<dd>import the CAR into a new repo on barbeuc with <code>ipfs dag import</code>, which pins the CAR&rsquo;s
+root<sup id="fnref:18"><a class="internal-link" href="#fn:18" class="footnote-ref" role="doc-noteref">18</a></sup>.
+<ul>
+<li><strong>what:</strong> pinning a root fails when the imported blocks do not form a complete DAG<sup id="fnref1:18"><a class="internal-link" href="#fn:18" class="footnote-ref" role="doc-noteref">18</a></sup>.</li>
+<li><strong>therefore:</strong> a successful pin of the root shows every block under it reached barbeuc.</li>
+<li><strong>therefore:</strong> the whole repo weighs 574 GB, so the CAR and its import together fit barbeuc, a 2 TB disk
+lsblk lists as 1.8T.</li>
+</ul>
+</dd>
+<dt>how</dt>
+<dd>then the user switches roddenberry&rsquo;s ipfs onto the barbeuc repo, as the user states.
+<ul>
+<li><strong>how:</strong> the new repo sits at <em>media/sam/barbeuc</em>.ipfs, as the old one at <em>media/sam/bimbap</em>.ipfs, and the
+switch repoints the ~/.ipfs link on roddenberry, as the user states.</li>
+</ul>
+</dd>
+</dl>
+<h2 id="permalink"><a class="internal-link" href="/braindump/d54f7c8d-4f33-43c5-ae6f-65b30d726392?title=debug_health_of_my_ipfs_swarm">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>« If the device reports failing health status, this means either that the device has
+already failed, or that it is predicting its own failure within the next 24 hours. » — primary,
+<a target="_blank" href="https://manpages.debian.org/trixie/smartmontools/smartctl.8.en.html">smartctl(8)</a>, smartmontools 7.4.&#160;<a class="internal-link" href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2">
+<p>« If the Normalized value is less than or equal to the Threshold value, then the
+Attribute is said to have failed. If the Attribute is a pre-failure Attribute, then disk failure is imminent. »
+— primary, <a target="_blank" href="https://manpages.debian.org/trixie/smartmontools/smartctl.8.en.html">smartctl(8)</a>,
+smartmontools 7.4.&#160;<a class="internal-link" href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:3">
+<p>« Count of reallocated sectors. The raw value represents a count of the bad sectors that have been
+found and remapped. » — secondary,
+<a target="_blank" href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology">Wikipedia, S.M.A.R.T.</a>;
+attributes are vendor specific, and the 13 pages of Toshiba&rsquo;s
+<a target="_blank" href="https://toshiba.semicon-storage.com/content/dam/toshiba-ss-v2/master/en/storage/product/internal-specialty/cHDD-MQ04AB_Product-Manual.pdf">MQ04AB manual</a>,
+for roddenberry&rsquo;s MQ04ABD200, read on 2026-10-07, define none; gooseberry&rsquo;s drive model is not known.&#160;<a class="internal-link" href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:4">
+<p>« Count of &ldquo;unstable&rdquo; sectors (waiting to be remapped, because of unrecoverable read errors). »
+— secondary,
+<a target="_blank" href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology">Wikipedia, S.M.A.R.T.</a>,
+same reason.&#160;<a class="internal-link" href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:5">
+<p>« The count of errors in data transfer via the interface cable as determined by ICRC (Interface
+Cyclic Redundancy Check). » — secondary,
+<a target="_blank" href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology">Wikipedia, S.M.A.R.T.</a>,
+same reason.&#160;<a class="internal-link" href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:6">
+<p>« Each day Backblaze records the SMART stats that are reported by the 67,814 hard drives
+we have spinning in our Sacramento data center. » — primary, Andy Klein,
+<a target="_blank" href="https://www.backblaze.com/blog/what-smart-stats-indicate-hard-drive-failures/">What SMART Stats Tell Us About
+Hard Drives</a>, Backblaze, 2016-10-06.&#160;<a class="internal-link" href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:7">
+<p>« For the last few years we’ve used the following five SMART stats as a means of
+helping determine if a drive is going to fail. » « SMART 5 Reallocated Sectors Count », « SMART 187 Reported
+Uncorrectable Errors », « SMART 188 Command Timeout », « SMART 197 Current Pending Sector Count », « SMART 198
+Uncorrectable Sector Count » « When the RAW value for one of these five attributes is greater than zero, we
+have a reason to investigate. » — primary, Andy Klein,
+<a target="_blank" href="https://www.backblaze.com/blog/what-smart-stats-indicate-hard-drive-failures/">What SMART Stats Tell Us About
+Hard Drives</a>, Backblaze, 2016-10-06.&#160;<a class="internal-link" href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:8">
+<p>« Operational drives with one or more of our five SMART stats greater than zero: 4.2%. »
+« Failed drives with one or more of our five SMART stats greater than zero: 76.7%. » — primary, Andy Klein,
+<a target="_blank" href="https://www.backblaze.com/blog/what-smart-stats-indicate-hard-drive-failures/">What SMART Stats Tell Us About
+Hard Drives</a>, Backblaze, 2016-10-06.&#160;<a class="internal-link" href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:9">
+<p>« Returns the throttled state of the system. This is a bit pattern. A bit being set
+indicates the following meanings: » … « 16 | 0x10000 | Undervoltage has occurred » — primary,
+<a target="_blank" href="https://www.raspberrypi.com/documentation/computers/os.html">Raspberry Pi OS documentation</a>, vcgencmd
+get_throttled.&#160;<a class="internal-link" href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:10">
+<p>« NUMXFERS : Number of transfers to battery since apcupsd startup » « LOTRANS : Input line
+voltage below which UPS will switch to battery » « HITRANS : Input line voltage above which UPS will switch to
+battery » — primary, <a target="_blank" href="https://manpages.debian.org/trixie/apcupsd/apcaccess.8.en.html">apcaccess(8)</a>,
+apcupsd 3.14.14.&#160;<a class="internal-link" href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:11">
+<p>« journal log data will be stored only in memory » — primary,
+<a target="_blank" href="https://www.freedesktop.org/software/systemd/man/latest/journald.conf.html">journald.conf(5)</a>, Storage=,
+the volatile value.&#160;<a class="internal-link" href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:12">
+<p>« #define WRITE_10              0x2a » — primary,
+<a target="_blank" href="https://github.com/torvalds/linux/blob/master/include/scsi/scsi_proto.h">Linux include/scsi/scsi_proto.h</a>.&#160;<a class="internal-link" href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:13">
+<p>« When the drive’s logic believes that a sector is damaged (typically as a result of
+recurring soft errors or a hard error) it can remap the faulty sector number to a new physical sector drawn
+from a pool of spares. Reallocation counts reflect the number of times this has happened, and is seen as an
+indication of drive surface wear. » « After their first reallocation, drives are over 14 times more likely to
+fail within 60 days than drives without reallocation counts, making the critical threshold for this parameter
+also one. » — primary, Pinheiro, Weber and Barroso,
+<a target="_blank" href="https://static.googleusercontent.com/media/research.google.com/en//archive/disk_failures.pdf">Failure Trends
+in a Large Disk Drive Population</a>, FAST'07, 2007, section 3.5.2.&#160;<a class="internal-link" href="#fnref:13" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:14">
+<p>« Disk drives put suspect bad sectors &ldquo;on probation&rdquo; until they either fail permanently
+and are reallocated or continue to work without problems. » « The critical threshold for probational counts is
+also one: after the first event, drives are 16 times more likely to fail within 60 days than drives with zero
+probational counts. » — primary, same paper, section 3.5.4.&#160;<a class="internal-link" href="#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:15">
+<p>« This performs a lazy copy: the full DAG will not be fetched, only the root node being copied. »
+— primary, <code>ipfs files cp --help</code>, kubo 0.39.0, run on roddenberry on 2026-10-07.&#160;<a class="internal-link" href="#fnref:15" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:16">
+<p>« All files and folders within MFS are respected and will not be deleted during garbage
+collections. » — primary, <code>ipfs files --help</code>, kubo 0.39.0, run on roddenberry on 2026-10-07.&#160;<a class="internal-link" href="#fnref:16" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:17">
+<p>« &lsquo;ipfs dag export&rsquo; fetches a DAG and streams it out as a well-formed .car file. » — primary,
+<code>ipfs dag export --help</code>, kubo 0.39.0, run on roddenberry on 2026-10-07.&#160;<a class="internal-link" href="#fnref:17" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:18">
+<p>« &lsquo;ipfs dag import&rsquo; imports all blocks present in supplied .car ( Content Address aRchive )
+files, recursively pinning any roots specified in the CAR file headers, unless &ndash;pin-roots is set to false. »
+« If the combination of blocks from the imported CAR files and what is currently present in the blockstore
+does not represent a complete DAG, pinning of that individual root will fail. » — primary, <code>ipfs dag import --help</code>, kubo 0.39.0, run on roddenberry on 2026-10-07.&#160;<a class="internal-link" href="#fnref:18" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:18" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+      </div>
+	  <aside class="date"><time>Last updated: 07 Oct 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 07 Oct 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

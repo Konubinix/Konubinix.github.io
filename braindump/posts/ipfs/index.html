@@ -190,6 +190,7 @@ created 4 files instead of 3 as I expected. By computing the hash of the 3
 expected files, I can remove the extra one and find out that ipfs still
 behaves as intended. I suppose this is a side effect of the ipfs add command.</p>
 <p>Therefore, I suppose I can find the relevant blocks using the following script.</p>
+<div class="konix-block-name-marker" data-name="script"></div>
 <p><a id="code-snippet--script"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#953800">cids</span><span style="color:#0550ae">=(</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">cid</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#cf222e">$(</span>ipfs refs -r <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">cid</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0550ae">)</span>
 </span></span><span style="display:flex;"><span>
@@ -217,6 +218,7 @@ stat /&rdquo;).</p>
 <li><a class="internal-link" href="/braindump/posts/boxo/">boxo</a></li>
 <li><a class="internal-link" href="/braindump/posts/clk_alias/">clk alias</a></li>
 <li><a class="internal-link" href="/braindump/posts/comment_je_reference_mes_fichiers/">comment je référence mes fichiers</a></li>
+<li><a class="internal-link" href="/braindump/posts/debug_health_of_my_ipfs_swarm/">debug health of my ipfs swarm</a></li>
 <li><a class="internal-link" href="/braindump/posts/edit_the_content_of_a_folder_in_ipfs/">edit the content of a folder in ipfs</a></li>
 <li><a class="internal-link" href="/braindump/posts/filecoin/">filecoin</a></li>
 <li><a class="internal-link" href="/braindump/posts/gateway_ipfs/">gateway ipfs</a></li>
@@ -250,6 +252,69 @@ stat /&rdquo;).</p>
 <li><a target="_blank" href="/blog/posts/why_do_the_same_git_commits_not_have_the_same_hash/?title=why_do_the_same_git_commits_not_have_the_same_hash#">why do the same git commits not have the same hash?</a> (blog)</li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/51a48d04-955a-4226-b429-fc72947f33de?title=ipfs">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
       </div>
 	  <aside class="date"><time>Last updated: 04 Jul 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 05 Jun 2020</time></aside>
