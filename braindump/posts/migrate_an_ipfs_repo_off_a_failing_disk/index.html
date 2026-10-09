@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html><title>migrate an ipfs repo off a failing disk</title>
+
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="google-site-verification" content="bLmaFyyXugiCqSup-eIIIx0B4CngtdF_svyMMKQbS5E" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=10, minimum-scale=0.5, user-scalable=yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<script src="https://hypothes.is/embed.js" async></script>
+
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/main.min.4f3090a3bf75683cee14c9b72a492acfc7916ceea6d50266e578d4806d6573ca.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/links.min.4bf1990b213fb76d2a66153dc6ef9a57d49f536c6baf6e7f19a7948470a38141.css"/>
+
+<link rel="stylesheet" class="internal-link" href="/braindump/css/konubinix.min.cf2d0f36945178c647979ee68f1830892e06aa3d481d8913728b5c7462b97f6e.css"/>
+
+<link rel="stylesheet" target="_blank" href="https://ipfs.konubinix.eu/p/QmQFVQS89fv1XUNFcjwCKDePzckuT9kpuAVNYUwNdEfYcv/css/all.css"/>
+<link rel="shortcut icon" target="_blank" href="https://ipfs.konubinix.eu/p/bafkreicqn4vs2dxbyymucymkjuz7xt5rhe65xozti6lwo5hblwlq4vnfhi?a.png" type="image/x-icon" />
+
+<body><header>
+  <div>
+	<a class="internal-link" href="/braindump//"><h5 class="site-title">Konubinix&#39; opinionated web of thoughts</h5></a>
+  </div>
+  <span>
+	<a target="_blank" href="/blog/"><i class="icon fas fa-blog"></i></a>
+	<a class="internal-link" href="/braindump/posts/"><i class="icon fas fa-brain"></i></a>
+    <a target="_blank" href="mailto:konubinixweb@gmail.com"><i class="icon fas fa-envelope-square"></i></a>
+    <a target="_blank" href="https://github.com/konubinix"><i class="icon fab fa-github-square"></i></a>
+    <a target="_blank" href="https://linkedin.com/in/samuel-loury-61259040"><i class="icon fab fa-linkedin"></i></a>
+	<a class="internal-link" href="/braindump/index.xml"><i class="icon fas fa-rss-square"></i></a>
+	<a class="internal-link" href="/braindump/tags/"><i class="icon fa fa-tag"></i></a>
+	<a class="internal-link" href="/braindump/braindump_search"><i class="icon fa fa-search"></i></a>
+  </span>
+</header>
+
+<div class="grid-container">
+  <div class="grid">
+    <div class="page" data-level="1">
+      <div class="content">
+		<p class="lead">
+        <h1>Migrate an Ipfs Repo Off a Failing Disk</h1>
+		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
+        <dl>
+<dt>what</dt>
+<dd>how to move chosen cids of an <a class="internal-link" href="/braindump/posts/ipfs/">ipfs</a> node from a kubo repo on a failing disk
+into a new repo on another disk of the same host, and the tools that do it.</dd>
+<dt>tl;dr</dt>
+<dd>copy each cid&rsquo;s block files straight from flatfs to flatfs, read in their order on the old disk,
+check sizes during the copy and dag stat after, and get what the old disk cannot read from another node.</dd>
+<dt>what</dt>
+<dd><a class="internal-link" href="/braindump/posts/debug_health_of_my_ipfs_swarm/">debug health of my ipfs swarm</a> runs it to move roddenberry
+off bimbap, and holds the measures quoted below.</dd>
+</dl>
+<div class="ox-hugo-toc toc">
+<div class="heading">Table of Contents</div>
+<ul>
+<li><a class="internal-link" href="#6f1df239-3bad-4bf0-8cfd-8fef61fbfe0b">what the method rests on</a></li>
+<li><a class="internal-link" href="#0f128a4c-87aa-4588-b135-8bab8ae60ef4">the steps</a></li>
+<li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
+<li><a class="internal-link" href="#permalink">Permalink</a></li>
+</ul>
+</div>
+<!--endtoc-->
+<h2 id="6f1df239-3bad-4bf0-8cfd-8fef61fbfe0b">what the method rests on</h2>
+<dl>
+<dt>what</dt>
+<dd>kubo keeps each block as its own file in a flatfs directory, named after the block&rsquo;s multihash and
+sharded as the repo&rsquo;s blocks/SHARDING file says.
+<ul>
+<li><strong>therefore:</strong> where the old repo, the new one and the rescuing node shard alike, copying a cid&rsquo;s block files
+from one blocks directory to another puts the cid in that repo, with no ipfs command and no daemon.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>the copied blocks are not pinned in the new repo.
+<ul>
+<li><strong>therefore:</strong> the method holds only on a node that never runs garbage collection, or once the cids are
+pinned or put in MFS there.</li>
+</ul>
+</dd>
+<dt>how</dt>
+<dd>the scripts tangle to <em>var/run/user/1000/ipfshealth</em> and run from the workstation, konix, each
+taking the host and paths as arguments.</dd>
+<dt>how</dt>
+<dd>the old repo&rsquo;s node keeps running on the old disk until the switch: the copy only reads its block
+files.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="check-sharding"></div>
+<p><a id="code-snippet--check-sharding"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Prints how the old and the new repo on &lt;host&gt;, then this workstation&#39;s own repo, shard their block files;</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># the copy needs all three alike.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: check_sharding.sh &lt;host&gt; &lt;old repo&gt; &lt;new repo&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span> cat <span style="color:#0a3069">&#34;</span><span style="color:#953800">$2</span><span style="color:#0a3069">/blocks/SHARDING&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$3</span><span style="color:#0a3069">/blocks/SHARDING&#34;</span>
+</span></span><span style="display:flex;"><span>cat <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">IPFS_PATH</span><span style="color:#cf222e">:-</span><span style="color:#0a3069">${</span><span style="color:#953800">HOME</span><span style="color:#0a3069">}</span><span style="color:#1f2328">/.ipfs</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/blocks/SHARDING&#34;</span>
+</span></span></code></pre></div><h2 id="0f128a4c-87aa-4588-b135-8bab8ae60ef4">the steps</h2>
+<dl>
+<dt>how</dt>
+<dd>in their order: make the new repo, check the sharding, cut the cids into batches, start the chain,
+follow it, rescue what the old disk cannot give, rerun the chain to check the rescued batches.</dd>
+<dt>how</dt>
+<dd>then cut the batches again, for the cids added meanwhile, and run the chain again, until no new
+cid comes; then the node is switched onto the new repo.</dd>
+</dl>
+<h3 id="091e24f7-fc1d-4aa6-b6e9-0a9946fc6ad1">the new repo</h3>
+<dl>
+<dt>how</dt>
+<dd>kubo&rsquo;s docker image makes the repo, run as the ssh user, so that user&rsquo;s copies can write into it.</dd>
+<dt>how</dt>
+<dd>no daemon runs on the new repo until the switch, so each command takes the repo&rsquo;s lock in turn.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="init-repo"></div>
+<p><a id="code-snippet--init-repo"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Makes a new kubo repo at &lt;repo&gt; on &lt;host&gt;, owned by the ssh user.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: init_repo.sh &lt;host&gt; &lt;repo&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;docker run --rm --user \&#34;\$(id -u):\$(id -g)\&#34; -v </span><span style="color:#953800">$2</span><span style="color:#0a3069">:/data/ipfs --entrypoint ipfs \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    ipfs/kubo:v0.39.0 init --profile server&#34;</span>
+</span></span></code></pre></div><h3 id="07fa0fab-1d4b-44e6-8b63-d9e8120404bb">the batches</h3>
+<dl>
+<dt>how</dt>
+<dd>cut_batches.sh takes the cids to move on its input, keeps those no batch holds yet, and cuts them
+into batches of 1000 on the host, numbered after the last one.
+<ul>
+<li><strong>why:</strong> the cids to move may keep growing during the copy; run again after it, it adds only the new ones.</li>
+<li><strong>why:</strong> a batch is the unit the copy resumes from and the check marks whole.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="cut-batches"></div>
+<p><a id="code-snippet--cut-batches"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Cuts the cids read on stdin that no batch on &lt;host&gt; holds yet into batches of 1000, numbered after the last.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: cut_batches.sh &lt;host&gt; &lt;migration dir&gt; &lt; cids, bare or as /ipfs/&lt;cid&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">host</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">dir</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$2</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">next</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;mkdir -p </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/batches &amp;&amp; ls </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/batches | wc -l&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">new</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>comm -13 &lt;<span style="color:#0550ae">(</span>ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;cat </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/batches/* 2&gt; /dev/null&#34;</span> <span style="color:#1f2328">|</span> sort -u<span style="color:#cf222e">)</span><span style="color:#0a3069"> \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;(grep -v &#39;^</span>$<span style="color:#0a3069">&#39; | sed &#39;s|^\([^/]\)|/ipfs/\1|&#39; | sort -u))&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> <span style="color:#6639ba">test</span> -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">new</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">new</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#1f2328">|</span> ssh <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> split --lines<span style="color:#0550ae">=</span><span style="color:#0550ae">1000</span> --numeric-suffixes<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">next</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> --suffix-length<span style="color:#0550ae">=</span><span style="color:#0550ae">3</span> - <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>        <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/batches/&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span><span style="color:#6639ba">echo</span> -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">new</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#1f2328">|</span> grep -c .<span style="color:#cf222e">)</span><span style="color:#0a3069"> new cids, from batch </span><span style="color:#0a3069">${</span><span style="color:#953800">next</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><h3 id="aef3b6f1-7dd2-4081-84f7-3bc73854e679">listing a cid&rsquo;s block files</h3>
+<dl>
+<dt>what</dt>
+<dd><code>ipfs refs -r</code> lists a DAG&rsquo;s blocks through the node, reading every block it walks.</dd>
+<dt>what</dt>
+<dd>in a dag-pb block, links come before data, so its first byte, 0x12, tells a node with children from
+a leaf, and a raw block never has children.</dd>
+<dt>how</dt>
+<dd>list_blocks.py reads the block files itself: inner nodes whole, one byte of each dag-pb leaf, raw
+leaves not at all.
+<ul>
+<li><strong>what:</strong> on roddenberry, it listed the same 47851 files as <code>ipfs refs -r</code> in 18 s, where refs took 23 min.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="list-blocks"></div>
+<p><a id="code-snippet--list-blocks"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#0a3069">&#34;&#34;&#34;List the flatfs block files of whole DAGs, reading the block files of a repo directly, without ipfs.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">usage: list_blocks.py &lt;blocks dir&gt; &lt; lines of /ipfs/&lt;cid&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">prints one &lt;shard&gt;/&lt;KEY&gt;.data per block, each once; complains on stderr about blocks it can&#39;t find or read.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">A dag-pb block holds its links (field 2) before its data (field 1), so its first byte tells whether it has
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">children: 0x12 means links follow, anything else means a leaf. Leaves, which hold nearly all the bytes,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">are thus never read past their first byte. raw blocks have no children and are not opened at all.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">base64</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>DAG_PB <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x70</span>
+</span></span><span style="display:flex;"><span>RAW <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x55</span>
+</span></span><span style="display:flex;"><span>IDENTITY <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x00</span>
+</span></span><span style="display:flex;"><span>B58 <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">varint</span><span style="color:#1f2328">(</span>data<span style="color:#1f2328">,</span> pos<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    value <span style="color:#0550ae">=</span> shift <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> <span style="color:#cf222e">True</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        byte <span style="color:#0550ae">=</span> data<span style="color:#1f2328">[</span>pos<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        pos <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>        value <span style="color:#0550ae">|=</span> <span style="color:#1f2328">(</span>byte <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">0x7F</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">&lt;&lt;</span> shift
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> byte <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">0x80</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> value<span style="color:#1f2328">,</span> pos
+</span></span><span style="display:flex;"><span>        shift <span style="color:#0550ae">+=</span> <span style="color:#0550ae">7</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">b58decode</span><span style="color:#1f2328">(</span>text<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    number <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> char <span style="color:#0550ae">in</span> text<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        number <span style="color:#0550ae">=</span> number <span style="color:#0550ae">*</span> <span style="color:#0550ae">58</span> <span style="color:#0550ae">+</span> B58<span style="color:#0550ae">.</span>index<span style="color:#1f2328">(</span>char<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    raw <span style="color:#0550ae">=</span> number<span style="color:#0550ae">.</span>to_bytes<span style="color:#1f2328">((</span>number<span style="color:#0550ae">.</span>bit_length<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> <span style="color:#0550ae">7</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">//</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;big&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">\0</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">*</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>text<span style="color:#1f2328">)</span> <span style="color:#0550ae">-</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>text<span style="color:#0550ae">.</span>lstrip<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;1&#34;</span><span style="color:#1f2328">)))</span> <span style="color:#0550ae">+</span> raw
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">parse_binary_cid</span><span style="color:#1f2328">(</span>data<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;(codec, multihash) of a binary cid&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>data<span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">34</span> <span style="color:#0550ae">and</span> data<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">0x12</span> <span style="color:#0550ae">and</span> data<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">0x20</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> DAG_PB<span style="color:#1f2328">,</span> data
+</span></span><span style="display:flex;"><span>    version<span style="color:#1f2328">,</span> pos <span style="color:#0550ae">=</span> varint<span style="color:#1f2328">(</span>data<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> version <span style="color:#0550ae">!=</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">raise</span> ValueError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;cid version </span><span style="color:#0a3069">{</span>version<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    codec<span style="color:#1f2328">,</span> pos <span style="color:#0550ae">=</span> varint<span style="color:#1f2328">(</span>data<span style="color:#1f2328">,</span> pos<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> codec<span style="color:#1f2328">,</span> data<span style="color:#1f2328">[</span>pos<span style="color:#1f2328">:]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">parse_text_cid</span><span style="color:#1f2328">(</span>text<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> text<span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Qm&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> DAG_PB<span style="color:#1f2328">,</span> b58decode<span style="color:#1f2328">(</span>text<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> text<span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;b&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        padded <span style="color:#0550ae">=</span> text<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]</span><span style="color:#0550ae">.</span>upper<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;=&#34;</span> <span style="color:#0550ae">*</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">-</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>text<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:])</span> <span style="color:#0550ae">%</span> <span style="color:#0550ae">8</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> parse_binary_cid<span style="color:#1f2328">(</span>base64<span style="color:#0550ae">.</span>b32decode<span style="color:#1f2328">(</span>padded<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">raise</span> ValueError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;unsupported cid </span><span style="color:#0a3069">{</span>text<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">block_file</span><span style="color:#1f2328">(</span>multihash<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># flatfs next-to-last/2: the key is the base32 multihash, sharded by its next-to-last two characters</span>
+</span></span><span style="display:flex;"><span>    key <span style="color:#0550ae">=</span> base64<span style="color:#0550ae">.</span>b32encode<span style="color:#1f2328">(</span>multihash<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>decode<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>rstrip<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;=&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>key<span style="color:#1f2328">[</span><span style="color:#0550ae">-</span><span style="color:#0550ae">3</span><span style="color:#1f2328">:</span><span style="color:#0550ae">-</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/</span><span style="color:#0a3069">{</span>key<span style="color:#0a3069">}</span><span style="color:#0a3069">.data&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">links</span><span style="color:#1f2328">(</span>content<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;binary cids of a dag-pb node&#39;s links&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    pos <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> pos <span style="color:#0550ae">&lt;</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>content<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        tag<span style="color:#1f2328">,</span> pos <span style="color:#0550ae">=</span> varint<span style="color:#1f2328">(</span>content<span style="color:#1f2328">,</span> pos<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> tag <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">7</span> <span style="color:#0550ae">!=</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">raise</span> ValueError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;dag-pb field </span><span style="color:#0a3069">{</span>tag <span style="color:#0550ae">&gt;&gt;</span> <span style="color:#0550ae">3</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> of wire type </span><span style="color:#0a3069">{</span>tag <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">7</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        length<span style="color:#1f2328">,</span> pos <span style="color:#0550ae">=</span> varint<span style="color:#1f2328">(</span>content<span style="color:#1f2328">,</span> pos<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        field <span style="color:#0550ae">=</span> content<span style="color:#1f2328">[</span>pos<span style="color:#1f2328">:</span>pos <span style="color:#0550ae">+</span> length<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        pos <span style="color:#0550ae">+=</span> length
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> tag <span style="color:#0550ae">&gt;&gt;</span> <span style="color:#0550ae">3</span> <span style="color:#0550ae">!=</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        inner <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">while</span> inner <span style="color:#0550ae">&lt;</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>field<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>            inner_tag<span style="color:#1f2328">,</span> inner <span style="color:#0550ae">=</span> varint<span style="color:#1f2328">(</span>field<span style="color:#1f2328">,</span> inner<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> inner_tag <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">7</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                inner_length<span style="color:#1f2328">,</span> inner <span style="color:#0550ae">=</span> varint<span style="color:#1f2328">(</span>field<span style="color:#1f2328">,</span> inner<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> inner_tag <span style="color:#0550ae">&gt;&gt;</span> <span style="color:#0550ae">3</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">yield</span> field<span style="color:#1f2328">[</span>inner<span style="color:#1f2328">:</span>inner <span style="color:#0550ae">+</span> inner_length<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>                inner <span style="color:#0550ae">+=</span> inner_length
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">elif</span> inner_tag <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">7</span> <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                _<span style="color:#1f2328">,</span> inner <span style="color:#0550ae">=</span> varint<span style="color:#1f2328">(</span>field<span style="color:#1f2328">,</span> inner<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">raise</span> ValueError<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;dag-pb link wire type </span><span style="color:#0a3069">{</span>inner_tag <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">7</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">main</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    blocks <span style="color:#0550ae">=</span> sys<span style="color:#0550ae">.</span>argv<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>    seen <span style="color:#0550ae">=</span> <span style="color:#6639ba">set</span><span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    failed <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
+</span></span><span style="display:flex;"><span>    todo <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>parse_text_cid<span style="color:#1f2328">(</span>line<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>removeprefix<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;/ipfs/&#34;</span><span style="color:#1f2328">))</span> <span style="color:#cf222e">for</span> line <span style="color:#0550ae">in</span> sys<span style="color:#0550ae">.</span>stdin <span style="color:#cf222e">if</span> line<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">while</span> todo<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        codec<span style="color:#1f2328">,</span> multihash <span style="color:#0550ae">=</span> todo<span style="color:#0550ae">.</span>pop<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> multihash<span style="color:#1f2328">[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> IDENTITY<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#57606a"># inlined in its cid, no block file</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        path <span style="color:#0550ae">=</span> block_file<span style="color:#1f2328">(</span>multihash<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> path <span style="color:#0550ae">in</span> seen<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        seen<span style="color:#0550ae">.</span>add<span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> codec <span style="color:#0550ae">==</span> RAW<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> codec <span style="color:#0550ae">!=</span> DAG_PB<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;unsupported codec </span><span style="color:#0a3069">{</span>codec<span style="color:#0a3069">:</span><span style="color:#0a3069">#x</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>path<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> file<span style="color:#0550ae">=</span>sys<span style="color:#0550ae">.</span>stderr<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            failed <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>blocks<span style="color:#0a3069">}</span><span style="color:#0a3069">/</span><span style="color:#0a3069">{</span>path<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;rb&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> block<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> block<span style="color:#0550ae">.</span>read<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">!=</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">\x12</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>                block<span style="color:#0550ae">.</span>seek<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>                content <span style="color:#0550ae">=</span> block<span style="color:#0550ae">.</span>read<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>            todo<span style="color:#0550ae">.</span>extend<span style="color:#1f2328">(</span>parse_binary_cid<span style="color:#1f2328">(</span>child<span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> child <span style="color:#0550ae">in</span> links<span style="color:#1f2328">(</span>content<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> <span style="color:#1f2328">(</span>OSError<span style="color:#1f2328">,</span> ValueError<span style="color:#1f2328">,</span> IndexError<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> error<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;cannot read </span><span style="color:#0a3069">{</span>path<span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>error<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span> file<span style="color:#0550ae">=</span>sys<span style="color:#0550ae">.</span>stderr<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            failed <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
+</span></span><span style="display:flex;"><span>    sys<span style="color:#0550ae">.</span>exit<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#cf222e">if</span> failed <span style="color:#cf222e">else</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>main<span style="color:#1f2328">()</span>
+</span></span></code></pre></div><h3 id="1b8b7f2d-e11d-40c4-b1d6-dd44f0aaff77">the order to read them in</h3>
+<dl>
+<dt>what</dt>
+<dd>flatfs names each block file after its hash, so a list of block files in hash order lands all over
+the disk.</dd>
+<dt>what</dt>
+<dd>read_order.sh lists one batch&rsquo;s block files, reads 800 of them in that hash order, then 800 others
+sorted by the first physical block filefrag gives for each, any running copy paused meanwhile.
+<ul>
+<li><strong>how:</strong> pick a batch not read since the old disk was mounted, so none of its files come from memory.</li>
+<li><strong>what:</strong> on roddenberry&rsquo;s failing disk, disk order read 49 MB/s, hash order 26 MB/s.</li>
+</ul>
+</dd>
+<dt>how</dt>
+<dd>copy_sorted.py sorts each batch&rsquo;s missing block files by their first physical block and copies them
+in that order, each to a temporary name then renamed.
+<ul>
+<li><strong>why:</strong> renamed whole, a block file interrupted mid copy is absent, never short, and a rerun copies it again.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="read-order"></div>
+<p><a id="code-snippet--read-order"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Times reading one batch&#39;s block files on &lt;host&gt; in hash order, then in their order on disk.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: read_order.sh &lt;host&gt; &lt;old blocks dir&gt; &lt;migration dir&gt; &lt;batch&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ssh <span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span> bash -s <span style="color:#0a3069">&#34;</span><span style="color:#953800">$2</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$3</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$4</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&lt;&lt;&#39;EOF&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">cd &#34;$1&#34; || exit 1
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">files=&#34;$(python3 &#34;$2/list_blocks.py&#34; . &lt; &#34;$2/batches/$3&#34; 2&gt; /dev/null)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">hash_order=&#34;$(echo &#34;${files}&#34; | sed -n &#39;1,800p&#39;)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069"># first physical block of each file, from its extent map
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">disk_order=&#34;$(echo &#34;${files}&#34; | sed -n &#39;801,1600p&#39; | xargs /usr/sbin/filefrag -e \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    | awk &#39;/^File size of/ { file = $4 } /^ +0:/ { sub(/\.\./, &#34;&#34;, $4); print $4, file }&#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    | sort -n | cut -d&#39; &#39; -f2)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">paused=&#34;$(pgrep -f &#34;^python3 $2/copy_sorted&#34; | tr &#39;\n&#39; &#39; &#39;)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">test -n &#34;${paused}&#34; &amp;&amp; kill -STOP ${paused}
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">trap &#39;test -n &#34;${paused}&#34; &amp;&amp; kill -CONT ${paused}&#39; EXIT
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">for order in hash_order disk_order
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">do
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    list=&#34;${!order}&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    bytes=&#34;$(echo &#34;${list}&#34; | tr &#39;\n&#39; &#39;\0&#39; | du -cb --files0-from=- | tail -n 1 | cut -f1)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    start=&#34;$(date +%s%N)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    echo &#34;${list}&#34; | xargs cat &gt; /dev/null
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    ms=$(( ($(date +%s%N) - start) / 1000000 ))
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    echo &#34;${order}: $(echo &#34;${list}&#34; | wc -l) files, $((bytes / 1000000)) MB in ${ms} ms,&#34; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">         &#34;$(( bytes / 1000 / (ms + 1) )) MB/s&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">done
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">EOF</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="copy-sorted"></div>
+<p><a id="code-snippet--copy-sorted"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#0a3069">&#34;&#34;&#34;Copy block files from one flatfs to another, reading them in the order they lie on the source disk.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">usage: copy_sorted.py &lt;source blocks dir&gt; &lt;target blocks dir&gt; &lt;file of shard/KEY.data lines&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">Read in hash order, the head seeks before each file, which halves what the failing disk reads; sorted by their
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">first physical block, reads mostly follow each other. Files already in the target are skipped. Each file is
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">written under a temporary name then renamed, so a block file is whole or absent. Prints how many files and
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">bytes were copied, and each file it could not read; exits non zero if any.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">subprocess</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>source<span style="color:#1f2328">,</span> target<span style="color:#1f2328">,</span> listing <span style="color:#0550ae">=</span> sys<span style="color:#0550ae">.</span>argv<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:</span><span style="color:#0550ae">4</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>listing<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> lines<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    wanted <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>line<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()</span> <span style="color:#cf222e">for</span> line <span style="color:#0550ae">in</span> lines <span style="color:#cf222e">if</span> line<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()]</span>
+</span></span><span style="display:flex;"><span>missing <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>path <span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> wanted <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>exists<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>target<span style="color:#1f2328">,</span> path<span style="color:#1f2328">))]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">physical_start</span><span style="color:#1f2328">(</span>paths<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;&#34;&#34;first physical block of each file, from filefrag&#39;s extent maps; unknown ones go last&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    start <span style="color:#0550ae">=</span> <span style="color:#1f2328">{}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> index <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>paths<span style="color:#1f2328">),</span> <span style="color:#0550ae">500</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        chunk <span style="color:#0550ae">=</span> paths<span style="color:#1f2328">[</span>index<span style="color:#1f2328">:</span>index <span style="color:#0550ae">+</span> <span style="color:#0550ae">500</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        result <span style="color:#0550ae">=</span> subprocess<span style="color:#0550ae">.</span>run<span style="color:#1f2328">([</span><span style="color:#0a3069">&#34;/usr/sbin/filefrag&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;-e&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>chunk<span style="color:#1f2328">],</span> cwd<span style="color:#0550ae">=</span>source<span style="color:#1f2328">,</span> capture_output<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                text<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        current <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">for</span> line <span style="color:#0550ae">in</span> result<span style="color:#0550ae">.</span>stdout<span style="color:#0550ae">.</span>splitlines<span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> line<span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;File size of &#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                current <span style="color:#0550ae">=</span> line<span style="color:#1f2328">[</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;File size of &#34;</span><span style="color:#1f2328">):]</span><span style="color:#0550ae">.</span>split<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34; is &#34;</span><span style="color:#1f2328">)[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">elif</span> current <span style="color:#0550ae">is</span> <span style="color:#0550ae">not</span> <span style="color:#cf222e">None</span> <span style="color:#0550ae">and</span> line<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>startswith<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;0:&#34;</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                start<span style="color:#1f2328">[</span>current<span style="color:#1f2328">]</span> <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span>line<span style="color:#0550ae">.</span>split<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;:&#34;</span><span style="color:#1f2328">)[</span><span style="color:#0550ae">2</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>split<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;..&#34;</span><span style="color:#1f2328">)[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">])</span>
+</span></span><span style="display:flex;"><span>                current <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> start
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>began <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>start <span style="color:#0550ae">=</span> physical_start<span style="color:#1f2328">(</span>missing<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>missing<span style="color:#0550ae">.</span>sort<span style="color:#1f2328">(</span>key<span style="color:#0550ae">=</span><span style="color:#cf222e">lambda</span> path<span style="color:#1f2328">:</span> start<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span>path<span style="color:#1f2328">,</span> <span style="color:#6639ba">float</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;inf&#34;</span><span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;sorted </span><span style="color:#0a3069">{</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>missing<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> missing files by place on disk in </span><span style="color:#0a3069">{</span>time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">-</span> began<span style="color:#0a3069">:</span><span style="color:#0a3069">.0f</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> s&#34;</span><span style="color:#1f2328">,</span> flush<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>began <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>copied <span style="color:#0550ae">=</span> size <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>failed <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> missing<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    destination <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>target<span style="color:#1f2328">,</span> path<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>source<span style="color:#1f2328">,</span> path<span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;rb&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> block<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            content <span style="color:#0550ae">=</span> block<span style="color:#0550ae">.</span>read<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> OSError <span style="color:#cf222e">as</span> error<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        failed<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>path<span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>error<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>    os<span style="color:#0550ae">.</span>makedirs<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>dirname<span style="color:#1f2328">(</span>destination<span style="color:#1f2328">),</span> exist_ok<span style="color:#0550ae">=</span><span style="color:#cf222e">True</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>destination <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;.tmp&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;wb&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> out<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        out<span style="color:#0550ae">.</span>write<span style="color:#1f2328">(</span>content<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    os<span style="color:#0550ae">.</span>rename<span style="color:#1f2328">(</span>destination <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;.tmp&#34;</span><span style="color:#1f2328">,</span> destination<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    copied <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>    size <span style="color:#0550ae">+=</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>content<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> failure <span style="color:#0550ae">in</span> failed<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;could not read </span><span style="color:#0a3069">{</span>failure<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;copied </span><span style="color:#0a3069">{</span>copied<span style="color:#0a3069">}</span><span style="color:#0a3069"> files, </span><span style="color:#0a3069">{</span>size<span style="color:#0a3069">}</span><span style="color:#0a3069"> bytes in </span><span style="color:#0a3069">{</span>time<span style="color:#0550ae">.</span>monotonic<span style="color:#1f2328">()</span> <span style="color:#0550ae">-</span> began<span style="color:#0a3069">:</span><span style="color:#0a3069">.0f</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> s; </span><span style="color:#0a3069">{</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>wanted<span style="color:#1f2328">)</span> <span style="color:#0550ae">-</span> <span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>missing<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34; already there, </span><span style="color:#0a3069">{</span><span style="color:#6639ba">len</span><span style="color:#1f2328">(</span>failed<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> unreadable&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>sys<span style="color:#0550ae">.</span>exit<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#cf222e">if</span> failed <span style="color:#cf222e">else</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h3 id="a019908b-512b-4384-882b-9ef422a5c555">checking the copy</h3>
+<dl>
+<dt>what</dt>
+<dd><code>ipfs dag stat --offline</code> walks a cid&rsquo;s whole DAG in a repo and fails on any block missing there,
+reading every block back<sup id="fnref:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</dd>
+<dt>what</dt>
+<dd>disk_load.sh samples the disks&rsquo; counters in /proc/diskstats twenty seconds apart: the share of time
+each disk was busy, what it read and wrote, and the mean time of one read.
+<ul>
+<li><strong>what:</strong> on roddenberry, a copy beside a dag stat of the batch before kept the new disk 98% busy and the
+old one read ~7 MB/s; with the dag stat paused, the new disk was 32% busy.</li>
+<li><strong>therefore:</strong> a dag stat beside the copy starves its writes on the new disk.</li>
+</ul>
+</dd>
+<dt>how</dt>
+<dd>right after each batch, check_present.py only compares each block file&rsquo;s size in the new repo with
+the old one&rsquo;s; dag stat runs over every batch once the old disk is no longer read.
+<ul>
+<li><strong>what:</strong> so checked, roddenberry&rsquo;s batches of 8 to 12 GB copied at 31 to 41 MB/s.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="disk-load"></div>
+<p><a id="code-snippet--disk-load"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Samples the given disks of &lt;host&gt; twenty seconds apart: busy share, reads, mean read time, writes.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: disk_load.sh &lt;host&gt; &lt;disk&gt;...</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">host</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">shift</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">pattern</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34; (</span><span style="color:#cf222e">$(</span><span style="color:#953800">IFS</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;|&#39;</span><span style="color:#1f2328">;</span> <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$*</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">) &#34;</span>
+</span></span><span style="display:flex;"><span>ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;grep -E &#39;</span><span style="color:#0a3069">${</span><span style="color:#953800">pattern</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#39; /proc/diskstats; sleep 20; grep -E &#39;</span><span style="color:#0a3069">${</span><span style="color:#953800">pattern</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#39; /proc/diskstats&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;{ name = $3 }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           name in reads { printf &#34;%s: busy %d%%, read %d MB in %d reads of %d ms each, wrote %d MB\n&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                             name, ($13 - busy[name]) / 200, ($6 - sread[name]) / 2048,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                             $4 - reads[name], ($7 - rms[name]) / ($4 - reads[name] + 1),
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                             ($10 - swritten[name]) / 2048; next }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           { reads[name] = $4; sread[name] = $6; rms[name] = $7; swritten[name] = $10; busy[name] = $13 }&#39;</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="check-present"></div>
+<p><a id="code-snippet--check-present"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#0a3069">&#34;&#34;&#34;Check that each listed block file is in the target flatfs with the same size as in the source.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">usage: check_present.py &lt;source blocks dir&gt; &lt;target blocks dir&gt; &lt;file of shard/KEY.data lines&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">A light check run right after a copy: it reads only file sizes, never block contents, so it costs the target
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">disk nothing beside the copy. Prints each missing or short file; exits non zero if any. Whether every DAG is
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">whole is left to dag stat --offline, run over all batches once the source no longer needs reading.
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>source<span style="color:#1f2328">,</span> target<span style="color:#1f2328">,</span> listing <span style="color:#0550ae">=</span> sys<span style="color:#0550ae">.</span>argv<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:</span><span style="color:#0550ae">4</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>bad <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>listing<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> lines<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">for</span> path <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span>line<span style="color:#0550ae">.</span>strip<span style="color:#1f2328">()</span> <span style="color:#cf222e">for</span> line <span style="color:#0550ae">in</span> lines<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> path<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            copied <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>stat<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>target<span style="color:#1f2328">,</span> path<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>st_size
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> FileNotFoundError<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;missing: </span><span style="color:#0a3069">{</span>path<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            bad <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            original <span style="color:#0550ae">=</span> os<span style="color:#0550ae">.</span>stat<span style="color:#1f2328">(</span>os<span style="color:#0550ae">.</span>path<span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>source<span style="color:#1f2328">,</span> path<span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>st_size
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> OSError <span style="color:#cf222e">as</span> error<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;cannot stat source </span><span style="color:#0a3069">{</span>path<span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>error<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            bad <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> copied <span style="color:#0550ae">!=</span> original<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;size </span><span style="color:#0a3069">{</span>copied<span style="color:#0a3069">}</span><span style="color:#0a3069"> instead of </span><span style="color:#0a3069">{</span>original<span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#0a3069">{</span>path<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            bad <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>bad<span style="color:#0a3069">}</span><span style="color:#0a3069"> block files missing or short&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>sys<span style="color:#0550ae">.</span>exit<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span> <span style="color:#cf222e">if</span> bad <span style="color:#cf222e">else</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
+</span></span></code></pre></div><h3 id="a08cdc86-53ff-44ff-ba1c-1ce82996f808">the chain</h3>
+<dl>
+<dt>how</dt>
+<dd>copy_all.sh, on the host, copies every batch not yet copied: lists its block files, copies them
+sorted, checks their sizes, marks it copied.</dd>
+<dt>how</dt>
+<dd>then it runs dag stat over every batch not yet whole, marks a whole one imported, and lists each cid
+not whole in copy/broken.
+<ul>
+<li><strong>why:</strong> each step leaves a marker, so a rerun resumes where the last one stopped, and checks only what is
+left.</li>
+</ul>
+</dd>
+<dt>how</dt>
+<dd>start_chain.sh puts the scripts on the host and starts copy_all.sh there detached, logging to
+copy/all.log, since a whole migration lasts hours; chain_status.sh tells where it is without waiting.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="copy-all"></div>
+<p><a id="code-snippet--copy-all"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Copies every batch not yet copied, one after the other: list its block files, copy them in disk order, check</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># each copied file is there with its size. Once the old repo needs no more reading, checks every batch not yet</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># whole offline in the new repo, marking whole batches imported and listing the cids that are not in</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># copy/broken. Run detached; it logs to copy/all.log.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: copy_all.sh &lt;migration dir&gt; &lt;old repo&gt; &lt;new repo&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o pipefail
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">dir</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">old</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$2</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">new</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$3</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">kubo</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;ipfs/kubo:v0.39.0&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>mkdir -p <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copied&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/imported&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">exec</span> &gt;&gt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy/all.log&#34;</span> 2&gt;<span style="color:#1f2328">&amp;</span><span style="color:#0550ae">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>log <span style="color:#0550ae">()</span> <span style="color:#0550ae">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>date -Is<span style="color:#cf222e">)</span><span style="color:#0a3069"> </span><span style="color:#953800">$*</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>copy <span style="color:#0550ae">()</span> <span style="color:#0550ae">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">name</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span> <span style="color:#953800">work</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy/</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    mkdir -p <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">work</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    python3 <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/list_blocks.py&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">old</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/blocks&#34;</span> &lt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/batches/</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> &gt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">work</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/files&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>        <span style="color:#0550ae">||</span> log <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: some blocks could not be listed, see above&#34;</span>
+</span></span><span style="display:flex;"><span>    log <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: </span><span style="color:#cf222e">$(</span>wc -l &lt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">work</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/files&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069"> block files&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># unreadable files are listed and left for the check to name the cids they break</span>
+</span></span><span style="display:flex;"><span>    python3 <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy_sorted.py&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">old</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/blocks&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">new</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/blocks&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">work</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/files&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>        <span style="color:#0550ae">||</span> log <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: some block files could not be read&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#57606a"># sizes only: reading the copied bytes back here would compete with the copy for the new disk</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> python3 <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/check_present.py&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">old</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/blocks&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">new</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/blocks&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">work</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/files&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">then</span> log <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: copied, every block file present&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span> log <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: copied, some block files missing, see above&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># marks the batch imported only when every one of its cids is whole in the new repo</span>
+</span></span><span style="display:flex;"><span>check <span style="color:#0550ae">()</span> <span style="color:#0550ae">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">local</span> <span style="color:#953800">name</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span> result
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">result</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>docker run --rm -i --user <span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>id -u<span style="color:#cf222e">)</span><span style="color:#0a3069">:</span><span style="color:#cf222e">$(</span>id -g<span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span> -v <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">new</span><span style="color:#0a3069">}</span><span style="color:#0a3069">:/data/ipfs&#34;</span> --entrypoint sh <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">kubo</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> -c <span style="color:#0a3069">&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        broken=0
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        while read -r path
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        do
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            if ! error=&#34;$(ipfs dag stat --offline --progress=false &#34;${path#/ipfs/}&#34; 2&gt;&amp;1 &gt; /dev/null)&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            then broken=$((broken + 1)); echo &#34;not whole: ${path}: ${error}&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            fi
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        done
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        echo &#34;broken ${broken}&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &#39;</span> &lt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/batches/</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">result</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#1f2328">|</span> grep <span style="color:#0a3069">&#34;^not whole&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#6639ba">test</span> <span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">result</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#1f2328">|</span> tail -n 1<span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;broken 0&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">echo</span> whole-by-dag-stat &gt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/imported/</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>        log <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: checked, all whole&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">else</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">result</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#1f2328">|</span> sed -n <span style="color:#0a3069">&#34;s|^not whole: \([^:]*\):.*|</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> \1|p&#34;</span> &gt;&gt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy/broken&#34;</span>
+</span></span><span style="display:flex;"><span>        log <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: checked, </span><span style="color:#cf222e">$(</span><span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">result</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#1f2328">|</span> tail -n <span style="color:#0550ae">1</span> <span style="color:#1f2328">|</span> cut -d<span style="color:#0a3069">&#39; &#39;</span> -f2<span style="color:#cf222e">)</span><span style="color:#0a3069"> cids not whole, listed in broken&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#0550ae">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> batch in <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>/batches/*
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">name</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>basename <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">batch</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">test</span> -e <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/imported/</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> -o -e <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copied/</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>    copy <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    touch <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copied/</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span><span style="display:flex;"><span>log <span style="color:#0a3069">&#34;all batches copied, the old repo no longer read; checking every DAG in the new one&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># lists only what this check finds, so a cid rescued since drops out</span>
+</span></span><span style="display:flex;"><span>: &gt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy/broken&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> batch in <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>/batches/*
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">name</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>basename <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">batch</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">test</span> -e <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/imported/</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>    check <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">name</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span><span style="display:flex;"><span>log <span style="color:#0a3069">&#34;all batches checked; </span><span style="color:#cf222e">$(</span>ls <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/imported&#34;</span> <span style="color:#1f2328">|</span> wc -l<span style="color:#cf222e">)</span><span style="color:#0a3069"> of </span><span style="color:#cf222e">$(</span>ls <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/batches&#34;</span> <span style="color:#1f2328">|</span> wc -l<span style="color:#cf222e">)</span><span style="color:#0a3069"> whole,&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>wc -l &lt; <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy/broken&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069"> cids to rescue, listed in copy/broken&#34;</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="start-chain"></div>
+<p><a id="code-snippet--start-chain"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Puts the copy scripts in &lt;migration dir&gt; on &lt;host&gt;, then starts copy_all.sh there detached, unless it runs.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: start_chain.sh &lt;host&gt; &lt;migration dir&gt; &lt;old repo&gt; &lt;new repo&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">host</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">dir</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$2</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">here</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>dirname <span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>readlink -f <span style="color:#0a3069">&#34;</span><span style="color:#953800">$0</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> mkdir -p <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>rsync -a <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">here</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/list_blocks.py&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">here</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy_sorted.py&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">here</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/check_present.py&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">here</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy_all.sh&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> pgrep -f <span style="color:#0a3069">&#34;&#39;^bash </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy_all.sh&#39;&#34;</span> &gt; /dev/null
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;copy_all.sh already runs&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">else</span>
+</span></span><span style="display:flex;"><span>    ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;setsid nohup bash </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy_all.sh </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069"> </span><span style="color:#953800">$3</span><span style="color:#0a3069"> </span><span style="color:#953800">$4</span><span style="color:#0a3069"> &gt; /dev/null 2&gt;&amp;1 &lt; /dev/null &amp;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;copy_all.sh started&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">fi</span>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="chain-status"></div>
+<p><a id="code-snippet--chain-status"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Tells where the chain on &lt;host&gt; is: its last log lines, how many batches are whole, whether it runs.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: chain_status.sh &lt;host&gt; &lt;migration dir&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">dir</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$2</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;tail -n 5 </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy/all.log; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    echo whole: \$(ls </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/imported | wc -l) of \$(ls </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/batches | wc -l) batches; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    pgrep -f &#39;^bash </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy_all.sh&#39; &gt; /dev/null &amp;&amp; echo running || echo ended&#34;</span>
+</span></span></code></pre></div><h3 id="5b0c3f4e-2d5a-4c63-9a3e-6f1c2b7d8e90">rescuing what the old disk cannot give</h3>
+<dl>
+<dt>what</dt>
+<dd>a failing disk leaves some block files unreadable, an input/output error; copy_sorted.py skips them
+and the dag stat lists the cids they break in copy/broken.</dd>
+<dt>what</dt>
+<dd>a cid can be meant for the node and yet missing from its repo altogether, never fetched.</dd>
+<dt>how</dt>
+<dd>rescue_broken.sh gets each broken cid into the workstation&rsquo;s own node: first by the retrieve command
+given, a backup say, else from the swarm, where <code>ipfs dag stat</code> fetches every block of a DAG<sup id="fnref1:1"><a class="internal-link" href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</dd>
+<dt>how</dt>
+<dd>then it lists the cid&rsquo;s block files in the workstation&rsquo;s repo with list_blocks.py and copies those
+the new repo lacks into it; a rerun of the chain then checks the batches not yet whole.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="rescue-broken"></div>
+<p><a id="code-snippet--rescue-broken"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#57606a">#!/usr/bin/env bash
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a"># Gets each cid listed in copy/broken on &lt;host&gt; into this workstation&#39;s node, then copies its block files into</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># the new repo there.</span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a"># usage: rescue_broken.sh &lt;host&gt; &lt;migration dir&gt; &lt;new repo&gt; [retrieve command, given each /ipfs/&lt;cid&gt;]</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">set</span> -o nounset
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">host</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$1</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">dir</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$2</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">new</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#953800">$3</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#6639ba">shift</span> <span style="color:#0550ae">3</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">here</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>dirname <span style="color:#0a3069">&#34;</span><span style="color:#cf222e">$(</span>readlink -f <span style="color:#0a3069">&#34;</span><span style="color:#953800">$0</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">blocks</span><span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">IPFS_PATH</span><span style="color:#cf222e">:-</span><span style="color:#0a3069">${</span><span style="color:#953800">HOME</span><span style="color:#0a3069">}</span><span style="color:#1f2328">/.ipfs</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/blocks&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> path in <span style="color:#cf222e">$(</span>ssh -n <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;cut -d&#39; &#39; -f2 </span><span style="color:#0a3069">${</span><span style="color:#953800">dir</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/copy/broken&#34;</span> <span style="color:#1f2328">|</span> sort -u<span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> ! <span style="color:#0550ae">{</span> <span style="color:#6639ba">test</span> <span style="color:#953800">$#</span> -gt <span style="color:#0550ae">0</span> <span style="color:#0550ae">&amp;&amp;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$@</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">path</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> &lt; /dev/null &gt; /dev/null 2&gt;<span style="color:#1f2328">&amp;</span>1<span style="color:#1f2328">;</span> <span style="color:#0550ae">}</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>            <span style="color:#0550ae">&amp;&amp;</span> ! ipfs dag stat --progress<span style="color:#0550ae">=</span><span style="color:#6639ba">false</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">path</span><span style="color:#1f2328">#/ipfs/</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> &lt; /dev/null &gt; /dev/null
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">path</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: neither retrieved nor on the swarm&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">continue</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">path</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#1f2328">|</span> python3 <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">here</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/list_blocks.py&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">blocks</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>        <span style="color:#1f2328">|</span> rsync -a --ignore-existing --files-from<span style="color:#0550ae">=</span>- <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">blocks</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">host</span><span style="color:#0a3069">}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">${</span><span style="color:#953800">new</span><span style="color:#0a3069">}</span><span style="color:#0a3069">/blocks/&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">echo</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">path</span><span style="color:#0a3069">}</span><span style="color:#0a3069">: blocks copied from this workstation&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span></code></pre></div><h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a class="internal-link" href="/braindump/posts/debug_health_of_my_ipfs_swarm/">debug health of my ipfs swarm</a></li>
+</ul>
+<h2 id="permalink"><a class="internal-link" href="/braindump/5beee452-bf2a-40bb-ba60-cbf5ae18fd0a?title=migrate_an_ipfs_repo_off_a_failing_disk">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>« &lsquo;ipfs dag stat&rsquo; fetches a DAG and returns various statistics about it. » — primary, <code>ipfs dag stat --help</code>, kubo 0.43.1, run on konix on 2026-10-09.</p>
+<!--more-->
+&#160;<a class="internal-link" href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
+</ol>
+</div>
+      </div>
+	  <aside class="date"><time>Last updated: 09 Oct 2026</time></aside>
+	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 09 Oct 2026</time></aside>
+    </div>
+  </div>
+</div>
+
+<script src="/braindump/js/URI.js" type="text/javascript"></script>
+
+<script src="/braindump/js/page.js" type="text/javascript"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

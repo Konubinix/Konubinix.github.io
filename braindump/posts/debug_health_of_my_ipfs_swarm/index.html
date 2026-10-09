@@ -60,6 +60,7 @@ disconnected at 05:56 and come back as sdb; 95 aborts on roddenberry&rsquo;s USB
 <li><a class="internal-link" href="#6cdaa637-d23a-4e10-bf5e-6d6e805d459f">reading a SMART report</a></li>
 <li><a class="internal-link" href="#a491cdfe-7ae6-410d-bb79-2dfec7bb6ba4">gooseberry</a></li>
 <li><a class="internal-link" href="#9f716059-aa12-455e-8b6c-19aa3562e19f">roddenberry</a></li>
+<li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
 </div>
@@ -490,21 +491,19 @@ group too.</dd>
 <dd>barbeuc is to replace the drive under roddenberry&rsquo;s ipfs node, holding only the cids the docs
 database allocates to roddenberry, the rest staying behind, as the user states.
 <ul>
-<li><strong>what:</strong> no ipfs node runs on barbeuc yet, as the user states.</li>
+<li><strong>what:</strong> barbeuc is a second USB disk on roddenberry, beside bimbap, the one holding the drive above, as
+the roddenberry-disks block below shows.</li>
 </ul>
 </dd>
 <dt>what</dt>
-<dd>barbeuc is a second USB disk on roddenberry, beside bimbap, the one holding the drive above, as the
-roddenberry-disks block below shows.</dd>
+<dd>no pin may be added on the user&rsquo;s nodes, and roddenberry&rsquo;s node never runs garbage collection, as
+the user states.
+<ul>
+<li><strong>therefore:</strong> a cid is migrated once its blocks are in barbeuc&rsquo;s repo; nothing has to hold them there.</li>
+</ul>
+</dd>
 </dl>
-<div class="konix-block-name-marker" data-name="roddenberry-cid-counts"></div>
-<p><a id="code-snippet--roddenberry-cid-counts"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql -h 192.168.2.5 -U postgres docs -At -c <span style="color:#0a3069">&#34;select
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    (select count(*) from file where allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;),
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    (select count(*) from photovideo where thumbnail_allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;),
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    (select count(*) from photovideo where web_allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;);&#34;</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>35528|36512|37717
-</span></span></code></pre></div><div class="konix-block-name-marker" data-name="roddenberry-repo-size"></div>
+<div class="konix-block-name-marker" data-name="roddenberry-repo-size"></div>
 <p><a id="code-snippet--roddenberry-repo-size"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nd alloc <span style="color:#6639ba">exec</span> 8884e15b sh -c <span style="color:#0a3069">&#39;ipfs repo stat --human&#39;</span> &lt; /dev/null
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>NumObjects: 2458743
@@ -523,37 +522,75 @@ roddenberry-disks block below shows.</dd>
 </span></span><span style="display:flex;"><span>├─mmcblk0p1 mmc                          512M bootfs  /boot/firmware
 </span></span><span style="display:flex;"><span>└─mmcblk0p2 mmc                         29.3G rootfs  /
 </span></span></code></pre></div><dl>
-<dt>what</dt>
-<dd>the user settled the three steps below.</dd>
+<dt>therefore</dt>
+<dd>the whole repo weighs 574 GB, so roddenberry&rsquo;s share of it fits barbeuc, a 2 TB disk lsblk
+lists as 1.8T.</dd>
 <dt>how</dt>
-<dd>copy each cid into one MFS directory with <code>ipfs files cp</code>, which copies only the root node, not the
-whole DAG<sup id="fnref:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.
+<dd>the move follows <a class="internal-link" href="/braindump/posts/migrate_an_ipfs_repo_off_a_failing_disk/">migrate an ipfs repo off a failing disk</a>,
+its scripts tangled from there, with the old repo at <em>media/sam/bimbap</em>.ipfs, the new one at
+<em>media/sam/barbeuc</em>.ipfs, and the migration&rsquo;s files in /media/sam/barbeuc/migration.
 <ul>
-<li><strong>what:</strong> content in MFS is not deleted by garbage collection<sup id="fnref:16"><a class="internal-link" href="#fn:16" class="footnote-ref" role="doc-noteref">16</a></sup>.</li>
-<li><strong>therefore:</strong> the cids stay safe from garbage collection on the old repo without one pin each.</li>
-</ul>
-</dd>
-<dt>how</dt>
-<dd>export that directory&rsquo;s root with <code>ipfs dag export</code>, which streams the DAG below a root as one
-CAR<sup id="fnref:17"><a class="internal-link" href="#fn:17" class="footnote-ref" role="doc-noteref">17</a></sup>.</dd>
-<dt>how</dt>
-<dd>import the CAR into a new repo on barbeuc with <code>ipfs dag import</code>, which pins the CAR&rsquo;s
-root<sup id="fnref:18"><a class="internal-link" href="#fn:18" class="footnote-ref" role="doc-noteref">18</a></sup>.
-<ul>
-<li><strong>what:</strong> pinning a root fails when the imported blocks do not form a complete DAG<sup id="fnref1:18"><a class="internal-link" href="#fn:18" class="footnote-ref" role="doc-noteref">18</a></sup>.</li>
-<li><strong>therefore:</strong> a successful pin of the root shows every block under it reached barbeuc.</li>
-<li><strong>therefore:</strong> the whole repo weighs 574 GB, so the CAR and its import together fit barbeuc, a 2 TB disk
-lsblk lists as 1.8T.</li>
-</ul>
-</dd>
-<dt>how</dt>
-<dd>then the user switches roddenberry&rsquo;s ipfs onto the barbeuc repo, as the user states.
-<ul>
-<li><strong>how:</strong> the new repo sits at <em>media/sam/barbeuc</em>.ipfs, as the old one at <em>media/sam/bimbap</em>.ipfs, and the
-switch repoints the ~/.ipfs link on roddenberry, as the user states.</li>
+<li><strong>how:</strong> then the user switches roddenberry&rsquo;s ipfs onto the barbeuc repo, repointing the ~/.ipfs link on
+roddenberry, as the user states.</li>
 </ul>
 </dd>
 </dl>
+<div class="konix-block-name-marker" data-name="barbeuc-init"></div>
+<p><a id="code-snippet--barbeuc-init"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/init_repo.sh roddenberry /media/sam/barbeuc/.ipfs
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="repos-sharding"></div>
+<p><a id="code-snippet--repos-sharding"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/check_sharding.sh roddenberry /media/sam/bimbap/.ipfs <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    /media/sam/barbeuc/.ipfs
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/repo/flatfs/shard/v1/next-to-last/2
+</span></span><span style="display:flex;"><span>/repo/flatfs/shard/v1/next-to-last/2
+</span></span><span style="display:flex;"><span>/repo/flatfs/shard/v1/next-to-last/2
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>the docs database allocates a cid to roddenberry in three places: a file&rsquo;s own cid, a photo or
+video&rsquo;s thumbnail, and its web version.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="roddenberry-batches"></div>
+<p><a id="code-snippet--roddenberry-batches"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql -h 192.168.2.5 -U postgres docs -At -c <span style="color:#0a3069">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    select cid from file where allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    union select thumbnail_cid from photovideo where thumbnail_allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    union select web_cid from photovideo where web_allocations @&gt; &#39;[\&#34;roddenberry\&#34;]&#39;&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> bash /var/run/user/1000/ipfshealth/cut_batches.sh roddenberry /media/sam/barbeuc/migration
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>0 new cids, from batch 111
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="roddenberry-read-order"></div>
+<p><a id="code-snippet--roddenberry-read-order"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/read_order.sh roddenberry /media/sam/bimbap/.ipfs/blocks <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    /media/sam/barbeuc/migration <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">batch</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>hash_order: 800 files, 195 MB in 7460 ms, 26 MB/s
+</span></span><span style="display:flex;"><span>disk_order: 800 files, 201 MB in 4079 ms, 49 MB/s
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>read in disk order, the same kind of block files came off bimbap about twice as fast as in hash
+order.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="roddenberry-disk-load"></div>
+<p><a id="code-snippet--roddenberry-disk-load"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/disk_load.sh roddenberry sda sdb
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="roddenberry-start-chain"></div>
+<p><a id="code-snippet--roddenberry-start-chain"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/start_chain.sh roddenberry /media/sam/barbeuc/migration <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    /media/sam/bimbap/.ipfs /media/sam/barbeuc/.ipfs
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="roddenberry-chain-status"></div>
+<p><a id="code-snippet--roddenberry-chain-status"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/chain_status.sh roddenberry /media/sam/barbeuc/migration
+</span></span></code></pre></div><dl>
+<dt>how</dt>
+<dd>the rescue tries the backup on bibou first, which must be mounted at /run/media/sam/bibou.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="roddenberry-rescue"></div>
+<p><a id="code-snippet--roddenberry-rescue"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/rescue_broken.sh roddenberry /media/sam/barbeuc/migration <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    /media/sam/barbeuc/.ipfs clk backup docs retrieve
+</span></span></code></pre></div><h2 id="notes-linking-here">Notes linking here</h2>
+<ul>
+<li><a class="internal-link" href="/braindump/posts/migrate_an_ipfs_repo_off_a_failing_disk/">migrate an ipfs repo off a failing disk</a></li>
+</ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/d54f7c8d-4f33-43c5-ae6f-65b30d726392?title=debug_health_of_my_ipfs_swarm">Permalink</a></h2>
 <style>
 .konix-block-name-marker { display: none; }
@@ -671,8 +708,9 @@ Hard Drives</a>, Backblaze, 2016-10-06.&#160;<a class="internal-link" href="#fnr
 <p>« Operational drives with one or more of our five SMART stats greater than zero: 4.2%. »
 « Failed drives with one or more of our five SMART stats greater than zero: 76.7%. » — primary, Andy Klein,
 <a target="_blank" href="https://www.backblaze.com/blog/what-smart-stats-indicate-hard-drive-failures/">What SMART Stats Tell Us About
-Hard Drives</a>, Backblaze, 2016-10-06.&#160;<a class="internal-link" href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
-</li>
+Hard Drives</a>, Backblaze, 2016-10-06.</p>
+<!--more-->
+&#160;<a class="internal-link" href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></li>
 <li id="fn:9">
 <p>« Returns the throttled state of the system. This is a bit pattern. A bit being set
 indicates the following meanings: » … « 16 | 0x10000 | Undervoltage has occurred » — primary,
@@ -710,28 +748,10 @@ and are reallocated or continue to work without problems. » « The critical thr
 also one: after the first event, drives are 16 times more likely to fail within 60 days than drives with zero
 probational counts. » — primary, same paper, section 3.5.4.&#160;<a class="internal-link" href="#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:15">
-<p>« This performs a lazy copy: the full DAG will not be fetched, only the root node being copied. »
-— primary, <code>ipfs files cp --help</code>, kubo 0.39.0, run on roddenberry on 2026-10-07.&#160;<a class="internal-link" href="#fnref:15" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
-</li>
-<li id="fn:16">
-<p>« All files and folders within MFS are respected and will not be deleted during garbage
-collections. » — primary, <code>ipfs files --help</code>, kubo 0.39.0, run on roddenberry on 2026-10-07.&#160;<a class="internal-link" href="#fnref:16" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
-</li>
-<li id="fn:17">
-<p>« &lsquo;ipfs dag export&rsquo; fetches a DAG and streams it out as a well-formed .car file. » — primary,
-<code>ipfs dag export --help</code>, kubo 0.39.0, run on roddenberry on 2026-10-07.&#160;<a class="internal-link" href="#fnref:17" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
-</li>
-<li id="fn:18">
-<p>« &lsquo;ipfs dag import&rsquo; imports all blocks present in supplied .car ( Content Address aRchive )
-files, recursively pinning any roots specified in the CAR file headers, unless &ndash;pin-roots is set to false. »
-« If the combination of blocks from the imported CAR files and what is currently present in the blockstore
-does not represent a complete DAG, pinning of that individual root will fail. » — primary, <code>ipfs dag import --help</code>, kubo 0.39.0, run on roddenberry on 2026-10-07.&#160;<a class="internal-link" href="#fnref:18" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:18" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
-</li>
 </ol>
 </div>
       </div>
-	  <aside class="date"><time>Last updated: 07 Oct 2026</time></aside>
+	  <aside class="date"><time>Last updated: 09 Oct 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 07 Oct 2026</time></aside>
     </div>
   </div>
