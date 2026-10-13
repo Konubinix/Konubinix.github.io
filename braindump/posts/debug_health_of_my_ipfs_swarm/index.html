@@ -402,6 +402,10 @@ only in memory<sup id="fnref:11"><a class="internal-link" href="#fn:11" class="f
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh gooseberry <span style="color:#0a3069">&#34;journalctl --dmesg --boot=all --no-pager --grep=&#39;usb 4-1: reset&#39;&#34;</span>
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 07 05:56:09 gooseberry kernel: usb 4-1: reset SuperSpeed USB device number 2 using xhci-hcd
 </span></span></code></pre></div><h2 id="9f716059-aa12-455e-8b6c-19aa3562e19f">roddenberry</h2>
+<dl>
+<dt>why</dt>
+<dd>By mere chance, I took a look at roddenberry as well and found out it had troubles</dd>
+</dl>
 <div class="konix-block-name-marker" data-name="roddenberry-in-swarm"></div>
 <p><a id="code-snippet--roddenberry-in-swarm"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nd node status <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;^ID|roddenberry&#39;</span>
@@ -485,7 +489,221 @@ group too.</dd>
 <dt>how</dt>
 <dd>copy what only roddenberry holds off the drive, then replace the drive, as the user settled.</dd>
 </dl>
+<h3 id="3f0c6a52-8e1d-4b7a-9c25-d4e8a1b6f093">why so young a drive gave way</h3>
+<h4 id="e02ec11f-19aa-49a8-bf2c-9d9f3ff0d51e">the drive is shingled</h4>
+<dl>
+<dt>what</dt>
+<dd>a shingled, SMR, drive writes each track over part of the one before, like roof shingles, to fit
+more tracks on a platter<sup id="fnref:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.
+<ul>
+<li><strong>what:</strong> a conventional, CMR, drive writes tracks that do not overlap<sup id="fnref1:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.
+<ul>
+<li><strong>therefore:</strong> a CMR drive rewrites any block in place, touching nothing else.</li>
+</ul>
+</li>
+<li><strong>what:</strong> on SMR, writing a track overwrites its neighbour, which must be rewritten too when it holds
+data<sup id="fnref2:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.
+<ul>
+<li><strong>therefore:</strong> rewriting one block may cost an SMR drive rewriting the tracks after it.</li>
+</ul>
+</li>
+<li><strong>what:</strong> continuous writing of large amounts of data is noticeably slower than on CMR drives<sup id="fnref3:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.</li>
+<li><strong>what:</strong> a device-managed SMR drive hides this in its firmware and shows to the host as a plain
+drive<sup id="fnref4:15"><a class="internal-link" href="#fn:15" class="footnote-ref" role="doc-noteref">15</a></sup>.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>Toshiba lists drive-managed SMR among the MQ04 series&rsquo; features, for the MQ04ABD200 among
+others<sup id="fnref:16"><a class="internal-link" href="#fn:16" class="footnote-ref" role="doc-noteref">16</a></sup>.
+<ul>
+<li><strong>what:</strong> smartctl reports roddenberry&rsquo;s old drive, an MQ04ABD200, as zoned, device managed, as the block
+below shows.</li>
+<li><strong>therefore:</strong> bimbap&rsquo;s drive is SMR, by its maker&rsquo;s word and by what the drive itself reports.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="roddenberry-drive-zones"></div>
+<p><a id="code-snippet--roddenberry-drive-zones"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n roddenberry sudo -n smartctl -i /dev/sda <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Device Model|Rotation|Zoned&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Device Model:     TOSHIBA MQ04ABD200
+</span></span><span style="display:flex;"><span>Rotation Rate:    5400 rpm
+</span></span><span style="display:flex;"><span>Zoned Device:     Device managed zones
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>ipfs stores each block as a small file, so it writes many small files all over the disk.
+<ul>
+<li><strong>therefore:</strong> on an SMR drive each of those writes may make the drive rewrite neighbouring tracks, which
+fits the aborted writes and resets the journal above shows.</li>
+</ul>
+</dd>
+</dl>
+<h4 id="3d727152-a85e-49c3-9ef6-520680c7cc80">what the drive and the logs record</h4>
+<div class="konix-block-name-marker" data-name="roddenberry-power-cycles"></div>
+<p><a id="code-snippet--roddenberry-power-cycles"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n roddenberry sudo -n smartctl -A /dev/sda <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Power_Cycle|Retract&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span> 12 Power_Cycle_Count       0x0032   100   100   000    Old_age   Always       -       14
+</span></span><span style="display:flex;"><span>192 Power-Off_Retract_Count 0x0032   100   100   000    Old_age   Always       -       11
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="bimbap-age"></div>
+<p><a id="code-snippet--bimbap-age"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n roddenberry sudo -n smartctl -A /dev/sda <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Power_On_Hours&#39;</span>
+</span></span><span style="display:flex;"><span>ssh -n roddenberry sudo -n tune2fs -l /dev/sda1 <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Filesystem created&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>  9 Power_On_Hours          0x0032   094   094   000    Old_age   Always       -       2556
+</span></span><span style="display:flex;"><span>Filesystem created:       Thu Jun 25 17:57:11 2026
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>the drive had run 2542 hours, about 106 days, when its bad sectors kept growing.
+<ul>
+<li><strong>what:</strong> its filesystem was made on Jun 25, about as many hours ago as the drive has run, as the block
+above shows.
+<ul>
+<li><strong>therefore:</strong> the drive has run without a stop since about when its filesystem was made.</li>
+</ul>
+</li>
+<li><strong>what:</strong> attribute 192 counts power-off or emergency head retracts<sup id="fnref:17"><a class="internal-link" href="#fn:17" class="footnote-ref" role="doc-noteref">17</a></sup>; it reads 11 on bimbap&rsquo;s
+drive, against 14 power cycles in attribute 12, as the block above shows.
+<ul>
+<li><strong>therefore:</strong> about one retract per power cycle: nothing points at power cuts beyond the drive&rsquo;s own
+power cycles, its hub having its own supply, as the user states.</li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>smartd logs every attribute of the drive each 30 min since Oct 07, 07:43; the first block below prints
+the readings where attribute 5 or 197 changed.
+<ul>
+<li><strong>what:</strong> loki keeps roddenberry&rsquo;s kernel lines since Oct 07; the second block prints the disk&rsquo;s resets and read
+errors, to set beside those readings.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="bimbap-bad-sectors-history"></div>
+<p><a id="code-snippet--bimbap-bad-sectors-history"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n roddenberry cat /var/lib/smartmontools/attrlog.TOSHIBA_MQ04ABD200-54R8PHXFT.ata.csv <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> awk -F<span style="color:#0a3069">&#39;\t&#39;</span> <span style="color:#0a3069">&#39;{ for (i = 2; i &lt;= NF; i++) { split($i, a, &#34;;&#34;); if (a[1] == 5) r = a[3]; if (a[1] == 197) p = a[3] }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    if (r p != last) print $1, &#34;reallocated&#34;, r, &#34;pending&#34;, p; last = r p }&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>2026-10-07 07:43:49; reallocated 301 pending 704
+</span></span><span style="display:flex;"><span>2026-10-07 11:25:49; reallocated 309 pending 872
+</span></span><span style="display:flex;"><span>2026-10-07 11:55:51; reallocated 326 pending 1096
+</span></span><span style="display:flex;"><span>2026-10-07 12:25:49; reallocated 329 pending 1096
+</span></span><span style="display:flex;"><span>2026-10-07 13:55:49; reallocated 330 pending 1096
+</span></span><span style="display:flex;"><span>2026-10-07 14:25:50; reallocated 332 pending 1096
+</span></span><span style="display:flex;"><span>2026-10-07 14:55:50; reallocated 342 pending 1128
+</span></span><span style="display:flex;"><span>2026-10-07 15:56:04; reallocated 369 pending 1024
+</span></span><span style="display:flex;"><span>2026-10-07 16:25:49; reallocated 409 pending 832
+</span></span><span style="display:flex;"><span>2026-10-07 16:55:50; reallocated 438 pending 752
+</span></span><span style="display:flex;"><span>2026-10-07 17:55:50; reallocated 442 pending 752
+</span></span><span style="display:flex;"><span>2026-10-07 18:55:51; reallocated 529 pending 656
+</span></span><span style="display:flex;"><span>2026-10-07 20:25:50; reallocated 564 pending 680
+</span></span><span style="display:flex;"><span>2026-10-07 20:55:49; reallocated 565 pending 680
+</span></span><span style="display:flex;"><span>2026-10-07 22:25:49; reallocated 565 pending 688
+</span></span><span style="display:flex;"><span>2026-10-08 07:25:50; reallocated 581 pending 792
+</span></span><span style="display:flex;"><span>2026-10-08 07:55:50; reallocated 582 pending 736
+</span></span><span style="display:flex;"><span>2026-10-08 08:25:49; reallocated 594 pending 976
+</span></span><span style="display:flex;"><span>2026-10-08 20:25:50; reallocated 594 pending 984
+</span></span><span style="display:flex;"><span>2026-10-09 12:55:50; reallocated 594 pending 992
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="bimbap-errors-timeline"></div>
+<p><a id="code-snippet--bimbap-errors-timeline"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nix-shell -p grafana-loki --run <span style="color:#0a3069">&#34;logcli --addr=http://192.168.2.14:9913 query --quiet --limit=20000 \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    --from=2026-10-06T00:00:00Z --to=2026-10-10T00:00:00Z --timezone=Local --forward \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &#39;{ns=\&#34;kernel\&#34;, host=\&#34;roddenberry\&#34;}
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">     |~ \`uas_eh_device_reset_handler start|critical medium error|I/O error, dev sda\`&#39;&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> sed -E <span style="color:#0a3069">&#39;s/^([^ ]+) .*\} +/\1 /&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>2026-10-07T11:25:43+02:00 scsi host0: uas_eh_device_reset_handler start
+</span></span><span style="display:flex;"><span>2026-10-07T11:32:14+02:00 scsi host0: uas_eh_device_reset_handler start
+</span></span><span style="display:flex;"><span>2026-10-07T11:32:15+02:00 I/O error, dev sda, sector 2378206336 op 0x0:(READ) flags 0x80700 phys_seg 16 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-07T11:40:25+02:00 scsi host0: uas_eh_device_reset_handler start
+</span></span><span style="display:flex;"><span>2026-10-07T11:40:25+02:00 I/O error, dev sda, sector 2365614344 op 0x0:(READ) flags 0x80700 phys_seg 24 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-07T11:40:25+02:00 I/O error, dev sda, sector 2365614544 op 0x0:(READ) flags 0x80700 phys_seg 7 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-07T11:43:00+02:00 scsi host0: uas_eh_device_reset_handler start
+</span></span><span style="display:flex;"><span>2026-10-07T11:45:48+02:00 scsi host0: uas_eh_device_reset_handler start
+</span></span><span style="display:flex;"><span>2026-10-08T13:11:16+02:00 critical medium error, dev sda, sector 58655808 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T13:13:51+02:00 critical medium error, dev sda, sector 58617632 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T13:19:04+02:00 critical medium error, dev sda, sector 58673312 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T13:19:05+02:00 critical medium error, dev sda, sector 58655808 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T13:19:06+02:00 critical medium error, dev sda, sector 58617632 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T19:39:36+02:00 critical medium error, dev sda, sector 36272608 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T19:52:38+02:00 critical medium error, dev sda, sector 36168448 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T19:56:47+02:00 critical medium error, dev sda, sector 36272608 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T19:56:48+02:00 I/O error, dev sda, sector 36168544 op 0x0:(READ) flags 0x80700 phys_seg 5 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-08T19:56:49+02:00 critical medium error, dev sda, sector 36168448 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>2026-10-09T22:31:52+02:00 scsi host0: uas_eh_device_reset_handler start
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>a SMART extended self-test reads the whole surface and logs the first sector it could not read; the
+block below shows the one run on Oct 10.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="bimbap-selftest"></div>
+<p><a id="code-snippet--bimbap-selftest"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n roddenberry sudo -n smartctl -l selftest /dev/sda <span style="color:#1f2328">|</span> sed -n <span style="color:#0a3069">&#39;/^Num/,$p&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Num  Test_Description    Status                  Remaining  LifeTime(hours)  LBA_of_first_error
+</span></span><span style="display:flex;"><span># 1  Extended offline    Completed: read failure       00%      2563         35121192
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>the test failed first at LBA 35121192, below sectors 36168448 and 36272608, which the kernel could
+not read on Oct 08, as the errors block above shows.</dd>
+<dt>what</dt>
+<dd>the block below gives the drive&rsquo;s lifetime temperatures and its shock count.
+<ul>
+<li><strong>what:</strong> Toshiba gives the drive an operating range of 0 to 60 °C<sup id="fnref:18"><a class="internal-link" href="#fn:18" class="footnote-ref" role="doc-noteref">18</a></sup>.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="bimbap-heat-and-shock"></div>
+<p><a id="code-snippet--bimbap-heat-and-shock"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n roddenberry sudo -n smartctl -l scttempsts /dev/sda <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Lifetime|Over Temperature&#39;</span>
+</span></span><span style="display:flex;"><span>ssh -n roddenberry sudo -n smartctl -A /dev/sda <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;G-Sense&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Lifetime    Min/Max Temperature:     24/51 Celsius
+</span></span><span style="display:flex;"><span>Under/Over Temperature Limit Count:   0/0
+</span></span><span style="display:flex;"><span>191 G-Sense_Error_Rate      0x0032   100   100   000    Old_age   Always       -       1
+</span></span></code></pre></div><h4 id="cf48bf88-6134-4bc4-8fa4-1740ff13e68f">what studies of drive fleets say</h4>
+<dl>
+<dt>what</dt>
+<dd>in Google&rsquo;s fleet, drives failed more in their first three months than over their first
+year<sup id="fnref:19"><a class="internal-link" href="#fn:19" class="footnote-ref" role="doc-noteref">19</a></sup>.
+<ul>
+<li><strong>what:</strong> there, high utilization raised failures only in the very young and very old age
+groups<sup id="fnref:20"><a class="internal-link" href="#fn:20" class="footnote-ref" role="doc-noteref">20</a></sup>.</li>
+<li><strong>what:</strong> there, failures did not rise with average temperature, save at the very high end<sup id="fnref:21"><a class="internal-link" href="#fn:21" class="footnote-ref" role="doc-noteref">21</a></sup>.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>Backblaze sees fewer early failures in its newer drives than in its 2013 ones<sup id="fnref:22"><a class="internal-link" href="#fn:22" class="footnote-ref" role="doc-noteref">22</a></sup>.</dd>
+</dl>
+<h4 id="7f17cd03-7f80-4963-b83c-409a31111601">for the next disk</h4>
+<dl>
+<dt>how</dt>
+<dd>for the next ipfs disk, as the user settled:
+<ul>
+<li><strong>how:</strong> pick a CMR drive, as its spec sheet states.</li>
+<li><strong>how:</strong> prefer a drive rated for 24x7 use and a yearly workload, as NAS drives are, to a laptop drive.
+<ul>
+<li><strong>what:</strong> Toshiba sells bimbap&rsquo;s MQ04ABD200 as a client drive for laptops, rated for an MTTF of
+600,000 h, with no workload nor hours of use a year stated<sup id="fnref1:18"><a class="internal-link" href="#fn:18" class="footnote-ref" role="doc-noteref">18</a></sup>.</li>
+<li><strong>what:</strong> Toshiba writes elsewhere that a client drive&rsquo;s duty may be limited to 8 or 16 hours a day, and
+that its MTTF holds only within that duty<sup id="fnref:23"><a class="internal-link" href="#fn:23" class="footnote-ref" role="doc-noteref">23</a></sup>.</li>
+<li><strong>what:</strong> there, typical rated workloads reach 55 TB a year for client drives, 550 TB for
+enterprise ones<sup id="fnref1:23"><a class="internal-link" href="#fn:23" class="footnote-ref" role="doc-noteref">23</a></sup>.</li>
+<li><strong>what:</strong> Western Digital sells its WD Red Plus, a CMR drive for NAS, for systems running 24x7, rated
+for 180 TB a year of workload and an MTBF of 1,000,000 h<sup id="fnref:24"><a class="internal-link" href="#fn:24" class="footnote-ref" role="doc-noteref">24</a></sup>.</li>
+</ul>
+</li>
+</ul>
+</dd>
+</dl>
 <h3 id="e2f4c1dc-257b-4792-b216-3b3bc7ce8771">moving its cids to barbeuc</h3>
+<dl>
+<dt>how</dt>
+<dd>the move follows <a class="internal-link" href="/braindump/posts/migrate_an_ipfs_repo_off_a_failing_disk/">migrate an ipfs repo off a failing disk</a>,
+its scripts tangled from there, with the old repo at <em>media/sam/bimbap</em>.ipfs, the new one at
+<em>media/sam/barbeuc</em>.ipfs, and the migration&rsquo;s files in /media/sam/barbeuc/migration.
+<ul>
+<li><strong>how:</strong> then the user switches roddenberry&rsquo;s ipfs onto the barbeuc repo, repointing the ~/.ipfs link on
+roddenberry, as the user states.</li>
+</ul>
+</dd>
+</dl>
+<h4 id="480772d9-6eaa-46b8-839c-c836444b0b50">the disk it moves to</h4>
 <dl>
 <dt>what</dt>
 <dd>barbeuc is to replace the drive under roddenberry&rsquo;s ipfs node, holding only the cids the docs
@@ -493,13 +711,12 @@ database allocates to roddenberry, the rest staying behind, as the user states.
 <ul>
 <li><strong>what:</strong> barbeuc is a second USB disk on roddenberry, beside bimbap, the one holding the drive above, as
 the roddenberry-disks block below shows.</li>
-</ul>
-</dd>
-<dt>what</dt>
-<dd>no pin may be added on the user&rsquo;s nodes, and roddenberry&rsquo;s node never runs garbage collection, as
+<li><strong>what:</strong> no pin may be added on the user&rsquo;s nodes, and roddenberry&rsquo;s node never runs garbage collection, as
 the user states.
 <ul>
 <li><strong>therefore:</strong> a cid is migrated once its blocks are in barbeuc&rsquo;s repo; nothing has to hold them there.</li>
+</ul>
+</li>
 </ul>
 </dd>
 </dl>
@@ -525,15 +742,12 @@ the user states.
 <dt>therefore</dt>
 <dd>the whole repo weighs 574 GB, so roddenberry&rsquo;s share of it fits barbeuc, a 2 TB disk lsblk
 lists as 1.8T.</dd>
+</dl>
+<h4 id="f5b07386-5e86-4630-b987-890d3685c569">the copy</h4>
+<dl>
 <dt>how</dt>
-<dd>the move follows <a class="internal-link" href="/braindump/posts/migrate_an_ipfs_repo_off_a_failing_disk/">migrate an ipfs repo off a failing disk</a>,
-its scripts tangled from there, with the old repo at <em>media/sam/bimbap</em>.ipfs, the new one at
-<em>media/sam/barbeuc</em>.ipfs, and the migration&rsquo;s files in /media/sam/barbeuc/migration.
-<ul>
-<li><strong>how:</strong> then the user switches roddenberry&rsquo;s ipfs onto the barbeuc repo, repointing the ~/.ipfs link on
-roddenberry, as the user states.</li>
-</ul>
-</dd>
+<dd>the blocks below, in their order, make the new repo, check the sharding, cut the batches, measure the
+read order and the disks&rsquo; load, then start and follow the chain.</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="barbeuc-init"></div>
 <p><a id="code-snippet--barbeuc-init"></a></p>
@@ -579,7 +793,8 @@ order.</dd>
 </span></span></code></pre></div><div class="konix-block-name-marker" data-name="roddenberry-chain-status"></div>
 <p><a id="code-snippet--roddenberry-chain-status"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/chain_status.sh roddenberry /media/sam/barbeuc/migration
-</span></span></code></pre></div><dl>
+</span></span></code></pre></div><h4 id="20b8ad8b-4320-4923-bd89-15a496ffe24f">the rescue</h4>
+<dl>
 <dt>how</dt>
 <dd>the rescue tries the backup on bibou first, which must be mounted at /run/media/sam/bibou.</dd>
 </dl>
@@ -587,7 +802,45 @@ order.</dd>
 <p><a id="code-snippet--roddenberry-rescue"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bash /var/run/user/1000/ipfshealth/rescue_broken.sh roddenberry /media/sam/barbeuc/migration <span style="color:#0a3069">\
 </span></span></span><span style="display:flex;"><span>    /media/sam/barbeuc/.ipfs clk backup docs retrieve
-</span></span></code></pre></div><h2 id="notes-linking-here">Notes linking here</h2>
+</span></span></code></pre></div><h4 id="da25d9c5-aa2f-4fbc-b480-2cce46788486">how fast it went</h4>
+<dl>
+<dt>what</dt>
+<dd>the chain&rsquo;s log holds batches copied three ways, one after the other: by rsync, in name order; in
+disk order beside a dag stat of the batch before; in disk order with only the size check beside.
+<ul>
+<li><strong>how:</strong> the block below times each batch from its listing to its copy&rsquo;s end, sorting included, and sums
+bytes and time for each way.</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="roddenberry-copy-speed"></div>
+<p><a id="code-snippet--roddenberry-copy-speed"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n roddenberry cat /media/sam/barbeuc/migration/copy/all.log <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> gawk <span style="color:#0a3069">&#39;function t(s) { gsub(/[-T:]/, &#34; &#34;, s); return mktime(substr(s, 1, 19)) }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            / [0-9]+ block files$/ { start = t($1); bytes = 0 }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            /^Total transferred file size/ { gsub(/,/, &#34;&#34;, $5); bytes = $5; way = &#34;1 rsync, name order&#34; }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            /^copied [0-9]+ files, [0-9]+ bytes/ { bytes = $4; way = &#34;2 disk order, dag stat beside&#34; }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            / [0-9]+: copied/ &amp;&amp; bytes &gt; 0 {
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                if ($0 ~ /every block file present|block files missing/) way = &#34;3 disk order, size check beside&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                n[way]++; sum[way] += bytes; dur[way] += t($1) - start; bytes = 0 }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            END { for (w in n) printf &#34;%s: %d batches, %.0f GB in %.1f h, %.0f MB/s\n&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                                     w, n[w], sum[w] / 1e9, dur[w] / 3600, sum[w] / 1e6 / dur[w] }&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> sort
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1 rsync, name order: 20 batches, 184 GB in 5.1 h, 10 MB/s
+</span></span><span style="display:flex;"><span>2 disk order, dag stat beside: 11 batches, 100 GB in 2.2 h, 12 MB/s
+</span></span><span style="display:flex;"><span>3 disk order, size check beside: 22 batches, 212 GB in 2.3 h, 25 MB/s
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>from 10 MB/s in name order to 25 MB/s in disk order with only the size check beside, about
+2.5 times as fast, sorting included.
+<ul>
+<li><strong>therefore:</strong> sorting alone, with a dag stat beside, gained little, 12 MB/s: the dag stat starved the copy&rsquo;s
+writes on barbeuc, as <a class="internal-link" href="/braindump/posts/migrate_an_ipfs_repo_off_a_failing_disk/">migrate an ipfs repo off a failing disk</a>
+measures.</li>
+</ul>
+</dd>
+</dl>
+<h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/migrate_an_ipfs_repo_off_a_failing_disk/">migrate an ipfs repo off a failing disk</a></li>
 </ul>
@@ -748,10 +1001,75 @@ and are reallocated or continue to work without problems. » « The critical thr
 also one: after the first event, drives are 16 times more likely to fail within 60 days than drives with zero
 probational counts. » — primary, same paper, section 3.5.4.&#160;<a class="internal-link" href="#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
+<li id="fn:15">
+<p>« continuous writing of large amounts of data is noticeably slower than with CMR drives. »
+« shingled recording writes new tracks that overlap part of the previously written magnetic track,
+leaving the previous track narrower and allowing higher track density. » « writing to one track also overwrites
+an adjacent track. » « If adjacent tracks contain valid data, they must be rewritten as well. » « Conventional
+hard disk drives record data by writing non-overlapping concentric magnetic tracks » « A device-managed or
+drive-managed drive appears to the host identically to a non-shingled drive. » — secondary,
+<a target="_blank" href="https://en.wikipedia.org/wiki/Shingled_magnetic_recording">Wikipedia, Shingled magnetic recording</a>, read on
+2026-10-09.&#160;<a class="internal-link" href="#fnref:15" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:15" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref2:15" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref3:15" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref4:15" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:16">
+<p>« Drive-Managed SMR (Shingled magnetic recording) Technology », model numbers « MQ04ABD200 »
+and « MQ04ABF100 » — primary,
+<a target="_blank" href="https://toshiba.semicon-storage.com/us/storage/product/internal-specialty/pc/articles/mq04ab-series.html">MQ04 Series</a>,
+Toshiba, read on 2026-10-09.&#160;<a class="internal-link" href="#fnref:16" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:17">
+<p>« Number of power-off or emergency retract cycles. » — secondary,
+<a target="_blank" href="https://en.wikipedia.org/wiki/Self-Monitoring,_Analysis_and_Reporting_Technology">Wikipedia, S.M.A.R.T.</a>,
+attribute 192.&#160;<a class="internal-link" href="#fnref:17" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:18">
+<p>« It is suitable for ultra-portable laptop and notebook PCs » « MTTF 600,000 h » « Temperature
+Operating 0 °C to 60 °C » « This drive uses 5V
+power only. 3.3V and 12V powe are not used. » — primary,
+<a target="_blank" href="https://toshiba.semicon-storage.com/content/dam/toshiba-ss-v2/master/en/storage/product/internal-specialty/cHDD-MQ04AB_Product-Manual.pdf">MQ04AB manual</a>,
+Toshiba, Rev. 01, Feb 2018, read on 2026-10-09.&#160;<a class="internal-link" href="#fnref:18" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:18" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:19">
+<p>« our 3-month, 6-months and 1-year data points do seem to indicate a noticeable influence
+of infant mortality phenomena, with 1-year AFR dropping significantly from the AFR observed in the first three
+months. » — primary, Pinheiro, Weber and Barroso, same paper as above, section 3.1.&#160;<a class="internal-link" href="#fnref:19" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:20">
+<p>« only very young and very old age groups appear to show the expected behavior. After
+the first year, the AFR of high utilization drives is at most moderately higher than that of low utilization
+drives. » — primary, same paper, section 3.3.&#160;<a class="internal-link" href="#fnref:20" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:21">
+<p>« The figure shows that failures do not increase when the average temperature increases. »
+« Only at very high temperatures is there a slight reversal » — primary, same paper, section 3.4.&#160;<a class="internal-link" href="#fnref:21" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:22">
+<p>« The 2013 data looks the closest to a true bathtub curve » « the 2021 data shows fewer
+early failures and a lower failure rate for more years » — primary, Backblaze,
+<a target="_blank" href="https://www.backblaze.com/blog/are-hard-drives-getting-better-lets-revisit-the-bathtub-curve/">Are Hard Drives Getting Better?</a>,
+read on 2026-10-09.&#160;<a class="internal-link" href="#fnref:22" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:23">
+<p>« While business critical enterprise drives are designed for 24 hours per day, 7 days a
+week, 365 days a year (24/7/365 or 24/7) continuous operation, the operation duty of client drives may be
+limited, i.e. 8 or 16 hours per day for dedicated hard disk drives for desktop or laptop computers. » « Within the
+warranty period, a drive manufacturer estimates that a population of drives will not exceed a specified failure
+rate. Again, upon the condition that operating duty and other environmental constraints are adhered to. »
+« Typical rated workloads are up to 55 TB/year for client devices and up to 550 TB/year for enterprise/server
+drives. » — primary,
+<a target="_blank" href="https://toshiba.semicon-storage.com/content/dam/toshiba-ss-v3/master/en/storage/technology-center/whitepaper-reliability-of-ehdd-e-201509.pdf">Reliability of Enterprise Hard Disk Drives</a>,
+Toshiba white paper, September 2015, sections 1.1, 1.3 and 2.2, read on 2026-10-10.&#160;<a class="internal-link" href="#fnref:23" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a>&#160;<a class="internal-link" href="#fnref1:23" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:24">
+<p>« WD Red Plus hard drives are designed for systems that operate 24x7 » « Recording technology
+CMR » « Workload rate (TB/year) 180 » « MTBF (hours) 1,000,000 » « 12VDC ±5% (A, peak) » — primary,
+<a target="_blank" href="https://documents.westerndigital.com/content/dam/doc-library/en_us/assets/public/western-digital/product/internal-drives/wd-red-plus-hdd/product-brief-western-digital-wd-red-plus-hdd.pdf">WD Red Plus brief</a>,
+Western Digital, March 2025, read on 2026-10-09.&#160;<a class="internal-link" href="#fnref:24" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
 </ol>
 </div>
       </div>
-	  <aside class="date"><time>Last updated: 09 Oct 2026</time></aside>
+	  <aside class="date"><time>Last updated: 10 Oct 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 07 Oct 2026</time></aside>
     </div>
   </div>
