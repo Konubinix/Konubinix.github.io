@@ -4386,6 +4386,12 @@ answer with.</p>
 <p>One router serves every document, and the gate works out which one is being dialled from
 the address itself. A list shared with one person therefore says nothing about the next, and
 adding a list costs no configuration at all.</p>
+<p>The app is served from another origin than the relay, and when a socket fails it
+asks the relay over plain HTTPS what went wrong. The browser only lets it read that
+answer if the relay names the app&rsquo;s origin, so the HTTPS router carries a CORS
+middleware listing the origins the app is served from. It comes before the gate,
+because the answer worth reading is precisely the gate&rsquo;s refusal, and it allows
+credentials, because the question is asked with the room&rsquo;s cookie.</p>
 <div class="konix-block-name-marker" data-name="lorosync-service"></div>
 <p><a id="code-snippet--lorosync-service"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">service</span>  {
@@ -4400,24 +4406,33 @@ adding a list costs no configuration at all.</p>
 </span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.tls.certresolver<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.tls.domains[0].main<span style="color:#0550ae">=</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">job-name</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">cors</span><span style="color:#1f2328">,</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    &#34;traefik.http.middlewares.${local.job-name}-cors.headers.accesscontrolalloworiginlist<span style="color:#0550ae">=</span><span style="color:#0a3069">${</span><span style="color:#6639ba">join</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;,&#34;, local.cors_origins)}&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;traefik.http.middlewares.${local.job-name}-cors.headers.accesscontrolallowmethods=GET,OPTIONS&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;traefik.http.middlewares.${local.job-name}-cors.headers.accesscontrolallowheaders=*&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;traefik.http.middlewares.${local.job-name}-cors.headers.accesscontrolallowcredentials=true&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>  port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">check</span> {
-</span></span><span style="display:flex;"><span>    port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
-</span></span><span style="display:flex;"><span>    name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;lorosync-${node.unique.name}&#34;</span>
-</span></span><span style="display:flex;"><span>    type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tcp&#34;</span>
-</span></span><span style="display:flex;"><span>    interval <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
-</span></span><span style="display:flex;"><span>    timeout  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
-</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#f6f8fa;background-color:#82071e">port</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f6f8fa;background-color:#82071e">check</span> <span style="color:#f6f8fa;background-color:#82071e">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f6f8fa;background-color:#82071e">port</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f6f8fa;background-color:#82071e">name</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;lorosync-${node.unique.name}&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f6f8fa;background-color:#82071e">type</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;tcp&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f6f8fa;background-color:#82071e">interval</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f6f8fa;background-color:#82071e">timeout</span>  <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0a3069">}</span>
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>The job that holds those three: one group, one task, the image pinned to the version
 above, and <code>DATA_DIR</code> pointing into the allocation directory — the sticky disk.</p>
+<div class="konix-block-name-marker" data-name="lorosync-job"></div>
+<p><a id="code-snippet--lorosync-job"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-hcl" data-lang="hcl"><span style="display:flex;"><span><span style="color:#cf222e">locals</span> {
 </span></span><span style="display:flex;"><span>  root <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;lorosync&#34;</span>
 </span></span><span style="display:flex;"><span>  job-name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;lorosync&#34;</span>
 </span></span><span style="display:flex;"><span>  repo <span style="color:#0550ae">=</span> <span style="color:#cf222e">file</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;jobs/conf/repo&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>  memory <span style="color:#0550ae">=</span> <span style="color:#0550ae">200</span>
+</span></span><span style="display:flex;"><span>  cors_origins <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0a3069">&#34;https://sam.konubinix.eu&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">job</span> <span style="color:#0a3069">&#34;lorosync&#34;</span> {
@@ -4468,16 +4483,20 @@ above, and <code>DATA_DIR</code> pointing into the allocation directory — the 
 </span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.tls.certresolver<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.entrypoints<span style="color:#0550ae">=</span><span style="color:#cf222e">https</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.tls.domains[0].main<span style="color:#0550ae">=</span><span style="color:#cf222e">konubinix</span><span style="color:#1f2328">.</span><span style="color:#cf222e">eu</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.routers.${local.job-name}-https.middlewares<span style="color:#0550ae">=</span><span style="color:#0a3069">${</span><span style="color:#f6f8fa;background-color:#82071e">local</span><span style="color:#1f2328">.</span><span style="color:#f6f8fa;background-color:#82071e">job-name</span><span style="color:#0a3069">}</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">cors</span><span style="color:#1f2328">,</span><span style="color:#cf222e">authz</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">check</span><span style="color:#f6f8fa;background-color:#82071e">-</span><span style="color:#cf222e">path</span><span style="color:#f6f8fa;background-color:#82071e">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          &#34;traefik.http.middlewares.${local.job-name}-cors.headers.accesscontrolalloworiginlist<span style="color:#0550ae">=</span><span style="color:#0a3069">${</span><span style="color:#6639ba">join</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;,&#34;, local.cors_origins)}&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0a3069">&#34;traefik.http.middlewares.${local.job-name}-cors.headers.accesscontrolallowmethods=GET,OPTIONS&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0a3069">&#34;traefik.http.middlewares.${local.job-name}-cors.headers.accesscontrolallowheaders=*&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0a3069">&#34;traefik.http.middlewares.${local.job-name}-cors.headers.accesscontrolallowcredentials=true&#34;</span><span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>        port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">check</span> {
-</span></span><span style="display:flex;"><span>          port <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
-</span></span><span style="display:flex;"><span>          name <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;lorosync-${node.unique.name}&#34;</span>
-</span></span><span style="display:flex;"><span>          type <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;tcp&#34;</span>
-</span></span><span style="display:flex;"><span>          interval <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
-</span></span><span style="display:flex;"><span>          timeout  <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
-</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#f6f8fa;background-color:#82071e">port</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f6f8fa;background-color:#82071e">check</span> <span style="color:#f6f8fa;background-color:#82071e">{</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f6f8fa;background-color:#82071e">port</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;http&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f6f8fa;background-color:#82071e">name</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;lorosync-${node.unique.name}&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f6f8fa;background-color:#82071e">type</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;tcp&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f6f8fa;background-color:#82071e">interval</span> <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;1m&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f6f8fa;background-color:#82071e">timeout</span>  <span style="color:#f6f8fa;background-color:#82071e">=</span> <span style="color:#0a3069">&#34;30s&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0a3069">}</span>
 </span></span><span style="display:flex;"><span>      }
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>  }
