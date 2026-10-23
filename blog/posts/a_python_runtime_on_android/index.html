@@ -425,7 +425,10 @@ cannot open a camera.</p>
 </span></span><span style="display:flex;"><span>             <span style="color:#0a3069">&#39;android:foregroundServiceType=&#34;camera|microphone&#34; /&gt;&#39;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">with</span> <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span>path<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;w&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> f<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        f<span style="color:#0550ae">.</span>write<span style="color:#1f2328">(</span>manifest<span style="color:#0550ae">.</span>replace<span style="color:#1f2328">(</span>anchor<span style="color:#1f2328">,</span> typed<span style="color:#1f2328">))</span>
-</span></span></code></pre></div><p>Now, let&rsquo;s create an application, adding a bunch of dependencies that I deem useful.</p>
+</span></span></code></pre></div><p>Now, let&rsquo;s create an application, adding a bunch of dependencies that I deem useful. The bluetooth
+scan is marked <code>neverForLocation</code>, so that android 12 and later let it find devices with location off.</p>
+<div class="konix-block-name-marker" data-name="buildozer-earthfile"></div>
+<p><a id="code-snippet--buildozer-earthfile"></a></p>
 <pre tabindex="0"><code class="language-earthfile" data-lang="earthfile">VERSION 0.8
 
 IMPORT github.com/Konubinix/Earthfile AS e
@@ -445,15 +448,15 @@ generate:
     # - zmq fails https://github.com/kivy/python-for-android/issues/2706
 
     # I needed android.api = 34 to start using androidx, but it won&#39;t work yet https://github.com/kivy/python-for-android/issues/3127
-    ARG extra=&#34;,able_recipe,dbus-next,usbserial4a,usb4a,Pillow,av,av_codecs,cryptography,ffpyplayer,ffpyplayer_codecs,matplotlib,pandas,pycryptodome,sqlite3,requests,numpy,opencv,opencv_extras&#34;
+    ARG extra=&#34;,dbus-next,usbserial4a,usb4a,Pillow,av,av_codecs,cryptography,ffpyplayer,ffpyplayer_codecs,matplotlib,pandas,pycryptodome,sqlite3,requests,numpy,opencv,opencv_extras&#34;
     RUN sed -i -r \
         -e &#34;s/^(title = .+)$/title = ${title}/&#34; \
         -e &#34;s/^(package.name = .+)$/package.name = ${name}/&#34; \
         -e &#34;s/^(package.domain = .+)$/package.domain = ${domain}/&#34; \
-        -e &#34;s/^(requirements = .+)$/\1,android,plumbum,rpyc,plyer,pyjnius,oscpy,requests${extra}/&#34; \
+        -e &#34;s/^(requirements = .+)$/\1,android,plumbum,rpyc,plyer,pyjnius,oscpy,able_recipe,requests${extra}/&#34; \
         -e &#34;s/# android.accept_sdk_license = False/android.accept_sdk_license = True/&#34; \
         -e &#34;s/^#android.manifest.intent_filters =.*$/android.manifest.intent_filters = intent-filter.xml/&#34; \
-        -e &#39;s/^(#android.permissions = .+)$/android.permissions = SET_TIME,SET_TIME_ZONE,WRITE_CALL_LOG,READ_CALL_LOG,WRITE_CONTACTS,READ_CONTACTS,INTERACT_ACROSS_USERS_FULL,SEND_SMS,READ_SMS,RECEIVE_SMS,WRITE_SMS,READ_PHONE_STATE,RECORD_AUDIO,CAMERA,WRITE_SETTINGS,VIBRATE,MANAGE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_LOCATION_EXTRA_COMMANDS,ACCESS_NETWORK_STATE,ACCESS_NOTIFICATION_POLICY,ACCESS_WIFI_STATE,BLUETOOTH,BLUETOOTH_ADMIN,BROADCAST_STICKY,CHANGE_NETWORK_STATE,CHANGE_WIFI_MULTICAST_STATE,CHANGE_WIFI_STATE,DISABLE_KEYGUARD,EXPAND_STATUS_BAR,FOREGROUND_SERVICE,FOREGROUND_SERVICE_CAMERA,FOREGROUND_SERVICE_MICROPHONE,GET_PACKAGE_SIZE,INSTALL_SHORTCUT,INTERNET,KILL_BACKGROUND_PROCESSES,MANAGE_OWN_CALLS,MODIFY_AUDIO_SETTINGS,NFC,READ_SYNC_SETTINGS,READ_SYNC_STATS,RECEIVE_BOOT_COMPLETED,REORDER_TASKS,REQUEST_COMPANION_RUN_IN_BACKGROUND,REQUEST_COMPANION_USE_DATA_IN_BACKGROUND,REQUEST_DELETE_PACKAGES,REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,SET_ALARM,SET_WALLPAPER,SET_WALLPAPER_HINTS,TRANSMIT_IR,USE_FINGERPRINT,VIBRATE,WAKE_LOCK,WRITE_SYNC_SETTINGS,BLUETOOTH, BLUETOOTH_ADMIN, BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, ACCESS_FINE_LOCATION/&#39; \
+        -e &#39;s/^(#android.permissions = .+)$/android.permissions = SET_TIME,SET_TIME_ZONE,WRITE_CALL_LOG,READ_CALL_LOG,WRITE_CONTACTS,READ_CONTACTS,INTERACT_ACROSS_USERS_FULL,SEND_SMS,READ_SMS,RECEIVE_SMS,WRITE_SMS,READ_PHONE_STATE,RECORD_AUDIO,CAMERA,WRITE_SETTINGS,VIBRATE,MANAGE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_LOCATION_EXTRA_COMMANDS,ACCESS_NETWORK_STATE,ACCESS_NOTIFICATION_POLICY,ACCESS_WIFI_STATE,BLUETOOTH,BLUETOOTH_ADMIN,BROADCAST_STICKY,CHANGE_NETWORK_STATE,CHANGE_WIFI_MULTICAST_STATE,CHANGE_WIFI_STATE,DISABLE_KEYGUARD,EXPAND_STATUS_BAR,FOREGROUND_SERVICE,FOREGROUND_SERVICE_CAMERA,FOREGROUND_SERVICE_MICROPHONE,GET_PACKAGE_SIZE,INSTALL_SHORTCUT,INTERNET,KILL_BACKGROUND_PROCESSES,MANAGE_OWN_CALLS,MODIFY_AUDIO_SETTINGS,NFC,READ_SYNC_SETTINGS,READ_SYNC_STATS,RECEIVE_BOOT_COMPLETED,REORDER_TASKS,REQUEST_COMPANION_RUN_IN_BACKGROUND,REQUEST_COMPANION_USE_DATA_IN_BACKGROUND,REQUEST_DELETE_PACKAGES,REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,SET_ALARM,SET_WALLPAPER,SET_WALLPAPER_HINTS,TRANSMIT_IR,USE_FINGERPRINT,VIBRATE,WAKE_LOCK,WRITE_SYNC_SETTINGS,BLUETOOTH, BLUETOOTH_ADMIN, (name=android.permission.BLUETOOTH_SCAN;usesPermissionFlags=neverForLocation), BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, ACCESS_FINE_LOCATION/&#39; \
         -e &#34;s/#android.api =.+/android.api = 33/&#34; \
         -e &#34;s|^(#services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY)$|services = ${name}:./service.py:foreground:sticky|&#34; \
         -e &#39;s|#android.add_src =.*|android.add_src = java_src|&#39; \
@@ -774,7 +777,7 @@ keep it for later.</p>
 <p><a id="code-snippet--without-extra"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>earthly --config /dev/null +apk --extra<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>ipfa app.apk <span style="color:#0550ae">&amp;&amp;</span> du -sh app.apk
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[[https://ipfs.konubinix.eu/p/bafybeihgqiff2n4g2mrfsh6s5uwdya66z4tfvsi3de37l7gxh7lks7dsb4?filename=app.apk][app.apk]]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[[https://ipfs.konubinix.eu/p/bafybeig7u767ljroz5kh5cz2xfue63z22u7jjjjvle4b5d4de4ortrgigq?filename=app.apk][app.apk]]
 </span></span><span style="display:flex;"><span>37M	app.apk
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>earthly --config /dev/null +generate --extra<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>ipfa buildozer.spec
