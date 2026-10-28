@@ -1,4 +1,4 @@
-// [[id:4f21ee3e-33b2-40ec-aae8-d45eb8fb38cf][How it all fits together:9]]
+// [[id:4f21ee3e-33b2-40ec-aae8-d45eb8fb38cf][How it all fits together:10]]
 import { render, html, svg } from 'uhtml';
 import { get, set, del } from 'idb-keyval';
 
@@ -131,6 +131,7 @@ const savedUi = restoreUi();
 doc.subscribe(() => { paint(); persist(); });
 paint();
 document.getElementById('loading')?.remove();
+sessionStorage.removeItem('triggerlist.boot-retries');   // opened: a later blip gets its retries afresh
 if(savedUi.scrollY) requestAnimationFrame(() => window.scrollTo(0, savedUi.scrollY));
 startSync();
 armGuard();
@@ -1054,6 +1055,7 @@ function restoreHere(){
     const f = viewingFrontier;
     endPreview();
     doc.revertTo(f);
+    commit('état restauré');
     goBack();
     notify('État restauré');
 }
@@ -1142,4 +1144,4 @@ function viewingBar(){
       </span>
     </div>`;
 }
-// How it all fits together:9 ends here
+// How it all fits together:10 ends here
