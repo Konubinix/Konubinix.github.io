@@ -60,6 +60,7 @@ disconnected at 05:56 and come back as sdb; 95 aborts on roddenberry&rsquo;s USB
 <li><a class="internal-link" href="#6cdaa637-d23a-4e10-bf5e-6d6e805d459f">reading a SMART report</a></li>
 <li><a class="internal-link" href="#a491cdfe-7ae6-410d-bb79-2dfec7bb6ba4">gooseberry</a></li>
 <li><a class="internal-link" href="#9f716059-aa12-455e-8b6c-19aa3562e19f">roddenberry</a></li>
+<li><a class="internal-link" href="#elderberry">elderberry</a></li>
 <li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
@@ -381,10 +382,10 @@ only in memory<sup id="fnref:11"><a class="internal-link" href="#fn:11" class="f
 					<td>1</td>
 					<td>official Raspberry Pi hub</td>
 					<td><span class="timestamp-wrapper"><span class="timestamp">[2026-10-07 Wed]</span></span></td>
+					<td>0</td>
 					<td></td>
-					<td></td>
-					<td></td>
-					<td></td>
+					<td><span class="timestamp-wrapper"><span class="timestamp">[2026-10-25 Sun]</span></span></td>
+					<td>no reset in 18 days, up since the swap</td>
 			</tr>
 			<tr>
 					<td>2</td>
@@ -840,6 +841,319 @@ measures.</li>
 </ul>
 </dd>
 </dl>
+<h2 id="elderberry">elderberry</h2>
+<dl>
+<dt>why</dt>
+<dd>on Oct 25 morning elderberry had input/output errors, and the user rebooted it, as the user states.</dd>
+<dt>what</dt>
+<dd>elderberry keeps its journal on disk, in /var/log/journal, so the reboots wiped nothing.</dd>
+<dt>what</dt>
+<dd>two USB disks sit behind its hub, a Genesys Logic 05e3:0626, the model gooseberry dropped its disk on:
+bebe, a TOSHIBA MQ04UBD200 on port 2, and thargosbackup, a Seagate Portable on port 4.</dd>
+</dl>
+<h3 id="the-disks-and-the-boots">the disks and the boots</h3>
+<div class="konix-block-name-marker" data-name="elderberry-disks"></div>
+<p><a id="code-snippet--elderberry-disks"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;lsblk --noheadings --output NAME,TRAN,MODEL,SERIAL,SIZE,LABEL,MOUNTPOINTS \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &amp;&amp; journalctl --list-boots --no-pager | tail -n 4&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>sda         usb  Portable     NACMJKCM         1.8T
+</span></span><span style="display:flex;"><span>sdb         usb  EXTERNAL_USB 20240906011908F  1.8T
+</span></span><span style="display:flex;"><span>└─sdb1                                         1.8T bebe   /media/sam/bebe
+</span></span><span style="display:flex;"><span>mmcblk0                       0xdad10a0b      14.4G
+</span></span><span style="display:flex;"><span>├─mmcblk0p1                                    512M bootfs /boot/firmware
+</span></span><span style="display:flex;"><span>└─mmcblk0p2                                   13.9G rootfs /
+</span></span><span style="display:flex;"><span> -3 69dcecffaf7f41d18f8c8df715f4cddf Sat 2026-10-03 10:05:20 CEST Sun 2026-10-25 08:34:19 CET
+</span></span><span style="display:flex;"><span> -2 ad5682ade90e4de7bfd365d41bc36b5e Sun 2026-10-25 08:34:34 CET  Sun 2026-10-25 08:49:19 CET
+</span></span><span style="display:flex;"><span> -1 2bad0b7d4c954a4fb3d75a40f749b2b4 Sun 2026-10-25 08:50:58 CET  Sun 2026-10-25 09:12:11 CET
+</span></span><span style="display:flex;"><span>  0 0773b3318bc14ba68b13617b1150183b Sun 2026-10-25 09:13:50 CET  Sun 2026-10-25 09:23:07 CET
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>thargosbackup shows no partition any more, while it showed sda1 at the 08:34 boot.</dd>
+</dl>
+<h3 id="what-happened-to-bebe">what happened to bebe</h3>
+<div class="konix-block-name-marker" data-name="elderberry-bebe-drop"></div>
+<p><a id="code-snippet--elderberry-bebe-drop"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;journalctl --dmesg --boot=-3 --no-pager --since=&#39;2026-10-25 08:24&#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    --grep=&#39;USB disconnect|device offline|Aborting journal|shut down|SerialNumber: |Attached SCSI&#39;&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 25 08:24:16 elderberry kernel: usb 2-1.2: USB disconnect, device number 3
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: device offline error, dev sdb, sector 2182546400 op 0x1:(WRITE) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: device offline error, dev sdb, sector 2285296912 op 0x1:(WRITE) flags 0x0 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: device offline error, dev sdb, sector 1736444168 op 0x1:(WRITE) flags 0x103000 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: device offline error, dev sdb, sector 1951448520 op 0x1:(WRITE) flags 0x9800 phys_seg 4 prio class 2
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: Aborting journal on device sdb1-8.
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: device offline error, dev sdb, sector 1950615552 op 0x1:(WRITE) flags 0x9800 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: device offline error, dev sdb, sector 1950615552 op 0x1:(WRITE) flags 0x9800 phys_seg 1 prio class 2
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: EXT4-fs (sdb1): shut down requested (2)
+</span></span><span style="display:flex;"><span>Oct 25 08:24:17 elderberry kernel: usb 2-1.2: SerialNumber: 20240906011908F
+</span></span><span style="display:flex;"><span>Oct 25 08:24:20 elderberry kernel: sd 2:0:0:0: [sdc] Attached SCSI disk
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>bebe dropped off USB at 08:24 and came back as sdc, while its filesystem stayed on the dead sdb,
+as gooseberry&rsquo;s did on Oct 07.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-bebe-smart"></div>
+<p><a id="code-snippet--elderberry-bebe-smart"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry sudo -n smartctl -x /dev/sdb <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;overall-health|^ *(5|9|196|197|198|199) [A-Z]|Device Error Count|occurred at&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>SMART overall-health self-assessment test result: PASSED
+</span></span><span style="display:flex;"><span>  5 Reallocated_Sector_Ct   PO--CK   100   100   050    -    0
+</span></span><span style="display:flex;"><span>  9 Power_On_Hours          -O--CK   065   065   000    -    14021
+</span></span><span style="display:flex;"><span>196 Reallocated_Event_Count -O--CK   100   100   000    -    0
+</span></span><span style="display:flex;"><span>197 Current_Pending_Sector  -O--CK   100   100   000    -    0
+</span></span><span style="display:flex;"><span>198 Offline_Uncorrectable   ----CK   100   100   000    -    0
+</span></span><span style="display:flex;"><span>199 UDMA_CRC_Error_Count    -O--CK   200   200   000    -    0
+</span></span><span style="display:flex;"><span>Device Error Count: 1
+</span></span><span style="display:flex;"><span>Error 1 [0] occurred at disk power-on lifetime: 11030 hours (459 days + 14 hours)
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>bebe&rsquo;s drive reports no sector reallocated or pending and no cable transfer error; its one
+logged error is 3000 hours old.</dd>
+<dt>what</dt>
+<dd>smartd logs bebe&rsquo;s attributes each 30 min since Oct 07; the block below prints the readings where
+attribute 5, 197 or 199 changed.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-bebe-attr-history"></div>
+<p><a id="code-snippet--elderberry-bebe-attr-history"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry cat /var/lib/smartmontools/attrlog.TOSHIBA_MQ04UBD200-946QP32AT.ata.csv <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> awk -F<span style="color:#0a3069">&#39;\t&#39;</span> <span style="color:#0a3069">&#39;{ for (i = 2; i &lt;= NF; i++) { split($i, a, &#34;;&#34;); if (a[1] == 5) r = a[3]; if (a[1] == 197) p = a[3]
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                                                 if (a[1] == 199) c = a[3] }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                    if (r p c != last) print $1, &#34;reallocated&#34;, r, &#34;pending&#34;, p, &#34;crc&#34;, c; last = r p c }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                  END { print &#34;last&#34;, $1, NR, &#34;readings&#34; }&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>2026-10-07 10:56:12; reallocated 0 pending 0 crc 0
+</span></span><span style="display:flex;"><span>last 2026-10-25 10:13:53; 874 readings
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>over 874 readings since Oct 07, bebe never reallocated nor put pending a sector, nor counted a
+cable transfer error, the drop of Oct 25 included.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-bebe-usb-drops"></div>
+<p><a id="code-snippet--elderberry-bebe-usb-drops"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;journalctl --dmesg --boot=all --no-pager --grep=&#39;usb 2-1\.2: (USB disconnect|reset)&#39;&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 03 09:29:37 elderberry kernel: usb 2-1.2: USB disconnect, device number 3
+</span></span><span style="display:flex;"><span>-- Boot 95fa47051b914fc1a165aa37fd18b130 --
+</span></span><span style="display:flex;"><span>-- Boot 78f9ce35b26348efa1a6efeb9559b2b7 --
+</span></span><span style="display:flex;"><span>-- Boot 69dcecffaf7f41d18f8c8df715f4cddf --
+</span></span><span style="display:flex;"><span>Oct 08 21:29:12 elderberry kernel: usb 2-1.2: reset SuperSpeed USB device number 3 using xhci-hcd
+</span></span><span style="display:flex;"><span>Oct 08 21:29:12 elderberry kernel: usb 2-1.2: reset SuperSpeed USB device number 3 using xhci-hcd
+</span></span><span style="display:flex;"><span>Oct 25 08:24:16 elderberry kernel: usb 2-1.2: USB disconnect, device number 3
+</span></span><span style="display:flex;"><span>-- Boot ad5682ade90e4de7bfd365d41bc36b5e --
+</span></span><span style="display:flex;"><span>Oct 25 08:34:35 elderberry kernel: usb 2-1.2: USB disconnect, device number 3
+</span></span><span style="display:flex;"><span>Oct 25 08:34:37 elderberry kernel: usb 2-1.2: USB disconnect, device number 5
+</span></span><span style="display:flex;"><span>-- Boot 2bad0b7d4c954a4fb3d75a40f749b2b4 --
+</span></span><span style="display:flex;"><span>-- Boot 0773b3318bc14ba68b13617b1150183b --
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>since Sep 29, bebe&rsquo;s USB port 2-1.2 saw a disconnect on Oct 03 at 09:29, a reset on Oct 08, and
+disconnects on Oct 25 at 08:24 and, a second after boot, at 08:34.</dd>
+<dt>what</dt>
+<dd><code>vcgencmd get_throttled</code> read 0x0 on elderberry on Oct 25, an hour after its last boot: no
+undervoltage flagged since then, which says nothing of 08:24.</dd>
+<dt>what</dt>
+<dd>gooseberry, off the same Genesys Logic hub model since Oct 07, has seen no hub reset in the 18 days
+since, as row 1 of <a class="internal-link" href="#1a6e6e76-116f-407b-8183-b9c7504458fe">its swap table</a> reads.
+<ul>
+<li><strong>therefore:</strong> bebe&rsquo;s drops fit that hub as well as gooseberry&rsquo;s did; swapping it on elderberry would test it.</li>
+<li><strong>what:</strong> the Oct 03 and Oct 25 08:24 disconnects each came minutes before a run of reboots: 09:33, 09:43
+and 10:05 on Oct 03, by journalctl &ndash;list-boots; 08:34, 08:50 and 09:13 on Oct 25.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>on Oct 27 the user swapped elderberry&rsquo;s hub for an official Raspberry Pi one, 2e8a:000e, booted at
+22:15; both disks sit behind it, by lsusb.
+<ul>
+<li><strong>how:</strong> a bebe drop or reset after Oct 27 22:15 in the elderberry-bebe-usb-drops block would clear the hub.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>attribute 12 counts the drive&rsquo;s power cycles, 192 its power losses with no clean spin-down; the block
+below prints smartd&rsquo;s readings of Oct 25 morning.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-bebe-power-cycles"></div>
+<p><a id="code-snippet--elderberry-bebe-power-cycles"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry cat /var/lib/smartmontools/attrlog.TOSHIBA_MQ04UBD200-946QP32AT.ata.csv <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> awk -F<span style="color:#0a3069">&#39;\t&#39;</span> <span style="color:#0a3069">&#39;/^2026-10-25 0[789]/ { for (i = 2; i &lt;= NF; i++) { split($i, a, &#34;;&#34;); if (a[1] == 12) c = a[3]
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                                                                     if (a[1] == 192) r = a[3] }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">                                        print $1, &#34;power cycles&#34;, c, &#34;power-off retracts&#34;, r }&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>2026-10-25 07:03:42; power cycles 13 power-off retracts 9
+</span></span><span style="display:flex;"><span>2026-10-25 07:33:42; power cycles 13 power-off retracts 9
+</span></span><span style="display:flex;"><span>2026-10-25 08:03:43; power cycles 13 power-off retracts 9
+</span></span><span style="display:flex;"><span>2026-10-25 08:24:21; power cycles 14 power-off retracts 10
+</span></span><span style="display:flex;"><span>2026-10-25 08:33:42; power cycles 14 power-off retracts 10
+</span></span><span style="display:flex;"><span>2026-10-25 08:34:41; power cycles 16 power-off retracts 12
+</span></span><span style="display:flex;"><span>2026-10-25 08:51:01; power cycles 17 power-off retracts 13
+</span></span><span style="display:flex;"><span>2026-10-25 08:51:56; power cycles 17 power-off retracts 13
+</span></span><span style="display:flex;"><span>2026-10-25 09:13:53; power cycles 18 power-off retracts 14
+</span></span><span style="display:flex;"><span>2026-10-25 09:14:32; power cycles 18 power-off retracts 14
+</span></span><span style="display:flex;"><span>2026-10-25 09:43:53; power cycles 18 power-off retracts 14
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>bebe lost its power at the 08:24 drop, with an emergency head retract: the hub cut its power,
+the data link did not merely fail.</dd>
+<dt>what</dt>
+<dd>each reboot that followed, 08:34, 08:50 and 09:13, cut its power too, as did the one of Oct 26 at
+12:38, by the same log and journalctl &ndash;list-boots.
+<ul>
+<li><strong>therefore:</strong> a reboot of elderberry cuts the power of the disks behind its hub; a disk&rsquo;s bridge stuck since
+Oct 25 would have been reset by those reboots.</li>
+</ul>
+</dd>
+<dt>what</dt>
+<dd>an extended self-test of bebe started on Oct 25 09:37, due to end at 15:07; the block below reads it.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-bebe-selftest"></div>
+<p><a id="code-snippet--elderberry-bebe-selftest"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry sudo -n smartctl -l selftest /dev/sdb <span style="color:#1f2328">|</span> sed -n <span style="color:#0a3069">&#39;/^Num/,$p&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Num  Test_Description    Status                  Remaining  LifeTime(hours)  LBA_of_first_error
+</span></span><span style="display:flex;"><span># 1  Extended offline    Completed without error       00%     14027         -
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>bebe is healthy: the full surface read without error, and SMART shows no bad sector; its Oct 25
+I/O errors came from the USB link dropping, not from the drive.</dd>
+</dl>
+<h3 id="what-happened-to-thargosbackup">what happened to thargosbackup</h3>
+<div class="konix-block-name-marker" data-name="elderberry-thargosbackup"></div>
+<p><a id="code-snippet--elderberry-thargosbackup"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;journalctl --boot=all --no-pager --since=&#39;2026-10-25 08:30&#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    --grep=&#39;EXT4-fs \(sda1\)|lost sync page write|I/O error, dev sda, sector 0 &#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    | uniq --skip-fields=5 --count&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>1 Oct 25 08:34:17 elderberry kernel: EXT4-fs (sda1): unmounting filesystem 86280c29-3e3f-4303-9c45-30eb2587e5fa.
+</span></span><span style="display:flex;"><span>1 -- Boot ad5682ade90e4de7bfd365d41bc36b5e --
+</span></span><span style="display:flex;"><span>1 Oct 25 08:34:41 elderberry kernel: EXT4-fs (sda1): mounted filesystem 86280c29-3e3f-4303-9c45-30eb2587e5fa r/w with ordered data mode. Quota mode: none.
+</span></span><span style="display:flex;"><span>1 Oct 25 08:36:06 elderberry kernel: EXT4-fs (sda1): unmounting filesystem 86280c29-3e3f-4303-9c45-30eb2587e5fa.
+</span></span><span style="display:flex;"><span>1 Oct 25 08:39:11 elderberry kernel: Buffer I/O error on dev sda1, logical block 0, lost sync page write
+</span></span><span style="display:flex;"><span>1 Oct 25 08:39:11 elderberry kernel: EXT4-fs (sda1): I/O error while writing superblock
+</span></span><span style="display:flex;"><span>1 -- Boot 2bad0b7d4c954a4fb3d75a40f749b2b4 --
+</span></span><span style="display:flex;"><span>3 Oct 25 08:50:58 elderberry kernel: I/O error, dev sda, sector 0 op 0x0:(READ) flags 0x0 phys_seg 32 prio class 2
+</span></span><span style="display:flex;"><span>1 -- Boot 0773b3318bc14ba68b13617b1150183b --
+</span></span><span style="display:flex;"><span>3 Oct 25 09:13:50 elderberry kernel: I/O error, dev sda, sector 0 op 0x0:(READ) flags 0x0 phys_seg 32 prio class 2
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>thargosbackup failed a write to its superblock at 08:39, and since the 08:50 boot the kernel
+cannot read its sector 0.</dd>
+<dt>what</dt>
+<dd>smartctl gets no identity from it, with -d sat as without, -T permissive included: it gives no SMART
+data and takes no self-test.</dd>
+<dt>what</dt>
+<dd>on Oct 25 at 10:11 its USB device, 2-1.4, was unbound and bound again, and the reads it then failed
+came back with the sense below.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-thargosbackup-sense"></div>
+<p><a id="code-snippet--elderberry-thargosbackup-sense"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;journalctl --dmesg --no-pager --since=&#39;2026-10-25 10:11&#39; --until=&#39;2026-10-25 10:12:05&#39; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    --grep=&#39;Sense Key|ASC=|unable to read partition&#39;&#34;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Oct 25 10:11:59 elderberry kernel: sd 1:0:0:0: [sda] tag#16 Sense Key : 0x4 [current]
+</span></span><span style="display:flex;"><span>Oct 25 10:11:59 elderberry kernel: sd 1:0:0:0: [sda] tag#16 ASC=0x44 &lt;&lt;vendor&gt;&gt;ASCQ=0x81
+</span></span><span style="display:flex;"><span>Oct 25 10:11:59 elderberry kernel: sd 1:0:0:0: [sda] tag#18 Sense Key : 0x4 [current]
+</span></span><span style="display:flex;"><span>Oct 25 10:11:59 elderberry kernel: sd 1:0:0:0: [sda] tag#18 ASC=0x44 &lt;&lt;vendor&gt;&gt;ASCQ=0x81
+</span></span><span style="display:flex;"><span>Oct 25 10:11:59 elderberry kernel: sd 1:0:0:0: [sda] tag#16 Sense Key : 0x4 [current]
+</span></span><span style="display:flex;"><span>Oct 25 10:11:59 elderberry kernel: sd 1:0:0:0: [sda] tag#16 ASC=0x44 &lt;&lt;vendor&gt;&gt;ASCQ=0x81
+</span></span><span style="display:flex;"><span>Oct 25 10:11:59 elderberry kernel:  sda: unable to read partition table
+</span></span><span style="display:flex;"><span>Oct 25 10:12:00 elderberry kernel: sd 1:0:0:0: [sda] tag#19 Sense Key : 0x4 [current]
+</span></span><span style="display:flex;"><span>Oct 25 10:12:00 elderberry kernel: sd 1:0:0:0: [sda] tag#19 ASC=0x44 &lt;&lt;vendor&gt;&gt;ASCQ=0x81
+</span></span><span style="display:flex;"><span>Oct 25 10:12:04 elderberry kernel: sd 1:0:0:0: [sda] tag#17 Sense Key : 0x4 [current]
+</span></span><span style="display:flex;"><span>Oct 25 10:12:04 elderberry kernel: sd 1:0:0:0: [sda] tag#17 ASC=0x44 &lt;&lt;vendor&gt;&gt;ASCQ=0x81
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>sense key 4 is HARDWARE ERROR, and ASC 44h is INTERNAL TARGET FAILURE<sup id="fnref:25"><a class="internal-link" href="#fn:25" class="footnote-ref" role="doc-noteref">25</a></sup>.
+<ul>
+<li><strong>therefore:</strong> the reads crossed the hub and came back with an answer: the enclosure itself, its bridge or
+its drive, reports a failure inside it.</li>
+</ul>
+</dd>
+<dt>therefore</dt>
+<dd>thargosbackup is not healthy: it reads nothing, not even sector 0, and reports a hardware
+failure; whether its bridge or its drive failed stays unknown while the drive stays in its enclosure.</dd>
+</dl>
+<h4 id="why-no-smart-error-showed">why no SMART error showed</h4>
+<dl>
+<dt>what</dt>
+<dd>smartd has skipped it on each start since Oct 07, while it still mounted: « /dev/sda [SAT], not
+ATA, no IDENTIFY DEVICE Structure »; /var/lib/smartmontools holds bebe&rsquo;s attrlog alone.</dd>
+<dt>what</dt>
+<dd>its bridge is USB 0bc2:2344; smartctl&rsquo;s drivedb gives every Seagate id -d sat, and -d sat,12 fails
+the same way, « unsupported field in scsi command ».</dd>
+<dt>what</dt>
+<dd>read as plain SCSI, the block below, it answers its identity but no SMART.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-thargosbackup-scsi"></div>
+<p><a id="code-snippet--elderberry-thargosbackup-scsi"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry sudo -n smartctl -d scsi -x /dev/sda <span style="color:#1f2328">|</span> sed -n <span style="color:#0a3069">&#39;/^Vendor/,$p&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Vendor:               Seagate
+</span></span><span style="display:flex;"><span>Product:              Portable
+</span></span><span style="display:flex;"><span>Revision:             0712
+</span></span><span style="display:flex;"><span>Compliance:           SPC-4
+</span></span><span style="display:flex;"><span>User Capacity:        2,000,398,933,504 bytes [2.00 TB]
+</span></span><span style="display:flex;"><span>Logical block size:   512 bytes
+</span></span><span style="display:flex;"><span>Physical block size:  4096 bytes
+</span></span><span style="display:flex;"><span>LU is fully provisioned
+</span></span><span style="display:flex;"><span>Logical Unit id:      0x3e41434d4a4b434d
+</span></span><span style="display:flex;"><span>Serial number:        NACMJKCM
+</span></span><span style="display:flex;"><span>Device type:          disk
+</span></span><span style="display:flex;"><span>Local Time is:        Sun Oct 25 21:12:47 2026 CET
+</span></span><span style="display:flex;"><span>SMART support is:     Unavailable - device lacks SMART capability.
+</span></span><span style="display:flex;"><span>Read Cache is:        Enabled
+</span></span><span style="display:flex;"><span>Writeback Cache is:   Enabled
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>=== START OF READ SMART DATA SECTION ===
+</span></span><span style="display:flex;"><span>Current Drive Temperature:     0 C
+</span></span><span style="display:flex;"><span>Drive Trip Temperature:        0 C
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Error Counter logging not supported
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>No Self-tests have been logged
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Device does not support Background scan results logging
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>its bridge passes none of the drive&rsquo;s SMART, before its failure as after: no SMART error could
+ever show; only the bridge&rsquo;s sense errors told of the failure.</dd>
+</dl>
+<h4 id="behind-the-raspberry-pi-hub">behind the Raspberry Pi hub</h4>
+<dl>
+<dt>what</dt>
+<dd>since the Oct 27 hub swap, thargosbackup reads its partition table, recovers its EXT4 journal and
+mounts r/w, with no I/O error or sense line in the kernel log.</dd>
+<dt>what</dt>
+<dd>the block below reads 1 GiB at 20 spots, from sector 0 to the last 50 GiB.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-thargosbackup-spots"></div>
+<p><a id="code-snippet--elderberry-thargosbackup-spots"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#39;for i in $(seq 0 19); do s=$((i*23830)); printf &#34;spot %2d at %6d GiB: &#34; $i $((s*4/1024)); \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    sudo -n dd if=/dev/sda of=/dev/null bs=4M count=256 skip=$s iflag=direct 2&gt;&amp;1 | tail -n 1; done; \
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    journalctl -k --no-pager --since=-15min --grep=&#34;sda|Sense|I/O error&#34;&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>spot  0 at      0 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 7.79744 s, 138 MB/s
+</span></span><span style="display:flex;"><span>spot  1 at     93 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 7.69711 s, 139 MB/s
+</span></span><span style="display:flex;"><span>spot  2 at    186 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 7.80307 s, 138 MB/s
+</span></span><span style="display:flex;"><span>spot  3 at    279 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 8.15981 s, 132 MB/s
+</span></span><span style="display:flex;"><span>spot  4 at    372 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 8.70542 s, 123 MB/s
+</span></span><span style="display:flex;"><span>spot  5 at    465 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 8.92627 s, 120 MB/s
+</span></span><span style="display:flex;"><span>spot  6 at    558 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 9.14202 s, 117 MB/s
+</span></span><span style="display:flex;"><span>spot  7 at    651 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 8.65749 s, 124 MB/s
+</span></span><span style="display:flex;"><span>spot  8 at    744 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 9.0981 s, 118 MB/s
+</span></span><span style="display:flex;"><span>spot  9 at    837 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 9.1219 s, 118 MB/s
+</span></span><span style="display:flex;"><span>spot 10 at    930 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 9.43267 s, 114 MB/s
+</span></span><span style="display:flex;"><span>spot 11 at   1023 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 9.72574 s, 110 MB/s
+</span></span><span style="display:flex;"><span>spot 12 at   1117 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 10.3649 s, 104 MB/s
+</span></span><span style="display:flex;"><span>spot 13 at   1210 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 11.1028 s, 96.7 MB/s
+</span></span><span style="display:flex;"><span>spot 14 at   1303 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 11.1962 s, 95.9 MB/s
+</span></span><span style="display:flex;"><span>spot 15 at   1396 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 11.7539 s, 91.4 MB/s
+</span></span><span style="display:flex;"><span>spot 16 at   1489 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 12.9332 s, 83.0 MB/s
+</span></span><span style="display:flex;"><span>spot 17 at   1582 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 14.0079 s, 76.7 MB/s
+</span></span><span style="display:flex;"><span>spot 18 at   1675 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 15.3892 s, 69.8 MB/s
+</span></span><span style="display:flex;"><span>spot 19 at   1768 GiB: 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 15.3917 s, 69.8 MB/s
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>every spot read in full, and the speed falls smoothly from 139 to 70 MB/s, outer tracks to inner,
+as a sound disk&rsquo;s does; the kernel logged no sda error meanwhile.</dd>
+<dt>therefore</dt>
+<dd>thargosbackup reads well again; the Oct 25 failure followed the Genesys hub, not the drive,
+which overturns the not healthy verdict above.
+<ul>
+<li><strong>why:</strong> likely power: a bus-powered drive the hub starved fails inside its enclosure, which then reports
+a hardware error; the user&rsquo;s swap, not any test, makes this the fitting reading.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
 <li><a class="internal-link" href="/braindump/posts/migrate_an_ipfs_repo_off_a_failing_disk/">migrate an ipfs repo off a failing disk</a></li>
@@ -1065,6 +1379,12 @@ Toshiba white paper, September 2015, sections 1.1, 1.3 and 2.2, read on 2026-10-
 CMR » « Workload rate (TB/year) 180 » « MTBF (hours) 1,000,000 » « 12VDC ±5% (A, peak) » — primary,
 <a target="_blank" href="https://documents.westerndigital.com/content/dam/doc-library/en_us/assets/public/western-digital/product/internal-drives/wd-red-plus-hdd/product-brief-western-digital-wd-red-plus-hdd.pdf">WD Red Plus brief</a>,
 Western Digital, March 2025, read on 2026-10-09.&#160;<a class="internal-link" href="#fnref:24" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:25">
+<p>« #define HARDWARE_ERROR      0x04 » — primary,
+<a target="_blank" href="https://github.com/torvalds/linux/blob/master/include/scsi/scsi_proto.h">Linux include/scsi/scsi_proto.h</a>;
+« SENSE_CODE(0x4400, &ldquo;Internal target failure&rdquo;) » — primary,
+<a target="_blank" href="https://github.com/torvalds/linux/blob/master/drivers/scsi/sense_codes.h">Linux drivers/scsi/sense_codes.h</a>.&#160;<a class="internal-link" href="#fnref:25" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 </ol>
 </div>
