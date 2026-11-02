@@ -60,7 +60,7 @@ disconnected at 05:56 and come back as sdb; 95 aborts on roddenberry&rsquo;s USB
 <li><a class="internal-link" href="#6cdaa637-d23a-4e10-bf5e-6d6e805d459f">reading a SMART report</a></li>
 <li><a class="internal-link" href="#a491cdfe-7ae6-410d-bb79-2dfec7bb6ba4">gooseberry</a></li>
 <li><a class="internal-link" href="#9f716059-aa12-455e-8b6c-19aa3562e19f">roddenberry</a></li>
-<li><a class="internal-link" href="#elderberry">elderberry</a></li>
+<li><a class="internal-link" href="#f5fe77e7-4b84-4d65-b23c-46dc88e04707">elderberry</a></li>
 <li><a class="internal-link" href="#notes-linking-here">Notes linking here</a></li>
 <li><a class="internal-link" href="#permalink">Permalink</a></li>
 </ul>
@@ -841,7 +841,7 @@ measures.</li>
 </ul>
 </dd>
 </dl>
-<h2 id="elderberry">elderberry</h2>
+<h2 id="f5fe77e7-4b84-4d65-b23c-46dc88e04707">elderberry</h2>
 <dl>
 <dt>why</dt>
 <dd>on Oct 25 morning elderberry had input/output errors, and the user rebooted it, as the user states.</dd>
@@ -851,7 +851,7 @@ measures.</li>
 <dd>two USB disks sit behind its hub, a Genesys Logic 05e3:0626, the model gooseberry dropped its disk on:
 bebe, a TOSHIBA MQ04UBD200 on port 2, and thargosbackup, a Seagate Portable on port 4.</dd>
 </dl>
-<h3 id="the-disks-and-the-boots">the disks and the boots</h3>
+<h3 id="e1c2b11d-fb4c-45f6-b7cd-aa462bd5b7f7">the disks and the boots</h3>
 <div class="konix-block-name-marker" data-name="elderberry-disks"></div>
 <p><a id="code-snippet--elderberry-disks"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;lsblk --noheadings --output NAME,TRAN,MODEL,SERIAL,SIZE,LABEL,MOUNTPOINTS \
@@ -870,7 +870,7 @@ bebe, a TOSHIBA MQ04UBD200 on port 2, and thargosbackup, a Seagate Portable on p
 <dt>what</dt>
 <dd>thargosbackup shows no partition any more, while it showed sda1 at the 08:34 boot.</dd>
 </dl>
-<h3 id="what-happened-to-bebe">what happened to bebe</h3>
+<h3 id="80f76ea6-8e77-4aae-a22f-13fa5a3f7b6d">what happened to bebe</h3>
 <div class="konix-block-name-marker" data-name="elderberry-bebe-drop"></div>
 <p><a id="code-snippet--elderberry-bebe-drop"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;journalctl --dmesg --boot=-3 --no-pager --since=&#39;2026-10-25 08:24&#39; \
@@ -964,6 +964,26 @@ and 10:05 on Oct 03, by journalctl &ndash;list-boots; 08:34, 08:50 and 09:13 on 
 <li><strong>how:</strong> a bebe drop or reset after Oct 27 22:15 in the elderberry-bebe-usb-drops block would clear the hub.</li>
 </ul>
 </dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-bebe-resets-after-swap"></div>
+<p><a id="code-snippet--elderberry-bebe-resets-after-swap"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;journalctl --dmesg --boot=0 --no-pager --grep=&#39;usb 2-1\.2: reset&#39;&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;{ t = $1 &#34; &#34; $2 &#34; &#34; substr($3, 1, 5); if (t != last) { n++; if (!first) first = t }; last = t }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           END { print n, &#34;resets, first&#34;, first, &#34;last&#34;, last }&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>125 resets, first Oct 27 22:27 last Nov 01 08:12
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>behind the new hub, bebe&rsquo;s port 2-1.2 resets every 20 min to 2 h, each a pair of lines a second apart,
+from 12 min after boot; no disconnect, no I/O error, no remount, through Nov 01 08:33.</dd>
+<dt>what</dt>
+<dd>over the same span smartd logs no power cycle, no cable error, no bad sector, but its head load
+count, attribute 193, rose from 1754 to 1879: 125, one per reset.</dd>
+<dt>what</dt>
+<dd>from Oct 07 to the swap, 20 days, that count rose by 165 with one reset logged: the heads parked
+without a reset then.</dd>
+<dt>therefore</dt>
+<dd>the new hub clears the old one of nothing: bebe resets 28 times a day behind it, against once in
+26 days before; each reset reloads its heads, yet no write has failed.</dd>
 <dt>what</dt>
 <dd>attribute 12 counts the drive&rsquo;s power cycles, 192 its power losses with no clean spin-down; the block
 below prints smartd&rsquo;s readings of Oct 25 morning.</dd>
@@ -1009,8 +1029,29 @@ Oct 25 would have been reset by those reboots.</li>
 <dt>therefore</dt>
 <dd>bebe is healthy: the full surface read without error, and SMART shows no bad sector; its Oct 25
 I/O errors came from the USB link dropping, not from the drive.</dd>
+<dt>what</dt>
+<dd>USB3 link power management, LPM, had U1 and U2 enabled on 2-1.2; usbcore.quirks <code>0480:0905:k</code> turns it
+off for bebe&rsquo;s bridge, written to cmdline.txt by the fabfile&rsquo;s setup_smartd.</dd>
+<dt>what</dt>
+<dd>elderberry rebooted on Nov 01 at 19:22 with that quirk; 2-1.2 no longer shows usb3_hardware_lpm files,
+which the kernel creates only when LPM is on.</dd>
 </dl>
-<h3 id="what-happened-to-thargosbackup">what happened to thargosbackup</h3>
+<div class="konix-block-name-marker" data-name="elderberry-bebe-resets-without-lpm"></div>
+<p><a id="code-snippet--elderberry-bebe-resets-without-lpm"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;journalctl --dmesg --boot=0 --no-pager --grep=&#39;usb 2-1\.2: reset&#39;&#34;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> awk <span style="color:#0a3069">&#39;/^--/ { next }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           { t = $1 &#34; &#34; $2 &#34; &#34; substr($3, 1, 5); if (t != last) { n++; if (!first) first = t }; last = t }
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">           END { print n + 0, &#34;resets, first&#34;, first, &#34;last&#34;, last }&#39;</span>
+</span></span><span style="display:flex;"><span>ssh -n elderberry uptime
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>0 resets, first  last
+</span></span><span style="display:flex;"><span> 11:34:18 up 16:12,  0 user,  load average: 0.25, 0.42, 0.30
+</span></span></code></pre></div><dl>
+<dt>what</dt>
+<dd>before, bebe reset 28 times a day, the first 12 min after boot; 16 h without LPM, it reset none.</dd>
+<dt>therefore</dt>
+<dd>LPM caused bebe&rsquo;s resets, and bebe is healthy.</dd>
+</dl>
+<h3 id="cfc3ab7b-ab24-4197-95ba-0a3195bf33d2">what happened to thargosbackup</h3>
 <div class="konix-block-name-marker" data-name="elderberry-thargosbackup"></div>
 <p><a id="code-snippet--elderberry-thargosbackup"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#34;journalctl --boot=all --no-pager --since=&#39;2026-10-25 08:30&#39; \
@@ -1064,7 +1105,7 @@ its drive, reports a failure inside it.</li>
 <dd>thargosbackup is not healthy: it reads nothing, not even sector 0, and reports a hardware
 failure; whether its bridge or its drive failed stays unknown while the drive stays in its enclosure.</dd>
 </dl>
-<h4 id="why-no-smart-error-showed">why no SMART error showed</h4>
+<h4 id="0b1dd6f9-1692-48ed-b7e9-c20ddcafa8d4">why no SMART error showed</h4>
 <dl>
 <dt>what</dt>
 <dd>smartd has skipped it on each start since Oct 07, while it still mounted: « /dev/sda [SAT], not
@@ -1108,7 +1149,7 @@ the same way, « unsupported field in scsi command ».</dd>
 <dd>its bridge passes none of the drive&rsquo;s SMART, before its failure as after: no SMART error could
 ever show; only the bridge&rsquo;s sense errors told of the failure.</dd>
 </dl>
-<h4 id="behind-the-raspberry-pi-hub">behind the Raspberry Pi hub</h4>
+<h4 id="23f0b40e-a0bc-4502-9fe8-c6a2c9d024a4">behind the Raspberry Pi hub</h4>
 <dl>
 <dt>what</dt>
 <dd>since the Oct 27 hub swap, thargosbackup reads its partition table, recovers its EXT4 journal and
@@ -1153,6 +1194,76 @@ which overturns the not healthy verdict above.
 a hardware error; the user&rsquo;s swap, not any test, makes this the fitting reading.</li>
 </ul>
 </dd>
+</dl>
+<h4 id="3be6ed20-a7d2-4d6f-be6b-be2f525fa8b3">its SMART, once Linux lets it through</h4>
+<dl>
+<dt>what</dt>
+<dd>Linux&rsquo;s uas driver sets NO_ATA_1X on every Seagate USB id, refusing the ATA pass-through smartctl
+needs; that, not the bridge, hid its SMART, as smartmontools ticket 1478 reports for the same 0bc2:2344.</dd>
+<dt>what</dt>
+<dd>on Nov 01 09:01 the quirk was emptied till next reboot, the disk unmounted and rebound:
+<code>echo 0bc2:2344: &gt; /sys/module/usb_storage/parameters/quirks</code>, then unbind and bind of usb 2-1.3.</dd>
+<dt>what</dt>
+<dd>the rebind found sda1 still held, likely by a container&rsquo;s mount namespace: device offline errors
+and an aborted journal on sda1; udisks remounted it as sdc1, recovering the journal.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-thargosbackup-smart"></div>
+<p><a id="code-snippet--elderberry-thargosbackup-smart"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#39;sudo -n smartctl -x $(readlink -f /dev/disk/by-label/thargosbackup | sed &#34;s/1$//&#34;)&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> grep -E <span style="color:#0a3069">&#39;Device Model|overall-health|^ *(1|5|9|12|187|188|192|193|194|197|198|199) [A-Z]|Device Error Count|occurred at|No self-tests|Lifetime    Min/Max&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Device Model:     ST2000LM007-1R8174
+</span></span><span style="display:flex;"><span>SMART overall-health self-assessment test result: PASSED
+</span></span><span style="display:flex;"><span>  1 Raw_Read_Error_Rate     POSR--   079   064   006    -    70802898
+</span></span><span style="display:flex;"><span>  5 Reallocated_Sector_Ct   PO--CK   100   100   036    -    0
+</span></span><span style="display:flex;"><span>  9 Power_On_Hours          -O--CK   061   061   000    -    34775 (60 209 0)
+</span></span><span style="display:flex;"><span> 12 Power_Cycle_Count       -O--CK   100   100   020    -    36
+</span></span><span style="display:flex;"><span>187 Reported_Uncorrect      -O--CK   100   100   000    -    0
+</span></span><span style="display:flex;"><span>188 Command_Timeout         -O--CK   100   100   000    -    0
+</span></span><span style="display:flex;"><span>192 Power-Off_Retract_Count -O--CK   100   100   000    -    6
+</span></span><span style="display:flex;"><span>193 Load_Cycle_Count        -O--CK   073   073   000    -    54448
+</span></span><span style="display:flex;"><span>194 Temperature_Celsius     -O---K   030   050   000    -    30 (0 18 0 0 0)
+</span></span><span style="display:flex;"><span>197 Current_Pending_Sector  -O--C-   100   100   000    -    0
+</span></span><span style="display:flex;"><span>198 Offline_Uncorrectable   ----C-   100   100   000    -    0
+</span></span><span style="display:flex;"><span>199 UDMA_CRC_Error_Count    -OSRCK   200   200   000    -    0
+</span></span><span style="display:flex;"><span>Device Error Count: 8
+</span></span><span style="display:flex;"><span>Error 8 [7] occurred at disk power-on lifetime: 34658 hours (1444 days + 2 hours)
+</span></span><span style="display:flex;"><span>Error 7 [6] occurred at disk power-on lifetime: 34658 hours (1444 days + 2 hours)
+</span></span><span style="display:flex;"><span>Error 6 [5] occurred at disk power-on lifetime: 34658 hours (1444 days + 2 hours)
+</span></span><span style="display:flex;"><span>Error 5 [4] occurred at disk power-on lifetime: 34658 hours (1444 days + 2 hours)
+</span></span><span style="display:flex;"><span>Error 4 [3] occurred at disk power-on lifetime: 34658 hours (1444 days + 2 hours)
+</span></span><span style="display:flex;"><span>Error 3 [2] occurred at disk power-on lifetime: 15473 hours (644 days + 17 hours)
+</span></span><span style="display:flex;"><span>Error 2 [1] occurred at disk power-on lifetime: 13932 hours (580 days + 12 hours)
+</span></span><span style="display:flex;"><span>Error 1 [0] occurred at disk power-on lifetime: 13932 hours (580 days + 12 hours)
+</span></span><span style="display:flex;"><span>Lifetime    Min/Max Temperature:     18/53 Celsius
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>the drive inside is a Seagate ST2000LM007, 4 years powered on: no sector reallocated, pending
+or uncorrectable, no command timeout, no cable error; its SMART verdict is PASSED.</dd>
+<dt>what</dt>
+<dd>its 8 logged errors are all aborted commands, status 0x71 error 0x04, mostly IDLE IMMEDIATE right
+after IDENTIFY; the last five date from 107 h before, near the Oct 27 hub swap; none names a bad sector.</dd>
+<dt>what</dt>
+<dd>its load cycles, 54,396, are a tenth of the 600,000 Seagate rates such mobile drives for.</dd>
+<dt>what</dt>
+<dd>it has never run a self-test; the quirk lasts until elderberry&rsquo;s next reboot.</dd>
+<dt>what</dt>
+<dd>an extended self-test of thargosbackup started on Nov 01 at 09:13, due to end at 14:51; the block
+below reads it.</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="elderberry-thargosbackup-selftest"></div>
+<p><a id="code-snippet--elderberry-thargosbackup-selftest"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -n elderberry <span style="color:#0a3069">&#39;sudo -n smartctl -l selftest $(readlink -f /dev/disk/by-label/thargosbackup | sed &#34;s/1$//&#34;)&#39;</span> <span style="color:#0a3069">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#1f2328">|</span> sed -n <span style="color:#0a3069">&#39;/^Num/,$p&#39;</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Num  Test_Description    Status                  Remaining  LifeTime(hours)  LBA_of_first_error
+</span></span><span style="display:flex;"><span># 1  Extended offline    Completed without error       00%     34770         -
+</span></span></code></pre></div><dl>
+<dt>therefore</dt>
+<dd>the drive read its whole surface without error: thargosbackup is healthy.</dd>
+<dt>what</dt>
+<dd>since 18:27 the disk runs on usb-storage instead of uas, quirk <code>0bc2:2344:u</code>, which gives SMART
+without the empty quirk&rsquo;s reported risk of corrupt writes; the first rebind under it hung, the second worked.</dd>
+<dt>what</dt>
+<dd>the fabfile&rsquo;s setup_smartd writes that quirk into cmdline.txt, so it holds across reboots.</dd>
 </dl>
 <h2 id="notes-linking-here">Notes linking here</h2>
 <ul>
@@ -1389,7 +1500,7 @@ Western Digital, March 2025, read on 2026-10-09.&#160;<a class="internal-link" h
 </ol>
 </div>
       </div>
-	  <aside class="date"><time>Last updated: 10 Oct 2026</time></aside>
+	  <aside class="date"><time>Last updated: 02 Nov 2026</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 07 Oct 2026</time></aside>
     </div>
   </div>
