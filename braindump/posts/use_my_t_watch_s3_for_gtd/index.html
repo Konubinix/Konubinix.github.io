@@ -1971,6 +1971,51 @@ left », the last « firmware 100 % », the same lines printed, and the piece
 </span></span><span style="display:flex;"><span>            <span style="color:#0550ae">and</span> shown<span style="color:#1f2328">[</span><span style="color:#0550ae">-</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;firmware 100 %&#34;</span> <span style="color:#0550ae">and</span> said <span style="color:#0550ae">==</span> shown
 </span></span><span style="display:flex;"><span>            <span style="color:#0550ae">and</span> whole <span style="color:#0550ae">==</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span><span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>n<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>encode<span style="color:#1f2328">()</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span> <span style="color:#cf222e">for</span> n <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>PIECES<span style="color:#1f2328">)))</span>
 </span></span></code></pre></div><dl>
+<dt>rule</dt>
+<dd>a firmware send cut short goes on from the pieces already landed, keeping them.
+<ul>
+<li><strong>why:</strong> over oxenhead the 1.7 MB take about 65 min, and a run is killed at 30: « make update-firmware
+resume from the pieces already on the watch » was given its go.</li>
+<li><strong>how:</strong> the story lands two of four pieces, then starts again keeping those two and lands the last two;
+<code>app.bin</code> must hold the four whole, the last line « firmware 100 % ».</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-resumed"></div>
+<p><a id="code-snippet--story-resumed"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">asyncio</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">os</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">air</span> <span style="color:#cf222e">import</span> ROOT
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PROMISE <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;a firmware send cut short goes on from the pieces already landed, keeping them&#34;</span>
+</span></span><span style="display:flex;"><span>PIECES <span style="color:#0550ae">=</span> <span style="color:#0550ae">4</span>
+</span></span><span style="display:flex;"><span>KEPT <span style="color:#0550ae">=</span> <span style="color:#0550ae">2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">def</span> <span style="color:#6639ba">land</span><span style="color:#1f2328">(</span>work<span style="color:#1f2328">,</span> script<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    sent <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> asyncio<span style="color:#0550ae">.</span>create_subprocess_exec<span style="color:#1f2328">(</span>
+</span></span><span style="display:flex;"><span>        os<span style="color:#0550ae">.</span>environ<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;TWATCH_MICROPYTHON&#34;</span><span style="color:#1f2328">],</span> <span style="color:#0a3069">&#34;-c&#34;</span><span style="color:#1f2328">,</span> script<span style="color:#1f2328">,</span> cwd<span style="color:#0550ae">=</span>work<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>        env<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span><span style="color:#0550ae">**</span>os<span style="color:#0550ae">.</span>environ<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;MICROPYPATH&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{</span>ROOT <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#39;watch&#39;</span><span style="color:#0a3069">}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{</span>ROOT <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#39;fake&#39;</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#0a3069">&#34;TWATCH_FAKE_SCREEN&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;screen.log&#34;</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;TWATCH_FAKE_DARK&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;1&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>             <span style="color:#0a3069">&#34;TWATCH_FAKE_ERRORS&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;errors.log&#34;</span><span style="color:#1f2328">),</span> <span style="color:#0a3069">&#34;TWATCH_FAKE_PHONE&#34;</span><span style="color:#1f2328">:</span> <span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;phone.txt&#34;</span><span style="color:#1f2328">)},</span>
+</span></span><span style="display:flex;"><span>        stdout<span style="color:#0550ae">=</span>asyncio<span style="color:#0550ae">.</span>subprocess<span style="color:#0550ae">.</span>PIPE<span style="color:#1f2328">,</span> stderr<span style="color:#0550ae">=</span>asyncio<span style="color:#0550ae">.</span>subprocess<span style="color:#0550ae">.</span>STDOUT<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">(</span><span style="color:#cf222e">await</span> sent<span style="color:#0550ae">.</span>communicate<span style="color:#1f2328">())[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">]</span><span style="color:#0550ae">.</span>decode<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>splitlines<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">piece</span><span style="color:#1f2328">(</span>n<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;open(&#39;app.part&#39;, &#39;wb&#39;).write(b&#39;</span><span style="color:#0a3069">{</span>n<span style="color:#0a3069">}</span><span style="color:#0a3069">&#39; * 10)</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">pieces.add()</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">def</span> <span style="color:#6639ba">story</span><span style="color:#1f2328">(</span>work<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">await</span> land<span style="color:#1f2328">(</span>work<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;import pieces</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">pieces.start(</span><span style="color:#0a3069">{</span>PIECES<span style="color:#0a3069">}</span><span style="color:#0a3069">)</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>piece<span style="color:#1f2328">(</span>n<span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> n <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>KEPT<span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    said <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> land<span style="color:#1f2328">(</span>work<span style="color:#1f2328">,</span> <span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;import pieces</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">pieces.start(</span><span style="color:#0a3069">{</span>PIECES<span style="color:#0a3069">}</span><span style="color:#0a3069">, </span><span style="color:#0a3069">{</span>KEPT<span style="color:#0a3069">}</span><span style="color:#0a3069">)</span><span style="color:#0a3069">\n</span><span style="color:#0a3069">&#34;</span>
+</span></span><span style="display:flex;"><span>                      <span style="color:#0550ae">+</span> <span style="color:#0a3069">&#34;&#34;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>piece<span style="color:#1f2328">(</span>n<span style="color:#1f2328">)</span> <span style="color:#cf222e">for</span> n <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>KEPT<span style="color:#1f2328">,</span> PIECES<span style="color:#1f2328">)))</span>
+</span></span><span style="display:flex;"><span>    whole <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;app.bin&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>read_bytes<span style="color:#1f2328">()</span> <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;app.bin&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>exists<span style="color:#1f2328">()</span> <span style="color:#cf222e">else</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  said: </span><span style="color:#0a3069">{</span><span style="color:#0a3069">&#39; / &#39;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span>said<span style="color:#1f2328">)</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  app.bin: </span><span style="color:#0a3069">{</span>whole<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> said<span style="color:#1f2328">[</span><span style="color:#0550ae">-</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]</span> <span style="color:#0550ae">==</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;firmware 100 %&#34;</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">and</span> whole <span style="color:#0550ae">==</span> <span style="color:#0a3069">b</span><span style="color:#0a3069">&#34;&#34;</span><span style="color:#0550ae">.</span>join<span style="color:#1f2328">(</span><span style="color:#6639ba">str</span><span style="color:#1f2328">(</span>n<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>encode<span style="color:#1f2328">()</span> <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span> <span style="color:#cf222e">for</span> n <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>PIECES<span style="color:#1f2328">))</span>
+</span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>after a flash over usb, the watch runs again as before it.
 <ul>
@@ -2695,14 +2740,15 @@ the phone links.</li>
 <dt>what</dt>
 <dd>linked and idle, the watch and the phone should talk as rarely as the link allows.
 <ul>
-<li><strong>rule:</strong> once the phone sets its low-power link, the watch asks to skip up to 4 of its exchanges in a row,
-at the same pace.
+<li><strong>rule:</strong> once the phone sets its low-power link, the watch asks to meet it every second, skipping none.
 <ul>
-<li><strong>why:</strong> « focus on preserving the battery of the phone while ensuring the connection remains possible »</li>
+<li><strong>why:</strong> « focus on preserving the battery of the phone while ensuring the connection remains possible »:
+the phone wakes at every meeting, skips or not, so only a longer interval spares it.</li>
+<li><strong>what:</strong> a notification then waits at most a second, as the user allows.</li>
 <li><strong>what:</strong> Android&rsquo;s low-power link exchanges every 100 to 125 ms and lets the watch skip 2; the phone app
 can ask nothing slower.</li>
 <li><strong>how:</strong> the phone links, sets 100 to 125 ms with 2 skips and 5 s of silence allowed, as Android does;
-within 10 s the link must let the watch skip 4.</li>
+within 10 s the link must meet every 1000 ms.</li>
 </ul>
 </li>
 </ul>
@@ -2715,8 +2761,8 @@ within 10 s the link must let the watch skip 4.</li>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">companion</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">air</span> <span style="color:#cf222e">import</span> the_air<span style="color:#1f2328">,</span> start_watch<span style="color:#1f2328">,</span> stop_watch
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>PROMISE <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;once the phone sets its low-power link, the watch asks to skip up to 4 of its exchanges in a row&#34;</span>
-</span></span><span style="display:flex;"><span>SKIPS <span style="color:#0550ae">=</span> <span style="color:#0550ae">4</span>
+</span></span><span style="display:flex;"><span>PROMISE <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;once the phone sets its low-power link, the watch asks to meet it every second, skipping none&#34;</span>
+</span></span><span style="display:flex;"><span>EVERY_MS <span style="color:#0550ae">=</span> <span style="color:#0550ae">1000</span>
 </span></span><span style="display:flex;"><span>WITHIN_S <span style="color:#0550ae">=</span> <span style="color:#0550ae">10</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
@@ -2729,13 +2775,100 @@ within 10 s the link must let the watch skip 4.</li>
 </span></span><span style="display:flex;"><span>            connection <span style="color:#0550ae">=</span> peer<span style="color:#0550ae">.</span>connection
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">await</span> connection<span style="color:#0550ae">.</span>update_parameters<span style="color:#1f2328">(</span><span style="color:#0550ae">100</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">125</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">5000</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>WITHIN_S <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> connection<span style="color:#0550ae">.</span>parameters<span style="color:#0550ae">.</span>peripheral_latency <span style="color:#0550ae">==</span> SKIPS<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> <span style="color:#6639ba">round</span><span style="color:#1f2328">(</span>connection<span style="color:#0550ae">.</span>parameters<span style="color:#0550ae">.</span>connection_interval<span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> EVERY_MS<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">break</span>
 </span></span><span style="display:flex;"><span>                <span style="color:#cf222e">await</span> asyncio<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            parameters <span style="color:#0550ae">=</span> connection<span style="color:#0550ae">.</span>parameters
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">await</span> stop_watch<span style="color:#1f2328">(</span>watch<span style="color:#1f2328">,</span> once<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;screen.log&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;waiting for the phone&#34;</span><span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  link: every </span><span style="color:#0a3069">{</span>parameters<span style="color:#0550ae">.</span>connection_interval<span style="color:#0a3069">}</span><span style="color:#0a3069"> ms, skips </span><span style="color:#0a3069">{</span>parameters<span style="color:#0550ae">.</span>peripheral_latency<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> parameters<span style="color:#0550ae">.</span>peripheral_latency <span style="color:#0550ae">==</span> SKIPS
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">round</span><span style="color:#1f2328">(</span>parameters<span style="color:#0550ae">.</span>connection_interval<span style="color:#1f2328">)</span> <span style="color:#0550ae">==</span> EVERY_MS <span style="color:#0550ae">and</span> parameters<span style="color:#0550ae">.</span>peripheral_latency <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span>
+</span></span></code></pre></div><dl>
+<dt>rule</dt>
+<dd>each pace the link takes, the watch writes in light.log: how many ms between exchanges, and
+how many it may skip.
+<ul>
+<li><strong>why:</strong> « focus on preserving the battery of the phone while ensuring the connection remains possible »:
+nothing on the phone shows the pace, so the watch&rsquo;s log is where to read it.</li>
+<li><strong>how:</strong> the phone links and sets 100 to 125 ms with 2 skips; light.log must then show « pace every
+1000 skips 0 ».</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-paced"></div>
+<p><a id="code-snippet--story-paced"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">asyncio</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">companion</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">air</span> <span style="color:#cf222e">import</span> the_air<span style="color:#1f2328">,</span> start_watch<span style="color:#1f2328">,</span> stop_watch
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PROMISE <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;each pace the link takes, the watch writes in light.log: how many ms between exchanges, and how many it may skip&#34;</span>
+</span></span><span style="display:flex;"><span>WANTED <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;pace&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;every&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;1000&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;skips&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;0&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>WITHIN_S <span style="color:#0550ae">=</span> <span style="color:#0550ae">10</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">paces</span><span style="color:#1f2328">(</span>trace<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    kept <span style="color:#0550ae">=</span> trace<span style="color:#0550ae">.</span>read_text<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>splitlines<span style="color:#1f2328">()</span> <span style="color:#cf222e">if</span> trace<span style="color:#0550ae">.</span>exists<span style="color:#1f2328">()</span> <span style="color:#cf222e">else</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">[</span>line<span style="color:#0550ae">.</span>split<span style="color:#1f2328">()[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:</span><span style="color:#0550ae">6</span><span style="color:#1f2328">]</span> <span style="color:#cf222e">for</span> line <span style="color:#0550ae">in</span> kept <span style="color:#cf222e">if</span> line<span style="color:#0550ae">.</span>split<span style="color:#1f2328">()[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:</span><span style="color:#0550ae">2</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;pace&#34;</span><span style="color:#1f2328">]]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">def</span> <span style="color:#6639ba">story</span><span style="color:#1f2328">(</span>work<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    trace <span style="color:#0550ae">=</span> work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;light.log&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">async</span> <span style="color:#cf222e">with</span> the_air<span style="color:#1f2328">(</span>work<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> <span style="color:#1f2328">(</span>watch_pty<span style="color:#1f2328">,</span> phone_pty<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        watch <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> start_watch<span style="color:#1f2328">(</span>watch_pty<span style="color:#1f2328">,</span> mic<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;none.wav&#34;</span><span style="color:#1f2328">,</span> screen<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;screen.log&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                  taps<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;taps.log&#34;</span><span style="color:#1f2328">,</span> speaker<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;speaker.log&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                  motor<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;motor.log&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">async</span> <span style="color:#cf222e">with</span> companion<span style="color:#0550ae">.</span>linked<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;serial:</span><span style="color:#0a3069">{</span>phone_pty<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> peer<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">await</span> peer<span style="color:#0550ae">.</span>connection<span style="color:#0550ae">.</span>update_parameters<span style="color:#1f2328">(</span><span style="color:#0550ae">100</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">125</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">5000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>WITHIN_S <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> WANTED <span style="color:#0550ae">in</span> paces<span style="color:#1f2328">(</span>trace<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">await</span> asyncio<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">await</span> stop_watch<span style="color:#1f2328">(</span>watch<span style="color:#1f2328">,</span> once<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;screen.log&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;waiting for the phone&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    seen <span style="color:#0550ae">=</span> paces<span style="color:#1f2328">(</span>trace<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  paces: </span><span style="color:#0a3069">{</span>seen<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> WANTED <span style="color:#0550ae">in</span> seen
+</span></span></code></pre></div><dl>
+<dt>rule</dt>
+<dd>each pace the watch asks, it writes in light.log whether the ask went out, or its error.
+<ul>
+<li><strong>why:</strong> on oxenhead the 1 s ask never takes, and a missing firmware patch or a refusal look alike.</li>
+<li><strong>how:</strong> the phone links and sets 100 to 125 ms with 2 skips; light.log must then show « pace ask ok ».</li>
+</ul>
+</dd>
+</dl>
+<div class="konix-block-name-marker" data-name="story-asked"></div>
+<p><a id="code-snippet--story-asked"></a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">asyncio</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">companion</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">air</span> <span style="color:#cf222e">import</span> the_air<span style="color:#1f2328">,</span> start_watch<span style="color:#1f2328">,</span> stop_watch
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PROMISE <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;each pace the watch asks, it writes in light.log whether the ask went out, or its error&#34;</span>
+</span></span><span style="display:flex;"><span>WANTED <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;pace&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;ask&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;ok&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>WITHIN_S <span style="color:#0550ae">=</span> <span style="color:#0550ae">10</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">asks</span><span style="color:#1f2328">(</span>trace<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    kept <span style="color:#0550ae">=</span> trace<span style="color:#0550ae">.</span>read_text<span style="color:#1f2328">()</span><span style="color:#0550ae">.</span>splitlines<span style="color:#1f2328">()</span> <span style="color:#cf222e">if</span> trace<span style="color:#0550ae">.</span>exists<span style="color:#1f2328">()</span> <span style="color:#cf222e">else</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#1f2328">[</span>line<span style="color:#0550ae">.</span>split<span style="color:#1f2328">()[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:]</span> <span style="color:#cf222e">for</span> line <span style="color:#0550ae">in</span> kept <span style="color:#cf222e">if</span> line<span style="color:#0550ae">.</span>split<span style="color:#1f2328">()[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> <span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;pace&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;ask&#34;</span><span style="color:#1f2328">]]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">async</span> <span style="color:#cf222e">def</span> <span style="color:#6639ba">story</span><span style="color:#1f2328">(</span>work<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    trace <span style="color:#0550ae">=</span> work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;light.log&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">async</span> <span style="color:#cf222e">with</span> the_air<span style="color:#1f2328">(</span>work<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> <span style="color:#1f2328">(</span>watch_pty<span style="color:#1f2328">,</span> phone_pty<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        watch <span style="color:#0550ae">=</span> <span style="color:#cf222e">await</span> start_watch<span style="color:#1f2328">(</span>watch_pty<span style="color:#1f2328">,</span> mic<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;none.wav&#34;</span><span style="color:#1f2328">,</span> screen<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;screen.log&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                  taps<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;taps.log&#34;</span><span style="color:#1f2328">,</span> speaker<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;speaker.log&#34;</span><span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>                                  motor<span style="color:#0550ae">=</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;motor.log&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">async</span> <span style="color:#cf222e">with</span> companion<span style="color:#0550ae">.</span>linked<span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;serial:</span><span style="color:#0a3069">{</span>phone_pty<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> peer<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">await</span> peer<span style="color:#0550ae">.</span>connection<span style="color:#0550ae">.</span>update_parameters<span style="color:#1f2328">(</span><span style="color:#0550ae">100</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">125</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">2</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">5000</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">for</span> _ <span style="color:#0550ae">in</span> <span style="color:#6639ba">range</span><span style="color:#1f2328">(</span>WITHIN_S <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">if</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>words<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> WANTED <span style="color:#cf222e">for</span> words <span style="color:#0550ae">in</span> asks<span style="color:#1f2328">(</span>trace<span style="color:#1f2328">)):</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">break</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">await</span> asyncio<span style="color:#0550ae">.</span>sleep<span style="color:#1f2328">(</span><span style="color:#0550ae">0.1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">await</span> stop_watch<span style="color:#1f2328">(</span>watch<span style="color:#1f2328">,</span> once<span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>work <span style="color:#0550ae">/</span> <span style="color:#0a3069">&#34;screen.log&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;waiting for the phone&#34;</span><span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>    seen <span style="color:#0550ae">=</span> asks<span style="color:#1f2328">(</span>trace<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span><span style="color:#0a3069">f</span><span style="color:#0a3069">&#34;  asks: </span><span style="color:#0a3069">{</span>seen<span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6639ba">any</span><span style="color:#1f2328">(</span>words<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span> <span style="color:#0550ae">==</span> WANTED <span style="color:#cf222e">for</span> words <span style="color:#0550ae">in</span> seen<span style="color:#1f2328">)</span>
 </span></span></code></pre></div><dl>
 <dt>what</dt>
 <dd>from the desktop, I reach the watch through the phone&rsquo;s relay, and leave it running after.
@@ -3405,6 +3538,7 @@ play alone.</li>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">first</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">findme</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">firmware</span>  <span style="color:#57606a"># noqa: E402</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">resumed</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">hour</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">icons</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">kept</span>  <span style="color:#57606a"># noqa: E402</span>
@@ -3413,6 +3547,8 @@ play alone.</li>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">nowifi</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">pace</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sparse</span>  <span style="color:#57606a"># noqa: E402</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">paced</span>  <span style="color:#57606a"># noqa: E402</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">asked</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">phone</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">picture</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">plug</span>  <span style="color:#57606a"># noqa: E402</span>
@@ -3450,9 +3586,9 @@ play alone.</li>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">wifi</span>  <span style="color:#57606a"># noqa: E402</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>STORIES <span style="color:#0550ae">=</span> <span style="color:#1f2328">[</span>voice<span style="color:#1f2328">,</span> kept<span style="color:#1f2328">,</span> stall<span style="color:#1f2328">,</span> hour<span style="color:#1f2328">,</span> recall<span style="color:#1f2328">,</span> quiet<span style="color:#1f2328">,</span> tints<span style="color:#1f2328">,</span> drop<span style="color:#1f2328">,</span> low<span style="color:#1f2328">,</span> notify<span style="color:#1f2328">,</span> ntfy<span style="color:#1f2328">,</span> accents<span style="color:#1f2328">,</span> torch<span style="color:#1f2328">,</span> start<span style="color:#1f2328">,</span> refresh<span style="color:#1f2328">,</span> plug<span style="color:#1f2328">,</span> wifi<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>           nowifi<span style="color:#1f2328">,</span> phone<span style="color:#1f2328">,</span> fresh<span style="color:#1f2328">,</span> light<span style="color:#1f2328">,</span> awake<span style="color:#1f2328">,</span> wake<span style="color:#1f2328">,</span> down<span style="color:#1f2328">,</span> tick<span style="color:#1f2328">,</span> rectick<span style="color:#1f2328">,</span> pace<span style="color:#1f2328">,</span> sparse<span style="color:#1f2328">,</span> call<span style="color:#1f2328">,</span> batch<span style="color:#1f2328">,</span> refuse<span style="color:#1f2328">,</span> media<span style="color:#1f2328">,</span> title<span style="color:#1f2328">,</span> find<span style="color:#1f2328">,</span> findme<span style="color:#1f2328">,</span> picture<span style="color:#1f2328">,</span> icons<span style="color:#1f2328">,</span> crash<span style="color:#1f2328">,</span> chosen<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>           nowifi<span style="color:#1f2328">,</span> phone<span style="color:#1f2328">,</span> fresh<span style="color:#1f2328">,</span> light<span style="color:#1f2328">,</span> awake<span style="color:#1f2328">,</span> wake<span style="color:#1f2328">,</span> down<span style="color:#1f2328">,</span> tick<span style="color:#1f2328">,</span> rectick<span style="color:#1f2328">,</span> pace<span style="color:#1f2328">,</span> sparse<span style="color:#1f2328">,</span> paced<span style="color:#1f2328">,</span> asked<span style="color:#1f2328">,</span> call<span style="color:#1f2328">,</span> batch<span style="color:#1f2328">,</span> refuse<span style="color:#1f2328">,</span> media<span style="color:#1f2328">,</span> title<span style="color:#1f2328">,</span> find<span style="color:#1f2328">,</span> findme<span style="color:#1f2328">,</span> picture<span style="color:#1f2328">,</span> icons<span style="color:#1f2328">,</span> crash<span style="color:#1f2328">,</span> chosen<span style="color:#1f2328">,</span>
 </span></span><span style="display:flex;"><span>           stay<span style="color:#1f2328">,</span> scene<span style="color:#1f2328">,</span> still<span style="color:#1f2328">,</span> pad_still<span style="color:#1f2328">,</span> reach<span style="color:#1f2328">,</span> lightlog<span style="color:#1f2328">,</span> heard<span style="color:#1f2328">,</span> charge<span style="color:#1f2328">,</span> chargelog<span style="color:#1f2328">,</span> lost<span style="color:#1f2328">,</span> turn<span style="color:#1f2328">,</span> first<span style="color:#1f2328">,</span> busy<span style="color:#1f2328">,</span> relay<span style="color:#1f2328">,</span> relay6<span style="color:#1f2328">,</span> adapter<span style="color:#1f2328">,</span> bounce<span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>           btoff<span style="color:#1f2328">,</span> asleep<span style="color:#1f2328">,</span> steps<span style="color:#1f2328">,</span> firmware<span style="color:#1f2328">,</span> restore<span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>           btoff<span style="color:#1f2328">,</span> asleep<span style="color:#1f2328">,</span> steps<span style="color:#1f2328">,</span> firmware<span style="color:#1f2328">,</span> resumed<span style="color:#1f2328">,</span> restore<span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>STORY_LIMIT_S <span style="color:#0550ae">=</span> <span style="color:#0550ae">120</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
@@ -4047,13 +4183,15 @@ spread over the pieces still to come.</li>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>_total <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span>_done <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>_kept <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span>_start <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">start</span><span style="color:#1f2328">(</span>total<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> _total<span style="color:#1f2328">,</span> _done<span style="color:#1f2328">,</span> _start
-</span></span><span style="display:flex;"><span>    _total<span style="color:#1f2328">,</span> _done<span style="color:#1f2328">,</span> _start <span style="color:#0550ae">=</span> total<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;app.bin&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;wb&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>close<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">start</span><span style="color:#1f2328">(</span>total<span style="color:#1f2328">,</span> kept<span style="color:#0550ae">=</span><span style="color:#0550ae">0</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> _total<span style="color:#1f2328">,</span> _done<span style="color:#1f2328">,</span> _kept<span style="color:#1f2328">,</span> _start
+</span></span><span style="display:flex;"><span>    _total<span style="color:#1f2328">,</span> _done<span style="color:#1f2328">,</span> _kept<span style="color:#1f2328">,</span> _start <span style="color:#0550ae">=</span> total<span style="color:#1f2328">,</span> kept<span style="color:#1f2328">,</span> kept<span style="color:#1f2328">,</span> time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">not</span> kept<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6639ba">open</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;app.bin&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;wb&#34;</span><span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>close<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_left</span><span style="color:#1f2328">(</span>ms<span style="color:#1f2328">):</span>
@@ -4078,12 +4216,15 @@ spread over the pieces still to come.</li>
 </span></span><span style="display:flex;"><span>    line <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;firmware </span><span style="color:#0a3069">%d</span><span style="color:#0a3069"> </span><span style="color:#0a3069">%%</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">100</span> <span style="color:#0550ae">*</span> _done <span style="color:#0550ae">//</span> _total<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> _done <span style="color:#0550ae">&lt;</span> _total<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        spent <span style="color:#0550ae">=</span> time<span style="color:#0550ae">.</span>ticks_diff<span style="color:#1f2328">(</span>time<span style="color:#0550ae">.</span>ticks_ms<span style="color:#1f2328">(),</span> _start<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        line <span style="color:#0550ae">+=</span> <span style="color:#0a3069">&#34;, </span><span style="color:#0a3069">%s</span><span style="color:#0a3069"> left&#34;</span> <span style="color:#0550ae">%</span> _left<span style="color:#1f2328">(</span>spent <span style="color:#0550ae">*</span> <span style="color:#1f2328">(</span>_total <span style="color:#0550ae">-</span> _done<span style="color:#1f2328">)</span> <span style="color:#0550ae">//</span> _done<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        line <span style="color:#0550ae">+=</span> <span style="color:#0a3069">&#34;, </span><span style="color:#0a3069">%s</span><span style="color:#0a3069"> left&#34;</span> <span style="color:#0550ae">%</span> _left<span style="color:#1f2328">(</span>spent <span style="color:#0550ae">*</span> <span style="color:#1f2328">(</span>_total <span style="color:#0550ae">-</span> _done<span style="color:#1f2328">)</span> <span style="color:#0550ae">//</span> <span style="color:#1f2328">(</span>_done <span style="color:#0550ae">-</span> _kept<span style="color:#1f2328">))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6639ba">print</span><span style="color:#1f2328">(</span>line<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>    screen<span style="color:#0550ae">.</span>say<span style="color:#1f2328">(</span>line<span style="color:#1f2328">)</span>
 </span></span></code></pre></div><dl>
 <dt>how</dt>
 <dd>« done » comes only from the watch&rsquo;s « written and checked », not from mpremote&rsquo;s exit.</dd>
+<dt>how</dt>
+<dd>a send cut short is taken up again: the watch tells how many bytes <code>app.bin</code> holds, and the
+pieces those bytes make whole are kept, not sent again.</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="update-firmware"></div>
 <p><a id="code-snippet--update-firmware"></a></p>
@@ -4102,12 +4243,38 @@ spread over the pieces still to come.</li>
 </span></span><span style="display:flex;"><span>rm -rf <span style="color:#0a3069">&#34;</span><span style="color:#953800">$pieces</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>mkdir -p <span style="color:#0a3069">&#34;</span><span style="color:#953800">$pieces</span><span style="color:#0a3069">&#34;</span>
 </span></span><span style="display:flex;"><span>split -n <span style="color:#0a3069">&#34;</span><span style="color:#953800">$PIECES</span><span style="color:#0a3069">&#34;</span> -d -a <span style="color:#0550ae">3</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$image</span><span style="color:#0a3069">&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$pieces</span><span style="color:#0a3069">/&#34;</span>
-</span></span><span style="display:flex;"><span>step <span style="color:#0a3069">&#34;copying </span><span style="color:#cf222e">$(</span>stat -c %s <span style="color:#0a3069">&#34;</span><span style="color:#953800">$image</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069"> bytes in </span><span style="color:#953800">$PIECES</span><span style="color:#0a3069"> pieces&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#953800">copies</span><span style="color:#0550ae">=(</span>cp <span style="color:#0a3069">&#34;</span><span style="color:#953800">$here</span><span style="color:#0a3069">/watch/pieces.py&#34;</span> :pieces.py + <span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;import pieces; pieces.start(</span><span style="color:#953800">$PIECES</span><span style="color:#0a3069">)&#34;</span><span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">held</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$(</span>mpremote connect <span style="color:#0a3069">&#34;</span><span style="color:#953800">$port</span><span style="color:#0a3069">&#34;</span> resume <span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;import os
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">try:
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    print(&#39;held&#39;, os.stat(&#39;app.bin&#39;)[6])
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">except OSError:
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    print(&#39;held&#39;, 0)&#34;</span> <span style="color:#1f2328">|</span> sed -n <span style="color:#0a3069">&#39;s/^held //p&#39;</span> <span style="color:#1f2328">|</span> tr -d <span style="color:#0a3069">&#39;\r&#39;</span><span style="color:#cf222e">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">kept</span><span style="color:#0550ae">=</span><span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">sum</span><span style="color:#0550ae">=</span><span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">n</span><span style="color:#0550ae">=</span><span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> piece in <span style="color:#0a3069">&#34;</span><span style="color:#953800">$pieces</span><span style="color:#0a3069">&#34;</span>/*<span style="color:#1f2328">;</span> <span style="color:#cf222e">do</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#953800">copies</span><span style="color:#0550ae">+=(</span>+ cp <span style="color:#0a3069">&#34;</span><span style="color:#953800">$piece</span><span style="color:#0a3069">&#34;</span> :app.part + <span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;pieces.add()&#34;</span><span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">sum</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$((</span>sum <span style="color:#0550ae">+</span> <span style="color:#cf222e">$(</span>stat -c %s <span style="color:#0a3069">&#34;</span><span style="color:#953800">$piece</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">n</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$((</span>n <span style="color:#0550ae">+</span> <span style="color:#0550ae">1</span><span style="color:#cf222e">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">[</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$sum</span><span style="color:#0a3069">&#34;</span> -eq <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">held</span><span style="color:#cf222e">:-</span><span style="color:#953800">0</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">]</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#953800">kept</span><span style="color:#0550ae">=</span><span style="color:#953800">$n</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">fi</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
-</span></span><span style="display:flex;"><span><span style="color:#953800">copies</span><span style="color:#0550ae">+=(</span>+ <span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;import os; os.remove(&#39;app.part&#39;); print(&#39;installing&#39;); import ota; ota.install(&#39;app.bin&#39;, &#39;</span><span style="color:#0a3069">${</span><span style="color:#953800">digest</span><span style="color:#1f2328">%% *</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#39;)&#34;</span><span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span>step <span style="color:#0a3069">&#34;copying </span><span style="color:#cf222e">$(</span>stat -c %s <span style="color:#0a3069">&#34;</span><span style="color:#953800">$image</span><span style="color:#0a3069">&#34;</span><span style="color:#cf222e">)</span><span style="color:#0a3069"> bytes in </span><span style="color:#953800">$PIECES</span><span style="color:#0a3069"> pieces, </span><span style="color:#953800">$kept</span><span style="color:#0a3069"> already on the watch&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">copies</span><span style="color:#0550ae">=(</span>cp <span style="color:#0a3069">&#34;</span><span style="color:#953800">$here</span><span style="color:#0a3069">/watch/pieces.py&#34;</span> :pieces.py + <span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;import pieces; pieces.start(</span><span style="color:#953800">$PIECES</span><span style="color:#0a3069">, </span><span style="color:#953800">$kept</span><span style="color:#0a3069">)&#34;</span><span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">n</span><span style="color:#0550ae">=</span><span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">for</span> piece in <span style="color:#0a3069">&#34;</span><span style="color:#953800">$pieces</span><span style="color:#0a3069">&#34;</span>/*<span style="color:#1f2328">;</span> <span style="color:#cf222e">do</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#953800">n</span><span style="color:#0550ae">=</span><span style="color:#cf222e">$((</span>n <span style="color:#0550ae">+</span> <span style="color:#0550ae">1</span><span style="color:#cf222e">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">if</span> <span style="color:#0550ae">[</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$n</span><span style="color:#0a3069">&#34;</span> -gt <span style="color:#0a3069">&#34;</span><span style="color:#953800">$kept</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">]</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#953800">copies</span><span style="color:#0550ae">+=(</span>+ cp <span style="color:#0a3069">&#34;</span><span style="color:#953800">$piece</span><span style="color:#0a3069">&#34;</span> :app.part + <span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;pieces.add()&#34;</span><span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">fi</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">done</span>
+</span></span><span style="display:flex;"><span><span style="color:#953800">copies</span><span style="color:#0550ae">+=(</span>+ <span style="color:#6639ba">exec</span> <span style="color:#0a3069">&#34;import os
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">try:
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    os.remove(&#39;app.part&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">except OSError:
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    pass
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">print(&#39;installing&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">import ota
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">ota.install(&#39;app.bin&#39;, &#39;</span><span style="color:#0a3069">${</span><span style="color:#953800">digest</span><span style="color:#1f2328">%% *</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#39;)&#34;</span><span style="color:#0550ae">)</span>
 </span></span><span style="display:flex;"><span><span style="color:#953800">PYTHONUNBUFFERED</span><span style="color:#0550ae">=</span><span style="color:#0550ae">1</span> mpremote connect <span style="color:#0a3069">&#34;</span><span style="color:#953800">$port</span><span style="color:#0a3069">&#34;</span> resume <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">${</span><span style="color:#953800">copies</span><span style="color:#1f2328">[@]</span><span style="color:#0a3069">}</span><span style="color:#0a3069">&#34;</span> <span style="color:#1f2328">|</span> tee <span style="color:#0a3069">&#34;</span><span style="color:#953800">$here</span><span style="color:#0a3069">/build/ota.out&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">if</span> grep -q <span style="color:#0a3069">&#34;ota: written and checked&#34;</span> <span style="color:#0a3069">&#34;</span><span style="color:#953800">$here</span><span style="color:#0a3069">/build/ota.out&#34;</span><span style="color:#1f2328">;</span> <span style="color:#cf222e">then</span>
 </span></span><span style="display:flex;"><span>    step <span style="color:#0a3069">&#34;done&#34;</span>
@@ -4314,11 +4481,23 @@ go off: bits 3 and 4 of 0x80, bit 4 of 0x90.
 <li><strong>why:</strong> they were found on, fed for nothing; the gnss track will turn bldo1 back on.</li>
 </ul>
 </dd>
+<dt>how</dt>
+<dd>at boot, the slot running is marked valid, so a firmware sent over the air stays booted.
+<ul>
+<li><strong>why:</strong> unmarked, the bootloader rolled the watch back to its old slot at the next reset.</li>
+</ul>
+</dd>
 </dl>
 <div class="konix-block-name-marker" data-name="device-boot"></div>
 <p><a id="code-snippet--device-boot"></a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">machine</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">esp32</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">machine</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">machine</span> <span style="color:#cf222e">import</span> I2C<span style="color:#1f2328">,</span> Pin
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    esp32<span style="color:#0550ae">.</span>Partition<span style="color:#0550ae">.</span>mark_app_valid_cancel_rollback<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">except</span> OSError<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">pass</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>PMU <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x34</span>
 </span></span><span style="display:flex;"><span>STATUS1<span style="color:#1f2328">,</span> VBUS_GOOD <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x00</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0b100000</span>
@@ -5170,6 +5349,12 @@ an hour.</li>
 </span></span><span style="display:flex;"><span>        writes <span style="color:#0550ae">=</span> watch<span style="color:#0550ae">.</span>next_writes<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> writes<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            screen<span style="color:#0550ae">.</span>heard<span style="color:#1f2328">(</span>writes<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        pace <span style="color:#0550ae">=</span> watch<span style="color:#0550ae">.</span>next_pace<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> pace<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            screen<span style="color:#0550ae">.</span>paced<span style="color:#1f2328">(</span><span style="color:#0550ae">*</span>pace<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        ask <span style="color:#0550ae">=</span> watch<span style="color:#0550ae">.</span>next_ask<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> ask<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            screen<span style="color:#0550ae">.</span>asked<span style="color:#1f2328">(</span>ask<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        wifi_state<span style="color:#1f2328">,</span> wifi_since <span style="color:#0550ae">=</span> follow_wifi<span style="color:#1f2328">(</span>wifi_state<span style="color:#1f2328">,</span> wifi_since<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> watch<span style="color:#0550ae">.</span>phone_ready <span style="color:#0550ae">!=</span> linked<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> watch<span style="color:#0550ae">.</span>phone_ready <span style="color:#0550ae">and</span> watch<span style="color:#0550ae">.</span>phone_name <span style="color:#0550ae">and</span> watch<span style="color:#0550ae">.</span>phone_name <span style="color:#0550ae">not</span> <span style="color:#0550ae">in</span> seen<span style="color:#1f2328">:</span>
@@ -5690,6 +5875,14 @@ its fake under test both hold, so the stories time the watch&rsquo;s own.</li>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">heard</span><span style="color:#1f2328">(</span>writes<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;heard &#34;</span> <span style="color:#0550ae">+</span> writes<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">paced</span><span style="color:#1f2328">(</span>every_ms<span style="color:#1f2328">,</span> skips<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pace every </span><span style="color:#0a3069">%d</span><span style="color:#0a3069"> skips </span><span style="color:#0a3069">%d</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span>every_ms<span style="color:#1f2328">,</span> skips<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">asked</span><span style="color:#1f2328">(</span>outcome<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pace ask &#34;</span> <span style="color:#0550ae">+</span> outcome<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>CHARGE_LOG_BYTES <span style="color:#0550ae">=</span> <span style="color:#0550ae">4_000</span>
@@ -6310,6 +6503,14 @@ scroll it nor draw over it, until the wheel puts the lines back.
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">heard</span><span style="color:#1f2328">(</span>writes<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;heard &#34;</span> <span style="color:#0550ae">+</span> writes<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">paced</span><span style="color:#1f2328">(</span>every_ms<span style="color:#1f2328">,</span> skips<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pace every </span><span style="color:#0a3069">%d</span><span style="color:#0a3069"> skips </span><span style="color:#0a3069">%d</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span>every_ms<span style="color:#1f2328">,</span> skips<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">asked</span><span style="color:#1f2328">(</span>outcome<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pace ask &#34;</span> <span style="color:#0550ae">+</span> outcome<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>CHARGE_LOG_BYTES <span style="color:#0550ae">=</span> <span style="color:#0550ae">4_000</span>
@@ -6990,6 +7191,14 @@ of a long one&rsquo;s scroll to the <code>.title</code> twin as « row … ».
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">heard</span><span style="color:#1f2328">(</span>writes<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;heard &#34;</span> <span style="color:#0550ae">+</span> writes<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">paced</span><span style="color:#1f2328">(</span>every_ms<span style="color:#1f2328">,</span> skips<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pace every </span><span style="color:#0a3069">%d</span><span style="color:#0a3069"> skips </span><span style="color:#0a3069">%d</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span>every_ms<span style="color:#1f2328">,</span> skips<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">asked</span><span style="color:#1f2328">(</span>outcome<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    _log_light<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pace ask &#34;</span> <span style="color:#0550ae">+</span> outcome<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>CHARGE_LOG_BYTES <span style="color:#0550ae">=</span> <span style="color:#0550ae">4_000</span>
@@ -7686,6 +7895,12 @@ LilyGo&rsquo;s library plays it at start<sup id="fnref1:16"><a class="internal-l
 <li><strong>how:</strong> only for the buzz: bldo2 goes on, the drv2605 is set up afresh, the alert is waited out,
 and bldo2 goes off.</li>
 <li><strong>why:</strong> as with the amplifier, a rail left on feeds the drv2605 all day for a rare buzz.</li>
+<li><strong>how:</strong> before bldo2 goes off, and once at boot, the drv2605 is put in standby, its mode&rsquo;s bit 6.
+<ul>
+<li><strong>why:</strong> with bldo2 off it still answered, its mode 0x00, awake: about 0.5 mA against a few µA in
+standby; « The motor driver idles awake: put it in standby at boot and after each buzz » got its go.</li>
+</ul>
+</li>
 </ul>
 </li>
 <li><strong>how:</strong> a tick is the same, with the strong buzz, effect 14<sup id="fnref2:17"><a class="internal-link" href="#fn:17" class="footnote-ref" role="doc-noteref">17</a></sup>, lasting 150 ms.
@@ -7717,6 +7932,7 @@ tens of ms<sup id="fnref3:17"><a class="internal-link" href="#fn:17" class="foot
 </span></span><span style="display:flex;"><span>BLDO2_ON <span style="color:#0550ae">=</span> <span style="color:#0550ae">0b100000</span>
 </span></span><span style="display:flex;"><span>DRV <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x5A</span>
 </span></span><span style="display:flex;"><span>MODE<span style="color:#1f2328">,</span> LIBRARY<span style="color:#1f2328">,</span> SEQUENCE<span style="color:#1f2328">,</span> GO<span style="color:#1f2328">,</span> FEEDBACK <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x01</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x03</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x04</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x0C</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0x1A</span>
+</span></span><span style="display:flex;"><span>STANDBY <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x40</span>
 </span></span><span style="display:flex;"><span>ALERT<span style="color:#1f2328">,</span> ALERT_MS <span style="color:#0550ae">=</span> <span style="color:#0550ae">15</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">750</span>
 </span></span><span style="display:flex;"><span>CLICK<span style="color:#1f2328">,</span> CLICK_MS <span style="color:#0550ae">=</span> <span style="color:#0550ae">14</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">150</span>
 </span></span><span style="display:flex;"><span>WAIT<span style="color:#1f2328">,</span> GAP_MS <span style="color:#0550ae">=</span> <span style="color:#0550ae">0x80</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">200</span>
@@ -7729,7 +7945,15 @@ tens of ms<sup id="fnref3:17"><a class="internal-link" href="#fn:17" class="foot
 </span></span><span style="display:flex;"><span>    _i2c<span style="color:#0550ae">.</span>writeto_mem<span style="color:#1f2328">(</span>device<span style="color:#1f2328">,</span> register<span style="color:#1f2328">,</span> <span style="color:#6639ba">bytes</span><span style="color:#1f2328">((</span>value<span style="color:#1f2328">,)))</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_standby</span><span style="color:#1f2328">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        _update<span style="color:#1f2328">(</span>DRV<span style="color:#1f2328">,</span> MODE<span style="color:#1f2328">,</span> <span style="color:#0550ae">0xFF</span><span style="color:#1f2328">,</span> STANDBY<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> OSError<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>_update<span style="color:#1f2328">(</span>PMU<span style="color:#1f2328">,</span> BLDO2_VOLT<span style="color:#1f2328">,</span> <span style="color:#0550ae">0xE0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">28</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>_standby<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>_update<span style="color:#1f2328">(</span>PMU<span style="color:#1f2328">,</span> LDO_ONOFF<span style="color:#1f2328">,</span> <span style="color:#0550ae">~</span>BLDO2_ON <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">0xFF</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
@@ -7749,6 +7973,7 @@ tens of ms<sup id="fnref3:17"><a class="internal-link" href="#fn:17" class="foot
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_off</span><span style="color:#1f2328">():</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">global</span> _resting
 </span></span><span style="display:flex;"><span>    _resting <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    _standby<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>    _update<span style="color:#1f2328">(</span>PMU<span style="color:#1f2328">,</span> LDO_ONOFF<span style="color:#1f2328">,</span> <span style="color:#0550ae">~</span>BLDO2_ON <span style="color:#0550ae">&amp;</span> <span style="color:#0550ae">0xFF</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>
@@ -8174,7 +8399,8 @@ notification on <code>ERRORS</code>, cut to a packet; the charge goes out the sa
 </span></span><span style="display:flex;"><span>PROGRESS_STEP <span style="color:#0550ae">=</span> <span style="color:#0550ae">5</span>
 </span></span><span style="display:flex;"><span>STALL_MS <span style="color:#0550ae">=</span> <span style="color:#0550ae">10_000</span>
 </span></span><span style="display:flex;"><span>CALL_US <span style="color:#0550ae">=</span> <span style="color:#0550ae">1_340_000</span>
-</span></span><span style="display:flex;"><span>SKIPS <span style="color:#0550ae">=</span> <span style="color:#0550ae">4</span>
+</span></span><span style="display:flex;"><span>IDLE_US <span style="color:#0550ae">=</span> <span style="color:#0550ae">1_000_000</span>
+</span></span><span style="display:flex;"><span>IDLE_TIMEOUT_MS <span style="color:#0550ae">=</span> <span style="color:#0550ae">6000</span>
 </span></span><span style="display:flex;"><span>SLOW_UNITS <span style="color:#0550ae">=</span> <span style="color:#0550ae">80</span>
 </span></span><span style="display:flex;"><span>UNIT_US <span style="color:#0550ae">=</span> <span style="color:#0550ae">1250</span>
 </span></span><span style="display:flex;"><span>
@@ -8199,13 +8425,15 @@ and the recalls not yet shown.
 <ul>
 <li><strong>how:</strong> a recall&rsquo;s characteristic holds a full packet, 244 bytes, where micropython gives 20 by
 default and would cut its text.</li>
-<li><strong>how:</strong> once the phone sets a pace of 100 ms or slower, the watch asks to keep it and skip up to 4
-exchanges in a row; a faster pace, as for a recording, it leaves alone.
+<li><strong>how:</strong> once the phone sets a pace of 100 ms or slower, the watch asks to meet it every second,
+skipping none, with 6 s of silence allowed; a faster pace, as the phone asks for a recording, it
+leaves alone.
 <ul>
-<li><strong>why:</strong> the radio of both wakes less while nothing is said; the watch still talks at once when it
-has something to send.</li>
+<li><strong>why:</strong> the phone wakes at every meeting, skips or not; a second between them spares it, and a
+notification still arrives within a second.</li>
 </ul>
 </li>
+<li><strong>how:</strong> each pace the link takes waits, ms and skips, until the loop writes it in light.log.</li>
 </ul>
 </dd>
 </dl>
@@ -8239,6 +8467,8 @@ has something to send.</li>
 </span></span><span style="display:flex;"><span>    <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>saves <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>time <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>repl <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>paces <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>asks <span style="color:#0550ae">=</span> <span style="color:#1f2328">[]</span>
 </span></span><span style="display:flex;"><span>    ble<span style="color:#0550ae">.</span>irq<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_irq<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_irq</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> event<span style="color:#1f2328">,</span> data<span style="color:#1f2328">):</span>
@@ -8272,15 +8502,17 @@ has something to send.</li>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>mtu <span style="color:#0550ae">=</span> data<span style="color:#1f2328">[</span><span style="color:#0550ae">1</span><span style="color:#1f2328">]</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">elif</span> event <span style="color:#0550ae">==</span> _IRQ_CONNECTION_UPDATE<span style="color:#1f2328">:</span>
 </span></span><span style="display:flex;"><span>        conn<span style="color:#1f2328">,</span> units<span style="color:#1f2328">,</span> skips<span style="color:#1f2328">,</span> timeout<span style="color:#1f2328">,</span> status <span style="color:#0550ae">=</span> data
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> status <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span> <span style="color:#0550ae">and</span> units <span style="color:#0550ae">&gt;=</span> SLOW_UNITS <span style="color:#0550ae">and</span> skips <span style="color:#0550ae">&lt;</span> SKIPS<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            micropython<span style="color:#0550ae">.</span>schedule<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_sparse<span style="color:#1f2328">,</span> <span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> units<span style="color:#1f2328">,</span> timeout<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> status <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>paces<span style="color:#0550ae">.</span>append<span style="color:#1f2328">((</span>units <span style="color:#0550ae">*</span> UNIT_US <span style="color:#0550ae">//</span> <span style="color:#0550ae">1000</span><span style="color:#1f2328">,</span> skips<span style="color:#1f2328">))</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> status <span style="color:#0550ae">==</span> <span style="color:#0550ae">0</span> <span style="color:#0550ae">and</span> units <span style="color:#0550ae">&gt;=</span> SLOW_UNITS <span style="color:#0550ae">and</span> units <span style="color:#0550ae">*</span> UNIT_US <span style="color:#0550ae">!=</span> IDLE_US<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            micropython<span style="color:#0550ae">.</span>schedule<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_sparse<span style="color:#1f2328">,</span> conn<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_sparse</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> pace<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>    conn<span style="color:#1f2328">,</span> units<span style="color:#1f2328">,</span> timeout <span style="color:#0550ae">=</span> pace
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">_sparse</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> conn<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ble<span style="color:#0550ae">.</span>gap_update<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> units <span style="color:#0550ae">*</span> UNIT_US<span style="color:#1f2328">,</span> units <span style="color:#0550ae">*</span> UNIT_US<span style="color:#1f2328">,</span> SKIPS<span style="color:#1f2328">,</span> timeout <span style="color:#0550ae">*</span> <span style="color:#0550ae">10</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> <span style="color:#1f2328">(</span>OSError<span style="color:#1f2328">,</span> AttributeError<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">pass</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ble<span style="color:#0550ae">.</span>gap_update<span style="color:#1f2328">(</span>conn<span style="color:#1f2328">,</span> IDLE_US<span style="color:#1f2328">,</span> IDLE_US<span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> IDLE_TIMEOUT_MS<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>asks<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;ok&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">except</span> <span style="color:#1f2328">(</span>OSError<span style="color:#1f2328">,</span> AttributeError<span style="color:#1f2328">)</span> <span style="color:#cf222e">as</span> error<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>asks<span style="color:#0550ae">.</span>append<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;</span><span style="color:#0a3069">%s</span><span style="color:#0a3069"> </span><span style="color:#0a3069">%s</span><span style="color:#0a3069">&#34;</span> <span style="color:#0550ae">%</span> <span style="color:#1f2328">(</span><span style="color:#6639ba">type</span><span style="color:#1f2328">(</span>error<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span><span style="color:#953800">__name__</span><span style="color:#1f2328">,</span> error<span style="color:#1f2328">))</span>
 </span></span></code></pre></div><dl>
 <dt>how</dt>
 <dd>the watch advertises its name every 1.34 s, until a phone links, and again as soon as any
@@ -8363,6 +8595,12 @@ word that a recording is saved, and the last time it gave.</dd>
 <p><a id="code-snippet--link-recall"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">next_recall</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>recalls<span style="color:#0550ae">.</span>pop<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>recalls <span style="color:#cf222e">else</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">next_pace</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>paces<span style="color:#0550ae">.</span>pop<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>paces <span style="color:#cf222e">else</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">next_ask</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">return</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>asks<span style="color:#0550ae">.</span>pop<span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">)</span> <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>asks <span style="color:#cf222e">else</span> <span style="color:#cf222e">None</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">def</span> <span style="color:#6639ba">next_writes</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>    writes<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>writes <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>writes<span style="color:#1f2328">,</span> <span style="color:#1f2328">{}</span>
