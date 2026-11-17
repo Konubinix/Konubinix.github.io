@@ -419,6 +419,8 @@ cannot open a camera.</p>
 <p>Android hands the phone&rsquo;s notifications only to a <code>NotificationListenerService</code> the
 manifest declares, guarded by <code>BIND_NOTIFICATION_LISTENER_SERVICE</code>; the same hook adds
 that element, once, before the application closes.</p>
+<div class="konix-block-name-marker" data-name="p4a-hook"></div>
+<p><a id="code-snippet--p4a-hook"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>LISTENER <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#39;&#39;&#39;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">    &lt;service android:name=&#34;eu.konubinix.konixpoc.PhoneListener&#34;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">             android:label=&#34;phone listener&#34;
@@ -569,6 +571,7 @@ generate:
     ARG title=proofofconcept
     ARG name=konixpoc
     ARG domain=eu.konubinix
+    ARG version=nil
     RUN buildozer init
     # permissions taken from https://github.com/kivy/kivy-launcher/blob/main/buildozer.spec
     # plumbum is required by rpyc
@@ -583,10 +586,12 @@ generate:
         -e &#34;s/^(title = .+)$/title = ${title}/&#34; \
         -e &#34;s/^(package.name = .+)$/package.name = ${name}/&#34; \
         -e &#34;s/^(package.domain = .+)$/package.domain = ${domain}/&#34; \
+        -e &#34;s/^version = .+$/version = ${version}/&#34; \
+        -e &#34;s/^# ?android.numeric_version = .+$/android.numeric_version = 10241/&#34; \
         -e &#34;s/^(requirements = .+)$/\1,android,plumbum,rpyc,plyer,pyjnius,oscpy,able_recipe,requests${extra}/&#34; \
         -e &#34;s/# android.accept_sdk_license = False/android.accept_sdk_license = True/&#34; \
         -e &#34;s/^#android.manifest.intent_filters =.*$/android.manifest.intent_filters = intent-filter.xml/&#34; \
-        -e &#39;s/^(#android.permissions = .+)$/android.permissions = SET_TIME,SET_TIME_ZONE,WRITE_CALL_LOG,READ_CALL_LOG,WRITE_CONTACTS,READ_CONTACTS,INTERACT_ACROSS_USERS_FULL,SEND_SMS,READ_SMS,RECEIVE_SMS,WRITE_SMS,READ_PHONE_STATE,ANSWER_PHONE_CALLS,RECORD_AUDIO,CAMERA,WRITE_SETTINGS,VIBRATE,MANAGE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_LOCATION_EXTRA_COMMANDS,ACCESS_NETWORK_STATE,ACCESS_NOTIFICATION_POLICY,ACCESS_WIFI_STATE,BLUETOOTH,BLUETOOTH_ADMIN,BROADCAST_STICKY,CHANGE_NETWORK_STATE,CHANGE_WIFI_MULTICAST_STATE,CHANGE_WIFI_STATE,DISABLE_KEYGUARD,EXPAND_STATUS_BAR,FOREGROUND_SERVICE,FOREGROUND_SERVICE_CAMERA,FOREGROUND_SERVICE_MICROPHONE,POST_NOTIFICATIONS,GET_PACKAGE_SIZE,INSTALL_SHORTCUT,INTERNET,KILL_BACKGROUND_PROCESSES,MANAGE_OWN_CALLS,MODIFY_AUDIO_SETTINGS,NFC,READ_SYNC_SETTINGS,READ_SYNC_STATS,RECEIVE_BOOT_COMPLETED,REORDER_TASKS,REQUEST_COMPANION_RUN_IN_BACKGROUND,REQUEST_COMPANION_USE_DATA_IN_BACKGROUND,REQUEST_DELETE_PACKAGES,REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,SET_ALARM,(name=com.android.alarm.permission.SET_ALARM),SET_WALLPAPER,SET_WALLPAPER_HINTS,TRANSMIT_IR,USE_FINGERPRINT,VIBRATE,WAKE_LOCK,WRITE_SYNC_SETTINGS,READ_CALENDAR,WRITE_CALENDAR,BLUETOOTH, BLUETOOTH_ADMIN, (name=android.permission.BLUETOOTH_SCAN;usesPermissionFlags=neverForLocation), BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, ACCESS_FINE_LOCATION/&#39; \
+        -e &#39;s/^(#android.permissions = .+)$/android.permissions = SET_TIME,SET_TIME_ZONE,WRITE_CALL_LOG,READ_CALL_LOG,WRITE_CONTACTS,READ_CONTACTS,INTERACT_ACROSS_USERS_FULL,SEND_SMS,READ_SMS,RECEIVE_SMS,WRITE_SMS,READ_PHONE_STATE,ANSWER_PHONE_CALLS,RECORD_AUDIO,CAMERA,WRITE_SETTINGS,VIBRATE,MANAGE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,ACCESS_LOCATION_EXTRA_COMMANDS,ACCESS_NETWORK_STATE,ACCESS_NOTIFICATION_POLICY,ACCESS_WIFI_STATE,BLUETOOTH,BLUETOOTH_ADMIN,BROADCAST_STICKY,CHANGE_NETWORK_STATE,CHANGE_WIFI_MULTICAST_STATE,CHANGE_WIFI_STATE,DISABLE_KEYGUARD,EXPAND_STATUS_BAR,FOREGROUND_SERVICE,FOREGROUND_SERVICE_CAMERA,FOREGROUND_SERVICE_MICROPHONE,POST_NOTIFICATIONS,GET_PACKAGE_SIZE,INSTALL_SHORTCUT,INTERNET,KILL_BACKGROUND_PROCESSES,MANAGE_OWN_CALLS,MODIFY_AUDIO_SETTINGS,NFC,READ_SYNC_SETTINGS,READ_SYNC_STATS,RECEIVE_BOOT_COMPLETED,REORDER_TASKS,REQUEST_COMPANION_RUN_IN_BACKGROUND,REQUEST_COMPANION_USE_DATA_IN_BACKGROUND,REQUEST_DELETE_PACKAGES,REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,SET_ALARM,(name=com.android.alarm.permission.SET_ALARM),SET_WALLPAPER,SET_WALLPAPER_HINTS,TRANSMIT_IR,USE_FINGERPRINT,VIBRATE,WAKE_LOCK,SYSTEM_ALERT_WINDOW,WRITE_SYNC_SETTINGS,READ_CALENDAR,WRITE_CALENDAR,BLUETOOTH, BLUETOOTH_ADMIN, (name=android.permission.BLUETOOTH_SCAN;usesPermissionFlags=neverForLocation), BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE, ACCESS_FINE_LOCATION/&#39; \
         -e &#34;s/#android.api =.+/android.api = 33/&#34; \
         -e &#34;s|^(#services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY)$|services = ${name}:./service.py:foreground:sticky|&#34; \
         -e &#39;s|#android.add_src =.*|android.add_src = java_src|&#39; \
@@ -653,6 +658,8 @@ apk:
 </code></pre><p>Local recipe override (wired in via <code>p4a.local_recipes</code> above): matplotlib 3.5.2&rsquo;s
 <code>setup_requires</code> asks for <code>setuptools_scm&gt;=4</code> uncapped, so it fetches 10.x, which
 needs a newer setuptools than the 2024 hostpython ships. Cap it to <code>&lt;8</code>.</p>
+<div class="konix-block-name-marker" data-name="matplotlib-recipe"></div>
+<p><a id="code-snippet--matplotlib-recipe"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">os.path</span> <span style="color:#cf222e">import</span> dirname<span style="color:#1f2328">,</span> join
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">pythonforandroid.recipes.matplotlib</span> <span style="color:#cf222e">as</span> <span style="color:#24292e">_matplotlib_module</span>
@@ -689,6 +696,8 @@ the apk, and the part inside the sdcard. The former is responsible to find
 and run the later.</p>
 <h4 id="9af56295-dadf-41f0-8738-e5b92923d7d6">inside the apk</h4>
 <p>The main application will try to find /sdcard/poc/poc.py:main()</p>
+<div class="konix-block-name-marker" data-name="apk-main"></div>
+<p><a id="code-snippet--apk-main"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">jnius</span> <span style="color:#cf222e">import</span> autoclass
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">pathlib</span> <span style="color:#cf222e">import</span> Path
@@ -708,6 +717,8 @@ the first time will you press the accept button and work the second time.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clk android adb shell appops <span style="color:#6639ba">set</span> --uid eu.konubinix.konixpoc MANAGE_EXTERNAL_STORAGE allow
 </span></span></code></pre></div><p>For more information, see the <a class="internal-link" href="#2217d655-6b01-4460-8e5e-89ae3f68a908">note about accessing the files</a>.</p>
 <p>The service will try to run /sdcard/poc/poc.py:service()</p>
+<div class="konix-block-name-marker" data-name="apk-service"></div>
+<p><a id="code-snippet--apk-service"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">sys</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">jnius</span> <span style="color:#cf222e">import</span> autoclass
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">pathlib</span> <span style="color:#cf222e">import</span> Path
@@ -907,7 +918,7 @@ keep it for later.</p>
 <p><a id="code-snippet--without-extra"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>earth --config /dev/null +apk --extra<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>ipfa app.apk <span style="color:#0550ae">&amp;&amp;</span> du -sh app.apk <span style="color:#0550ae">&amp;&amp;</span> ipfa pins.txt
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[[https://ipfs.konubinix.eu/p/bafybeig43wezqkslj4oz6bw4vvkb2e34pi25fhywoizvhr4bxr3ovho4by?filename=app.apk][app.apk]]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[[https://ipfs.konubinix.eu/p/bafybeibvyhc46uw725dfp27ba5hbg6tiu5mbpqggpbm7qful2upsv4wcri?filename=app.apk][app.apk]]
 </span></span><span style="display:flex;"><span>37M	app.apk
 </span></span><span style="display:flex;"><span>[[https://ipfs.konubinix.eu/p/bafkreiafn65pzr4wdpza5eqfuspmg3urpcyb5kieifg7snqbuw7yrrgsl4?filename=pins.txt][pins.txt]]
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>earth --config /dev/null +generate --extra<span style="color:#0550ae">=</span><span style="color:#0a3069">&#34;&#34;</span>
