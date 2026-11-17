@@ -44,18 +44,17 @@
 		<span class="badge badge-pill badge-warning"><a class="internal-link" href="/braindump/tags/fleeting/">Fleeting</a></span></p>
         <p><a class="internal-link" href="/braindump/posts/pomodoro_technique/">pomodo timer</a> on <a class="internal-link" href="/braindump/posts/kivy/">kivy</a>, using my <a target="_blank" href="/blog/posts/a_python_runtime_on_android/?title=a_python_runtime_on_android#">a python runtime on android</a></p>
 <p>Following the code of <a class="internal-link" href="/braindump/posts/interval_timer/#887c6b43-0363-429d-9bc7-6b1492cc262e">doing again, with old python2 kivy, to reuse my wiko cink peax</a></p>
+<div class="konix-block-name-marker" data-name="main-ex"></div>
 <p><a id="code-snippet--main-ex"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-org" data-lang="org"><span style="display:flex;"><span>import time
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>import plyer
 </span></span><span style="display:flex;"><span>from kivy.app import App
 </span></span><span style="display:flex;"><span>from jnius import autoclass
-</span></span><span style="display:flex;"><span>import requests
 </span></span><span style="display:flex;"><span>from kivy.clock import Clock
 </span></span><span style="display:flex;"><span>from kivy.lang import Builder
 </span></span><span style="display:flex;"><span>from kivy.uix.boxlayout import BoxLayout
 </span></span><span style="display:flex;"><span>from kivy.core.camera import Camera
-</span></span><span style="display:flex;"><span>import base64
 </span></span><span style="display:flex;"><span>from datetime import datetime, timedelta
 </span></span><span style="display:flex;"><span>from kivy.graphics import Color, Rectangle
 </span></span><span style="display:flex;"><span>from kivy.properties import StringProperty
@@ -64,7 +63,6 @@
 </span></span><span style="display:flex;"><span>from kivy.uix.screenmanager import Screen, ScreenManagerException, ScreenManager
 </span></span><span style="display:flex;"><span>from helpers.osc import oschandler, to_service
 </span></span><span style="display:flex;"><span>from helpers.wakelock import WakeLock
-</span></span><span style="display:flex;"><span>from helpers.notify import show_toast
 </span></span><span style="display:flex;"><span>from logging import getLogger
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>logger = getLogger(__name__)
@@ -77,6 +75,8 @@
 </span></span><span style="display:flex;"><span>green = (0, 0.9, 0.3, 1)
 </span></span><span style="display:flex;"><span>blue = (0, 0.8, 0.8, 1)
 </span></span><span style="display:flex;"><span>yellow = (0.8, 0.8, 0, 1)
+</span></span><span style="display:flex;"><span>colors = {&#34;idle&#34;: grey, &#34;pomodoro&#34;: pink, &#34;break&#34;: green, &#34;interruption&#34;: blue, &#34;exterruption&#34;: blue,
+</span></span><span style="display:flex;"><span>          &#34;twominutes&#34;: yellow}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>Builder.load_string(&#34;&#34;&#34;
 </span></span><span style="display:flex;"><span>
@@ -108,42 +108,42 @@
 </span></span><span style="display:flex;"><span>        Button:
 </span></span><span style="display:flex;"><span>            disabled: pomodoro.state not in (&#34;idle&#34;, &#34;break&#34;)
 </span></span><span style="display:flex;"><span>            text: &#34;Start&#34;
-</span></span><span style="display:flex;"><span>            on_press: root.start()
+</span></span><span style="display:flex;"><span>            on_press: root.do(&#34;start&#34;)
 </span></span><span style="display:flex;"><span>            color: (0, 0, 0, 1)
 </span></span><span style="display:flex;"><span>            background_color: {pink}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        Button:
 </span></span><span style="display:flex;"><span>            text: &#34;Break&#34;
 </span></span><span style="display:flex;"><span>            disabled: pomodoro.state != &#34;idle&#34;
-</span></span><span style="display:flex;"><span>            on_press: root.short_break()
+</span></span><span style="display:flex;"><span>            on_press: root.do(&#34;short_break&#34;)
 </span></span><span style="display:flex;"><span>            color: (0, 0, 0, 1)
 </span></span><span style="display:flex;"><span>            background_color: {green}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        Button:
 </span></span><span style="display:flex;"><span>            disabled: pomodoro.state != &#34;idle&#34;
 </span></span><span style="display:flex;"><span>            text: &#34;Long Break&#34;
-</span></span><span style="display:flex;"><span>            on_press: root.long_break()
+</span></span><span style="display:flex;"><span>            on_press: root.do(&#34;long_break&#34;)
 </span></span><span style="display:flex;"><span>            color: (0, 0, 0, 1)
 </span></span><span style="display:flex;"><span>            background_color: {green}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        Button:
 </span></span><span style="display:flex;"><span>            disabled: pomodoro.state not in (&#34;pomodoro&#34;, &#34;interruption&#34;)
 </span></span><span style="display:flex;"><span>            text: &#34;Interruption&#34;
-</span></span><span style="display:flex;"><span>            on_press: root.interruption()
+</span></span><span style="display:flex;"><span>            on_press: root.do(&#34;interruption&#34;)
 </span></span><span style="display:flex;"><span>            color: (0, 0, 0, 1)
 </span></span><span style="display:flex;"><span>            background_color: {blue}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        Button:
 </span></span><span style="display:flex;"><span>            text: &#34;Exterruption&#34;
 </span></span><span style="display:flex;"><span>            disabled: pomodoro.state not in (&#34;pomodoro&#34;, &#34;exterruption&#34;)
-</span></span><span style="display:flex;"><span>            on_press: root.exterruption()
+</span></span><span style="display:flex;"><span>            on_press: root.do(&#34;exterruption&#34;)
 </span></span><span style="display:flex;"><span>            color: (0, 0, 0, 1)
 </span></span><span style="display:flex;"><span>            background_color: {blue}
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        Button:
 </span></span><span style="display:flex;"><span>            disabled: pomodoro.state not in (&#34;pomodoro&#34;, &#34;twominutes&#34;)
 </span></span><span style="display:flex;"><span>            text: &#34;Two minutes&#34;
-</span></span><span style="display:flex;"><span>            on_press: root.twominutes()
+</span></span><span style="display:flex;"><span>            on_press: root.do(&#34;twominutes&#34;)
 </span></span><span style="display:flex;"><span>            color: (0, 0, 0, 1)
 </span></span><span style="display:flex;"><span>            background_color: {yellow}
 </span></span><span style="display:flex;"><span>
@@ -173,13 +173,7 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.add_widget(self.pomodorotimer)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.bind(on_enter=self.enter_handler)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.bind(on_pre_leave=self.pre_leave_handler)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        @oschandler(&#34;pomodoro:start&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        def _(_):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            Clock.schedule_once(self.pomodorotimer.start)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        @oschandler(&#34;pomodoro:break&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        def _(_):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            Clock.schedule_once(self.pomodorotimer.short_break)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        oschandler(&#34;pomodoro:state&#34;)(self.pomodorotimer.show)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def pre_leave_handler(self, _):
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.pomodorotimer.leave()
@@ -202,226 +196,42 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.color = Color(1, 0, 0, 1)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.rect = Rectangle(size=self.size, pos=self.pos)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.interrupted_time = None
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.bind(size=self._update_rect, pos=self._update_rect)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.pomodoro_duration = 25
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def update(self, _):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.running:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.progress.value += 1
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            remaining = int(self.ids.progress.max - self.ids.progress.value)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.countdown.text = &#34;{:02d}:{:02d}&#34;.format(remaining // 60, remaining % 60)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if self.ids.progress.value == self.ids.progress.max:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.interrupted_time = None
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.ids.progress.value = 0
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    if self.state == &#34;pomodoro&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                        requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;done&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    elif self.state == &#34;break&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                        requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;done_break&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    elif self.state in (&#34;interruption&#34;, &#34;exterruption&#34;):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                        requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;, data=&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption_too_big&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    elif self.state == &#34;twominutes&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                        requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                     data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_over&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    requests.delete(&#34;http:/</span>/home/consul/v1/kv/iot<span style="color:#1f2328">/pomodoro&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                    show_toast(&#34;Could not update state&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            end = datetime.now() + timedelta(minutes=25)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.endtime.text = end.strftime(&#34;%H:%M&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.countdown.text = &#34;&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def enter(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            resp = requests.get(&#34;http:/</span>/home/consul/v1/kv/iot<span style="color:#1f2328">/pomodoro&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if resp.status_code == 200:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.start_state()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                # endtime = datetime.fromisoformat(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode())
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                # compatibility python2
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                endtime = datetime.strptime(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode(), &#34;%Y-%m-%dT%H:%M:%S.%f&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                now = datetime.now()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.ids.progress.value = self.ids.progress.max - (endtime - now).total_seconds()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.ids.endtime.text = endtime.strftime(&#34;%H:%M&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            show_toast(&#34;Could not get previous state&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.clock = Clock.schedule_interval(self.update, 1)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        wl.acquire()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        to_service(&#34;pomodoro:entered&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def leave(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        Clock.unschedule(self.clock)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.end = 0
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.clock = None
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        wl.release()
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.bind(size=self._update_rect, pos=self._update_rect)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def reset(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.state = &#34;idle&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = False
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = grey[:3]
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def interruption(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;interruption&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_interruption&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for handled interruption&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if self.interrupted_time:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.start()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            return
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def show(self, msg):
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.state = msg[&#34;state&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.end = msg[&#34;end&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = colors[self.state][:3]
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.end:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.progress.max = msg[&#34;total&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.endtime.text = datetime.fromtimestamp(self.end).strftime(&#34;%H:%M&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for interruption&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.progress.value = 0
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.update()
 </span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;pomodoro&#34; and not self.interrupted_time:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.interrupted_time = (self.ids.progress.value, self.ids.progress.max)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = True
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.state = &#34;interruption&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        duration = 1
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.max = duration * 60
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.value = 0
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = blue[:3]
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def exterruption(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;exterruption&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_ext_interruption&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for handled exterruption&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if self.interrupted_time:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.start()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            return
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;external_interruption&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for exterruption&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;pomodoro&#34; and not self.interrupted_time:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.interrupted_time = (self.ids.progress.value, self.ids.progress.max)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = True
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.state = &#34;exterruption&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        duration = 1
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.max = duration * 60
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.value = 0
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = blue[:3]
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def twominutes(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;twominutes&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_done&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for handled two minutes&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            if self.interrupted_time:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.start()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            return
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                             data=&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                show_toast(&#34;Could not update state for two minutes&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.state == &#34;pomodoro&#34; and not self.interrupted_time:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.interrupted_time = (self.ids.progress.value, self.ids.progress.max)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = True
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.state = &#34;twominutes&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        duration = 2
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.max = duration * 60
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.value = 0
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = yellow[:3]
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def short_break(self, *_):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         data=&#39;&#39;&#39;{&#34;message&#34;: &#34;start_break&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            show_toast(&#34;Could not update state for break&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = True
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.state = &#34;break&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        duration = 4
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.max = duration * 60
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.value = 0
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = green[:3]
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def long_break(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         data=&#39;&#39;&#39;{&#34;message&#34;: &#34;start_long_break&#34;}&#39;&#39;&#39;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        except requests.RequestException as e:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            show_toast(&#34;Could not update state for long break&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.reset()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = True
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.state = &#34;break&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        duration = 20
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.max = duration * 60
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.value = 0
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = green[:3]
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def start_state(self):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.running = True
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.state = &#34;pomodoro&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.color.rgb = pink[:3]
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.value = 0
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.progress.max = self.pomodoro_duration * 60
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def start(self, *_):
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.running and self.state == &#34;pomodoro&#34;:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            logger.debug(&#34;Already in a pomodoro&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            return
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.start_state()
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.interrupted_time:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            (self.ids.progress.value, self.ids.progress.max) = self.interrupted_time
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            remaining_seconds = self.ids.progress.max - self.ids.progress.value
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            end = datetime.now() + timedelta(seconds=remaining_seconds)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.interrupted_time = None
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            duration = remaining_seconds // 60
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        else:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            duration = self.pomodoro_duration
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            end = datetime.now() + timedelta(minutes=duration)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        self.ids.endtime.text = end.strftime(&#34;%H:%M&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        try:
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            session_id = requests.put(&#34;http:/</span>/home/consul/v1/session/create&#34;,
-</span></span><span style="display:flex;"><span>                                      json={
-</span></span><span style="display:flex;"><span>                                          &#34;TTL&#34;: &#34;{}m&#34;.format(duration),
-</span></span><span style="display:flex;"><span>                                          &#34;Behavior&#34;: &#34;delete&#34;,
-</span></span><span style="display:flex;"><span>                                          &#34;Name&#34;: &#34;iot<span style="color:#1f2328">/pomodoro&#34;,
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                          &#34;Checks&#34;: [],
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                                      }).json()[&#34;ID&#34;]
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            logger.debug(&#34;Registering pomodoro for session {}&#34;.format(session_id))
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.delete(&#34;http:/</span>/home/consul/v1/kv/iot<span style="color:#1f2328">/pomodoro&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/home/consul/v1/kv/iot<span style="color:#1f2328">/pomodoro?acquire={}&#34;.format(session_id),
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">                         data=end.isoformat())
-</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            requests.put(&#34;http:/</span>/home/consul/v1/event/fire/iot/pomodoro&#34;,
-</span></span><span style="display:flex;"><span>                         data=&#39;{{&#34;message&#34;: &#34;start_pomodoro&#34;, &#34;end&#34;: &#34;{}&#34;}}&#39;.format(end.isoformat()))
-</span></span><span style="display:flex;"><span>        except requests.RequestException as e:
-</span></span><span style="display:flex;"><span>            show_toast(&#34;Could not update state for start&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">    def update(self, *_):
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">        if self.end:
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            remaining = max(0, int(self.end - time.time()))
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.progress.value = self.ids.progress.max - remaining
+</span></span></span><span style="display:flex;"><span><span style="color:#1f2328">            self.ids.countdown.text = &#34;{:02d}:{:02d}&#34;.format(remaining /</span>/ 60, remaining % 60)
+</span></span><span style="display:flex;"><span>        else:
+</span></span><span style="display:flex;"><span>            self.ids.endtime.text = (datetime.now() + timedelta(minutes=25)).strftime(&#34;%H:%M&#34;)
+</span></span><span style="display:flex;"><span>            self.ids.countdown.text = &#34;&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def enter(self):
+</span></span><span style="display:flex;"><span>        self.clock = Clock.schedule_interval(self.update, 1)
+</span></span><span style="display:flex;"><span>        wl.acquire()
+</span></span><span style="display:flex;"><span>        to_service(&#34;pomodoro:show&#34;)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def leave(self):
+</span></span><span style="display:flex;"><span>        Clock.unschedule(self.clock)
+</span></span><span style="display:flex;"><span>        self.clock = None
+</span></span><span style="display:flex;"><span>        wl.release()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    def do(self, what):
+</span></span><span style="display:flex;"><span>        to_service(&#34;pomodoro:do&#34;, {&#34;what&#34;: what})
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>class PomodoroApp(App):
 </span></span><span style="display:flex;"><span>
@@ -443,18 +253,17 @@
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>def run():
 </span></span><span style="display:flex;"><span>    PomodoroApp().run()
-</span></span></code></pre></div><p><a id="code-snippet--main"></a></p>
+</span></span></code></pre></div><div class="konix-block-name-marker" data-name="main"></div>
+<p><a id="code-snippet--main"></a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">time</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">plyer</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.app</span> <span style="color:#cf222e">import</span> App
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">jnius</span> <span style="color:#cf222e">import</span> autoclass
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">requests</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.clock</span> <span style="color:#cf222e">import</span> Clock
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.lang</span> <span style="color:#cf222e">import</span> Builder
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.boxlayout</span> <span style="color:#cf222e">import</span> BoxLayout
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.core.camera</span> <span style="color:#cf222e">import</span> Camera
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">import</span> <span style="color:#24292e">base64</span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">datetime</span> <span style="color:#cf222e">import</span> datetime<span style="color:#1f2328">,</span> timedelta
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.graphics</span> <span style="color:#cf222e">import</span> Color<span style="color:#1f2328">,</span> Rectangle
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.properties</span> <span style="color:#cf222e">import</span> StringProperty
@@ -463,7 +272,6 @@
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">kivy.uix.screenmanager</span> <span style="color:#cf222e">import</span> Screen<span style="color:#1f2328">,</span> ScreenManagerException<span style="color:#1f2328">,</span> ScreenManager
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers.osc</span> <span style="color:#cf222e">import</span> oschandler<span style="color:#1f2328">,</span> to_service
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers.wakelock</span> <span style="color:#cf222e">import</span> WakeLock
-</span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">helpers.notify</span> <span style="color:#cf222e">import</span> show_toast
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">from</span> <span style="color:#24292e">logging</span> <span style="color:#cf222e">import</span> getLogger
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>logger <span style="color:#0550ae">=</span> getLogger<span style="color:#1f2328">(</span><span style="color:#953800">__name__</span><span style="color:#1f2328">)</span>
@@ -476,6 +284,8 @@
 </span></span><span style="display:flex;"><span>green <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.9</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.3</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>blue <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>yellow <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#0550ae">0.8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0.8</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>colors <span style="color:#0550ae">=</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;idle&#34;</span><span style="color:#1f2328">:</span> grey<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span><span style="color:#1f2328">:</span> pink<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;break&#34;</span><span style="color:#1f2328">:</span> green<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;interruption&#34;</span><span style="color:#1f2328">:</span> blue<span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;exterruption&#34;</span><span style="color:#1f2328">:</span> blue<span style="color:#1f2328">,</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0a3069">&#34;twominutes&#34;</span><span style="color:#1f2328">:</span> yellow<span style="color:#1f2328">}</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>Builder<span style="color:#0550ae">.</span>load_string<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;&#34;&#34;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
@@ -507,42 +317,42 @@
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        Button:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            disabled: pomodoro.state not in (&#34;idle&#34;, &#34;break&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            text: &#34;Start&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.start()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.do(&#34;start&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            color: (0, 0, 0, 1)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            background_color: </span><span style="color:#0a3069">{pink}</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        Button:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            text: &#34;Break&#34;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            disabled: pomodoro.state != &#34;idle&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.short_break()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.do(&#34;short_break&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            color: (0, 0, 0, 1)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            background_color: </span><span style="color:#0a3069">{green}</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        Button:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            disabled: pomodoro.state != &#34;idle&#34;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            text: &#34;Long Break&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.long_break()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.do(&#34;long_break&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            color: (0, 0, 0, 1)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            background_color: </span><span style="color:#0a3069">{green}</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        Button:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            disabled: pomodoro.state not in (&#34;pomodoro&#34;, &#34;interruption&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            text: &#34;Interruption&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.interruption()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.do(&#34;interruption&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            color: (0, 0, 0, 1)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            background_color: </span><span style="color:#0a3069">{blue}</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        Button:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            text: &#34;Exterruption&#34;
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            disabled: pomodoro.state not in (&#34;pomodoro&#34;, &#34;exterruption&#34;)
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.exterruption()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.do(&#34;exterruption&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            color: (0, 0, 0, 1)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            background_color: </span><span style="color:#0a3069">{blue}</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">        Button:
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            disabled: pomodoro.state not in (&#34;pomodoro&#34;, &#34;twominutes&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            text: &#34;Two minutes&#34;
-</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.twominutes()
+</span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            on_press: root.do(&#34;twominutes&#34;)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            color: (0, 0, 0, 1)
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">            background_color: </span><span style="color:#0a3069">{yellow}</span><span style="color:#0a3069">
 </span></span></span><span style="display:flex;"><span><span style="color:#0a3069">
@@ -572,13 +382,7 @@
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>add_widget<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pomodorotimer<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_enter<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>enter_handler<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>on_pre_leave<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pre_leave_handler<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pomodoro:start&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>_<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>            Clock<span style="color:#0550ae">.</span>schedule_once<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pomodorotimer<span style="color:#0550ae">.</span>start<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">@oschandler</span><span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pomodoro:break&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">def</span> <span style="color:#6639ba">_</span><span style="color:#1f2328">(</span>_<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>            Clock<span style="color:#0550ae">.</span>schedule_once<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pomodorotimer<span style="color:#0550ae">.</span>short_break<span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        oschandler<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pomodoro:state&#34;</span><span style="color:#1f2328">)(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pomodorotimer<span style="color:#0550ae">.</span>show<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">pre_leave_handler</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> _<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pomodorotimer<span style="color:#0550ae">.</span>leave<span style="color:#1f2328">()</span>
@@ -601,226 +405,42 @@
 </span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color <span style="color:#0550ae">=</span> Color<span style="color:#1f2328">(</span><span style="color:#0550ae">1</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>rect <span style="color:#0550ae">=</span> Rectangle<span style="color:#1f2328">(</span>size<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>size<span style="color:#1f2328">,</span> pos<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pos<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>bind<span style="color:#1f2328">(</span>size<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_update_rect<span style="color:#1f2328">,</span> pos<span style="color:#0550ae">=</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>_update_rect<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pomodoro_duration <span style="color:#0550ae">=</span> <span style="color:#0550ae">25</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">update</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> _<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">+=</span> <span style="color:#0550ae">1</span>
-</span></span><span style="display:flex;"><span>            remaining <span style="color:#0550ae">=</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">-</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>countdown<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{:02d}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02d}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>remaining <span style="color:#0550ae">//</span> <span style="color:#0550ae">60</span><span style="color:#1f2328">,</span> remaining <span style="color:#0550ae">%</span> <span style="color:#0550ae">60</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">==</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;done&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;break&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;done_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">in</span> <span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;interruption&#34;</span><span style="color:#1f2328">,</span> <span style="color:#0a3069">&#34;exterruption&#34;</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>                        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span> data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption_too_big&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#cf222e">elif</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;twominutes&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                        requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                                     data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_over&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>                    requests<span style="color:#0550ae">.</span>delete<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/kv/iot/pomodoro&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                    show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">show</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> msg<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">=</span> msg<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;state&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end <span style="color:#0550ae">=</span> msg<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;end&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> colors<span style="color:#1f2328">[</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state<span style="color:#1f2328">][:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">=</span> msg<span style="color:#1f2328">[</span><span style="color:#0a3069">&#34;total&#34;</span><span style="color:#1f2328">]</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>endtime<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>fromtimestamp<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>strftime<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;%H:%M&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            end <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>minutes<span style="color:#0550ae">=</span><span style="color:#0550ae">25</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>endtime<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> end<span style="color:#0550ae">.</span>strftime<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;%H:%M&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>update<span style="color:#1f2328">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">update</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end<span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            remaining <span style="color:#0550ae">=</span> <span style="color:#6639ba">max</span><span style="color:#1f2328">(</span><span style="color:#0550ae">0</span><span style="color:#1f2328">,</span> <span style="color:#6639ba">int</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>end <span style="color:#0550ae">-</span> time<span style="color:#0550ae">.</span>time<span style="color:#1f2328">()))</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">-</span> remaining
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>countdown<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{:02d}</span><span style="color:#0a3069">:</span><span style="color:#0a3069">{:02d}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>remaining <span style="color:#0550ae">//</span> <span style="color:#0550ae">60</span><span style="color:#1f2328">,</span> remaining <span style="color:#0550ae">%</span> <span style="color:#0550ae">60</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>endtime<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span>datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>minutes<span style="color:#0550ae">=</span><span style="color:#0550ae">25</span><span style="color:#1f2328">))</span><span style="color:#0550ae">.</span>strftime<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;%H:%M&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>countdown<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;&#34;</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">enter</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            resp <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>get<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/kv/iot/pomodoro&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> resp<span style="color:#0550ae">.</span>status_code <span style="color:#0550ae">==</span> <span style="color:#0550ae">200</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start_state<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#57606a"># endtime = datetime.fromisoformat(base64.b64decode(resp.json()[0][&#34;Value&#34;]).decode())</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#57606a"># compatibility python2</span>
-</span></span><span style="display:flex;"><span>                endtime <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>strptime<span style="color:#1f2328">(</span>base64<span style="color:#0550ae">.</span>b64decode<span style="color:#1f2328">(</span>resp<span style="color:#0550ae">.</span>json<span style="color:#1f2328">()[</span><span style="color:#0550ae">0</span><span style="color:#1f2328">][</span><span style="color:#0a3069">&#34;Value&#34;</span><span style="color:#1f2328">])</span><span style="color:#0550ae">.</span>decode<span style="color:#1f2328">(),</span> <span style="color:#0a3069">&#34;%Y-%m-</span><span style="color:#0a3069">%d</span><span style="color:#0a3069">T%H:%M:%S.</span><span style="color:#0a3069">%f</span><span style="color:#0a3069">&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>                now <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">-</span> <span style="color:#1f2328">(</span>endtime <span style="color:#0550ae">-</span> now<span style="color:#1f2328">)</span><span style="color:#0550ae">.</span>total_seconds<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>endtime<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> endtime<span style="color:#0550ae">.</span>strftime<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;%H:%M&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not get previous state&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock <span style="color:#0550ae">=</span> Clock<span style="color:#0550ae">.</span>schedule_interval<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>update<span style="color:#1f2328">,</span> <span style="color:#0550ae">1</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        wl<span style="color:#0550ae">.</span>acquire<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pomodoro:entered&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pomodoro:show&#34;</span><span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">leave</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>        Clock<span style="color:#0550ae">.</span>unschedule<span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock<span style="color:#1f2328">)</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>clock <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
 </span></span><span style="display:flex;"><span>        wl<span style="color:#0550ae">.</span>release<span style="color:#1f2328">()</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">reset</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;idle&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">False</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> grey<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">interruption</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;interruption&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for handled interruption&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for interruption&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span> <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;interruption&#34;</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        duration <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">=</span> duration <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> blue<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">exterruption</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;exterruption&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;handled_ext_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for handled exterruption&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;external_interruption&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for exterruption&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span> <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;exterruption&#34;</span>
-</span></span><span style="display:flex;"><span>        duration <span style="color:#0550ae">=</span> <span style="color:#0550ae">1</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">=</span> duration <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> blue<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">twominutes</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;twominutes&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes_done&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for handled two minutes&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                             data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;two_minutes&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>                show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for two minutes&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span> <span style="color:#0550ae">and</span> <span style="color:#0550ae">not</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;twominutes&#34;</span>
-</span></span><span style="display:flex;"><span>        duration <span style="color:#0550ae">=</span> <span style="color:#0550ae">2</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">=</span> duration <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> yellow<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">short_break</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                         data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;start_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for break&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;break&#34;</span>
-</span></span><span style="display:flex;"><span>        duration <span style="color:#0550ae">=</span> <span style="color:#0550ae">4</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">=</span> duration <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> green<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">long_break</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                         data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;&#39;&#39;{&#34;message&#34;: &#34;start_long_break&#34;}&#39;&#39;&#39;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for long break&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>reset<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;break&#34;</span>
-</span></span><span style="display:flex;"><span>        duration <span style="color:#0550ae">=</span> <span style="color:#0550ae">20</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">=</span> duration <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> green<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">start_state</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">=</span> <span style="color:#cf222e">True</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">=</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>color<span style="color:#0550ae">.</span>rgb <span style="color:#0550ae">=</span> pink<span style="color:#1f2328">[:</span><span style="color:#0550ae">3</span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pomodoro_duration <span style="color:#0550ae">*</span> <span style="color:#0550ae">60</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">start</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> <span style="color:#0550ae">*</span>_<span style="color:#1f2328">):</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>running <span style="color:#0550ae">and</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>state <span style="color:#0550ae">==</span> <span style="color:#0a3069">&#34;pomodoro&#34;</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            logger<span style="color:#0550ae">.</span>debug<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Already in a pomodoro&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>start_state<span style="color:#1f2328">()</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value<span style="color:#1f2328">,</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max<span style="color:#1f2328">)</span> <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time
-</span></span><span style="display:flex;"><span>            remaining_seconds <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>max <span style="color:#0550ae">-</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>progress<span style="color:#0550ae">.</span>value
-</span></span><span style="display:flex;"><span>            end <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>seconds<span style="color:#0550ae">=</span>remaining_seconds<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>interrupted_time <span style="color:#0550ae">=</span> <span style="color:#cf222e">None</span>
-</span></span><span style="display:flex;"><span>            duration <span style="color:#0550ae">=</span> remaining_seconds <span style="color:#0550ae">//</span> <span style="color:#0550ae">60</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">else</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            duration <span style="color:#0550ae">=</span> <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>pomodoro_duration
-</span></span><span style="display:flex;"><span>            end <span style="color:#0550ae">=</span> datetime<span style="color:#0550ae">.</span>now<span style="color:#1f2328">()</span> <span style="color:#0550ae">+</span> timedelta<span style="color:#1f2328">(</span>minutes<span style="color:#0550ae">=</span>duration<span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#6a737d">self</span><span style="color:#0550ae">.</span>ids<span style="color:#0550ae">.</span>endtime<span style="color:#0550ae">.</span>text <span style="color:#0550ae">=</span> end<span style="color:#0550ae">.</span>strftime<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;%H:%M&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">try</span><span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            session_id <span style="color:#0550ae">=</span> requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/session/create&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                                      json<span style="color:#0550ae">=</span><span style="color:#1f2328">{</span>
-</span></span><span style="display:flex;"><span>                                          <span style="color:#0a3069">&#34;TTL&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">m&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>duration<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>                                          <span style="color:#0a3069">&#34;Behavior&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;delete&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                                          <span style="color:#0a3069">&#34;Name&#34;</span><span style="color:#1f2328">:</span> <span style="color:#0a3069">&#34;iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                                          <span style="color:#0a3069">&#34;Checks&#34;</span><span style="color:#1f2328">:</span> <span style="color:#1f2328">[],</span>
-</span></span><span style="display:flex;"><span>                                      <span style="color:#1f2328">})</span><span style="color:#0550ae">.</span>json<span style="color:#1f2328">()[</span><span style="color:#0a3069">&#34;ID&#34;</span><span style="color:#1f2328">]</span>
-</span></span><span style="display:flex;"><span>            logger<span style="color:#0550ae">.</span>debug<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Registering pomodoro for session </span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>session_id<span style="color:#1f2328">))</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>delete<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/kv/iot/pomodoro&#34;</span><span style="color:#1f2328">)</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/kv/iot/pomodoro?acquire=</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>session_id<span style="color:#1f2328">),</span>
-</span></span><span style="display:flex;"><span>                         data<span style="color:#0550ae">=</span>end<span style="color:#0550ae">.</span>isoformat<span style="color:#1f2328">())</span>
-</span></span><span style="display:flex;"><span>            requests<span style="color:#0550ae">.</span>put<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;http://home/consul/v1/event/fire/iot/pomodoro&#34;</span><span style="color:#1f2328">,</span>
-</span></span><span style="display:flex;"><span>                         data<span style="color:#0550ae">=</span><span style="color:#0a3069">&#39;{{&#34;message&#34;: &#34;start_pomodoro&#34;, &#34;end&#34;: &#34;</span><span style="color:#0a3069">{}</span><span style="color:#0a3069">&#34;}}&#39;</span><span style="color:#0550ae">.</span>format<span style="color:#1f2328">(</span>end<span style="color:#0550ae">.</span>isoformat<span style="color:#1f2328">()))</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">except</span> requests<span style="color:#0550ae">.</span>RequestException <span style="color:#cf222e">as</span> e<span style="color:#1f2328">:</span>
-</span></span><span style="display:flex;"><span>            show_toast<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;Could not update state for start&#34;</span><span style="color:#1f2328">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">def</span> <span style="color:#6639ba">do</span><span style="color:#1f2328">(</span><span style="color:#6a737d">self</span><span style="color:#1f2328">,</span> what<span style="color:#1f2328">):</span>
+</span></span><span style="display:flex;"><span>        to_service<span style="color:#1f2328">(</span><span style="color:#0a3069">&#34;pomodoro:do&#34;</span><span style="color:#1f2328">,</span> <span style="color:#1f2328">{</span><span style="color:#0a3069">&#34;what&#34;</span><span style="color:#1f2328">:</span> what<span style="color:#1f2328">})</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">PomodoroApp</span><span style="color:#1f2328">(</span>App<span style="color:#1f2328">):</span>
 </span></span><span style="display:flex;"><span>
@@ -849,6 +469,69 @@
 <li><a target="_blank" href="/blog/posts/use_the_camera_with_kivy_on_android/?title=use_the_camera_with_kivy_on_android#">use the camera with kivy on android</a> (blog)</li>
 </ul>
 <h2 id="permalink"><a class="internal-link" href="/braindump/aec7a5a4-ee92-407b-b39b-dc8baaa13ac0?title=pomodo_timer_on_kivy">Permalink</a></h2>
+<style>
+.konix-block-name-marker { display: none; }
+.konix-named-block {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.65em;
+  padding: 1px 6px;
+  background: rgba(127, 127, 127, 0.25);
+  color: inherit;
+  border-radius: 0 4px 0 4px;
+  font-family: monospace;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.7;
+}
+.noweb-ref { text-decoration: underline dotted; }
+</style>
+<script>
+(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Attach the named-block labels at top-right of each code block.
+    document.querySelectorAll(".konix-block-name-marker").forEach(function (marker) {
+      var name = marker.getAttribute("data-name");
+      if (!name) return;
+      var slug = "code-snippet--" + name.replace(/[_/]/g, "-");
+      var anchor = document.getElementById(slug);
+      if (!anchor) return;
+      var blocks = Array.from(document.querySelectorAll(".highlight, pre"));
+      var container = blocks.find(function (b) {
+        return !b.contains(anchor) &&
+               (anchor.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (!container) return;
+      if (getComputedStyle(container).position === "static") {
+        container.style.position = "relative";
+      }
+      var label = document.createElement("span");
+      label.className = "konix-named-block";
+      label.textContent = name;
+      container.appendChild(label);
+    });
+
+    // Turn <<x>> patterns in code into anchor links.
+    document.querySelectorAll("pre code").forEach(function (code) {
+      code.innerHTML = code.innerHTML.replace(
+        /&lt;&lt;(.*?)&gt;&gt;/g,
+        function (match, inner) {
+          var n = inner
+            .replace(/<[^>]+>/g, "")
+            .replace(/\(.*\)\s*$/, "")
+            .trim();
+          if (!/^[A-Za-z0-9_./-]+$/.test(n)) return match;
+          var s = "code-snippet--" + n.replace(/[_/]/g, "-");
+          if (!document.getElementById(s)) return match;
+          return '<a class="internal-link" href="#' + s + '" class="noweb-ref">&lt;&lt;' + inner + '&gt;&gt;</a>';
+        }
+      );
+    });
+  });
+})();
+</script>
       </div>
 	  <aside class="date"><time>Last updated: 14 Nov 2025</time></aside>
 	  <aside class="date"><time>Published&nbsp;&nbsp;&nbsp;: 26 Nov 2024</time></aside>
